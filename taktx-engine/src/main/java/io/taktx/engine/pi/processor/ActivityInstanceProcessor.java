@@ -8,8 +8,6 @@
 
 package io.taktx.engine.pi.processor;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.IntNode;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.dto.ExecutionState;
 import io.taktx.engine.feel.FeelExpressionHandler;
@@ -21,6 +19,8 @@ import io.taktx.engine.pi.model.ActivityInstance;
 import io.taktx.engine.pi.model.ProcessInstance;
 import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.VariableScope;
+import io.taktx.proto.VariableValue;
+import io.taktx.variables.Variables;
 import java.time.Clock;
 import java.util.Set;
 import lombok.NoArgsConstructor;
@@ -50,7 +50,7 @@ public abstract class ActivityInstanceProcessor<
       String inputFlowId) {
 
     if (flownodeInstance.isIteration()) {
-      variableScope.put("loopCnt", new IntNode(flownodeInstance.getLoopCnt()));
+      variableScope.put("loopCnt", Variables.of(flownodeInstance.getLoopCnt()));
       variableScope.put(
           flownodeInstance.getFlowNode().getLoopCharacteristics().getInputElement(),
           flownodeInstance.getInputElement());
@@ -153,11 +153,10 @@ public abstract class ActivityInstanceProcessor<
       if (flowNode.getLoopCharacteristics() != null) {
         String outputElement = flowNode.getLoopCharacteristics().getOutputElement();
         if (outputElement != null) {
-          JsonNode jsonNode =
+          VariableValue outputValue =
               feelExpressionHandler.processFeelExpression(outputElement, variableScope);
-          // Only set output element if FEEL expression returns a non-null result
-          if (jsonNode != null) {
-            flownodeInstance.setOutputElement(jsonNode);
+          if (outputValue != null) {
+            flownodeInstance.setOutputElement(outputValue);
           }
         }
       }

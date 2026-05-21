@@ -20,6 +20,7 @@ import io.taktx.engine.pi.model.GatewayInstance;
 import io.taktx.engine.pi.model.ProcessInstance;
 import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.VariableScope;
+import io.taktx.variables.Variables;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -77,7 +78,7 @@ class GatewayFeelNullHandlingTest {
     when(feelExpressionHandler.processFeelExpression("invalidExpression", variableScope))
         .thenReturn(null);
     when(feelExpressionHandler.processFeelExpression("validExpression", variableScope))
-        .thenReturn(com.fasterxml.jackson.databind.node.BooleanNode.TRUE);
+        .thenReturn(Variables.of(true));
 
     processor.setCanTrigger(true);
 

@@ -7,10 +7,7 @@
  */
 package io.taktx.dto;
 
-import io.quarkus.runtime.annotations.RegisterForReflection;
-
 /** Runtime-configurable replay enforcement mode for protected command paths. */
-@RegisterForReflection
 public enum ReplayProtectionMode {
   /** Disable replay enforcement. */
   OFF,

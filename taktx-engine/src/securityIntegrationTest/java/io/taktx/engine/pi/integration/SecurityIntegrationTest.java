@@ -10,9 +10,6 @@ package io.taktx.engine.pi.integration;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import io.jsonwebtoken.Jwts;
 import io.quarkus.arc.Arc;
 import io.quarkus.test.common.QuarkusTestResource;
@@ -46,6 +43,12 @@ import io.taktx.engine.pi.testengine.KafkaConsumerUtil;
 import io.taktx.security.Ed25519Service;
 import io.taktx.security.EngineSigningKeysHolder;
 import io.taktx.security.SigningKeyGenerator;
+import io.taktx.security.SigningKeyRegistrar;
+import io.taktx.security.SigningKeysStore;
+import io.taktx.security.SigningKeysStoreHolder;
+import io.taktx.serdes.ConfigurationProtoMapper;
+import io.taktx.serdes.ProcessInstanceTriggerProtoMapper;
+import io.taktx.serdes.SigningKeyProtoMapper;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
@@ -69,7 +72,6 @@ import org.eclipse.microprofile.config.ConfigProvider;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
@@ -79,13 +81,12 @@ import org.junit.jupiter.api.Test;
  * <p>Two signing paths exist in the engine:
  *
  * <ul>
- *   <li><b>JWT / RS256</b> ({@code X-TaktX-Authorization}) — used by Console, Platform, and
- *       Ingester for {@code StartCommandDTO}, {@code AbortTriggerDTO}, and {@code
- *       SetVariableTriggerDTO}.
- *   <li><b>Ed25519</b> ({@code X-TaktX-Signature}) — used by workers, user-task handlers, and
- *       engine-internal commands (sub-process / call-activity starts). The deserializer verifies
- *       the signature; {@link io.taktx.engine.security.EngineAuthorizationService} only logs and
- *       passes it through.
+ *   <li><b>JWT / RS256</b> ({@code tx-auth}) — used by Console, Platform, and Ingester for {@code
+ *       StartCommandDTO}, {@code AbortTriggerDTO}, and {@code SetVariableTriggerDTO}.
+ *   <li><b>Ed25519</b> ({@code tx-sig}) — used by workers, user-task handlers, and engine-internal
+ *       commands (sub-process / call-activity starts). The deserializer verifies the signature;
+ *       {@link io.taktx.engine.security.EngineAuthorizationService} only logs and passes it
+ *       through.
  * </ul>
  *
  * <p>These tests run against a real embedded Kafka broker (Quarkus dev-services) and a fully
@@ -107,8 +108,8 @@ import org.junit.jupiter.api.Test;
  *   <li>Ed25519 inbound path: worker-signed external-task response → process completes
  *   <li>Ed25519 inbound path: engine-internal signed start (sub-process) → child process accepted
  *   <li>Ed25519 inbound path: revoked worker key → response dropped, process stays blocked
- *   <li>Outbound signing: instance-update records carry a valid {@code X-TaktX-Signature} header
- *   <li>Outbound signing: external-task trigger records carry a valid {@code X-TaktX-Signature}
+ *   <li>Outbound signing: instance-update records carry a valid {@code tx-sig} header
+ *   <li>Outbound signing: external-task trigger records carry a valid {@code tx-sig}
  * </ul>
  */
 @QuarkusTest
@@ -116,11 +117,6 @@ import org.junit.jupiter.api.Test;
 @QuarkusTestResource(value = SecurityTestConfigResource.class, restrictToAnnotatedClass = true)
 @Tag("security-integration")
 class SecurityIntegrationTest {
-
-  private static final ObjectMapper OBJECT_MAPPER =
-      new ObjectMapper()
-          .registerModule(new JavaTimeModule())
-          .configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
 
   private static final String TASK_SINGLE_PROCESS_ID = "task-single";
   private static final String SERVICE_TASK_PROCESS_ID = "service-task-single";
@@ -369,16 +365,15 @@ class SecurityIntegrationTest {
   }
 
   /**
-   * A {@code StartCommandDTO} sent with no {@code X-TaktX-Authorization} and no {@code
-   * X-TaktX-Signature} header must be rejected by the engine — the process instance must never
-   * appear in the instance map.
+   * A {@code StartCommandDTO} sent with no {@code tx-auth} and no {@code tx-sig} header must be
+   * rejected by the engine — the process instance must never appear in the instance map.
    *
    * <p>We bypass {@link io.taktx.client.TaktXClient} deliberately: the client's {@code
-   * processInstanceTriggerEmitter} wraps a {@link io.taktx.serdes.SigningSerializer} which
-   * automatically attaches an {@code X-TaktX-Signature} header via {@link
+   * processInstanceTriggerEmitter} wraps a {@link io.taktx.serdes.ProtoSigningSerializer} which
+   * automatically attaches a {@code tx-sig} header via {@link
    * io.taktx.security.SigningServiceHolder}. Using the client would therefore exercise the Ed25519
    * path, not the missing-header path. Instead we produce the record with a plain {@link
-   * KafkaProducer} using the raw CBOR serializer so no header is ever attached.
+   * KafkaProducer} using the raw protobuf serializer so no header is ever attached.
    */
   @Test
   void missingAuthHeader_commandRejected_noProcessInstanceStarted() throws IOException {
@@ -461,9 +456,9 @@ class SecurityIntegrationTest {
    * JWT — the process should complete normally.
    *
    * <p>The {@link #workerClient} has {@code WORKER_KEY_ID} registered in the signing-keys KTable.
-   * Its {@code SigningSerializer} attaches {@code X-TaktX-Signature} to every {@code
-   * ContinueFlowElementTriggerDTO}. The engine's {@code JsonDeserializer} verifies it via the
-   * KTable; {@code EngineAuthorizationService} logs and passes it through.
+   * Its {@code ProtoSigningSerializer} attaches {@code tx-sig} to every {@code
+   * ContinueFlowElementTriggerDTO}. The engine's protobuf deserializer verifies it via the KTable;
+   * {@code EngineAuthorizationService} logs and passes it through.
    */
   @Test
   void workerEd25519SignedResponse_processCompletes() throws IOException {
@@ -501,8 +496,8 @@ class SecurityIntegrationTest {
 
   /**
    * Engine-internal {@code StartCommandDTO} messages (e.g. those emitted by the engine itself when
-   * entering a sub-process scope) carry the engine's own {@code X-TaktX-Signature}. The engine
-   * should accept them via the Ed25519 passthrough path — no JWT required.
+   * entering a sub-process scope) carry the engine's own {@code tx-sig}. The engine should accept
+   * them via the Ed25519 passthrough path — no JWT required.
    *
    * <p>The sub-process BPMN causes the engine to emit a signed {@code StartFlowElementTriggerDTO}
    * for the sub-process scope. That trigger is consumed back on the {@code
@@ -538,9 +533,9 @@ class SecurityIntegrationTest {
   }
 
   /**
-   * A worker response signed with a <em>revoked</em> key must be dropped by the engine's {@code
-   * JsonDeserializer} — the key is in the KTable with {@code REVOKED} status, so {@code
-   * resolvePublicKeyFromKTable} returns {@code null} and the deserializer throws. The process
+   * A worker response signed with a <em>revoked</em> key must be dropped by the engine's trigger
+   * deserializer — the key is in the KTable with {@code REVOKED} status, so {@code
+   * resolvePublicKeyFromKTable} returns {@code null} and deserialization fails. The process
    * instance should stay blocked (never complete).
    */
   @Test
@@ -579,10 +574,117 @@ class SecurityIntegrationTest {
                     .isNotEqualTo(ExecutionState.COMPLETED));
   }
 
+  @Test
+  void signingKeyPublishRotateAndRevokeLifecycle_worksEndToEnd() throws IOException {
+    engine
+        .registerAndSubscribeToExternalTaskIds(SERVICE_TASK_TYPE)
+        .deployProcessDefinitionAndWait("/bpmn/servicetask-single.bpmn");
+
+    String bootstrapServers =
+        ConfigProvider.getConfig().getValue("kafka.bootstrap.servers", String.class);
+    String signingKeysTopic = prefixed(Topics.SIGNING_KEYS_TOPIC.getTopicName());
+
+    KeyPair legacyKeyPair = SigningKeyGenerator.generate();
+    String legacyKeyId = "rotation-old-" + UUID.randomUUID();
+    String legacyPrivateKeyBase64 =
+        SigningKeyGenerator.encodePrivateKey(legacyKeyPair.getPrivate());
+    String legacyPublicKeyBase64 = SigningKeyGenerator.encodePublicKey(legacyKeyPair.getPublic());
+    SigningKeyDTO legacyActiveKey =
+        SigningKeyDTO.builder()
+            .keyId(legacyKeyId)
+            .publicKeyBase64(legacyPublicKeyBase64)
+            .algorithm("Ed25519")
+            .createdAt(Instant.now())
+            .status(KeyStatus.ACTIVE)
+            .owner("rotation-old-worker")
+            .build();
+
+    SigningKeyRegistrar.publishKeyWithStatus(bootstrapServers, signingKeysTopic, legacyActiveKey);
+    awaitSigningKeyStatus(legacyKeyId, KeyStatus.ACTIVE);
+
+    UUID publishedKeyInstanceId = startJwtProtectedProcessAndWaitForExternalTask();
+    ExternalTaskTriggerDTO publishedKeyTrigger =
+        engine.getActiveExternalTaskTrigger(SERVICE_TASK_TYPE);
+    sendSignedExternalTaskResponse(publishedKeyTrigger, legacyKeyId, legacyPrivateKeyBase64);
+    awaitProcessCompleted(publishedKeyInstanceId);
+
+    KeyPair rotatedKeyPair = SigningKeyGenerator.generate();
+    String rotatedKeyId = "rotation-new-" + UUID.randomUUID();
+    String rotatedPrivateKeyBase64 =
+        SigningKeyGenerator.encodePrivateKey(rotatedKeyPair.getPrivate());
+    String rotatedPublicKeyBase64 = SigningKeyGenerator.encodePublicKey(rotatedKeyPair.getPublic());
+    SigningKeyDTO rotatedActiveKey =
+        SigningKeyDTO.builder()
+            .keyId(rotatedKeyId)
+            .publicKeyBase64(rotatedPublicKeyBase64)
+            .algorithm("Ed25519")
+            .createdAt(Instant.now())
+            .status(KeyStatus.ACTIVE)
+            .owner("rotation-new-worker")
+            .build();
+
+    SigningKeyRegistrar.publishKeyWithStatus(bootstrapServers, signingKeysTopic, rotatedActiveKey);
+    awaitSigningKeyStatus(rotatedKeyId, KeyStatus.ACTIVE);
+
+    SigningKeyDTO legacyTrustedKey =
+        SigningKeyDTO.builder()
+            .keyId(legacyActiveKey.getKeyId())
+            .publicKeyBase64(legacyActiveKey.getPublicKeyBase64())
+            .algorithm(legacyActiveKey.getAlgorithm())
+            .createdAt(legacyActiveKey.getCreatedAt())
+            .status(KeyStatus.TRUSTED)
+            .owner(legacyActiveKey.getOwner())
+            .build();
+    SigningKeyRegistrar.publishKeyWithStatus(bootstrapServers, signingKeysTopic, legacyTrustedKey);
+    awaitSigningKeyStatus(legacyKeyId, KeyStatus.TRUSTED);
+
+    UUID trustedKeyInstanceId = startJwtProtectedProcessAndWaitForExternalTask();
+    ExternalTaskTriggerDTO trustedKeyTrigger =
+        engine.getActiveExternalTaskTrigger(SERVICE_TASK_TYPE);
+    sendSignedExternalTaskResponse(trustedKeyTrigger, legacyKeyId, legacyPrivateKeyBase64);
+    awaitProcessCompleted(trustedKeyInstanceId);
+
+    UUID rotatedKeyInstanceId = startJwtProtectedProcessAndWaitForExternalTask();
+    ExternalTaskTriggerDTO rotatedKeyTrigger =
+        engine.getActiveExternalTaskTrigger(SERVICE_TASK_TYPE);
+    sendSignedExternalTaskResponse(rotatedKeyTrigger, rotatedKeyId, rotatedPrivateKeyBase64);
+    awaitProcessCompleted(rotatedKeyInstanceId);
+
+    SigningKeyDTO legacyRevokedKey =
+        SigningKeyDTO.builder()
+            .keyId(legacyActiveKey.getKeyId())
+            .publicKeyBase64(legacyActiveKey.getPublicKeyBase64())
+            .algorithm(legacyActiveKey.getAlgorithm())
+            .createdAt(legacyActiveKey.getCreatedAt())
+            .status(KeyStatus.REVOKED)
+            .owner(legacyActiveKey.getOwner())
+            .build();
+    SigningKeyRegistrar.publishKeyWithStatus(bootstrapServers, signingKeysTopic, legacyRevokedKey);
+    awaitSigningKeyStatus(legacyKeyId, KeyStatus.REVOKED);
+
+    UUID revokedKeyInstanceId = startJwtProtectedProcessAndWaitForExternalTask();
+    ExternalTaskTriggerDTO revokedKeyTrigger =
+        engine.getActiveExternalTaskTrigger(SERVICE_TASK_TYPE);
+    sendSignedExternalTaskResponse(revokedKeyTrigger, legacyKeyId, legacyPrivateKeyBase64);
+
+    await()
+        .during(Duration.ofSeconds(3))
+        .atMost(Duration.ofSeconds(4))
+        .untilAsserted(
+            () ->
+                assertThat(
+                        engine
+                            .getProcessInstanceMap()
+                            .get(revokedKeyInstanceId)
+                            .getScope()
+                            .getState())
+                    .as("Process must stay active after legacy key revocation")
+                    .isNotEqualTo(ExecutionState.COMPLETED));
+  }
+
   // ── Outbound signing tests ─────────────────────────────────────────────────
 
   @Test
-  @Disabled
   void timerContinuationAfterWorkerResponse_isAttributedToEngine() throws IOException {
     engine
         .registerAndSubscribeToExternalTaskIds(SERVICE_TASK_TYPE)
@@ -596,9 +698,10 @@ class SecurityIntegrationTest {
             UUID.randomUUID().toString(),
             "user-1",
             Date.from(Instant.now().plusSeconds(300)));
-    engine
-        .getTaktClient()
-        .startProcess(SERVICE_TASK_THEN_TIMER_PROCESS_ID, -1, VariablesDTO.empty(), jwt);
+    UUID instanceId =
+        engine
+            .getTaktClient()
+            .startProcess(SERVICE_TASK_THEN_TIMER_PROCESS_ID, -1, VariablesDTO.empty(), jwt);
 
     engine.waitForNewProcessInstance();
     engine.waitForExternalTaskTrigger(SERVICE_TASK_TYPE);
@@ -611,6 +714,7 @@ class SecurityIntegrationTest {
             () ->
                 assertThat(
                         rawInstanceUpdates.stream()
+                            .filter(currentRecord -> instanceId.equals(currentRecord.key()))
                             .map(ConsumerRecord::value)
                             .filter(
                                 update ->
@@ -619,6 +723,14 @@ class SecurityIntegrationTest {
                                             update.getCurrentTrustMetadata().getSignerKeyId()))
                             .findFirst())
                     .isPresent());
+
+    await()
+        .atMost(Duration.ofSeconds(10))
+        .untilAsserted(
+            () ->
+                assertThat(engine.getScopeWithElementId(instanceId, "CatchEvent_1"))
+                    .anyMatch(io.taktx.dto.FlowNodeInstanceDTO::isActive));
+    engine.waitFor(Duration.ofMillis(500));
 
     rawInstanceUpdates.clear();
 
@@ -631,6 +743,7 @@ class SecurityIntegrationTest {
             () -> {
               InstanceUpdateDTO found =
                   rawInstanceUpdates.stream()
+                      .filter(currentRecord -> instanceId.equals(currentRecord.key()))
                       .map(ConsumerRecord::value)
                       .filter(
                           update ->
@@ -652,7 +765,7 @@ class SecurityIntegrationTest {
             CommandTrustMetadataDTO::getSignerOwner)
         .containsExactly(
             CommandAuthMethod.ED25519,
-            CommandTrustVerificationResult.SIGNATURE_VERIFIED,
+            CommandTrustVerificationResult.ENGINE_SIGNED,
             true,
             SecurityTestConfigResource.engineKeyId,
             "engine");
@@ -665,15 +778,15 @@ class SecurityIntegrationTest {
             CommandTrustMetadataDTO::getSignerOwner)
         .containsExactly(
             CommandAuthMethod.ED25519,
-            CommandTrustVerificationResult.SIGNATURE_VERIFIED,
+            CommandTrustVerificationResult.ENGINE_SIGNED,
             true,
-            WORKER_KEY_ID,
-            "worker");
+            SecurityTestConfigResource.engineKeyId,
+            "engine");
   }
 
   /**
    * External-task trigger records written by the engine to the worker topic must also carry the
-   * {@code X-TaktX-Signature} header signed with the engine's Ed25519 key.
+   * {@code tx-sig} header signed with the engine's Ed25519 key.
    */
   @Test
   void externalTaskTriggerRecord_hasSignatureHeader() throws IOException {
@@ -713,9 +826,7 @@ class SecurityIntegrationTest {
                   rawExternalTaskTriggers.stream()
                       .anyMatch(
                           r -> r.headers().lastHeader(Constants.HEADER_ENGINE_SIGNATURE) != null);
-              assertThat(hasSigned)
-                  .as("External-task trigger record must carry X-TaktX-Signature")
-                  .isTrue();
+              assertThat(hasSigned).as("External-task trigger record must carry tx-sig").isTrue();
             });
 
     // Also verify the signature is cryptographically valid
@@ -761,9 +872,9 @@ class SecurityIntegrationTest {
             () -> {
               boolean hasSignedRecord =
                   rawInstanceUpdates.stream()
-                      .anyMatch(r -> r.headers().lastHeader("X-TaktX-Signature") != null);
+                      .anyMatch(r -> r.headers().lastHeader("tx-sig") != null);
               assertThat(hasSignedRecord)
-                  .as("At least one instance-update record must carry X-TaktX-Signature")
+                  .as("At least one instance-update record must carry tx-sig")
                   .isTrue();
             });
   }
@@ -792,7 +903,7 @@ class SecurityIntegrationTest {
             () -> {
               ConsumerRecord<UUID, InstanceUpdateDTO> found =
                   rawInstanceUpdates.stream()
-                      .filter(r -> r.headers().lastHeader("X-TaktX-Signature") != null)
+                      .filter(r -> r.headers().lastHeader("tx-sig") != null)
                       .findFirst()
                       .orElse(null);
               assertThat(found).as("Signed instance-update record not yet received").isNotNull();
@@ -800,7 +911,7 @@ class SecurityIntegrationTest {
             });
 
     ConsumerRecord<UUID, InstanceUpdateDTO> consumerRecord = signedRecord.get();
-    Header sigHeader = consumerRecord.headers().lastHeader("X-TaktX-Signature");
+    Header sigHeader = consumerRecord.headers().lastHeader("tx-sig");
     String headerValue = new String(sigHeader.value(), StandardCharsets.UTF_8);
 
     // Header format: "<keyId>.<base64(signature)>"
@@ -836,7 +947,7 @@ class SecurityIntegrationTest {
     // In the security test profile both signingEnabled=true and engineRequiresAuthorization=true
     // are active from @BeforeAll. The BpmnTestEngine's TaktXClient does not own a signing
     // identity but uses the engine's global SigningServiceHolder (set by MessageSigningService),
-    // so every outbound start command gets both a JWT header AND an X-TaktX-Signature header.
+    // so every outbound start command gets both a JWT header AND a tx-sig header.
     // EngineAuthorizationService combines them into JWT_AND_ED25519 — this is correct behaviour.
     AtomicReference<InstanceUpdateDTO> trustedUpdate = new AtomicReference<>();
     await()
@@ -1030,6 +1141,69 @@ class SecurityIntegrationTest {
         .compact();
   }
 
+  private UUID startJwtProtectedProcessAndWaitForExternalTask() {
+    String jwt =
+        buildJwt(
+            "START",
+            SERVICE_TASK_PROCESS_ID,
+            -1,
+            UUID.randomUUID().toString(),
+            "user-rotation",
+            Date.from(Instant.now().plusSeconds(300)));
+    UUID instanceId =
+        engine.getTaktClient().startProcess(SERVICE_TASK_PROCESS_ID, -1, VariablesDTO.empty(), jwt);
+    engine.waitForNewProcessInstance();
+    engine.waitForExternalTaskTrigger(SERVICE_TASK_TYPE);
+    return instanceId;
+  }
+
+  private void sendSignedExternalTaskResponse(
+      ExternalTaskTriggerDTO trigger, String keyId, String privateKeyBase64) {
+    ExternalTaskResponseTriggerDTO response =
+        new ExternalTaskResponseTriggerDTO(
+            trigger.getProcessInstanceId(),
+            trigger.getElementInstanceIdPath(),
+            new ExternalTaskResponseResultDTO(
+                ExternalTaskResponseType.SUCCESS, true, null, null, 0L),
+            VariablesDTO.empty());
+    sendSignedProcessInstanceTrigger(response, keyId, privateKeyBase64);
+  }
+
+  private void awaitProcessCompleted(UUID instanceId) {
+    await()
+        .atMost(Duration.ofSeconds(10))
+        .untilAsserted(
+            () ->
+                assertThat(engine.getProcessInstanceMap().get(instanceId).getScope().getState())
+                    .isEqualTo(ExecutionState.COMPLETED));
+  }
+
+  private static void awaitSigningKeyStatus(String keyId, KeyStatus expectedStatus) {
+    SigningKeysStore signingKeysStore = SigningKeysStoreHolder.get();
+    if (signingKeysStore != null) {
+      await()
+          .atMost(Duration.ofSeconds(30))
+          .pollInterval(Duration.ofMillis(200))
+          .until(
+              () -> {
+                SigningKeyDTO dto = signingKeysStore.get(keyId);
+                return dto != null && dto.getStatus() == expectedStatus;
+              });
+    }
+
+    EngineSigningKeysHolder.KeyResolver keyResolver = EngineSigningKeysHolder.get();
+    if (keyResolver != null) {
+      await()
+          .atMost(Duration.ofSeconds(30))
+          .pollInterval(Duration.ofMillis(200))
+          .until(
+              () ->
+                  expectedStatus == KeyStatus.REVOKED
+                      ? keyResolver.resolvePublicKey(keyId) == null
+                      : keyResolver.resolvePublicKey(keyId) != null);
+    }
+  }
+
   private void sendWorkerResponseWithInjectedTrustMetadata(
       ExternalTaskTriggerDTO trigger,
       CommandTrustMetadataDTO currentTrustMetadata,
@@ -1114,7 +1288,7 @@ class SecurityIntegrationTest {
           new ProducerRecord<>(
               prefixed(Topics.CONFIGURATION_TOPIC.getTopicName()),
               "config",
-              OBJECT_MAPPER.writeValueAsBytes(event)));
+              ConfigurationProtoMapper.toProto(event).toByteArray()));
       producer.flush();
     } catch (Exception e) {
       throw new IllegalStateException("Failed to publish signing configuration", e);
@@ -1137,14 +1311,7 @@ class SecurityIntegrationTest {
             .owner("revoked-worker")
             .build();
 
-    // Re-use SigningKeyRegistrar's CBOR serialisation by going through the raw byte producer path
-    // that SigningKeyRegistrar itself uses internally
     try {
-      com.fasterxml.jackson.databind.ObjectMapper cbor =
-          new com.fasterxml.jackson.databind.ObjectMapper(
-                  new com.fasterxml.jackson.dataformat.cbor.CBORFactory())
-              .registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
-
       java.util.Properties props = new java.util.Properties();
       props.put("bootstrap.servers", bootstrapServers);
       props.put("acks", "all");
@@ -1153,7 +1320,9 @@ class SecurityIntegrationTest {
               props,
               new StringSerializer(),
               new org.apache.kafka.common.serialization.ByteArraySerializer())) {
-        producer.send(new ProducerRecord<>(topic, keyId, cbor.writeValueAsBytes(revokedDto)));
+        producer.send(
+            new ProducerRecord<>(
+                topic, keyId, SigningKeyProtoMapper.toProto(revokedDto).toByteArray()));
         producer.flush();
       }
     } catch (Exception e) {
@@ -1165,9 +1334,8 @@ class SecurityIntegrationTest {
    * Sends a {@code ExternalTaskResponseTriggerDTO} response signed with the REVOKED worker key,
    * bypassing the {@link TaktXClient} so we can control exactly which keyId is used.
    *
-   * <p>The CBOR payload is serialised with a plain ObjectMapper (no {@link
-   * io.taktx.serdes.SigningSerializer} wrapper) so only our manually-crafted revoked-key signature
-   * header is attached.
+   * <p>The protobuf payload is serialised directly (no signing serializer wrapper) so only our
+   * manually-crafted revoked-key signature header is attached.
    */
   private void sendRevokedWorkerResponse(ExternalTaskTriggerDTO trigger) {
     if (trigger == null) {
@@ -1184,11 +1352,7 @@ class SecurityIntegrationTest {
               result,
               VariablesDTO.empty());
 
-      // Serialise with the plain ObjectMapper (no SigningSerializer wrapping)
-      com.fasterxml.jackson.databind.ObjectMapper cbor =
-          new com.fasterxml.jackson.databind.ObjectMapper(
-              new com.fasterxml.jackson.dataformat.cbor.CBORFactory());
-      byte[] payloadBytes = cbor.writeValueAsBytes(response);
+      byte[] payloadBytes = ProcessInstanceTriggerProtoMapper.toProto(response).toByteArray();
 
       // Sign with the REVOKED key
       byte[] sigBytes = Ed25519Service.sign(payloadBytes, revokedWorkerPrivateKeyBase64);
@@ -1229,13 +1393,12 @@ class SecurityIntegrationTest {
   /**
    * Sends a {@link io.taktx.dto.StartCommandDTO} with no headers to the {@code
    * process-instance-trigger} topic using a plain {@link KafkaProducer}, simulating an external
-   * caller that omits both {@code X-TaktX-Authorization} and {@code X-TaktX-Signature}.
+   * caller that omits both {@code tx-auth} and {@code tx-sig}.
    *
    * <p>We bypass {@link io.taktx.client.TaktXClient} deliberately: its {@code
-   * processInstanceTriggerEmitter} wraps a {@link io.taktx.serdes.SigningSerializer} that
-   * automatically attaches {@code X-TaktX-Signature} via {@link
-   * io.taktx.security.SigningServiceHolder}. A plain producer with no interceptors guarantees a
-   * completely header-free record.
+   * processInstanceTriggerEmitter} wraps a {@link io.taktx.serdes.ProtoSigningSerializer} that
+   * automatically attaches {@code tx-sig} via {@link io.taktx.security.SigningServiceHolder}. A
+   * plain producer with no interceptors guarantees a completely header-free record.
    */
   private UUID sendUnsignedStartCommand(String processDefinitionId) {
     return sendStartCommandWithSignatureHeader(processDefinitionId, null);
@@ -1256,8 +1419,8 @@ class SecurityIntegrationTest {
         ConfigProvider.getConfig().getValue("kafka.bootstrap.servers", String.class);
     String topic = prefixed(Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName());
 
-    // Serialise via the no-Headers overload — SigningSerializer only signs in the Headers overload,
-    // so calling serialize(topic, value) always returns plain CBOR bytes with no side-effects.
+    // Serialize via the no-Headers overload — SigningSerializer only signs in the Headers overload,
+    // so calling serialize(topic, value) always returns plain protobuf bytes with no side-effects.
     byte[] payload;
     try (io.taktx.client.serdes.ProcessInstanceTriggerSerializer rawSerializer =
         new io.taktx.client.serdes.ProcessInstanceTriggerSerializer()) {

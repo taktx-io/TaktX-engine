@@ -8,27 +8,28 @@
 
 package io.taktx.engine.pi;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
-import java.io.IOException;
+import io.taktx.serdes.ProcessInstanceTriggerProtoMapper;
 import org.apache.kafka.common.header.Headers;
 import org.apache.kafka.common.serialization.Serializer;
 
 public class ProcessInstanceTriggerEnvelopeSerializer
     implements Serializer<ProcessInstanceTriggerEnvelope> {
 
-  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper(new CBORFactory());
-
   @Override
   public byte[] serialize(String topic, ProcessInstanceTriggerEnvelope data) {
-    if (data == null || data.trigger() == null) {
+    if (data == null) {
       return null;
     }
-    try {
-      return OBJECT_MAPPER.writeValueAsBytes(data.trigger());
-    } catch (IOException e) {
-      throw new IllegalStateException(e);
+    if (data.trigger() != null) {
+      if (data.data() != null && data.data().length > 0) {
+        return data.data();
+      }
+      return ProcessInstanceTriggerProtoMapper.toProto(data.trigger()).toByteArray();
     }
+    if (data.data() != null) {
+      return data.data();
+    }
+    return null;
   }
 
   @Override

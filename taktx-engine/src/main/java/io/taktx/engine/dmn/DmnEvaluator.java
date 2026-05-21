@@ -8,9 +8,9 @@
 
 package io.taktx.engine.dmn;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import io.taktx.dto.DmnDecisionDTO;
 import io.taktx.engine.pi.model.VariableScope;
+import io.taktx.proto.VariableValue;
 
 public interface DmnEvaluator {
 
@@ -19,8 +19,7 @@ public interface DmnEvaluator {
    *
    * @param decision the DMN decision to evaluate
    * @param variables the process-instance variable scope
-   * @return the decision result as a JsonNode (object for single-row policies, array for multi-row
-   *     policies such as COLLECT/RULE_ORDER/OUTPUT_ORDER)
+   * @return the decision result as a proto-backed variable value
    */
-  JsonNode evaluate(DmnDecisionDTO decision, VariableScope variables);
+  VariableValue evaluate(DmnDecisionDTO decision, VariableScope variables);
 }

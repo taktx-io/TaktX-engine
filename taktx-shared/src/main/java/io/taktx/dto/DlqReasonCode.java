@@ -13,8 +13,8 @@ import lombok.RequiredArgsConstructor;
 @Getter
 @RequiredArgsConstructor
 public enum DlqReasonCode {
-  CBOR_DECODE_ERROR(DlqSeverity.MEDIUM),
-  CBOR_TYPE_MISMATCH(DlqSeverity.MEDIUM),
+  PAYLOAD_DESERIALIZATION_ERROR(DlqSeverity.MEDIUM),
+  PAYLOAD_TYPE_MISMATCH(DlqSeverity.MEDIUM),
   SIGNATURE_MISSING(DlqSeverity.HIGH),
   SIGNATURE_MALFORMED(DlqSeverity.HIGH),
   SIGNATURE_KEY_UNKNOWN(DlqSeverity.HIGH),

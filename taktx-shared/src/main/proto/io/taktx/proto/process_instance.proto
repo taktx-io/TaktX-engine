@@ -1,0 +1,117 @@
+syntax = "proto3";
+
+package io.taktx.proto;
+
+option java_package = "io.taktx.proto";
+option java_multiple_files = true;
+option java_outer_classname = "ProcessInstanceProto";
+
+import "io/taktx/proto/common.proto";
+import "io/taktx/proto/schedule.proto";
+
+// SubscriptionEnvelope — replaces SubscriptionTypeIdResolver
+message SubscriptionEnvelope {
+  oneof subscription {
+    CatchAllErrorSubscriptionMessage    catch_all_error = 1; // TypeId "A"
+    ErrorSubscriptionMessage            error_sub       = 2; // TypeId "B"
+    CatchAllEscalationSubscriptionMessage catch_all_esc = 3; // TypeId "C"
+    EscalationSubscriptionMessage       escalation_sub  = 4; // TypeId "D"
+    MessageSubscriptionMessage          message_sub     = 5; // TypeId "E"
+    TimerSubscriptionMessage            timer_sub       = 6; // TypeId "F"
+    SignalSubscriptionMessage           signal_sub      = 7; // TypeId "S"
+  }
+}
+
+enum SubScriptionType {
+  SUBSCRIPTION_TYPE_UNSPECIFIED = 0;
+  SUBSCRIPTION_TYPE_STARTING    = 1;
+}
+
+// Java: CatchAllErrorSubscriptionDTO
+message CatchAllErrorSubscriptionMessage {
+  SubScriptionType sub_scription_type = 1;
+  string           element_id         = 2;
+}
+
+// Java: CatchAllEscalationSubscriptionDTO
+message CatchAllEscalationSubscriptionMessage {
+  SubScriptionType sub_scription_type = 1;
+  string           element_id         = 2;
+}
+
+// Java: ErrorSubscriptionDTO
+message ErrorSubscriptionMessage {
+  SubScriptionType sub_scription_type = 1;
+  string           element_id         = 2;
+  string           code               = 3;
+}
+
+// Java: EscalationSubscriptionDTO
+message EscalationSubscriptionMessage {
+  SubScriptionType sub_scription_type = 1;
+  string           element_id         = 2;
+  string           code               = 3;
+}
+
+// Java: MessageSubscriptionDTO
+message MessageSubscriptionMessage {
+  SubScriptionType sub_scription_type = 1;
+  string           element_id         = 2;
+  string           name               = 3;
+  string           correlation_key    = 4;
+}
+
+// Java: ProcessInstanceDTO
+message ProcessInstanceMessage {
+  Uuid                        process_instance_id          = 1;
+  Uuid                        parent_process_instance_id   = 2;
+  ScopeMessage                scope                        = 3;
+  repeated sint64             parent_element_instance_path = 4;
+  ProcessDefinitionKeyMessage process_definition_key       = 5;
+  bool                        propagate_all_to_parent      = 6;
+  repeated IoVariableMappingMessage output_mappings        = 7;
+  IncidentInfoMessage         incident_info                = 8;
+  string                      business_key                 = 9;
+  repeated string             tags                         = 10;
+}
+
+// Java: ScopeDTO
+message ScopeMessage {
+  int32                       sub_process_level    = 1;
+  int32                       active_cnt           = 2;
+  ExecutionState              state                = 3;
+  sint64                      element_instance_cnt = 4;
+  map<string, sint64>         gateway_instances    = 5;
+  SubscriptionsMessage        subscriptions        = 6;
+}
+
+// Java: SignalSubscriptionDTO
+message SignalSubscriptionMessage {
+  SubScriptionType sub_scription_type = 1;
+  string           element_id         = 2;
+  string           name               = 3;
+}
+
+// Java: SubscriptionDTO (abstract — base fields flattened into concrete types)
+message SubscriptionMessage {
+  SubScriptionType sub_scription_type = 1;
+  string           element_id         = 2;
+}
+
+// Wrapper for proto3 map value (proto3 map values cannot themselves be repeated)
+message SubscriptionList {
+  repeated SubscriptionEnvelope items = 1;
+}
+
+// Java: SubscriptionsDTO
+message SubscriptionsMessage {
+  // key = element instance ID (as sint64)
+  map<sint64, SubscriptionList> instance_subscriptions = 1;
+}
+
+// Java: TimerSubscriptionDTO
+message TimerSubscriptionMessage {
+  SubScriptionType  sub_scription_type = 1;
+  string            element_id         = 2;
+  ScheduleKeyEnvelope scheduled_key    = 3;
+}

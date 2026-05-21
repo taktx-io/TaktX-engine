@@ -43,6 +43,7 @@ dependencies {
     compileOnly(libs.springBootAutoconfigure3)
     compileOnlyApi(libs.jakarta.inject.api)
     compileOnlyApi(libs.jakarta.annotation.api)
+    compileOnly(libs.kafka.clients)
 
     api(project(":taktx-client"))
 

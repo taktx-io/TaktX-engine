@@ -1,0 +1,53 @@
+syntax = "proto3";
+
+package io.taktx.proto;
+
+option java_package = "io.taktx.proto";
+option java_multiple_files = true;
+option java_outer_classname = "SignalsProto";
+
+import "io/taktx/proto/common.proto";
+
+// SignalEnvelope — replaces SignalTypeIdResolver
+message SignalEnvelope {
+  oneof signal {
+    SignalMessage                           signal_msg          = 1; // TypeId "S"
+    NewInstanceSignalSubscriptionMessage new_instance_sub    = 2; // TypeId "NS"
+    CancelInstanceSignalSubscriptionMessage cancel_instance_sub = 3; // TypeId "CS"
+    NewDefinitionSignalSubscriptionMessage new_def_sub       = 4; // TypeId "ND"
+    CancelDefinitionSignalSubscriptionMessage cancel_def_sub = 5; // TypeId "CD"
+  }
+}
+
+// Java: CancelDefinitionSignalSubscriptionDTO
+message CancelDefinitionSignalSubscriptionMessage {
+  string signal_name = 1;
+  ProcessDefinitionKeyMessage process_definition_key = 2;
+  string element_id = 3;
+}
+
+// Java: CancelInstanceSignalSubscriptionDTO
+message CancelInstanceSignalSubscriptionMessage {
+  string signal_name = 1;
+  Uuid process_instance_id = 2;
+  repeated sint64 element_instance_id_path = 3;
+}
+
+// Java: NewDefinitionSignalSubscriptionDTO
+message NewDefinitionSignalSubscriptionMessage {
+  string signal_name = 1;
+  ProcessDefinitionKeyMessage process_definition_key = 2;
+  string element_id = 3;
+}
+
+// Java: NewInstanceSignalSubscriptionDTO
+message NewInstanceSignalSubscriptionMessage {
+  string signal_name = 1;
+  Uuid process_instance_id = 2;
+  repeated sint64 element_instance_id_path = 3;
+}
+
+// Java: SignalDTO
+message SignalMessage {
+  string signal_name = 1;
+}

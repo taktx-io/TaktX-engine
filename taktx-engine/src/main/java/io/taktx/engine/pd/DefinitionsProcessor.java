@@ -90,7 +90,7 @@ public class DefinitionsProcessor
     if (definitionsRecord.value() == null) {
       emitDefinitionsDlq(
           definitionsRecord,
-          "CBOR_DECODE_ERROR",
+          "PAYLOAD_DESERIALIZATION_ERROR",
           "Null payload for definitions record",
           "DESERIALIZER");
       return;
@@ -107,7 +107,7 @@ public class DefinitionsProcessor
             definitionsRecord.value().getClass().getName());
         emitDefinitionsDlq(
             definitionsRecord,
-            "CBOR_TYPE_MISMATCH",
+            "PAYLOAD_TYPE_MISMATCH",
             "Unknown definitions trigger type: " + definitionsRecord.value().getClass().getName(),
             "PROCESSOR");
       }

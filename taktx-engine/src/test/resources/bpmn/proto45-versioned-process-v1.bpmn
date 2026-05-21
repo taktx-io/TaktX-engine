@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:zeebe="http://camunda.org/schema/zeebe/1.0"
+                  id="Definitions_proto45_versioned_v1"
+                  targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="proto45-versioned-process" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_1">
+      <bpmn:outgoing>Flow_v1_start</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="Flow_v1_start" sourceRef="StartEvent_1" targetRef="ServiceTask_v1"/>
+    <bpmn:serviceTask id="ServiceTask_v1" name="Legacy worker">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="proto45-version-task-v1" retries="3"/>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_v1_start</bpmn:incoming>
+      <bpmn:outgoing>Flow_v1_end</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_v1_end" sourceRef="ServiceTask_v1" targetRef="EndEvent_v1"/>
+    <bpmn:endEvent id="EndEvent_v1">
+      <bpmn:incoming>Flow_v1_end</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+</bpmn:definitions>
+

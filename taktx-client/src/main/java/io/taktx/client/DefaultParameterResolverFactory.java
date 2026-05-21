@@ -7,11 +7,10 @@
  */
 package io.taktx.client;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
 import io.taktx.client.annotation.CustomHeaders;
 import io.taktx.client.annotation.Variable;
 import io.taktx.dto.ExternalTaskTriggerDTO;
+import io.taktx.dto.VariablesDTO;
 import java.lang.reflect.Parameter;
 import java.util.Map;
 
@@ -20,8 +19,6 @@ import java.util.Map;
  * parameter types and annotations.
  */
 public class DefaultParameterResolverFactory implements ParameterResolverFactory {
-
-  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper(new CBORFactory());
 
   private final ProcessInstanceResponder externalTaskResponder;
 
@@ -36,21 +33,26 @@ public class DefaultParameterResolverFactory implements ParameterResolverFactory
 
   @Override
   public ParameterResolver create(Parameter parameter) {
-    if (parameter.getType().isAssignableFrom(ExternalTaskTriggerDTO.class)) {
+    Class<?> parameterType = parameter.getType();
+    if (ExternalTaskTriggerDTO.class.isAssignableFrom(parameterType)) {
       return new ExternalTaskTriggerDTOParameterResolver();
-    } else if (parameter.getType().isAssignableFrom(ExternalTaskInstanceResponder.class)) {
+    } else if (ExternalTaskInstanceResponder.class.isAssignableFrom(parameterType)) {
       return new ExternalTaskInstanceResponderParameterResolver(externalTaskResponder);
     } else if (parameter.getAnnotation(Variable.class) != null) {
       Variable variableAnnotation = parameter.getAnnotation(Variable.class);
       String name =
           !variableAnnotation.value().isEmpty() ? variableAnnotation.value() : parameter.getName();
-      return new VariableParameterResolver(OBJECT_MAPPER, parameter.getType(), name);
+      return new VariableParameterResolver(parameter.getType(), name);
     } else if (parameter.getAnnotation(CustomHeaders.class) != null) {
-      return new HeadersParameterResolver(OBJECT_MAPPER, parameter.getType());
-    } else if (parameter.getType().isAssignableFrom(Map.class)) {
-      return new MapParameterResolver(OBJECT_MAPPER);
+      return new HeadersParameterResolver(parameter.getType());
+    } else if (Map.class.isAssignableFrom(parameterType)) {
+      return new MapParameterResolver();
+    } else if (VariablesDTO.class.isAssignableFrom(parameterType)) {
+      return new VariablesObjectParameterResolver(parameterType);
+    } else if (ClientValueMapper.isSimpleValue(parameterType)) {
+      return new VariableParameterResolver(parameterType, parameter.getName());
     } else {
-      return new VariableParameterResolver(OBJECT_MAPPER, parameter.getType(), parameter.getName());
+      return new VariablesObjectParameterResolver(parameterType);
     }
   }
 }

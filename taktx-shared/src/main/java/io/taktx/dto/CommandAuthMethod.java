@@ -7,13 +7,10 @@
  */
 package io.taktx.dto;
 
-import io.quarkus.runtime.annotations.RegisterForReflection;
-
-@RegisterForReflection
 public enum CommandAuthMethod {
-  /** JWT-only authorization — X-TaktX-Authorization verified, no Ed25519 header present. */
+  /** JWT-only authorization — {@code tx-auth} verified, no Ed25519 header present. */
   JWT,
-  /** Ed25519-only signing — X-TaktX-Signature verified, no JWT header present. */
+  /** Ed25519-only signing — {@code tx-sig} verified, no JWT header present. */
   ED25519,
   /**
    * Both JWT authorization and Ed25519 signing were verified on the same command.

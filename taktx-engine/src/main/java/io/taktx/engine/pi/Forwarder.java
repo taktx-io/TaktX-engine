@@ -376,7 +376,7 @@ public class Forwarder {
               null,
               pathExtractor.getInstancePath(newStartCommand.instance()),
               new ProcessDefinitionKey(newStartCommand.calledElement()),
-              newStartCommand.variables(),
+              VariablesDTO.ofVariableMap(newStartCommand.variables()),
               newStartCommand.propagateAllToParent(),
               outputMappings);
       applyDerivedCommandTrustMetadata(startCommand, originTrustMetadata);
@@ -451,7 +451,7 @@ public class Forwarder {
         externalTaskInfo.externalTaskId(),
         externalTaskInfo.element().getId(),
         pathExtractor.getInstancePath(externalTaskInfo.instance()),
-        externalTaskInfo.variables().scopeAndParentsToDto(),
+        VariablesDTO.ofVariableMap(externalTaskInfo.variables().scopeAndParentsToMap()),
         externalTaskInfo.headers());
   }
 
@@ -467,7 +467,7 @@ public class Forwarder {
         userTaskInfo.assignmentDefinition(),
         userTaskInfo.taskSchedule(),
         userTaskInfo.priorityDefinition(),
-        userTaskInfo.variables().scopeAndParentsToDto());
+        VariablesDTO.ofVariableMap(userTaskInfo.variables().scopeAndParentsToMap()));
   }
 
   private void applyDerivedCommandTrustMetadata(

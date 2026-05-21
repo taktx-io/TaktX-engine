@@ -12,6 +12,7 @@ import java.time.Duration;
 /** Exception to indicate a promise with a specified duration. */
 public class TaktXBpmnPromise extends RuntimeException {
 
+  /** Duration after which the worker expects to complete the promised response. */
   private final Duration duration;
 
   /**

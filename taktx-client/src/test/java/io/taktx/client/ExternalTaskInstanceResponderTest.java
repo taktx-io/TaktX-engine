@@ -16,6 +16,7 @@ import io.taktx.dto.ExternalTaskResponseResultDTO;
 import io.taktx.dto.ExternalTaskResponseTriggerDTO;
 import io.taktx.dto.ExternalTaskResponseType;
 import io.taktx.dto.ProcessInstanceTriggerDTO;
+import io.taktx.variables.Variables;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
@@ -111,6 +112,8 @@ class ExternalTaskInstanceResponderTest {
     ExternalTaskResponseResultDTO resultDTO =
         externalTaskResponseTriggerDTO.getExternalTaskResponseResult();
     assertSuccessResult(resultDTO);
+    assertThat(Variables.toJavaObject(externalTaskResponseTriggerDTO.getVariables().get("value")))
+        .isEqualTo("test-value");
   }
 
   @SuppressWarnings("unchecked")
@@ -278,6 +281,7 @@ class ExternalTaskInstanceResponderTest {
     assertThat(resultDTO.getTimeout()).isEqualTo(duration.toMillis());
   }
 
+  @SuppressWarnings("unused")
   static class TestDto {
     private String value;
 

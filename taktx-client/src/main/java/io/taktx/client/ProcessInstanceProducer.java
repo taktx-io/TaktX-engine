@@ -40,6 +40,8 @@ public class ProcessInstanceProducer {
    * Constructor for ProcessInstanceProducer.
    *
    * @param kafkaPropertiesHelper the TaktPropertiesHelper to use for configuration
+   * @param processInstanceTriggerEmitter Kafka producer used to publish process-instance trigger
+   *     records
    */
   public ProcessInstanceProducer(
       TaktPropertiesHelper kafkaPropertiesHelper,
@@ -47,6 +49,15 @@ public class ProcessInstanceProducer {
     this(kafkaPropertiesHelper, processInstanceTriggerEmitter, null);
   }
 
+  /**
+   * Constructs a producer with an optional authorization-token provider.
+   *
+   * @param kafkaPropertiesHelper helper for resolving prefixed topic names and Kafka properties
+   * @param processInstanceTriggerEmitter Kafka producer used to publish process-instance trigger
+   *     records
+   * @param authorizationTokenProvider provider used to lazily obtain command JWTs when callers do
+   *     not supply one explicitly
+   */
   public ProcessInstanceProducer(
       TaktPropertiesHelper kafkaPropertiesHelper,
       KafkaProducer<UUID, ProcessInstanceTriggerDTO> processInstanceTriggerEmitter,
@@ -67,6 +78,14 @@ public class ProcessInstanceProducer {
     return startProcess(processDefinitionId, -1, variables, null);
   }
 
+  /**
+   * Starts a new process instance for a specific process-definition version.
+   *
+   * @param processDefinitionId the ID of the process definition to start
+   * @param version explicit process-definition version, or {@code -1} for latest
+   * @param variables the initial variables for the process instance
+   * @return the UUID of the started process instance
+   */
   public UUID startProcess(String processDefinitionId, int version, VariablesDTO variables) {
     return startProcess(processDefinitionId, version, variables, null);
   }
@@ -74,8 +93,12 @@ public class ProcessInstanceProducer {
   /**
    * Starts a new process instance, optionally attaching a Platform Service authorization token.
    *
+   * @param processDefinitionId the ID of the process definition to start
+   * @param version explicit process-definition version, or {@code -1} for latest
+   * @param variables the initial variables for the process instance
    * @param authorizationToken RS256 JWT from the Platform Service, or {@code null} for
    *     unauthenticated deployments
+   * @return the UUID of the started process instance
    */
   public UUID startProcess(
       String processDefinitionId,
@@ -89,10 +112,13 @@ public class ProcessInstanceProducer {
   /**
    * Starts a new process instance with optional business metadata.
    *
+   * @param processDefinitionId the ID of the process definition to start
+   * @param variables the initial variables for the process instance
    * @param businessKey optional business identifier for this instance; trimmed, empty treated as
    *     {@code null}, max 512 characters
    * @param tags optional immutable operational labels; normalised to lowercase, max 20 tags, max 64
    *     characters each, allowed characters: {@code a-z 0-9 . _ -}
+   * @return the UUID of the started process instance
    */
   public UUID startProcess(
       String processDefinitionId,
@@ -106,11 +132,15 @@ public class ProcessInstanceProducer {
    * Starts a new process instance with optional business metadata and a Platform Service
    * authorization token.
    *
+   * @param processDefinitionId the ID of the process definition to start
+   * @param version explicit process-definition version, or {@code -1} for latest
+   * @param variables the initial variables for the process instance
    * @param businessKey optional business identifier; see {@link #startProcess(String, VariablesDTO,
    *     String, Set)} for rules
    * @param tags optional immutable operational labels; see above for rules
    * @param authorizationToken RS256 JWT from the Platform Service, or {@code null} for
    *     unauthenticated deployments
+   * @return the UUID of the started process instance
    */
   public UUID startProcess(
       String processDefinitionId,
@@ -155,6 +185,13 @@ public class ProcessInstanceProducer {
     abortElementInstance(processInstanceId, List.of(), null);
   }
 
+  /**
+   * Sets variables in the given scope without an explicit authorization token.
+   *
+   * @param processInstanceId target process instance ID
+   * @param elementInstanceIdPath path identifying the target scope within the process instance
+   * @param variables variables to merge into the target scope
+   */
   public void setVariable(
       UUID processInstanceId, List<Long> elementInstanceIdPath, VariablesDTO variables) {
     setVariable(processInstanceId, elementInstanceIdPath, variables, null);
@@ -163,6 +200,9 @@ public class ProcessInstanceProducer {
   /**
    * Sets variables in a scope, optionally attaching a Platform Service authorization token.
    *
+   * @param processInstanceId target process instance ID
+   * @param elementInstanceIdPath path identifying the target scope within the process instance
+   * @param variables variables to merge into the target scope
    * @param authorizationToken RS256 JWT from the Platform Service, or {@code null} for
    *     unauthenticated deployments
    */
@@ -186,6 +226,12 @@ public class ProcessInstanceProducer {
     processInstanceTriggerEmitter.send(processInstanceTriggerRecord);
   }
 
+  /**
+   * Aborts a specific element instance without an explicit authorization token.
+   *
+   * @param processInstanceId active process instance containing the element to abort
+   * @param elementInstanceIdPath path identifying the element instance to abort
+   */
   public void abortElementInstance(UUID processInstanceId, List<Long> elementInstanceIdPath) {
     abortElementInstance(processInstanceId, elementInstanceIdPath, null);
   }
@@ -193,6 +239,8 @@ public class ProcessInstanceProducer {
   /**
    * Aborts an element instance, optionally attaching a Platform Service authorization token.
    *
+   * @param processInstanceId active process instance containing the element to abort
+   * @param elementInstanceIdPath path identifying the element instance to abort
    * @param authorizationToken RS256 JWT from the Platform Service, or {@code null}
    */
   public void abortElementInstance(

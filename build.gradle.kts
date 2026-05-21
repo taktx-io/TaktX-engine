@@ -32,10 +32,14 @@ subprojects {
         }
 
         // Configure the JaCoCo report task
-        tasks.withType<JacocoReport> {
+        tasks.named<JacocoReport>("jacocoTestReport") {
+            val canonicalJacocoReportDir = layout.buildDirectory.dir("reports/jacoco/test")
+
             reports {
                 xml.required.set(true)
+                xml.outputLocation.set(canonicalJacocoReportDir.map { it.file("jacocoTestReport.xml") })
                 html.required.set(true)
+                html.outputLocation.set(canonicalJacocoReportDir.map { it.dir("html") })
             }
 
             // Exclude specified packages from all modules
@@ -96,6 +100,17 @@ tasks.register<Exec>("generateCoverageBadges") {
     doLast {
         println("✅ Coverage badges updated in badges/ directory")
     }
+}
+
+tasks.register<Exec>("protoCheck") {
+    group = "verification"
+    description = "Validates protobuf field-number stability and reserved declarations"
+    workingDir = projectDir
+    commandLine("python3", "${projectDir}/scripts/check_proto_field_numbers.py")
+}
+
+tasks.named("check") {
+    dependsOn("protoCheck")
 }
 
 val allSubprojectChecks = subprojects.map { "${it.path}:check" }

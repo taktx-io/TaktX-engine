@@ -81,7 +81,7 @@ This document formalizes the architecture, design decisions, and implementation 
 ### Problem Statement
 
 Messages fail processing at multiple stages:
-- **Pre-decode failures**: CBOR corruption, malformed payloads, truncated arrays
+- **Pre-decode failures**: malformed protobuf payloads, truncated messages, schema/shape mismatches
 - **Signature verification failures**: Ed25519 signature mismatches, unknown/revoked key IDs, trust policy violations
 - **Authorization failures**: JWT verification failures, replay violations, insufficient claims, scope mismatches
 - **Business logic failures**: Unhandled error events, authorization scope violations, state conflicts
@@ -161,7 +161,7 @@ public class DlqEnvelope {
     @Nullable
     private byte[] keyBytes;
     
-    /** Raw value bytes: CBOR payload always preserved, even if decode fails */
+    /** Raw value bytes: payload always preserved, even if deserialization fails */
     private byte[] valueBytes;
     
     /** Snapshot of Kafka headers at time of rejection (preserves context for re-validation) */
@@ -256,7 +256,7 @@ The `headers` field stores a snapshot of Kafka record headers as `Map<String, St
 ```json
 {
   "headers": {
-    "X-TaktX-Signature": "base64_encoded_signature_bytes",
+    "tx-sig": "base64_encoded_signature_bytes",
     "X-TaktX-Signature-KeyId": "key-2026-05-01-alpha-001",
     "Authorization": "Bearer eyJhbGc...",
     "X-Tenant-Id": "tenant-123",
@@ -308,7 +308,7 @@ The console needs to:
 4. **Allow operator to**:
    - View raw payload (hex/base64)
    - Attempt to re-decode with schema selector (show as JSON if successful)
-   - Modify payload (edit JSON, re-encode to CBOR)
+   - Modify payload (edit JSON, then re-encode to the destination topic's protobuf payload)
    - Modify headers (change Authorization, add notes)
    - Select validation policy (STRICT, OPERATOR_OVERRIDE)
 5. **Dry-run replay**: validate payload, deserialization, and authorization without execution/publish
@@ -539,17 +539,17 @@ public ProcessInstanceTriggerEnvelope deserialize(String topic, Headers headers,
         
         return new ProcessInstanceTriggerEnvelope(data, trigger, true, keyId);
         
-    } catch (CborDecodeException e) {
+    } catch (PayloadDeserializationException e) {
         dlqPublisher.publishRejection(
             topic, null, data, headersMap(headers),
-            DlqReasonCode.CBOR_DECODE_ERROR,
-            "CBOR decoding failed: " + e.getMessage(),
+            DlqReasonCode.PAYLOAD_DESERIALIZATION_ERROR,
+            "Payload deserialization failed: " + e.getMessage(),
             Optional.empty(),
             Optional.empty()
         );
         
         return new ProcessInstanceTriggerEnvelope(data, null, false, null,
-            "CBOR decode error: " + e.getMessage());
+            "Payload deserialization error: " + e.getMessage());
     } catch (Exception e) {
         dlqPublisher.publishRejection(
             topic, null, data, headersMap(headers),
@@ -907,7 +907,7 @@ Define APIs/data structures that console will rely on:
 
 **Console Implements**:
 1. **DLQ Viewer**: UI to display rejected messages (filterable by reason code, time range, keyword)
-2. **Payload Inspector**: Attempt JSON/CBOR decode of raw payload; show decoded summary if available
+2. **Payload Inspector**: Attempt schema-aware payload decode of raw bytes; show decoded summary if available
 3. **Correction UI**: Modify payload/headers, select validation policy, publish to replay topic
 4. **Replay Monitor**: Track replay results, display success/failure to operator
 5. **Lineage Visualization**: Show message origin and correction history
@@ -1091,9 +1091,9 @@ Add lineage fields to `DlqReplayCommand` and `DlqReplayResult`:
 
 Implementation rule:
 - Replayed output MUST include headers:
-  - `X-DLQ-Lineage-Ref`
-  - `X-DLQ-Correction-Id`
-  - `X-DLQ-Source-Offset`
+  - `dlq-lin`
+  - `dlq-cid`
+  - `dlq-off`
 
 Replay signing authority:
 - Replayed messages MUST always be newly signed.

@@ -14,6 +14,8 @@ import static org.mockito.Mockito.verify;
 import io.taktx.dto.ProcessInstanceTriggerDTO;
 import io.taktx.dto.UserTaskResponseTriggerDTO;
 import io.taktx.dto.UserTaskResponseType;
+import io.taktx.proto.ProcessInstanceTriggerEnvelope;
+import io.taktx.serdes.ProcessInstanceTriggerProtoMapper;
 import java.util.List;
 import java.util.UUID;
 import org.apache.kafka.clients.producer.KafkaProducer;
@@ -44,7 +46,7 @@ class UserTaskInstanceResponderTest {
 
   @SuppressWarnings("unchecked")
   @Test
-  void respondSuccess_autoPopulatesMessageId() {
+  void respondSuccess_autoPopulatesMessageId() throws Exception {
     responder.respondSuccess();
 
     ArgumentCaptor<ProducerRecord<UUID, ProcessInstanceTriggerDTO>> captor =
@@ -62,6 +64,11 @@ class UserTaskInstanceResponderTest {
     assertThat(trigger.getMessageId()).isNotBlank();
     assertThat(trigger.getUserTaskResponseResult().getResponseType())
         .isEqualTo(UserTaskResponseType.COMPLETED);
+
+    byte[] payload = ProcessInstanceTriggerProtoMapper.toProto(trigger).toByteArray();
+    ProcessInstanceTriggerEnvelope envelope = ProcessInstanceTriggerEnvelope.parseFrom(payload);
+    assertThat(envelope.hasUserTaskResponse()).isTrue();
+    assertThat(envelope.getUserTaskResponse().getMessageId()).isEqualTo(trigger.getMessageId());
   }
 
   @SuppressWarnings("unchecked")

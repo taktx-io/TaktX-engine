@@ -1,0 +1,15 @@
+z 86 *receive-task0@HàR(2&
+
+input*receive-task
+
+count8Z 2
+
+result
+
+sequence:`jorder-42r(
+payment.received
+order-42
+order-43r)
+payment.cancelled
+order-44
+order-45

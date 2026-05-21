@@ -7,23 +7,11 @@
  */
 package io.taktx.dto;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
-import com.fasterxml.jackson.annotation.JsonFormat.Shape;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
-import com.fasterxml.jackson.databind.annotation.JsonTypeIdResolver;
-import io.quarkus.runtime.annotations.RegisterForReflection;
-import io.taktx.MessageSchedulerTypeIdResolver;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-@JsonTypeInfo(use = Id.CUSTOM, property = "c")
-@JsonFormat(shape = Shape.ARRAY)
-@JsonTypeIdResolver(MessageSchedulerTypeIdResolver.class)
 @NoArgsConstructor
 @Getter
-@RegisterForReflection
 public abstract class MessageScheduleDTO {
 
   protected SchedulableMessageDTO message;
@@ -35,6 +23,5 @@ public abstract class MessageScheduleDTO {
     this.instantiationTime = instantiationTime;
   }
 
-  @JsonIgnore
   public abstract Long getNextExecutionTime(long timestamp);
 }

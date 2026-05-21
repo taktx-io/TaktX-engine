@@ -9,23 +9,34 @@ package io.taktx.client.quarkus;
 
 import io.quarkus.arc.DefaultBean;
 import io.taktx.client.ProcessInstanceResponder;
+import io.taktx.dto.ProcessInstanceTriggerDTO;
 import io.taktx.util.TaktPropertiesHelper;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.inject.Instance;
 import jakarta.enterprise.inject.Produces;
+import java.util.UUID;
+import org.apache.kafka.clients.producer.KafkaProducer;
 
 /** Produces a default ProcessInstanceResponder bean for Quarkus applications. */
 @ApplicationScoped
 public class ProcessInstanceResponderProducer {
 
-  private TaktPropertiesHelper taktPropertiesHelper;
+  private final TaktPropertiesHelper taktPropertiesHelper;
+  private final Instance<KafkaProducer<UUID, ProcessInstanceTriggerDTO>>
+      processInstanceTriggerEmitter;
 
   /**
    * Constructor injecting the TaktPropertiesHelper.
    *
    * @param taktPropertiesHelper the TaktPropertiesHelper to be used
+   * @param processInstanceTriggerEmitter optional injected producer for process-instance trigger
+   *     records
    */
-  public ProcessInstanceResponderProducer(TaktPropertiesHelper taktPropertiesHelper) {
+  public ProcessInstanceResponderProducer(
+      TaktPropertiesHelper taktPropertiesHelper,
+      Instance<KafkaProducer<UUID, ProcessInstanceTriggerDTO>> processInstanceTriggerEmitter) {
     this.taktPropertiesHelper = taktPropertiesHelper;
+    this.processInstanceTriggerEmitter = processInstanceTriggerEmitter;
   }
 
   /**
@@ -37,6 +48,12 @@ public class ProcessInstanceResponderProducer {
   @ApplicationScoped
   @DefaultBean
   public ProcessInstanceResponder processInstanceResponder() {
-    return new ProcessInstanceResponder(taktPropertiesHelper);
+    KafkaProducer<UUID, ProcessInstanceTriggerDTO> producer =
+        processInstanceTriggerEmitter != null
+                && !processInstanceTriggerEmitter.isUnsatisfied()
+                && !processInstanceTriggerEmitter.isAmbiguous()
+            ? processInstanceTriggerEmitter.get()
+            : null;
+    return new ProcessInstanceResponder(taktPropertiesHelper, producer);
   }
 }

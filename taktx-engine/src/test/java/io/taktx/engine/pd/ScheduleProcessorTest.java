@@ -142,7 +142,7 @@ class ScheduleProcessorTest {
 
   private RecordHeaders signedHeaders(String keyId) {
     RecordHeaders headers = new RecordHeaders();
-    headers.add("X-TaktX-Signature", (keyId + ".AABB").getBytes(StandardCharsets.UTF_8));
+    headers.add("tx-sig", (keyId + ".AABB").getBytes(StandardCharsets.UTF_8));
     return headers;
   }
 

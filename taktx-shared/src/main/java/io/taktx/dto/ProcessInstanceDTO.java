@@ -7,10 +7,6 @@
  */
 package io.taktx.dto;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
-import com.fasterxml.jackson.annotation.JsonFormat.Shape;
-import com.fasterxml.jackson.annotation.JsonInclude;
-import io.quarkus.runtime.annotations.RegisterForReflection;
 import jakarta.annotation.Nullable;
 import java.util.List;
 import java.util.Set;
@@ -21,14 +17,15 @@ import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 
+/**
+ * Process-instance DTO backed by {@code process_instance.proto} / {@code ProcessInstanceMessage}.
+ * Business metadata maps to {@code business_key = 9} and {@code tags = 10}.
+ */
 @Getter
 @ToString
 @EqualsAndHashCode
 @SuperBuilder(toBuilder = true)
 @NoArgsConstructor
-@JsonFormat(shape = Shape.ARRAY)
-@JsonInclude(JsonInclude.Include.NON_NULL)
-@RegisterForReflection
 public class ProcessInstanceDTO {
   private UUID processInstanceId;
 
@@ -46,7 +43,7 @@ public class ProcessInstanceDTO {
 
   private IncidentInfoDTO incidentInfo;
 
-  // Business metadata — appended last for CBOR array backward compatibility
+  // Proto mapping: process_instance.proto / ProcessInstanceMessage.business_key = 9
   @Nullable private String businessKey;
 
   private Set<String> tags;

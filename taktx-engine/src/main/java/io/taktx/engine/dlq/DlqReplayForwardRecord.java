@@ -16,9 +16,10 @@ import java.util.Map;
  * <p>Produced by {@link DlqReplayProcessor} and consumed by {@link DlqForwardingProcessor}.
  *
  * @param targetTopic full prefixed topic name (e.g. {@code tenant.ns.process-instance})
+ * @param key corrected key bytes to write as the Kafka record key
  * @param payload corrected value bytes to write as the Kafka record value
  * @param headers decoded header map (values are raw {@code byte[]}); includes lineage headers and
  *     the fresh engine signature
  */
 public record DlqReplayForwardRecord(
-    String targetTopic, byte[] payload, Map<String, byte[]> headers) {}
+    String targetTopic, byte[] key, byte[] payload, Map<String, byte[]> headers) {}

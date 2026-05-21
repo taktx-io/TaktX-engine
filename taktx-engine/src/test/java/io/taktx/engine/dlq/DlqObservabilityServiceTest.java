@@ -96,13 +96,20 @@ class DlqObservabilityServiceTest {
     DlqEnvelope envelope =
         envelopeWith(
             DlqSeverity.MEDIUM,
-            DlqReasonCode.CBOR_DECODE_ERROR,
+            DlqReasonCode.PAYLOAD_DESERIALIZATION_ERROR,
             "message-event",
             DlqCaptureStage.DESERIALIZER);
 
     service.recordDlqEntry(envelope);
 
-    Counter counter = meterRegistry.find("taktx.dlq.entries").tag("severity", "MEDIUM").counter();
+    Counter counter =
+        meterRegistry
+            .find("taktx.dlq.entries")
+            .tag("severity", "MEDIUM")
+            .tag("reason_code", "PAYLOAD_DESERIALIZATION_ERROR")
+            .tag("source_topic", "message-event")
+            .tag("capture_stage", "DESERIALIZER")
+            .counter();
     assertThat(counter).isNotNull();
     assertThat(counter.count()).isEqualTo(1.0);
   }

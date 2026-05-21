@@ -11,13 +11,12 @@ package io.taktx.engine.pi.processor;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.TextNode;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.InputOutputMapping;
 import io.taktx.engine.pd.model.IoVariableMapping;
 import io.taktx.engine.pd.model.WithIoMapping;
 import io.taktx.engine.pi.model.VariableScope;
+import io.taktx.variables.Variables;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,8 +28,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class IoMappingProcessorTest {
 
-  @Spy private ObjectMapper objectMapper = new ObjectMapper();
-
   @Mock private FeelExpressionHandler feelExpressionHandler;
   @Mock private WithIoMapping element;
   @Mock private InputOutputMapping ioMapping;
@@ -41,7 +38,7 @@ class IoMappingProcessorTest {
 
   @BeforeEach
   void setUp() {
-    processor = new IoMappingProcessor(feelExpressionHandler, objectMapper);
+    processor = new IoMappingProcessor(feelExpressionHandler);
   }
 
   @Test
@@ -52,15 +49,15 @@ class IoMappingProcessorTest {
     when(element.getIoMapping()).thenReturn(ioMapping);
     when(ioMapping.getOutputMappings()).thenReturn(Set.of(mapping1, mapping2));
     when(feelExpressionHandler.processFeelExpression("sourceExpr1", variableScope))
-        .thenReturn(new TextNode("value1"));
+        .thenReturn(Variables.of("value1"));
     when(feelExpressionHandler.processFeelExpression("sourceExpr2", variableScope))
-        .thenReturn(new TextNode("value2"));
+        .thenReturn(Variables.of("value2"));
 
     processor.processOutputMappings(element, variableScope);
 
     assertThat(parentScope.getVariables()).hasSize(2);
-    assertThat(parentScope.get("targetVar1").asText()).isEqualTo("value1");
-    assertThat(parentScope.get("targetVar2").asText()).isEqualTo("value2");
+    assertThat(parentScope.get("targetVar1").getStringValue()).isEqualTo("value1");
+    assertThat(parentScope.get("targetVar2").getStringValue()).isEqualTo("value2");
   }
 
   @Test
@@ -70,7 +67,7 @@ class IoMappingProcessorTest {
 
     processor.processOutputMappings(element, variableScope);
 
-    verify(variableScope, never()).put(anyString(), any());
+    verify(variableScope, never()).put(anyString(), any(io.taktx.proto.VariableValue.class));
   }
 
   @Test
@@ -81,6 +78,6 @@ class IoMappingProcessorTest {
     processor.processInputMappings(element, variableScope);
 
     verify(feelExpressionHandler, never()).processFeelExpression(anyString(), any());
-    verify(variableScope, never()).put(anyString(), any());
+    verify(variableScope, never()).put(anyString(), any(io.taktx.proto.VariableValue.class));
   }
 }

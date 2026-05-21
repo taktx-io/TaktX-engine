@@ -1,0 +1,57 @@
+syntax = "proto3";
+
+package io.taktx.proto;
+
+option java_package = "io.taktx.proto";
+option java_multiple_files = true;
+option java_outer_classname = "InstanceUpdateProto";
+
+import "io/taktx/proto/common.proto";
+import "io/taktx/proto/variables.proto";
+import "io/taktx/proto/signing_key.proto";
+import "io/taktx/proto/flow_node_instance.proto";
+import "io/taktx/proto/process_instance.proto";
+
+// InstanceUpdateEnvelope — replaces InstanceUpdateTypeIdResolver
+message InstanceUpdateEnvelope {
+  oneof update {
+    FlowNodeInstanceUpdateMessage   flow_node = 1;  // TypeId "F"
+    ProcessInstanceUpdateMessage    process   = 2;  // TypeId "P"
+  }
+}
+
+// NOTE: CommandAuthMethod enum and CommandTrustMetadataMessage are in signing_key.proto
+
+// Java: FlowNodeInstanceUpdateDTO
+message FlowNodeInstanceUpdateMessage {
+  CommandTrustMetadataMessage current_trust_metadata  = 1;
+  CommandTrustMetadataMessage origin_trust_metadata   = 2;
+  repeated sint64             flow_node_instance_path = 3;
+  FlowNodeInstanceEnvelope    flow_node_instance      = 4;
+  VarMap                      variables               = 5;
+  sint64                      process_time            = 6;
+  optional string             input_sequence_flow_id  = 7;
+  repeated string             output_sequence_flow_ids = 8;
+}
+
+// Java: InstanceUpdateDTO (abstract — base fields flattened into concrete types)
+message InstanceUpdateMessage {
+  CommandTrustMetadataMessage current_trust_metadata = 1;
+  CommandTrustMetadataMessage origin_trust_metadata  = 2;
+}
+
+// Java: ProcessInstanceUpdateDTO
+message ProcessInstanceUpdateMessage {
+  CommandTrustMetadataMessage current_trust_metadata      = 1;
+  CommandTrustMetadataMessage origin_trust_metadata       = 2;
+  Uuid                        parent_process_instance_id  = 3;
+  repeated sint64             parent_element_instance_path = 4;
+  ProcessDefinitionKeyMessage process_definition_key      = 5;
+  IncidentInfoMessage         incident_info               = 6;
+  ScopeMessage                scope                       = 7;
+  VarMap                      variables                   = 8;
+  optional sint64             process_start_time          = 9;
+  optional sint64             process_end_time            = 10;
+  optional string             business_key                = 11;
+  repeated string             tags                        = 12;
+}

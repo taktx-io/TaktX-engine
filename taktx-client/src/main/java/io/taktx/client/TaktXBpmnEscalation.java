@@ -15,8 +15,13 @@ import io.taktx.dto.VariablesDTO;
  */
 public class TaktXBpmnEscalation extends RuntimeException {
 
+  /** BPMN escalation code matched against escalation handlers in the process model. */
   private final String errorCode;
+
+  /** Human-readable escalation message recorded with the response. */
   private final String errorMessage;
+
+  /** Optional variables to merge into the process context with the escalation response. */
   private final VariablesDTO variables;
 
   /**

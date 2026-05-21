@@ -8,7 +8,6 @@
 
 package io.taktx.engine.pi.processor;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.dto.ExecutionState;
 import io.taktx.dto.VariablesDTO;
@@ -28,7 +27,10 @@ import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.StartFlowNodeInstanceInfo;
 import io.taktx.engine.pi.model.ThrowEventInstance;
 import io.taktx.engine.pi.model.VariableScope;
+import io.taktx.proto.VariableValue;
+import io.taktx.variables.Variables;
 import java.time.Clock;
+import java.util.Map;
 import java.util.Optional;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -77,15 +79,17 @@ public abstract class ThrowEventInstanceProcessor<
                 throw new ProcessInstanceException(
                     flowNodeInstance, "SignalEventDefinition has no referenced signal");
               }
-              JsonNode jsonNode =
+              VariableValue signalNameValue =
                   feelExpressionHandler.processFeelExpression(
                       referencedSignal.name(), variableScope);
-              if (jsonNode == null || jsonNode.isNull()) {
+              if (signalNameValue == null
+                  || signalNameValue.getKindCase() == VariableValue.KindCase.NULL_VALUE
+                  || signalNameValue.getKindCase() == VariableValue.KindCase.KIND_NOT_SET) {
                 throw new ProcessInstanceException(
                     flowNodeInstance, "Signal name expression returned null");
               }
 
-              String name = jsonNode.asText();
+              String name = String.valueOf(Variables.toJavaObject(signalNameValue));
 
               processInstanceProcessingContext.getInstanceResult().addSignal(name);
             });
@@ -100,7 +104,7 @@ public abstract class ThrowEventInstanceProcessor<
                       flowNodeInstance,
                       errorEventDefinition.getReferencedError().code(),
                       "",
-                      VariablesDTO.empty());
+                      Map.of());
               scope.getDirectInstanceResult().addEvent(errorEvent);
             });
 
@@ -114,7 +118,7 @@ public abstract class ThrowEventInstanceProcessor<
                       flowNodeInstance,
                       errorEventDefinition.getReferencedEscalation().code(),
                       "",
-                      VariablesDTO.empty());
+                      Map.of());
               scope.getDirectInstanceResult().addEvent(escalationEventSignal);
             });
 
@@ -144,7 +148,7 @@ public abstract class ThrowEventInstanceProcessor<
                             scope.getProcessInstanceId(),
                             catchEventInstance.createKeyPath(),
                             null,
-                            childVariableScope.scopeToDTO());
+                            VariablesDTO.ofVariableMap(childVariableScope.scopeToMap()));
                     ContinueFlowNodeInstanceInfo continueFlowNodeInstanceInfo =
                         new ContinueFlowNodeInstanceInfo(
                             catchEventInstance, trigger, childVariableScope);

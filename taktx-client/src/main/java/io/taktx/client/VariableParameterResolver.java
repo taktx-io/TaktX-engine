@@ -7,29 +7,25 @@
  */
 package io.taktx.client;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.taktx.dto.ExternalTaskTriggerDTO;
+import io.taktx.proto.VariableValue;
 
 /**
  * A parameter resolver that extracts a variable from the ExternalTaskTriggerDTO's variables map and
- * converts it to the specified type using Jackson's ObjectMapper.
+ * converts it to the specified type using proto-backed variable values.
  */
 public class VariableParameterResolver implements ParameterResolver {
 
-  private final ObjectMapper objectMapper;
   private final Class<?> type;
   private final String name;
 
   /**
    * Constructs a VariableParameterResolver.
    *
-   * @param objectMapper the ObjectMapper to use for conversion
    * @param type the target type to convert the variable to
    * @param name the name of the variable to extract
    */
-  public VariableParameterResolver(ObjectMapper objectMapper, Class<?> type, String name) {
-    this.objectMapper = objectMapper;
+  public VariableParameterResolver(Class<?> type, String name) {
     this.type = type;
     this.name = name;
   }
@@ -43,9 +39,12 @@ public class VariableParameterResolver implements ParameterResolver {
    */
   @Override
   public Object resolve(ExternalTaskTriggerDTO externalTaskTriggerDTO) {
-    JsonNode jsonNode = externalTaskTriggerDTO.getVariables().get(name);
-    if (jsonNode != null) {
-      return objectMapper.convertValue(jsonNode, type);
+    VariableValue value =
+        externalTaskTriggerDTO.getVariables() == null
+            ? null
+            : externalTaskTriggerDTO.getVariables().get(name);
+    if (value != null) {
+      return ClientValueMapper.fromVariableValue(value, type);
     }
     return null;
   }

@@ -7,14 +7,14 @@
  */
 package io.taktx.client;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import io.taktx.dto.ExternalTaskTriggerDTO;
 import java.util.HashMap;
 
+/** Result processor for {@code void} worker methods that emits an empty variable map. */
 public class VoidResultProcessor implements ResultProcessor {
 
   @Override
   public Object process(Object object, ExternalTaskTriggerDTO externalTaskTrigger) {
-    return new HashMap<String, JsonNode>();
+    return new HashMap<>();
   }
 }

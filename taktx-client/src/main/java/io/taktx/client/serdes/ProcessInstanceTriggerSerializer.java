@@ -8,13 +8,26 @@
 package io.taktx.client.serdes;
 
 import io.taktx.dto.ProcessInstanceTriggerDTO;
-import io.taktx.serdes.JsonSerializer;
+import io.taktx.serdes.ProcessInstanceTriggerProtoMapper;
+import org.apache.kafka.common.serialization.Serializer;
 
-/** A JSON serializer for ProcessInstanceTriggerDTO objects. */
-public class ProcessInstanceTriggerSerializer extends JsonSerializer<ProcessInstanceTriggerDTO> {
+/** A protobuf serializer for {@link ProcessInstanceTriggerDTO} objects. */
+public class ProcessInstanceTriggerSerializer implements Serializer<ProcessInstanceTriggerDTO> {
 
-  /** Constructor for ProcessInstanceTriggerSerializer. */
-  public ProcessInstanceTriggerSerializer() {
-    super(ProcessInstanceTriggerDTO.class);
+  /**
+   * Returns the DTO class serialized by this serializer.
+   *
+   * @return {@link ProcessInstanceTriggerDTO}.class
+   */
+  public Class<ProcessInstanceTriggerDTO> getClazz() {
+    return ProcessInstanceTriggerDTO.class;
+  }
+
+  @Override
+  public byte[] serialize(String topic, ProcessInstanceTriggerDTO data) {
+    if (data == null) {
+      return null;
+    }
+    return ProcessInstanceTriggerProtoMapper.toProto(data).toByteArray();
   }
 }

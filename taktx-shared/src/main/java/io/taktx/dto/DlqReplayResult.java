@@ -7,7 +7,6 @@
  */
 package io.taktx.dto;
 
-import io.quarkus.runtime.annotations.RegisterForReflection;
 import jakarta.annotation.Nullable;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -18,7 +17,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@RegisterForReflection
 public class DlqReplayResult {
   private String dlqEntryRef;
   private String operatorId;
@@ -44,9 +42,9 @@ public class DlqReplayResult {
   @Nullable private String lineageRef;
 
   /**
-   * Unique ID generated per replay attempt; matches the {@code X-DLQ-Correction-Id} header stamped
-   * on the forwarded record. Use this to correlate the replay result with the record that arrived
-   * on the target ingress topic.
+   * Unique ID generated per replay attempt; matches the {@code dlq-cid} header stamped on the
+   * forwarded record. Use this to correlate the replay result with the record that arrived on the
+   * target ingress topic.
    */
   @Nullable private String correctionId;
 }

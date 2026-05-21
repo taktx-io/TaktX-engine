@@ -36,6 +36,7 @@ import io.taktx.dto.SubscriptionDTO;
 import io.taktx.dto.SubscriptionsDTO;
 import io.taktx.dto.TaskInstanceDTO;
 import io.taktx.dto.UserTaskInstanceDTO;
+import io.taktx.dto.VariablesDTO;
 import io.taktx.dto.subscriptions.CatchAllErrorSubscriptionDTO;
 import io.taktx.dto.subscriptions.CatchAllEscalationSubscriptionDTO;
 import io.taktx.dto.subscriptions.ErrorSubscriptionDTO;
@@ -80,6 +81,7 @@ import io.taktx.engine.pi.model.subscriptions.SignalSubscription;
 import io.taktx.engine.pi.model.subscriptions.Subscription;
 import io.taktx.engine.pi.model.subscriptions.Subscriptions;
 import io.taktx.engine.pi.model.subscriptions.TimerSubscription;
+import io.taktx.proto.VariableValue;
 import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 import java.util.Map;
@@ -901,4 +903,12 @@ public interface ProcessInstanceMapper {
   // mapping method when mapping the Map values (FlowNodeInstance -> FlowNodeInstanceDTO)
   Map<UUID, FlowNodeInstanceDTO> map(
       Map<UUID, FlowNodeInstance<?>> instances, @Context FlowElements flowElements);
+
+  default Map<String, VariableValue> map(VariablesDTO variables) {
+    return variables == null ? Map.of() : variables.getVariables();
+  }
+
+  default VariablesDTO map(Map<String, VariableValue> variables) {
+    return VariablesDTO.ofVariableMap(variables == null ? Map.of() : variables);
+  }
 }

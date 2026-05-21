@@ -1,0 +1,218 @@
+syntax = "proto3";
+
+package io.taktx.proto;
+
+option java_package = "io.taktx.proto";
+option java_multiple_files = true;
+option java_outer_classname = "ProcessInstanceTriggerProto";
+
+import "io/taktx/proto/common.proto";
+import "io/taktx/proto/variables.proto";
+import "io/taktx/proto/signing_key.proto";
+
+// ProcessInstanceTriggerEnvelope — replaces ProcessInstanceTriggerTypeIdResolver
+message ProcessInstanceTriggerEnvelope {
+  oneof trigger {
+    StartCommandMessage               start              = 1; // TypeId "A"
+    ContinueFlowElementTriggerMessage continue_flow      = 2; // TypeId "C"
+    ExternalTaskTriggerMessage        external_task      = 3; // TypeId "E"
+    SetVariableTriggerMessage         set_variable       = 4; // TypeId "F"
+    ExternalTaskResponseTriggerMessage ext_task_response = 5; // TypeId "R"
+    StartFlowElementTriggerMessage    start_flow_element = 6; // TypeId "S"
+    AbortTriggerMessage               abort              = 7; // TypeId "T"
+    UserTaskResponseTriggerMessage    user_task_response = 8; // TypeId "U"
+    EventSignalTriggerMessage         event_signal       = 9; // TypeId "V"
+  }
+}
+
+// EventSignalEnvelope — replaces EventSignalTypeIdResolver
+message EventSignalEnvelope {
+  oneof signal {
+    MessageEventSignalMessage   message_signal    = 1; // TypeId "M"
+    ErrorEventSignalMessage     error_signal      = 2; // TypeId "R"
+    EscalationEventSignalMessage escalation_signal = 3; // TypeId "S"
+    TimerEventSignalMessage     timer_signal      = 4; // TypeId "T"
+    SignalEventSignalMessage     signal_signal     = 5; // TypeId "I"
+  }
+}
+
+enum ExternalTaskResponseType {
+  EXTERNAL_TASK_RESPONSE_UNSPECIFIED = 0;
+  EXTERNAL_TASK_RESPONSE_SUCCESS     = 1;
+  EXTERNAL_TASK_RESPONSE_PROMISE     = 2;
+  EXTERNAL_TASK_RESPONSE_TIMEOUT     = 3;
+  EXTERNAL_TASK_RESPONSE_ESCALATION  = 4;
+  EXTERNAL_TASK_RESPONSE_ERROR       = 5;
+  EXTERNAL_TASK_RESPONSE_INCIDENT    = 6;
+}
+
+enum UserTaskResponseType {
+  USER_TASK_RESPONSE_UNSPECIFIED = 0;
+  USER_TASK_RESPONSE_COMPLETED   = 1;
+  USER_TASK_RESPONSE_ESCALATION  = 2;
+  USER_TASK_RESPONSE_ERROR       = 3;
+}
+
+// Java: AbortTriggerDTO
+message AbortTriggerMessage {
+  Uuid process_instance_id = 1;
+  CommandTrustMetadataMessage current_trust_metadata = 2;
+  CommandTrustMetadataMessage origin_trust_metadata = 3;
+  repeated sint64 element_instance_id_path = 4;
+}
+
+// Java: ContinueFlowElementTriggerDTO
+message ContinueFlowElementTriggerMessage {
+  Uuid process_instance_id = 1;
+  CommandTrustMetadataMessage current_trust_metadata = 2;
+  CommandTrustMetadataMessage origin_trust_metadata = 3;
+  string input_flow_id = 4;
+  VarMap variables = 5;
+  repeated sint64 element_instance_id_path = 6;
+}
+
+// Java: ErrorEventSignalDTO
+message ErrorEventSignalMessage {
+  repeated sint64 element_instance_id_path = 1;
+  VarMap variables = 2;
+  string code = 3;
+  string message = 4;
+}
+
+// Java: EscalationEventSignalDTO
+message EscalationEventSignalMessage {
+  repeated sint64 element_instance_id_path = 1;
+  VarMap variables = 2;
+  string code = 3;
+  string message = 4;
+}
+
+// Java: EventSignalDTO (abstract)
+message EventSignalMessage {
+  repeated sint64 element_instance_id_path = 1;
+  VarMap variables = 2;
+}
+
+// Java: EventSignalTriggerDTO
+message EventSignalTriggerMessage {
+  Uuid process_instance_id = 1;
+  CommandTrustMetadataMessage current_trust_metadata = 2;
+  CommandTrustMetadataMessage origin_trust_metadata = 3;
+  EventSignalEnvelope event_signal = 4;
+}
+
+// Java: ExternalTaskResponseResultDTO
+message ExternalTaskResponseResultMessage {
+  ExternalTaskResponseType response_type = 1;
+  string code = 2;
+  string message = 3;
+  optional bool allow_retry = 4;
+  sint64 timeout = 5;
+  repeated string stacktrace = 6;
+}
+
+// Java: ExternalTaskResponseTriggerDTO
+message ExternalTaskResponseTriggerMessage {
+  Uuid process_instance_id = 1;
+  CommandTrustMetadataMessage current_trust_metadata = 2;
+  CommandTrustMetadataMessage origin_trust_metadata = 3;
+  string input_flow_id = 4;
+  VarMap variables = 5;
+  repeated sint64 element_instance_id_path = 6;
+  string message_id = 7;
+  ExternalTaskResponseResultMessage external_task_response_result = 8;
+}
+
+// Java: ExternalTaskTriggerDTO
+message ExternalTaskTriggerMessage {
+  Uuid process_instance_id = 1;
+  ProcessDefinitionKeyMessage process_definition_key = 2;
+  string external_task_id = 3;
+  string element_id = 4;
+  repeated sint64 element_instance_id_path = 5;
+  VarMap variables = 6;
+  map<string, string> headers = 7;
+}
+
+// Java: MessageEventSignalDTO
+message MessageEventSignalMessage {
+  repeated sint64 element_instance_id_path = 1;
+  VarMap variables = 2;
+  string element_id = 3;
+  string name = 4;
+}
+
+// Java: ProcessInstanceTriggerDTO (abstract)
+message ProcessInstanceTriggerMessage {
+  Uuid process_instance_id = 1;
+  CommandTrustMetadataMessage current_trust_metadata = 2;
+  CommandTrustMetadataMessage origin_trust_metadata = 3;
+}
+
+// Java: SetVariableTriggerDTO
+message SetVariableTriggerMessage {
+  Uuid process_instance_id = 1;
+  CommandTrustMetadataMessage current_trust_metadata = 2;
+  CommandTrustMetadataMessage origin_trust_metadata = 3;
+  repeated sint64 parent_element_instance_id_path = 4;
+  VarMap variables = 5;
+}
+
+// Java: SignalEventSignalDTO
+message SignalEventSignalMessage {
+  repeated sint64 element_instance_id_path = 1;
+  VarMap variables = 2;
+  string name = 3;
+}
+
+// Java: StartCommandDTO
+message StartCommandMessage {
+  Uuid process_instance_id = 1;
+  CommandTrustMetadataMessage current_trust_metadata = 2;
+  CommandTrustMetadataMessage origin_trust_metadata = 3;
+  Uuid parent_process_instance_id = 4;
+  string element_id = 5;
+  repeated sint64 parent_element_instance_path = 6;
+  ProcessDefinitionKeyMessage process_definition_key = 7;
+  VarMap variables = 8;
+  bool propagate_all_to_parent = 9;
+  repeated IoVariableMappingMessage output_mappings = 10;
+  string business_key = 11;
+  repeated string tags = 12;
+}
+
+// Java: StartFlowElementTriggerDTO
+message StartFlowElementTriggerMessage {
+  Uuid process_instance_id = 1;
+  CommandTrustMetadataMessage current_trust_metadata = 2;
+  CommandTrustMetadataMessage origin_trust_metadata = 3;
+  repeated sint64 parent_element_instance_id_path = 4;
+  string element_id = 5;
+  VarMap variables = 6;
+}
+
+// Java: TimerEventSignalDTO
+message TimerEventSignalMessage {
+  repeated sint64 element_instance_id_path = 1;
+  VarMap variables = 2;
+  string element_id = 3;
+}
+
+// Java: UserTaskResponseResultDTO
+message UserTaskResponseResultMessage {
+  UserTaskResponseType response_type = 1;
+  string code = 2;
+  string message = 3;
+}
+
+// Java: UserTaskResponseTriggerDTO
+message UserTaskResponseTriggerMessage {
+  Uuid process_instance_id = 1;
+  CommandTrustMetadataMessage current_trust_metadata = 2;
+  CommandTrustMetadataMessage origin_trust_metadata = 3;
+  string input_flow_id = 4;
+  VarMap variables = 5;
+  repeated sint64 element_instance_id_path = 6;
+  string message_id = 7;
+  UserTaskResponseResultMessage user_task_response_result = 8;
+}

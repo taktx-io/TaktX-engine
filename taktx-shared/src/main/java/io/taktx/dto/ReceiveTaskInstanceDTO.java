@@ -7,7 +7,6 @@
  */
 package io.taktx.dto;
 
-import io.quarkus.runtime.annotations.RegisterForReflection;
 import java.util.Map;
 import java.util.Set;
 import lombok.Data;
@@ -19,7 +18,6 @@ import lombok.ToString;
 @Data
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-@RegisterForReflection
 public class ReceiveTaskInstanceDTO extends TaskInstanceDTO {
 
   private String correlationKey;

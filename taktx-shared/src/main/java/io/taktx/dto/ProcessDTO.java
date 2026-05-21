@@ -7,7 +7,6 @@
  */
 package io.taktx.dto;
 
-import io.quarkus.runtime.annotations.RegisterForReflection;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -17,7 +16,6 @@ import lombok.ToString;
 @EqualsAndHashCode(callSuper = true)
 @ToString
 @NoArgsConstructor
-@RegisterForReflection
 public class ProcessDTO extends RootElementDTO {
 
   public static final ProcessDTO NONE = new ProcessDTO(null, null, null, null);

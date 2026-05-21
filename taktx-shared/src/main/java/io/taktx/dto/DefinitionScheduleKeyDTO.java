@@ -7,7 +7,6 @@
  */
 package io.taktx.dto;
 
-import io.quarkus.runtime.annotations.RegisterForReflection;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -19,7 +18,6 @@ import lombok.ToString;
 @Setter
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-@RegisterForReflection
 public class DefinitionScheduleKeyDTO extends ScheduleKeyDTO {
 
   private ProcessDefinitionKey processDefinitionKey;

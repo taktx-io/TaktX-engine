@@ -84,6 +84,19 @@ class SubscriptionsTest {
   }
 
   @Test
+  void setInstanceSubscriptions_shouldNormalizeNullToEmptyMap() {
+    subscriptions.setInstanceSubscriptions(null);
+    when(flowNodeInstance.getElementInstanceId()).thenReturn(42L);
+
+    assertNotNull(subscriptions.getInstanceSubscriptions());
+    assertTrue(subscriptions.getInstanceSubscriptions().isEmpty());
+    assertDoesNotThrow(
+        () ->
+            subscriptions.cancelSubscriptionsForInstance(
+                processingContext, flowNodeInstance, scope));
+  }
+
+  @Test
   void terminateAllSubscriptionsIfDone_shouldCancelAllSubscriptions_whenScopeIsDone() {
     Subscription subscription1 = mock(Subscription.class);
     Subscription subscription2 = mock(Subscription.class);
@@ -136,7 +149,7 @@ class SubscriptionsTest {
     when(scope.getProcessInstanceId()).thenReturn(java.util.UUID.randomUUID());
     when(variableScope.selectChildScope(flowNodeInstance)).thenReturn(variableScope);
     when(scope.getDirectInstanceResult()).thenReturn(directInstanceResult);
-    when(eventSignal.getVariables()).thenReturn(io.taktx.dto.VariablesDTO.empty());
+    when(eventSignal.getVariables()).thenReturn(java.util.Map.of());
 
     subscriptions
         .getInstanceSubscriptions()
@@ -197,7 +210,7 @@ class SubscriptionsTest {
     when(scope.getProcessInstanceId()).thenReturn(java.util.UUID.randomUUID());
     when(variableScope.selectChildScope(flowNodeInstance)).thenReturn(variableScope);
     when(scope.getDirectInstanceResult()).thenReturn(directInstanceResult);
-    when(eventSignal.getVariables()).thenReturn(io.taktx.dto.VariablesDTO.empty());
+    when(eventSignal.getVariables()).thenReturn(java.util.Map.of());
 
     // Add low priority first, then high priority - should still match high priority first
     List<Subscription> subs = new ArrayList<>();

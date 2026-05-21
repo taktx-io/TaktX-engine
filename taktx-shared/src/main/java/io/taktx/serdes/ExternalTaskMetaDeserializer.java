@@ -7,11 +7,9 @@
  */
 package io.taktx.serdes;
 
-import io.taktx.dto.TopicMetaDTO;
-
-public class ExternalTaskMetaDeserializer extends JsonDeserializer<TopicMetaDTO> {
+public class ExternalTaskMetaDeserializer extends TopicMetaDtoDeserializer {
 
   public ExternalTaskMetaDeserializer() {
-    super(TopicMetaDTO.class, true);
+    super(true);
   }
 }

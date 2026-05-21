@@ -11,10 +11,8 @@ package io.taktx.engine.pi.processor;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-import com.fasterxml.jackson.databind.node.TextNode;
 import io.taktx.dto.AbortTriggerDTO;
 import io.taktx.dto.ExecutionState;
-import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.CallActivity;
 import io.taktx.engine.pd.model.InputOutputMapping;
@@ -25,6 +23,7 @@ import io.taktx.engine.pi.ProcessInstanceProcessingContext;
 import io.taktx.engine.pi.model.CallActivityInstance;
 import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.VariableScope;
+import io.taktx.variables.Variables;
 import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -56,9 +55,9 @@ class CallActivityInstanceProcessorTest {
     when(callActivity.isPropagateAllChildVariables()).thenReturn(true);
     when(callActivity.getIoMapping()).thenReturn(ioMapping);
     when(ioMapping.getOutputMappings()).thenReturn(Set.of());
-    when(variableScope.scopeToDTO()).thenReturn(new VariablesDTO());
+    when(variableScope.scopeToMap()).thenReturn(java.util.Map.of());
     when(feelExpressionHandler.processFeelExpression("childProcess", variableScope))
-        .thenReturn(new TextNode("childProcessId"));
+        .thenReturn(Variables.of("childProcessId"));
     when(processingContext.getInstanceResult()).thenReturn(instanceResult);
 
     processor.processStartSpecificActivityInstance(
@@ -84,15 +83,15 @@ class CallActivityInstanceProcessorTest {
     when(callActivity.isPropagateAllChildVariables()).thenReturn(false);
     when(callActivity.getIoMapping()).thenReturn(ioMapping);
     when(ioMapping.getOutputMappings()).thenReturn(Set.of());
-    when(variableScope.scopeAndParentsToDto()).thenReturn(new VariablesDTO());
+    when(variableScope.scopeAndParentsToMap()).thenReturn(java.util.Map.of());
     when(feelExpressionHandler.processFeelExpression("childProcess", variableScope))
-        .thenReturn(new TextNode("childProcessId"));
+        .thenReturn(Variables.of("childProcessId"));
     when(processingContext.getInstanceResult()).thenReturn(instanceResult);
 
     processor.processStartSpecificActivityInstance(
         processingContext, scope, variableScope, callActivityInstance, "flow1");
 
-    verify(variableScope).scopeAndParentsToDto();
+    verify(variableScope).scopeAndParentsToMap();
   }
 
   @Test
@@ -100,7 +99,7 @@ class CallActivityInstanceProcessorTest {
     when(callActivityInstance.getFlowNode()).thenReturn(callActivity);
     when(callActivity.getCalledElement()).thenReturn("childProcess");
     when(feelExpressionHandler.processFeelExpression("childProcess", variableScope))
-        .thenReturn(null);
+        .thenReturn(Variables.nullValue());
 
     assertThrows(
         ProcessInstanceException.class,

@@ -88,7 +88,10 @@ public class SignalProcessor implements Processor<String, SignalDTO, Object, Obj
   public void process(Record<String, SignalDTO> singalRecord) {
     if (singalRecord.value() == null) {
       emitSignalDlq(
-          singalRecord, "CBOR_DECODE_ERROR", "Null payload for signals record", "DESERIALIZER");
+          singalRecord,
+          "PAYLOAD_DESERIALIZATION_ERROR",
+          "Null payload for signals record",
+          "DESERIALIZER");
       return;
     }
     try {
@@ -173,31 +176,33 @@ public class SignalProcessor implements Processor<String, SignalDTO, Object, Obj
         return upper;
       }
     }
-    return new byte[0];
+    return null;
   }
 
   private void handleDefinitionSignals(SignalDTO signalDTO) {
     byte[] startHash = hash(signalDTO.getSignalName());
     byte[] endHash = prefixExclusiveUpperBound(startHash);
     SignalDefinitionSubscriptionKeyDTO start =
-        new SignalDefinitionSubscriptionKeyDTO(startHash, new ProcessDefinitionKey("", 0), null);
+        new SignalDefinitionSubscriptionKeyDTO(startHash, new ProcessDefinitionKey("", 0), "");
+    if (endHash == null) {
+      try (KeyValueIterator<SignalDefinitionSubscriptionKeyDTO, String> all =
+          definitionSignalSubscriptionStore.all()) {
+        all.forEachRemaining(
+            subscription -> {
+              if (Arrays.equals(subscription.key.getSignalNameHash(), startHash)) {
+                forwardSignalStart(subscription);
+              }
+            });
+      }
+      return;
+    }
+
     SignalDefinitionSubscriptionKeyDTO end =
-        new SignalDefinitionSubscriptionKeyDTO(endHash, new ProcessDefinitionKey("", 0), null);
+        new SignalDefinitionSubscriptionKeyDTO(endHash, null, null);
 
     try (KeyValueIterator<SignalDefinitionSubscriptionKeyDTO, String> range =
         definitionSignalSubscriptionStore.range(start, end)) {
-      range.forEachRemaining(
-          subscription -> {
-            UUID processInstanceId = UUID.randomUUID();
-            StartCommandDTO startCommand =
-                new StartCommandDTO(
-                    processInstanceId,
-                    subscription.key.getElementId(),
-                    null,
-                    subscription.key.getProcessDefinitionKey(),
-                    VariablesDTO.empty());
-            context.forward(new Record<>(processInstanceId, startCommand, clock.millis()));
-          });
+      range.forEachRemaining(this::forwardSignalStart);
     }
   }
 
@@ -227,11 +232,19 @@ public class SignalProcessor implements Processor<String, SignalDTO, Object, Obj
   }
 
   private byte[] hash(String input) {
-    byte[] digest = SHA256_DIGEST.get().digest(input.getBytes(StandardCharsets.UTF_8));
+    return SHA256_DIGEST.get().digest(input.getBytes(StandardCharsets.UTF_8));
+  }
 
-    byte[] truncated = new byte[16];
-    System.arraycopy(digest, 0, truncated, 0, 16);
-
-    return truncated;
+  private void forwardSignalStart(
+      org.apache.kafka.streams.KeyValue<SignalDefinitionSubscriptionKeyDTO, String> subscription) {
+    UUID processInstanceId = UUID.randomUUID();
+    StartCommandDTO startCommand =
+        new StartCommandDTO(
+            processInstanceId,
+            subscription.key.getElementId(),
+            null,
+            subscription.key.getProcessDefinitionKey(),
+            VariablesDTO.empty());
+    context.forward(new Record<>(processInstanceId, startCommand, clock.millis()));
   }
 }

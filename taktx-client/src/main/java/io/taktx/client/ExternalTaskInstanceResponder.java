@@ -7,18 +7,13 @@
  */
 package io.taktx.client;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
 import io.taktx.dto.ExternalTaskResponseResultDTO;
 import io.taktx.dto.ExternalTaskResponseTriggerDTO;
 import io.taktx.dto.ExternalTaskResponseType;
 import io.taktx.dto.ProcessInstanceTriggerDTO;
 import io.taktx.dto.VariablesDTO;
+import io.taktx.proto.VariableValue;
 import java.time.Duration;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -31,13 +26,20 @@ import org.apache.kafka.clients.producer.ProducerRecord;
  */
 public class ExternalTaskInstanceResponder {
 
-  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper(new CBORFactory());
   private final KafkaProducer<UUID, ProcessInstanceTriggerDTO> responseEmitter;
   private final String topicName;
   private final UUID processInstanceId;
   private final List<Long> elementInstanceIdPath;
   private final Runnable beforeSendHook;
 
+  /**
+   * Creates a responder bound to a specific external-task instance.
+   *
+   * @param responseEmitter Kafka producer used to emit response triggers
+   * @param topicName target process-instance trigger topic
+   * @param processInstanceId owning process instance ID
+   * @param elementInstanceIdPath path identifying the external-task element instance
+   */
   public ExternalTaskInstanceResponder(
       KafkaProducer<UUID, ProcessInstanceTriggerDTO> responseEmitter,
       String topicName,
@@ -61,31 +63,32 @@ public class ExternalTaskInstanceResponder {
 
   /** Responds with a success message without any variables. */
   public void respondSuccess() {
-    Map<String, JsonNode> variablesMap = new HashMap<>();
-    respondSuccess(variablesMap);
+    respondSuccess(VariablesDTO.empty());
   }
 
   /**
    * Responds with a success message including the provided variables.
    *
-   * @param variable The variables to include in the response. It is directly serialized to a JSON
-   *     map
+   * @param variable The variables to include in the response. It is converted to the shared
+   *     variables DTO map representation.
    */
   public void respondSuccess(Object variable) {
-    Map<String, JsonNode> variablesMap =
-        variable == null
-            ? Map.of()
-            : OBJECT_MAPPER.convertValue(
-                variable, new TypeReference<LinkedHashMap<String, JsonNode>>() {});
-    respondSuccess(variablesMap);
+    respondSuccess(toVariables(variable));
   }
 
   /**
    * Responds with a success message including the provided variables map.
    *
-   * @param variablesMap The map of variable names to their JSON values.
+   * @param variablesMap The map of variable names to their variable values.
    */
-  public void respondSuccess(Map<String, JsonNode> variablesMap) {
+  public void respondSuccess(Map<String, VariableValue> variablesMap) {
+    respondSuccess(
+        variablesMap == null
+            ? VariablesDTO.empty()
+            : ClientValueMapper.toVariablesDto(variablesMap));
+  }
+
+  private void respondSuccess(VariablesDTO variables) {
     ExternalTaskResponseResultDTO externalTaskResponseResult =
         new ExternalTaskResponseResultDTO(ExternalTaskResponseType.SUCCESS, true, null, null, 0L);
     ExternalTaskResponseTriggerDTO processInstanceTrigger =
@@ -94,8 +97,15 @@ public class ExternalTaskInstanceResponder {
             elementInstanceIdPath,
             UUID.randomUUID().toString(),
             externalTaskResponseResult,
-            new VariablesDTO(variablesMap));
+            variables);
     sendSigned(processInstanceTrigger);
+  }
+
+  private static VariablesDTO toVariables(Object variable) {
+    if (variable == null) {
+      return VariablesDTO.empty();
+    }
+    return ClientValueMapper.toVariablesDto(variable);
   }
 
   /**

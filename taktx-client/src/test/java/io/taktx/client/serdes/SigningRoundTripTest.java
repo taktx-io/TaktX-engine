@@ -16,9 +16,11 @@ import io.taktx.dto.ScopeDTO;
 import io.taktx.security.Ed25519Service;
 import io.taktx.security.SigningKeyGenerator;
 import io.taktx.security.SigningServiceHolder;
-import io.taktx.serdes.JsonSerializer;
-import io.taktx.serdes.SigningSerializer;
+import io.taktx.serdes.InstanceUpdateDtoDeserializer;
+import io.taktx.serdes.InstanceUpdateProtoMapper;
+import io.taktx.serdes.ProtoSigningSerializer;
 import java.security.KeyPair;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.Map;
 import org.apache.kafka.common.header.Headers;
@@ -30,14 +32,14 @@ import org.junit.jupiter.api.Test;
 /**
  * Unit tests for the complete engine-producer → worker-consumer signing round trip.
  *
- * <p>Covers the path that was broken in production: the engine's {@link SigningSerializer} signs
- * the CBOR bytes that the Kafka broker stores; the worker's {@link InstanceUpdateJsonDeserializer}
- * (backed by {@link io.taktx.serdes.JsonDeserializer}) receives those exact bytes and verifies the
- * signature before deserializing.
+ * <p>Covers the path that was broken in production: the engine's {@link ProtoSigningSerializer}
+ * signs the protobuf bytes that the Kafka broker stores; the worker's {@link
+ * InstanceUpdateDeserializer} receives those exact bytes and verifies the signature before
+ * deserializing.
  *
  * <p>The critical invariant being tested: <em>the bytes that are signed must be identical to the
- * bytes that are verified</em>. Re-serializing a deserialized DTO breaks this invariant because
- * Jackson CBOR does not guarantee byte-for-byte round-trip identity.
+ * bytes that are verified</em>. Re-serializing a deserialized DTO breaks this invariant whenever
+ * protobuf mapping normalizes the message into a semantically equivalent but byte-different form.
  *
  * <p>Also includes a regression test using bytes captured from a live failure (scratch_2.txt).
  */
@@ -46,13 +48,12 @@ class SigningRoundTripTest {
   private static final String TOPIC = "default.instance-update";
   private static final String KEY_ID = "engine-key-1";
 
-  private KeyPair keyPair;
   private String privateKeyBase64;
   private String publicKeyBase64;
 
   @BeforeEach
   void setUp() {
-    keyPair = SigningKeyGenerator.generate();
+    KeyPair keyPair = SigningKeyGenerator.generate();
     privateKeyBase64 = SigningKeyGenerator.encodePrivateKey(keyPair.getPrivate());
     publicKeyBase64 = SigningKeyGenerator.encodePublicKey(keyPair.getPublic());
 
@@ -76,21 +77,21 @@ class SigningRoundTripTest {
   // ── happy path ─────────────────────────────────────────────────────────────
 
   /**
-   * Full round trip: SigningSerializer signs the CBOR bytes → InstanceUpdateJsonDeserializer
+   * Full round trip: ProtoSigningSerializer signs the protobuf bytes → InstanceUpdateDeserializer
    * verifies and deserializes. This is the exact path a live worker takes.
    */
   @Test
   void signingSerializer_to_instanceUpdateDeserializer_roundTrip() {
     InstanceUpdateDTO dto = buildSampleUpdate();
 
-    // Engine side: serialize + sign (SigningSerializer calls serialize(topic, headers, data))
+    // Engine side: serialize + sign using the protobuf envelope bytes
     byte[] signedBytes = serializeAndSign(dto);
     Headers headers = captureHeaders(dto);
 
     // Worker side: deserialize with signature verification
-    try (InstanceUpdateJsonDeserializer deserializer = new InstanceUpdateJsonDeserializer()) {
+    try (InstanceUpdateDeserializer deserializer = new InstanceUpdateDeserializer()) {
       deserializer.configure(
-          Map.of(io.taktx.serdes.JsonDeserializer.ENGINE_PUBLIC_KEY_CONFIG, publicKeyBase64),
+          Map.of(io.taktx.serdes.ProtoDtoDeserializer.ENGINE_PUBLIC_KEY_CONFIG, publicKeyBase64),
           false);
 
       // Must not throw — bytes and signature are consistent
@@ -100,27 +101,62 @@ class SigningRoundTripTest {
   }
 
   /**
-   * Verifies that re-serializing the deserialized DTO produces identical bytes. If this fails it
-   * explains the live breakage: any consumer that re-serializes before verifying will get a byte
-   * mismatch.
+   * Re-serializing the DTO must preserve semantics, but protobuf field normalization may still
+   * produce different wire bytes. Signature verification therefore has to run against the original
+   * Kafka payload bytes before deserializing.
    */
   @Test
-  void reSerializedBytes_areIdenticalToOriginal() {
+  void reSerialization_preservesSemantics_evenWhenWireBytesAreNormalized() {
     InstanceUpdateDTO dto = buildSampleUpdate();
     byte[] originalBytes = serializeAndSign(dto);
+    Headers headers = captureHeaders(dto);
 
-    // Re-serialize the deserialized object — must be byte-for-byte identical
-    try (JsonSerializer<InstanceUpdateDTO> serializer =
-        new JsonSerializer<>(InstanceUpdateDTO.class) {}) {
-      // Deserialize first
-      try (InstanceUpdateJsonDeserializer deserializer = new InstanceUpdateJsonDeserializer()) {
-        InstanceUpdateDTO roundTripped = deserializer.deserialize(TOPIC, originalBytes);
-        byte[] reSerializedBytes = serializer.serialize(TOPIC, roundTripped);
-        assertThat(reSerializedBytes)
+    try (InstanceUpdateDeserializer deserializer = new InstanceUpdateDeserializer()) {
+      InstanceUpdateDTO roundTripped = deserializer.deserialize(TOPIC, originalBytes);
+      byte[] reSerializedBytes = InstanceUpdateProtoMapper.toProto(roundTripped).toByteArray();
+      InstanceUpdateDTO reparsed = deserializer.deserialize(TOPIC, reSerializedBytes);
+
+      assertThat(roundTripped)
+          .as("Deserializing the signed payload must preserve the logical DTO")
+          .usingRecursiveComparison()
+          .ignoringFields("scope.gatewayInstances", "scope.subscriptions")
+          .isEqualTo(dto);
+      assertThat(reparsed)
+          .as("Re-serializing and parsing again must preserve the logical DTO even if bytes change")
+          .usingRecursiveComparison()
+          .ignoringFields("scope.gatewayInstances", "scope.subscriptions")
+          .isEqualTo(dto);
+
+      assertThat(((ProcessInstanceUpdateDTO) roundTripped).getScope().getGatewayInstances())
+          .as("The mapper may normalize an absent gateway-instance map to an empty map")
+          .isEmpty();
+      assertThat(((ProcessInstanceUpdateDTO) roundTripped).getScope().getSubscriptions())
+          .as("The mapper may normalize absent subscriptions to an empty DTO container")
+          .isNotNull();
+      assertThat(((ProcessInstanceUpdateDTO) reparsed).getScope().getGatewayInstances())
+          .as("The normalization should remain stable after re-serialization")
+          .isEmpty();
+      assertThat(((ProcessInstanceUpdateDTO) reparsed).getScope().getSubscriptions())
+          .as("The empty subscription container should remain stable after re-serialization")
+          .isNotNull();
+
+      String headerValue =
+          new String(
+              headers.lastHeader(io.taktx.dto.Constants.HEADER_ENGINE_SIGNATURE).value(),
+              java.nio.charset.StandardCharsets.UTF_8);
+      byte[] signature =
+          Base64.getDecoder().decode(headerValue.substring(headerValue.indexOf('.') + 1));
+
+      assertThat(Ed25519Service.verify(originalBytes, signature, publicKeyBase64))
+          .as("The original Kafka payload bytes must verify with the recorded signature")
+          .isTrue();
+
+      if (!Arrays.equals(reSerializedBytes, originalBytes)) {
+        assertThat(Ed25519Service.verify(reSerializedBytes, signature, publicKeyBase64))
             .as(
-                "Re-serialized bytes must be identical to originals — if this fails, "
-                    + "any code that re-serializes before verifying will break signature validation")
-            .isEqualTo(originalBytes);
+                "If protobuf mapping normalizes the payload bytes, re-serialized bytes must not be "
+                    + "used for signature verification")
+            .isFalse();
       }
     }
   }
@@ -134,11 +170,11 @@ class SigningRoundTripTest {
 
     // Flip a byte in the middle of the payload
     byte[] tampered = signedBytes.clone();
-    tampered[signedBytes.length / 2] ^= 0xFF;
+    tampered[signedBytes.length / 2] = (byte) (tampered[signedBytes.length / 2] ^ 0xFF);
 
-    try (InstanceUpdateJsonDeserializer deserializer = new InstanceUpdateJsonDeserializer()) {
+    try (InstanceUpdateDeserializer deserializer = new InstanceUpdateDeserializer()) {
       deserializer.configure(
-          Map.of(io.taktx.serdes.JsonDeserializer.ENGINE_PUBLIC_KEY_CONFIG, publicKeyBase64),
+          Map.of(io.taktx.serdes.ProtoDtoDeserializer.ENGINE_PUBLIC_KEY_CONFIG, publicKeyBase64),
           false);
       assertThatThrownBy(() -> deserializer.deserialize(TOPIC, headers, tampered))
           .isInstanceOf(IllegalStateException.class)
@@ -154,19 +190,15 @@ class SigningRoundTripTest {
   void noSignatureHeader_passesThrough_whenKeySourceConfigured() {
     InstanceUpdateDTO dto = buildSampleUpdate();
 
-    try (JsonSerializer<InstanceUpdateDTO> serializer =
-        new JsonSerializer<>(InstanceUpdateDTO.class) {}) {
-      byte[] bytes = serializer.serialize(TOPIC, dto);
-      Headers emptyHeaders = new RecordHeaders();
+    byte[] bytes = InstanceUpdateProtoMapper.toProto(dto).toByteArray();
+    Headers emptyHeaders = new RecordHeaders();
 
-      try (InstanceUpdateJsonDeserializer deserializer = new InstanceUpdateJsonDeserializer()) {
-        deserializer.configure(
-            Map.of(io.taktx.serdes.JsonDeserializer.ENGINE_PUBLIC_KEY_CONFIG, publicKeyBase64),
-            false);
-        // Must not throw — absent header = signing disabled / not yet enabled
-        InstanceUpdateDTO result = deserializer.deserialize(TOPIC, emptyHeaders, bytes);
-        assertThat(result).isNotNull();
-      }
+    try (InstanceUpdateDeserializer deserializer = new InstanceUpdateDeserializer()) {
+      deserializer.configure(
+          Map.of(InstanceUpdateDtoDeserializer.ENGINE_PUBLIC_KEY_CONFIG, publicKeyBase64), false);
+      // Must not throw — absent header = signing disabled / not yet enabled
+      InstanceUpdateDTO result = deserializer.deserialize(TOPIC, emptyHeaders, bytes);
+      assertThat(result).isNotNull();
     }
   }
 
@@ -177,12 +209,13 @@ class SigningRoundTripTest {
     byte[] bytes = serializeAndSign(dto);
     Headers headers = captureHeaders(dto);
 
-    try (InstanceUpdateJsonDeserializer deserializer = new InstanceUpdateJsonDeserializer()) {
+    try (InstanceUpdateDeserializer deserializer = new InstanceUpdateDeserializer()) {
       // Configure with a *different* public key — keyId resolves but signature won't match
       KeyPair other = SigningKeyGenerator.generate();
       String otherPublicKey = SigningKeyGenerator.encodePublicKey(other.getPublic());
       deserializer.configure(
-          Map.of(io.taktx.serdes.JsonDeserializer.ENGINE_PUBLIC_KEY_CONFIG, otherPublicKey), false);
+          Map.of(io.taktx.serdes.ProtoDtoDeserializer.ENGINE_PUBLIC_KEY_CONFIG, otherPublicKey),
+          false);
       assertThatThrownBy(() -> deserializer.deserialize(TOPIC, headers, bytes))
           .isInstanceOf(IllegalStateException.class);
     }
@@ -191,12 +224,12 @@ class SigningRoundTripTest {
   // ── regression: live bytes from scratch_2.txt ─────────────────────────────
 
   /**
-   * Regression test using bytes generated by {@link SigningFixtureGenerator} — the fixture was
-   * produced by our own {@link SigningSerializer} + {@link io.taktx.security.Ed25519Service} stack
-   * and self-verified before being embedded here.
+   * Regression test using bytes generated by the shared signing fixture generator — the fixture was
+   * produced by our own {@link ProtoSigningSerializer} + {@link io.taktx.security.Ed25519Service}
+   * stack and self-verified before being embedded here.
    *
-   * <p>If the {@link InstanceUpdateDTO} serialization format ever changes, re-run {@code
-   * SigningFixtureGenerator.generateFixture()} and paste the new values here.
+   * <p>If the {@link InstanceUpdateDTO} wire format ever changes, regenerate the fixture and paste
+   * the new values here.
    *
    * <p>This test verifies two things:
    *
@@ -206,7 +239,7 @@ class SigningRoundTripTest {
    * </ol>
    */
   @Test
-  void regression_liveCapturedBytes_signatureVerifies() throws Exception {
+  void regression_liveCapturedBytes_signatureVerifies() {
     // Fixture generated by SigningFixtureGenerator.generateFixture() — SELF-CHECK: PASS
     // Run that generator again if the DTO serialization format ever changes.
     byte[] liveBytes = {
@@ -238,28 +271,24 @@ class SigningRoundTripTest {
   }
 
   /**
-   * Serializes the DTO and signs the bytes, returning the raw CBOR payload. Mirrors what
-   * SigningSerializer.serialize(topic, headers, data) does.
+   * Serializes the DTO and signs the bytes, returning the raw protobuf payload. Mirrors what
+   * ProtoSigningSerializer.serialize(topic, headers, data) does.
    */
   private byte[] serializeAndSign(InstanceUpdateDTO dto) {
-    try (JsonSerializer<InstanceUpdateDTO> delegateSerializer =
-        new JsonSerializer<>(InstanceUpdateDTO.class) {}) {
-      SigningSerializer<InstanceUpdateDTO> signingSerializer =
-          new SigningSerializer<>(delegateSerializer);
+    try (ProtoSigningSerializer<InstanceUpdateDTO> signingSerializer =
+        new ProtoSigningSerializer<>(InstanceUpdateProtoMapper::toProto)) {
       RecordHeaders headers = new RecordHeaders();
       return signingSerializer.serialize(TOPIC, headers, dto);
     }
   }
 
   /**
-   * Returns headers with the X-TaktX-Signature that SigningSerializer attached. Captures them by
-   * running through SigningSerializer once more.
+   * Returns headers with the tx-sig value that ProtoSigningSerializer attached. Captures them by
+   * running through ProtoSigningSerializer once more.
    */
   private Headers captureHeaders(InstanceUpdateDTO dto) {
-    try (JsonSerializer<InstanceUpdateDTO> delegateSerializer =
-        new JsonSerializer<>(InstanceUpdateDTO.class) {}) {
-      SigningSerializer<InstanceUpdateDTO> signingSerializer =
-          new SigningSerializer<>(delegateSerializer);
+    try (ProtoSigningSerializer<InstanceUpdateDTO> signingSerializer =
+        new ProtoSigningSerializer<>(InstanceUpdateProtoMapper::toProto)) {
       RecordHeaders headers = new RecordHeaders();
       signingSerializer.serialize(TOPIC, headers, dto);
       return headers;

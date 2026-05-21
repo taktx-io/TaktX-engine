@@ -9,7 +9,6 @@ package io.taktx.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.taktx.dto.ExternalTaskTriggerDTO;
 import java.util.Map;
 import java.util.Objects;
@@ -19,7 +18,7 @@ class HeadersParameterResolverTest {
 
   @Test
   void testOriginalType() {
-    HeadersParameterResolver resolver = new HeadersParameterResolver(new ObjectMapper(), Map.class);
+    HeadersParameterResolver resolver = new HeadersParameterResolver(Map.class);
     ExternalTaskTriggerDTO trigger =
         ExternalTaskTriggerDTO.builder()
             .headers(Map.of("key1", "value1", "key2", "value2"))
@@ -31,8 +30,7 @@ class HeadersParameterResolverTest {
 
   @Test
   void testSupportedClassType() {
-    HeadersParameterResolver resolver =
-        new HeadersParameterResolver(new ObjectMapper(), MyTaskHeaders.class);
+    HeadersParameterResolver resolver = new HeadersParameterResolver(MyTaskHeaders.class);
     ExternalTaskTriggerDTO trigger =
         ExternalTaskTriggerDTO.builder()
             .headers(Map.of("key1", "value1", "key2", "value2"))

@@ -22,11 +22,11 @@ public class Constants {
   public static final UUID MAX_UUID = new UUID(0xFFFFFFFFFFFFFFFFL, 0xFFFFFFFFFFFFFFFFL);
 
   /** Kafka record header carrying the Ed25519 signature: {@code "<keyId>.<base64sig>"}. */
-  public static final String HEADER_ENGINE_SIGNATURE = "X-TaktX-Signature";
+  public static final String HEADER_ENGINE_SIGNATURE = "tx-sig";
 
   /**
    * Kafka record header carrying the RS256 JWT issued by the Platform Service — used on inbound
    * commands (start-process, abort, task responses) to identify and authorise the caller.
    */
-  public static final String HEADER_AUTHORIZATION = "X-TaktX-Authorization";
+  public static final String HEADER_AUTHORIZATION = "tx-auth";
 }

@@ -202,7 +202,7 @@ public class DlqEntryConsumer {
   private KafkaConsumer<String, DlqEnvelope> createConsumer(String groupId) {
     Properties props =
         taktPropertiesHelper.getKafkaConsumerProperties(
-            groupId, StringDeserializer.class, DlqEnvelopeJsonDeserializer.class, "latest");
+            groupId, StringDeserializer.class, DlqEnvelopeDeserializer.class, "latest");
     return new KafkaConsumer<>(props);
   }
 }

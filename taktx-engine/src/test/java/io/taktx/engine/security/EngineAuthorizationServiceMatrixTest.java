@@ -200,7 +200,7 @@ class EngineAuthorizationServiceMatrixTest {
 
   private RecordHeaders sigHeaders(String keyId) {
     RecordHeaders h = new RecordHeaders();
-    h.add("X-TaktX-Signature", (keyId + ".FAKESIG").getBytes(StandardCharsets.UTF_8));
+    h.add("tx-sig", (keyId + ".FAKESIG").getBytes(StandardCharsets.UTF_8));
     return h;
   }
 
@@ -228,14 +228,14 @@ class EngineAuthorizationServiceMatrixTest {
 
   private RecordHeaders headersWithJwt(String jwt) {
     RecordHeaders h = new RecordHeaders();
-    h.add("X-TaktX-Authorization", jwt.getBytes(StandardCharsets.UTF_8));
+    h.add("tx-auth", jwt.getBytes(StandardCharsets.UTF_8));
     return h;
   }
 
   private RecordHeaders sigAndJwtHeaders(String keyId, String jwt) {
     RecordHeaders h = new RecordHeaders();
-    h.add("X-TaktX-Signature", (keyId + ".FAKESIG").getBytes(StandardCharsets.UTF_8));
-    h.add("X-TaktX-Authorization", jwt.getBytes(StandardCharsets.UTF_8));
+    h.add("tx-sig", (keyId + ".FAKESIG").getBytes(StandardCharsets.UTF_8));
+    h.add("tx-auth", jwt.getBytes(StandardCharsets.UTF_8));
     return h;
   }
 
@@ -281,7 +281,7 @@ class EngineAuthorizationServiceMatrixTest {
     EngineAuthorizationService svc = service(false, true);
     assertThatThrownBy(() -> svc.authorize(noHeaders(), clientNonEntryEnvelope(false, null)))
         .isInstanceOf(AuthorizationTokenException.class)
-        .hasMessageContaining("X-TaktX-Signature");
+        .hasMessageContaining("tx-sig");
   }
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -315,7 +315,7 @@ class EngineAuthorizationServiceMatrixTest {
                     noHeaders(),
                     new ProcessInstanceTriggerEnvelope(new byte[0], startCommand(), false, null)))
         .isInstanceOf(AuthorizationTokenException.class)
-        .hasMessageContaining("X-TaktX-Signature");
+        .hasMessageContaining("tx-sig");
   }
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -364,7 +364,7 @@ class EngineAuthorizationServiceMatrixTest {
     EngineAuthorizationService svc = service(true, false);
     assertThatThrownBy(() -> svc.authorize(noHeaders(), clientNonEntryEnvelope(false, null)))
         .isInstanceOf(AuthorizationTokenException.class)
-        .hasMessageContaining("X-TaktX-Signature");
+        .hasMessageContaining("tx-sig");
   }
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -391,7 +391,7 @@ class EngineAuthorizationServiceMatrixTest {
     EngineAuthorizationService svc = service(true, true);
     assertThatThrownBy(() -> svc.authorize(noHeaders(), clientNonEntryEnvelope(false, null)))
         .isInstanceOf(AuthorizationTokenException.class)
-        .hasMessageContaining("X-TaktX-Signature");
+        .hasMessageContaining("tx-sig");
   }
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -418,7 +418,7 @@ class EngineAuthorizationServiceMatrixTest {
     EngineAuthorizationService svc = service(true, true);
     assertThatThrownBy(() -> svc.authorize(noHeaders(), clientNonEntryEnvelope(false, null)))
         .isInstanceOf(AuthorizationTokenException.class)
-        .hasMessageContaining("X-TaktX-Signature");
+        .hasMessageContaining("tx-sig");
   }
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -530,7 +530,7 @@ class EngineAuthorizationServiceMatrixTest {
                     noHeaders(),
                     new ProcessInstanceTriggerEnvelope(new byte[0], abortTrigger(), false, null)))
         .isInstanceOf(AuthorizationTokenException.class)
-        .hasMessageContaining("X-TaktX-Signature");
+        .hasMessageContaining("tx-sig");
   }
 
   @Test
@@ -561,7 +561,7 @@ class EngineAuthorizationServiceMatrixTest {
                     headersWithJwt(jwt),
                     new ProcessInstanceTriggerEnvelope(new byte[0], startCommand(), false, null)))
         .isInstanceOf(AuthorizationTokenException.class)
-        .hasMessageContaining("X-TaktX-Signature");
+        .hasMessageContaining("tx-sig");
   }
 
   // Row 22 — C-ERA=T, C-SE=T
@@ -676,7 +676,7 @@ class EngineAuthorizationServiceMatrixTest {
                     new ProcessInstanceTriggerEnvelope(
                         new byte[0], setVariableTrigger(), false, null)))
         .isInstanceOf(AuthorizationTokenException.class)
-        .hasMessageContaining("X-TaktX-Signature");
+        .hasMessageContaining("tx-sig");
   }
 
   // ══════════════════════════════════════════════════════════════════════════

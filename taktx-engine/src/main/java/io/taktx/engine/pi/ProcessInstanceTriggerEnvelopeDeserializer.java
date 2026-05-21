@@ -8,18 +8,18 @@
 
 package io.taktx.engine.pi;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
+import com.google.protobuf.InvalidProtocolBufferException;
 import io.taktx.dto.Constants;
 import io.taktx.dto.ProcessInstanceTriggerDTO;
 import io.taktx.security.Ed25519Service;
 import io.taktx.security.EngineSigningKeysHolder;
-import java.io.IOException;
+import io.taktx.serdes.ProcessInstanceTriggerProtoMapper;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.apache.kafka.common.header.Header;
 import org.apache.kafka.common.header.Headers;
 import org.apache.kafka.common.serialization.Deserializer;
@@ -27,8 +27,7 @@ import org.apache.kafka.common.serialization.Deserializer;
 public class ProcessInstanceTriggerEnvelopeDeserializer
     implements Deserializer<ProcessInstanceTriggerEnvelope> {
 
-  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper(new CBORFactory());
-  private static final ObjectMapper JSON_OBJECT_MAPPER = new ObjectMapper();
+  private static final String JSON_UNICODE_ESCAPE_PREFIX = "\\u";
 
   @Override
   public ProcessInstanceTriggerEnvelope deserialize(String topic, byte[] data) {
@@ -54,7 +53,10 @@ public class ProcessInstanceTriggerEnvelopeDeserializer
               trigger,
               false,
               null,
-              "Malformed X-TaktX-Signature header (expected '<keyId>.<base64sig>'): " + headerValue)
+              "Malformed "
+                  + Constants.HEADER_ENGINE_SIGNATURE
+                  + " header (expected '<keyId>.<base64sig>'): "
+                  + headerValue)
           .withReplayRoutingKeyHint(replayRoutingKeyHint);
     }
     String keyId = headerValue.substring(0, dot);
@@ -121,10 +123,10 @@ public class ProcessInstanceTriggerEnvelopeDeserializer
       if (parts.length < 2) {
         return "jwt:" + sha256(rawJwt);
       }
-      byte[] decodedPayload = Base64.getUrlDecoder().decode(parts[1]);
-      JsonNode payload = JSON_OBJECT_MAPPER.readTree(decodedPayload);
-      String issuer = textValue(payload, "iss");
-      String auditId = textValue(payload, "auditId");
+      String decodedPayload =
+          new String(Base64.getUrlDecoder().decode(parts[1]), StandardCharsets.UTF_8);
+      String issuer = textValue(decodedPayload, "iss");
+      String auditId = textValue(decodedPayload, "auditId");
       if (issuer != null && !issuer.isBlank() && auditId != null && !auditId.isBlank()) {
         return issuer + ":" + auditId;
       }
@@ -134,9 +136,53 @@ public class ProcessInstanceTriggerEnvelopeDeserializer
     return "jwt:" + sha256(rawJwt);
   }
 
-  private static String textValue(JsonNode payload, String fieldName) {
-    JsonNode node = payload == null ? null : payload.get(fieldName);
-    return node == null || node.isNull() ? null : node.asText(null);
+  private static String textValue(String jsonPayload, String fieldName) {
+    if (jsonPayload == null || jsonPayload.isBlank()) {
+      return null;
+    }
+    Pattern pattern =
+        Pattern.compile(
+            "\\\"" + Pattern.quote(fieldName) + "\\\"\\s*:\\s*\\\"((?:\\\\.|[^\\\"\\\\])*)\\\"");
+    Matcher matcher = pattern.matcher(jsonPayload);
+    return matcher.find() ? unescapeJsonString(matcher.group(1)) : null;
+  }
+
+  private static String unescapeJsonString(String value) {
+    if (value == null || value.indexOf('\\') < 0) {
+      return value;
+    }
+    StringBuilder result = new StringBuilder(value.length());
+    for (int index = 0; index < value.length(); index++) {
+      char current = value.charAt(index);
+      if (current != '\\' || index == value.length() - 1) {
+        result.append(current);
+        continue;
+      }
+      char escaped = value.charAt(++index);
+      switch (escaped) {
+        case '"' -> result.append('"');
+        case '\\' -> result.append('\\');
+        case '/' -> result.append('/');
+        case 'b' -> result.append('\b');
+        case 'f' -> result.append('\f');
+        case 'n' -> result.append('\n');
+        case 'r' -> result.append('\r');
+        case 't' -> result.append('\t');
+        case 'u' -> {
+          if (index + 4 >= value.length()) {
+            throw new IllegalArgumentException(
+                "Invalid JSON unicode escape: "
+                    + JSON_UNICODE_ESCAPE_PREFIX
+                    + value.substring(index + 1));
+          }
+          String hex = value.substring(index + 1, index + 5);
+          result.append((char) Integer.parseInt(hex, 16));
+          index += 4;
+        }
+        default -> result.append(escaped);
+      }
+    }
+    return result.toString();
   }
 
   private static String sha256(String value) {
@@ -154,9 +200,13 @@ public class ProcessInstanceTriggerEnvelopeDeserializer
   }
 
   private ProcessInstanceTriggerDTO decode(byte[] data) {
+    if (data == null) {
+      return null;
+    }
     try {
-      return OBJECT_MAPPER.readValue(data, ProcessInstanceTriggerDTO.class);
-    } catch (IOException _) {
+      return ProcessInstanceTriggerProtoMapper.toDto(
+          io.taktx.proto.ProcessInstanceTriggerEnvelope.parseFrom(data));
+    } catch (InvalidProtocolBufferException _) {
       // Fall back to null, or partial object later
       return null;
     }

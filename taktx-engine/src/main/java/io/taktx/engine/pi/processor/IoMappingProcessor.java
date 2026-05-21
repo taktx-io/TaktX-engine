@@ -8,12 +8,12 @@
 
 package io.taktx.engine.pi.processor;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.IoVariableMapping;
 import io.taktx.engine.pd.model.WithIoMapping;
 import io.taktx.engine.pi.model.VariableScope;
+import io.taktx.proto.VariableValue;
+import io.taktx.variables.Variables;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.util.Set;
@@ -24,13 +24,10 @@ import lombok.Setter;
 public class IoMappingProcessor {
 
   private FeelExpressionHandler feelExpressionHandler;
-  private ObjectMapper objectMapper;
 
   @Inject
-  public IoMappingProcessor(
-      FeelExpressionHandler feelExpressionHandler, ObjectMapper objectMapper) {
+  public IoMappingProcessor(FeelExpressionHandler feelExpressionHandler) {
     this.feelExpressionHandler = feelExpressionHandler;
-    this.objectMapper = objectMapper;
   }
 
   public void processInputMappings(WithIoMapping element, VariableScope variables) {
@@ -76,7 +73,6 @@ public class IoMappingProcessor {
     Set<IoVariableMapping> outputMappings = element.getIoMapping().getOutputMappings();
 
     if (outputMappings.isEmpty()) {
-      // No explicit output mappings → propagate all dirty local variables to the parent scope.
       VariableScope parent = variables.getParentScope();
       if (parent != null) {
         variables
@@ -84,11 +80,9 @@ public class IoMappingProcessor {
             .forEach(key -> parent.put(key, variables.getVariables().get(key)));
       }
     } else {
-      // Explicit mappings → evaluate and copy only the declared variables to the parent scope.
       addVariables(variables, variables.getParentScope(), outputMappings);
     }
 
-    // Close the child scope: release in-memory state and prevent duplicate Kafka persistence.
     variables.getDirtyVariables().clear();
     variables.getVariables().clear();
   }
@@ -97,55 +91,50 @@ public class IoMappingProcessor {
       VariableScope source, VariableScope target, Set<IoVariableMapping> mappings) {
     for (IoVariableMapping mapping : mappings) {
       String varName = mapping.getTarget();
-      JsonNode jsonNode = feelExpressionHandler.processFeelExpression(mapping.getSource(), source);
-      setNestedVariable(target, varName, jsonNode);
+      VariableValue value =
+          feelExpressionHandler.processFeelExpression(mapping.getSource(), source);
+      setNestedVariable(target, varName, value);
     }
   }
 
-  private void setNestedVariable(VariableScope variables, String varName, JsonNode value) {
+  private void setNestedVariable(VariableScope variables, String varName, VariableValue value) {
     if (!varName.contains(".")) {
-      // Simple variable name without nesting
       variables.put(varName, value);
       return;
     }
 
-    // Split the variable name by dots to get the path
     String[] pathParts = varName.split("\\.");
     String rootVarName = pathParts[0];
 
-    // Get or create the root object
-    JsonNode rootNode = variables.getVariables().get(rootVarName);
-    com.fasterxml.jackson.databind.node.ObjectNode rootObject;
+    java.util.Map<String, VariableValue> rootObject =
+        asMutableMap(variables.getVariables().get(rootVarName));
+    setNestedValue(rootObject, pathParts, 1, value == null ? Variables.nullValue() : value);
 
-    if (rootNode == null || !rootNode.isObject()) {
-      // Create a new root object if it doesn't exist or is not an object
-      rootObject = objectMapper.createObjectNode();
-    } else {
-      // Use existing object but make it mutable
-      rootObject = (com.fasterxml.jackson.databind.node.ObjectNode) rootNode;
+    variables.put(
+        rootVarName,
+        VariableValue.newBuilder().setMapValue(Variables.toVarMap(rootObject)).build());
+  }
+
+  private void setNestedValue(
+      java.util.Map<String, VariableValue> current,
+      String[] pathParts,
+      int index,
+      VariableValue value) {
+    if (index == pathParts.length - 1) {
+      current.put(pathParts[index], value);
+      return;
     }
+    String key = pathParts[index];
+    java.util.Map<String, VariableValue> child = asMutableMap(current.get(key));
+    setNestedValue(child, pathParts, index + 1, value);
+    current.put(key, VariableValue.newBuilder().setMapValue(Variables.toVarMap(child)).build());
+  }
 
-    // Navigate/create the nested path
-    com.fasterxml.jackson.databind.node.ObjectNode currentObject = rootObject;
-    for (int i = 1; i < pathParts.length - 1; i++) {
-      String key = pathParts[i];
-      JsonNode childNode = currentObject.get(key);
-
-      if (childNode == null || !childNode.isObject()) {
-        // Create a new nested object if it doesn't exist or is not an object
-        com.fasterxml.jackson.databind.node.ObjectNode newObject = objectMapper.createObjectNode();
-        currentObject.set(key, newObject);
-        currentObject = newObject;
-      } else {
-        currentObject = (com.fasterxml.jackson.databind.node.ObjectNode) childNode;
-      }
+  private java.util.Map<String, VariableValue> asMutableMap(VariableValue value) {
+    java.util.Map<String, VariableValue> result = new java.util.LinkedHashMap<>();
+    if (value != null && value.getKindCase() == VariableValue.KindCase.MAP_VALUE) {
+      result.putAll(value.getMapValue().getEntriesMap());
     }
-
-    // Set the final value at the deepest level
-    String finalKey = pathParts[pathParts.length - 1];
-    currentObject.set(finalKey, value);
-
-    // Store the modified root object back to variables
-    variables.put(rootVarName, rootObject);
+    return result;
   }
 }

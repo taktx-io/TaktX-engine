@@ -1,6 +1,7 @@
 package io.taktx.engine.pi.model.subscriptions;
 
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
+import io.taktx.dto.VariablesDTO;
 import io.taktx.dto.subscriptions.SubScriptionType;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.BoundaryEvent;
@@ -41,6 +42,18 @@ import lombok.Setter;
 public class Subscriptions {
 
   private Map<Long, List<Subscription>> instanceSubscriptions = new HashMap<>();
+
+  public Map<Long, List<Subscription>> getInstanceSubscriptions() {
+    if (instanceSubscriptions == null) {
+      instanceSubscriptions = new HashMap<>();
+    }
+    return instanceSubscriptions;
+  }
+
+  public void setInstanceSubscriptions(Map<Long, List<Subscription>> instanceSubscriptions) {
+    this.instanceSubscriptions =
+        instanceSubscriptions == null ? new HashMap<>() : instanceSubscriptions;
+  }
 
   public void addSubscriptionsForBoundaryEventDefinitions(
       ProcessInstanceProcessingContext context,
@@ -255,7 +268,7 @@ public class Subscriptions {
               scope.getProcessInstanceId(),
               flowNodeInstance.createKeyPath(),
               null,
-              event.getVariables());
+              VariablesDTO.ofVariableMap(event.getVariables()));
       ContinueFlowNodeInstanceInfo continueInfo =
           new ContinueFlowNodeInstanceInfo(flowNodeInstance, trigger, childVariableScope);
       scope.getDirectInstanceResult().addContinueInstance(continueInfo);

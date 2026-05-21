@@ -8,7 +8,6 @@
 
 package io.taktx.engine.pd;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.taktx.dto.CancelDefinitionMessageSubscriptionDTO;
 import io.taktx.dto.DefinitionMessageSubscriptionDTO;
 import io.taktx.dto.MessageEventKeyDTO;
@@ -31,7 +30,6 @@ public class DefinitionMessageSubscriptions {
     this.definitions = definitions;
   }
 
-  @JsonIgnore
   public DefinitionMessageSubscriptions update(
       DefinitionMessageSubscriptionDTO messageSubscription) {
     Map<MessageEventKeyDTO, DefinitionMessageSubscriptionDTO> newDefinitions =
@@ -40,7 +38,6 @@ public class DefinitionMessageSubscriptions {
     return new DefinitionMessageSubscriptions(newDefinitions);
   }
 
-  @JsonIgnore
   public DefinitionMessageSubscriptions remove(
       CancelDefinitionMessageSubscriptionDTO messageSubscription) {
     Map<MessageEventKeyDTO, DefinitionMessageSubscriptionDTO> newDefinitions =

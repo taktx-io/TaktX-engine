@@ -15,6 +15,7 @@ import io.taktx.bpmn.AssignmentDefinition;
 import io.taktx.dto.AssignmentDefinitionDTO;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pi.model.VariableScope;
+import io.taktx.variables.Variables;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -48,9 +49,9 @@ class UserTaskFeelNullHandlingSimpleTest {
     when(feelExpressionHandler.processFeelExpression("missingVariable", variableScope))
         .thenReturn(null);
     when(feelExpressionHandler.processFeelExpression("someGroup", variableScope))
-        .thenReturn(com.fasterxml.jackson.databind.node.TextNode.valueOf("group1"));
+        .thenReturn(Variables.of("group1"));
     when(feelExpressionHandler.processFeelExpression("someUser", variableScope))
-        .thenReturn(com.fasterxml.jackson.databind.node.TextNode.valueOf("user1"));
+        .thenReturn(Variables.of("user1"));
 
     // This should NOT throw NPE
     // We test via reflection since the method is private

@@ -11,7 +11,6 @@ package io.taktx.engine.pi.processor;
 import io.taktx.dto.AbortTriggerDTO;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.dto.ExecutionState;
-import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.FlowElements;
 import io.taktx.engine.pd.model.SubProcess;
@@ -71,7 +70,7 @@ public class SubProcessInstanceProcessor
     scopeProcessor.processStart(
         instancePath,
         null,
-        VariablesDTO.empty(),
+        java.util.Map.of(),
         processInstanceProcessingContext,
         subScope,
         variableScope);

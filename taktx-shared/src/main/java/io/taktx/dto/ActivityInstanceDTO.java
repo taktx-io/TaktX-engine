@@ -7,8 +7,7 @@
  */
 package io.taktx.dto;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import io.quarkus.runtime.annotations.RegisterForReflection;
+import io.taktx.proto.VariableValue;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -18,16 +17,30 @@ import lombok.ToString;
 @Data
 @NoArgsConstructor
 @ToString(callSuper = true)
-@RegisterForReflection
 public abstract class ActivityInstanceDTO extends FlowNodeInstanceDTO {
 
   private boolean iteration = false;
 
   private long nextIterationId;
 
-  private JsonNode inputElement;
+  private VariableValue inputElement;
 
-  private JsonNode outputElement;
+  private VariableValue outputElement;
 
   private int loopCnt;
+
+  public void setInputElement(VariableValue inputElement) {
+    this.inputElement = normalize(inputElement);
+  }
+
+  public void setOutputElement(VariableValue outputElement) {
+    this.outputElement = normalize(outputElement);
+  }
+
+  private static VariableValue normalize(VariableValue value) {
+    if (value != null) {
+      value.getSerializedSize();
+    }
+    return value;
+  }
 }

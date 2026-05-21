@@ -12,8 +12,7 @@ package io.taktx.security;
  *
  * <p>Kafka deserializers are instantiated reflectively by the consumer, making it impossible to
  * inject dependencies via constructor. This holder lets application code register the store once at
- * startup, and all {@code JsonDeserializer} subclasses pick it up in their {@code configure()}
- * call.
+ * startup, and the protobuf-backed DTO deserializers pick it up in their {@code configure()} call.
  *
  * <h3>Usage</h3>
  *
@@ -21,7 +20,7 @@ package io.taktx.security;
  * // In TaktXClient.start():
  * SigningKeysStoreHolder.set(myStore);
  *
- * // In JsonDeserializer.configure():
+ * // In ProtoDtoDeserializer.configure():
  * SigningKeysStore store = SigningKeysStoreHolder.get();
  * if (store != null) setSigningKeysStore(store);
  * }</pre>

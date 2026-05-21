@@ -80,7 +80,7 @@ public class MessageEventProcessor
     if (messageEventRecord.value() == null) {
       emitMessageEventDlq(
           messageEventRecord,
-          "CBOR_DECODE_ERROR",
+          "PAYLOAD_DESERIALIZATION_ERROR",
           "Null payload for message-event record",
           "DESERIALIZER");
       return;
@@ -113,7 +113,7 @@ public class MessageEventProcessor
               messageEventRecord.value().getClass().getName());
           emitMessageEventDlq(
               messageEventRecord,
-              "CBOR_TYPE_MISMATCH",
+              "PAYLOAD_TYPE_MISMATCH",
               "Unknown message event type: " + messageEventRecord.value().getClass().getName(),
               "PROCESSOR");
         }

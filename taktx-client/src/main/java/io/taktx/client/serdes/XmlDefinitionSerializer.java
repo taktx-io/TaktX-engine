@@ -8,13 +8,17 @@
 package io.taktx.client.serdes;
 
 import io.taktx.dto.XmlDefinitionsDTO;
-import io.taktx.serdes.JsonSerializer;
+import io.taktx.serdes.DefinitionsProtoMapper;
+import org.apache.kafka.common.serialization.Serializer;
 
-/** A JSON serializer for XmlDefinitionsDTO objects. */
-public class XmlDefinitionSerializer extends JsonSerializer<XmlDefinitionsDTO> {
+/** A protobuf serializer for {@link XmlDefinitionsDTO} objects. */
+public class XmlDefinitionSerializer implements Serializer<XmlDefinitionsDTO> {
 
-  /** Constructor for XmlDefinitionSerializer. */
-  public XmlDefinitionSerializer() {
-    super(XmlDefinitionsDTO.class);
+  @Override
+  public byte[] serialize(String topic, XmlDefinitionsDTO data) {
+    if (data == null) {
+      return null;
+    }
+    return DefinitionsProtoMapper.toProto(data).toByteArray();
   }
 }

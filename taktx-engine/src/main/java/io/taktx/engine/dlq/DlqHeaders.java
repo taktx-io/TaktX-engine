@@ -22,15 +22,15 @@ public final class DlqHeaders {
    * Header whose value is the {@link io.taktx.dto.DlqReasonCode} name (e.g. {@code
    * REPLAY_DETECTED}).
    */
-  public static final String REASON_HINT = "X-TaktX-DLQ-Reason-Hint";
+  public static final String REASON_HINT = "dlq-hint";
 
   /** Header whose value is a human-readable description of the rejection. */
-  public static final String REASON_TEXT = "X-TaktX-DLQ-Reason-Text";
+  public static final String REASON_TEXT = "dlq-text";
 
   /**
    * Header whose value is the {@link io.taktx.dto.DlqCaptureStage} name (e.g. {@code PROCESSOR}).
    */
-  public static final String CAPTURE_STAGE = "X-TaktX-DLQ-Capture-Stage";
+  public static final String CAPTURE_STAGE = "dlq-stage";
 
   private DlqHeaders() {}
 }

@@ -7,9 +7,6 @@
  */
 package io.taktx.dto;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
-import com.fasterxml.jackson.annotation.JsonFormat.Shape;
-import io.quarkus.runtime.annotations.RegisterForReflection;
 import java.util.Set;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -18,8 +15,6 @@ import lombok.NoArgsConstructor;
 @Getter
 @EqualsAndHashCode
 @NoArgsConstructor
-@JsonFormat(shape = Shape.ARRAY)
-@RegisterForReflection
 public class InputOutputMappingDTO {
   private Set<IoVariableMappingDTO> inputMappings;
 

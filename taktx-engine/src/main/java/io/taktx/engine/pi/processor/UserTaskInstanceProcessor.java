@@ -18,7 +18,6 @@ import io.taktx.dto.TaskScheduleDTO;
 import io.taktx.dto.UserTaskResponseResultDTO;
 import io.taktx.dto.UserTaskResponseTriggerDTO;
 import io.taktx.dto.UserTaskResponseType;
-import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.UserTask;
 import io.taktx.engine.pi.DirectInstanceResult;
@@ -30,9 +29,11 @@ import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.UserTaskInfo;
 import io.taktx.engine.pi.model.UserTaskInstance;
 import io.taktx.engine.pi.model.VariableScope;
+import io.taktx.proto.VariableValue;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.time.Clock;
+import java.util.Map;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -80,10 +81,10 @@ public class UserTaskInstanceProcessor
   private PriorityDefinitionDTO getProcessedPriorityDefinition(
       VariableScope flowNodeInstanceVariablesn, PriorityDefinition priorityDefinition) {
     if (priorityDefinition != null) {
-      com.fasterxml.jackson.databind.JsonNode priorityNode =
+      VariableValue priorityNode =
           feelExpressionHandler.processFeelExpression(
               priorityDefinition.getPriority(), flowNodeInstanceVariablesn);
-      String priority = priorityNode != null ? priorityNode.asText() : null;
+      String priority = stringValue(priorityNode);
       return new PriorityDefinitionDTO(priority);
     } else {
       return null;
@@ -93,15 +94,15 @@ public class UserTaskInstanceProcessor
   private TaskScheduleDTO getProcessedTaskSchedule(
       VariableScope flowNodeInstanceVariables, TaskSchedule taskSchedule) {
     if (taskSchedule != null) {
-      com.fasterxml.jackson.databind.JsonNode dueDateNode =
+      VariableValue dueDateNode =
           feelExpressionHandler.processFeelExpression(
               taskSchedule.getDueDate(), flowNodeInstanceVariables);
-      String dueDate = dueDateNode != null ? dueDateNode.asText() : null;
+      String dueDate = stringValue(dueDateNode);
 
-      com.fasterxml.jackson.databind.JsonNode followupDateNode =
+      VariableValue followupDateNode =
           feelExpressionHandler.processFeelExpression(
               taskSchedule.getFollowUpDate(), flowNodeInstanceVariables);
-      String followupDate = followupDateNode != null ? followupDateNode.asText() : null;
+      String followupDate = stringValue(followupDateNode);
 
       return new TaskScheduleDTO(dueDate, followupDate);
     } else {
@@ -112,20 +113,20 @@ public class UserTaskInstanceProcessor
   private AssignmentDefinitionDTO getProcessedAssignmentDefinition(
       VariableScope flowNodeInstanceVariables, AssignmentDefinition assignmentDefinition) {
     if (assignmentDefinition != null) {
-      com.fasterxml.jackson.databind.JsonNode assigneeNode =
+      VariableValue assigneeNode =
           feelExpressionHandler.processFeelExpression(
               assignmentDefinition.getAssignee(), flowNodeInstanceVariables);
-      String assignee = assigneeNode != null ? assigneeNode.asText() : null;
+      String assignee = stringValue(assigneeNode);
 
-      com.fasterxml.jackson.databind.JsonNode candidateGroupsNode =
+      VariableValue candidateGroupsNode =
           feelExpressionHandler.processFeelExpression(
               assignmentDefinition.getCandidateGroups(), flowNodeInstanceVariables);
-      String candidateGroups = candidateGroupsNode != null ? candidateGroupsNode.asText() : null;
+      String candidateGroups = stringValue(candidateGroupsNode);
 
-      com.fasterxml.jackson.databind.JsonNode candidateUsersNode =
+      VariableValue candidateUsersNode =
           feelExpressionHandler.processFeelExpression(
               assignmentDefinition.getCandidateUsers(), flowNodeInstanceVariables);
-      String candidateUsers = candidateUsersNode != null ? candidateUsersNode.asText() : null;
+      String candidateUsers = stringValue(candidateUsersNode);
 
       return new AssignmentDefinitionDTO(assignee, candidateGroups, candidateUsers);
     } else {
@@ -150,13 +151,13 @@ public class UserTaskInstanceProcessor
           scope.getDirectInstanceResult(),
           userTaskInstance,
           responseResult,
-          trigger.getVariables());
+          trigger.getVariables() == null ? Map.of() : trigger.getVariables().getVariables());
     } else if (UserTaskResponseType.ESCALATION == responseResult.getResponseType()) {
       handleEscalation(
           scope.getDirectInstanceResult(),
           userTaskInstance,
           responseResult,
-          trigger.getVariables());
+          trigger.getVariables() == null ? Map.of() : trigger.getVariables().getVariables());
     }
   }
 
@@ -164,7 +165,7 @@ public class UserTaskInstanceProcessor
       DirectInstanceResult directInstanceResult,
       UserTaskInstance userTaskInstance,
       UserTaskResponseResultDTO responseResult,
-      VariablesDTO variables) {
+      Map<String, VariableValue> variables) {
     directInstanceResult.addEvent(
         new EscalationEventSignal(
             userTaskInstance, responseResult.getCode(), responseResult.getMessage(), variables));
@@ -174,7 +175,7 @@ public class UserTaskInstanceProcessor
       DirectInstanceResult directInstanceResult,
       UserTaskInstance userTaskInstance,
       UserTaskResponseResultDTO responseResult,
-      VariablesDTO variables) {
+      Map<String, VariableValue> variables) {
     directInstanceResult.addEvent(
         new ErrorEventSignal(
             userTaskInstance, responseResult.getCode(), responseResult.getMessage(), variables));
@@ -187,5 +188,10 @@ public class UserTaskInstanceProcessor
       VariableScope variableScope,
       UserTaskInstance instance) {
     // no specific termination logic for user tasks
+  }
+
+  private static String stringValue(VariableValue value) {
+    Object javaValue = value == null ? null : io.taktx.variables.Variables.toJavaObject(value);
+    return javaValue != null ? String.valueOf(javaValue) : null;
   }
 }

@@ -51,7 +51,7 @@ The boundary is designed to be:
 | `STRICT` validation policy | ✅ | ✅ |
 | `OPERATOR_OVERRIDE` validation policy | ✅ | ✅ |
 | Destination topic safety enforcement (engine-side) | ✅ | ✅ |
-| Lineage headers (`X-DLQ-Lineage-Ref`, `X-DLQ-Correction-Id`, `X-DLQ-Source-Offset`) | ✅ | ✅ |
+| Lineage headers (`dlq-lin`, `dlq-cid`, `dlq-off`) | ✅ | ✅ |
 
 ### Epic E4 — Observability
 
@@ -71,7 +71,7 @@ The boundary is designed to be:
 | `taktx-client` DLQ API (`registerDlqEntryConsumer`, `submitReplayCommand`, `registerReplayResultConsumer`) | ✅ | ✅ |
 | `DlqReplayCommandBuilder` fluent API | ✅ | ✅ |
 | **DLQ Explorer** — rich filter UI (reason code, severity, time range, process ID) | ❌ | ✅ |
-| **Payload Inspector** — CBOR decode + JSON display + schema mismatch warnings | ❌ | ✅ |
+| **Payload Inspector** — schema-aware payload decode + JSON display + schema mismatch warnings | ❌ | ✅ |
 | **Correction UI** — JSON/form editor for payload and headers | ❌ | ✅ |
 | **Replay Approval Workflow** — multi-step review, approvals, RBAC | ❌ | ✅ |
 | **Lineage Visualization** — interactive graph (original → DLQ → correction → replay) | ❌ | ✅ |

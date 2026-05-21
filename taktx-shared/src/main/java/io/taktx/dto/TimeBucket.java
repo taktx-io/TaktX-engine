@@ -7,9 +7,6 @@
  */
 package io.taktx.dto;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonValue;
-
 public enum TimeBucket {
   MINUTE("M", Constants.MINUTE_MS, "minute"),
   HOURLY("H", Constants.HOUR_MS, "hourly"),
@@ -27,17 +24,14 @@ public enum TimeBucket {
     this.name = name;
   }
 
-  @JsonIgnore
   public String getName() {
     return name;
   }
 
-  @JsonIgnore
   public long getPeriodMs() {
     return periodMs;
   }
 
-  @JsonValue
   public String getValue() {
     return value;
   }

@@ -81,7 +81,7 @@ class DlqReplayProcessorTest {
     assertThat(fwd.payload()).containsExactly(1, 2, 3);
     assertThat(fwd.headers()).containsKey(DlqReplayProcessor.HEADER_DLQ_LINEAGE_REF);
     assertThat(fwd.headers()).containsKey(DlqReplayProcessor.HEADER_DLQ_CORRECTION_ID);
-    assertThat(fwd.headers()).containsKey("X-TaktX-Signature");
+    assertThat(fwd.headers()).containsKey("tx-sig");
 
     // Second forward: DlqReplayResult
     assertThat(emitted.get(1).value()).isInstanceOf(DlqReplayResult.class);
@@ -193,7 +193,7 @@ class DlqReplayProcessorTest {
     verify(context, org.mockito.Mockito.times(2)).forward(captor.capture());
 
     DlqReplayForwardRecord fwd = (DlqReplayForwardRecord) captor.getAllValues().get(0).value();
-    assertThat(new String(fwd.headers().get("X-TaktX-Signature"), StandardCharsets.UTF_8))
+    assertThat(new String(fwd.headers().get("tx-sig"), StandardCharsets.UTF_8))
         .isEqualTo("engine-key.AABBCCDD==");
 
     DlqReplayResult result = (DlqReplayResult) captor.getAllValues().get(1).value();
@@ -203,7 +203,7 @@ class DlqReplayProcessorTest {
 
   @Test
   void process_lineageHeadersAttachedToForwardRecord() {
-    // DLQ-T04: X-DLQ-Lineage-Ref, X-DLQ-Correction-Id, X-DLQ-Source-Offset present
+    // DLQ-T04: dlq-lin, dlq-cid, dlq-off present
     DlqLineageDTO lineage = new DlqLineageDTO();
     lineage.setSourceOffset(12345L);
     lineage.setSourceTopic("process-instance");

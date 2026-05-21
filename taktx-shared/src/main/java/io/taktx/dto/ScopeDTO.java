@@ -7,10 +7,6 @@
  */
 package io.taktx.dto;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
-import com.fasterxml.jackson.annotation.JsonFormat.Shape;
-import com.fasterxml.jackson.annotation.JsonInclude;
-import io.quarkus.runtime.annotations.RegisterForReflection;
 import java.util.Map;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -19,9 +15,6 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @EqualsAndHashCode
-@JsonFormat(shape = Shape.ARRAY)
-@JsonInclude(JsonInclude.Include.NON_NULL)
-@RegisterForReflection
 public class ScopeDTO {
 
   private int subProcessLevel;

@@ -10,7 +10,6 @@ package io.taktx.engine.pi;
 
 import static io.taktx.dto.Constants.MAX_LONG;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import io.taktx.dto.AbortTriggerDTO;
 import io.taktx.dto.CommandTrustMetadataDTO;
 import io.taktx.dto.CommandTrustVerificationResult;
@@ -51,6 +50,7 @@ import io.taktx.engine.pi.model.WithScope;
 import io.taktx.engine.pi.processor.IoMappingProcessor;
 import io.taktx.engine.security.EngineAuthorizationService;
 import io.taktx.engine.topicmanagement.DynamicTopicManager;
+import io.taktx.proto.VariableValue;
 import io.taktx.security.AuthorizationTokenException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -105,7 +105,7 @@ public class ProcessInstanceProcessor
       definitionsStore;
   private KeyValueStore<UUID, ProcessInstanceDTO> processInstanceStore;
   private KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore;
-  private KeyValueStore<VariableKeyDTO, JsonNode> variablesStore;
+  private KeyValueStore<VariableKeyDTO, VariableValue> variablesStore;
   private ProcessorContext<Object, Object> context;
   private final ThreadLocal<VariableScope> variableScopeThreadLocal = new ThreadLocal<>();
   private final ThreadLocal<ProcessInstance> processInstanceThreadLocal = new ThreadLocal<>();
@@ -281,7 +281,7 @@ public class ProcessInstanceProcessor
         processInstanceId,
         headers,
         triggerEnvelope,
-        "CBOR_DECODE_ERROR",
+        "PAYLOAD_DESERIALIZATION_ERROR",
         "Unable to decode trigger",
         "DESERIALIZER");
 
@@ -378,7 +378,10 @@ public class ProcessInstanceProcessor
         new Scope(
             null, processInstanceId, null, flowElements, instanceMapper, flowNodeInstanceStore);
     VariableScope variableScope = VariableScope.empty(processInstanceId, variablesStore);
-    variableScope.merge(startCommand.getVariables());
+    variableScope.merge(
+        startCommand.getVariables() == null
+            ? Map.of()
+            : startCommand.getVariables().getVariables());
     variableScopeThreadLocal.set(variableScope);
 
     Set<IoVariableMapping> ioVariableMappings = dtoMapper.map(startCommand.getOutputMappings());
@@ -417,7 +420,7 @@ public class ProcessInstanceProcessor
             scopeProcessor.processStart(
                 Collections.emptyList(),
                 startEventId,
-                VariablesDTO.empty(),
+                Map.of(),
                 processInstanceProcessingContext,
                 scope,
                 variableScope));
@@ -455,7 +458,7 @@ public class ProcessInstanceProcessor
             .scope(scopeDTO)
             .build();
 
-    VariablesDTO variables = variableScope.scopeToDTO();
+    VariablesDTO variables = VariablesDTO.ofVariableMap(variableScope.scopeToMap());
 
     return new InstanceUpdate(
         processInstance.getProcessInstanceId(),
@@ -477,7 +480,7 @@ public class ProcessInstanceProcessor
             .scope(scopeDTO)
             .build();
 
-    VariablesDTO variables = variableScope.scopeToDTO();
+    VariablesDTO variables = VariablesDTO.ofVariableMap(variableScope.scopeToMap());
 
     Long processStartTime =
         scope.isStateChanged() && scope.getState() == ExecutionState.ACTIVE ? clock.millis() : null;
@@ -522,7 +525,7 @@ public class ProcessInstanceProcessor
           () ->
               scopeProcessor.processSetVariables(
                   trigger.getParentElementInstanceIdPath(),
-                  trigger.getVariables(),
+                  trigger.getVariables() == null ? Map.of() : trigger.getVariables().getVariables(),
                   processInstanceProcessingContext,
                   processInstance.getScope(),
                   variableScopeThreadLocal.get()));
@@ -555,7 +558,7 @@ public class ProcessInstanceProcessor
               scopeProcessor.processStart(
                   trigger.getParentElementInstanceIdPath(),
                   trigger.getElementId(),
-                  trigger.getVariables(),
+                  trigger.getVariables() == null ? Map.of() : trigger.getVariables().getVariables(),
                   processInstanceProcessingContext,
                   processInstance.getScope(),
                   variableScopeThreadLocal.get()));
@@ -816,16 +819,17 @@ public class ProcessInstanceProcessor
   private void continueParentInstance(
       InstanceResult instanceResult, ProcessInstance processInstance, VariableScope variableScope) {
     if (processInstance.getParentProcessInstanceId() != null) {
-      VariablesDTO variables;
+      VariablesDTO variables =
+          processInstance.isPropagateAllToParent()
+              ? VariablesDTO.ofVariableMap(variableScope.retrieveAndFlattenAllVariables())
+              : null;
 
-      if (processInstance.isPropagateAllToParent()) {
-        variables = VariablesDTO.ofJsonMap(variableScope.retrieveAndFlattenAllVariables());
-      } else {
+      if (!processInstance.isPropagateAllToParent()) {
         VariableScope outputVariables =
             VariableScope.empty(processInstance.getProcessInstanceId(), variablesStore);
         ioMappingProcessor.addVariables(
             variableScope, outputVariables, processInstance.getOutputMappings());
-        variables = VariablesDTO.ofJsonMap(outputVariables.getVariables());
+        variables = VariablesDTO.ofVariableMap(outputVariables.scopeToMap());
       }
 
       instanceResult.addContinuation(
@@ -843,15 +847,16 @@ public class ProcessInstanceProcessor
       VariableScope variableScope,
       EventSignalDTO eventSignal) {
     if (processInstance.getParentProcessInstanceId() != null) {
-      VariablesDTO variables;
-      if (processInstance.isPropagateAllToParent()) {
-        variables = VariablesDTO.ofJsonMap(variableScope.retrieveAndFlattenAllVariables());
-      } else {
+      VariablesDTO variables =
+          processInstance.isPropagateAllToParent()
+              ? VariablesDTO.ofVariableMap(variableScope.retrieveAndFlattenAllVariables())
+              : null;
+      if (!processInstance.isPropagateAllToParent()) {
         VariableScope outputVariables =
             VariableScope.empty(processInstance.getProcessInstanceId(), variablesStore);
         ioMappingProcessor.addVariables(
             outputVariables, variableScope.getParentScope(), processInstance.getOutputMappings());
-        variables = VariablesDTO.ofJsonMap(outputVariables.getVariables());
+        variables = VariablesDTO.ofVariableMap(outputVariables.scopeToMap());
       }
       eventSignal.getVariables().getVariables().forEach(variables::put);
       eventSignal.setVariables(variables);
@@ -900,9 +905,9 @@ public class ProcessInstanceProcessor
     VariableKeyDTO variableStartKey = new VariableKeyDTO(flowNodeInstanceKeyStart, "");
     FlowNodeInstanceKeyDTO flownodeInstanceKeyEnd =
         new FlowNodeInstanceKeyDTO(processInstanceId, List.of(MAX_LONG));
-    VariableKeyDTO variableEndKey = new VariableKeyDTO(flownodeInstanceKeyEnd, "\uffff");
+    VariableKeyDTO variableEndKey = new VariableKeyDTO(flownodeInstanceKeyEnd, "");
 
-    try (KeyValueIterator<VariableKeyDTO, JsonNode> range =
+    try (KeyValueIterator<VariableKeyDTO, VariableValue> range =
         this.variablesStore.range(variableStartKey, variableEndKey)) {
       range.forEachRemaining(r -> this.variablesStore.delete(r.key));
     }

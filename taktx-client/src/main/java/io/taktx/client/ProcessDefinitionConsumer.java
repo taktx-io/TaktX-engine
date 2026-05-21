@@ -8,8 +8,8 @@
 package io.taktx.client;
 
 import io.taktx.Topics;
-import io.taktx.client.serdes.ProcessDefinitionJsonDeserializer;
-import io.taktx.client.serdes.ProcessDefinitionKeyJsonDeserializer;
+import io.taktx.client.serdes.ProcessDefinitionDeserializer;
+import io.taktx.client.serdes.ProcessDefinitionKeyDeserializer;
 import io.taktx.dto.ProcessDefinitionDTO;
 import io.taktx.dto.ProcessDefinitionKey;
 import io.taktx.util.TaktPropertiesHelper;
@@ -232,8 +232,8 @@ public class ProcessDefinitionConsumer {
     Properties props =
         taktPropertiesHelper.getKafkaConsumerProperties(
             groupId,
-            ProcessDefinitionKeyJsonDeserializer.class,
-            ProcessDefinitionJsonDeserializer.class,
+            ProcessDefinitionKeyDeserializer.class,
+            ProcessDefinitionDeserializer.class,
             "earliest");
     return new KafkaConsumer<>(props);
   }

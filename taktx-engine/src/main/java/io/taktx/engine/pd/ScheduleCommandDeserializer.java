@@ -8,11 +8,11 @@
 
 package io.taktx.engine.pd;
 
-import io.quarkus.kafka.client.serialization.ObjectMapperSerde;
 import io.taktx.dto.Constants;
 import io.taktx.dto.MessageScheduleDTO;
 import io.taktx.security.Ed25519Service;
 import io.taktx.security.EngineSigningKeysHolder;
+import io.taktx.serdes.MessageScheduleDtoDeserializer;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import org.apache.kafka.common.header.Header;
@@ -21,8 +21,7 @@ import org.apache.kafka.common.serialization.Deserializer;
 
 public class ScheduleCommandDeserializer implements Deserializer<MessageScheduleDTO> {
 
-  private final Deserializer<MessageScheduleDTO> delegate =
-      new ObjectMapperSerde<>(MessageScheduleDTO.class).deserializer();
+  private final Deserializer<MessageScheduleDTO> delegate = new MessageScheduleDtoDeserializer();
 
   @Override
   public MessageScheduleDTO deserialize(String topic, byte[] data) {
@@ -37,14 +36,19 @@ public class ScheduleCommandDeserializer implements Deserializer<MessageSchedule
       throw new IllegalStateException(
           "Inbound record on topic='"
               + topic
-              + "' has no X-TaktX-Signature header — rejecting unsigned schedule command");
+              + "' has no "
+              + Constants.HEADER_ENGINE_SIGNATURE
+              + " header — rejecting unsigned schedule command");
     }
 
     String headerValue = new String(sigHeader.value(), StandardCharsets.UTF_8);
     int dot = headerValue.indexOf('.');
     if (dot < 0) {
       throw new IllegalStateException(
-          "Malformed X-TaktX-Signature header (expected '<keyId>.<base64sig>'): " + headerValue);
+          "Malformed "
+              + Constants.HEADER_ENGINE_SIGNATURE
+              + " header (expected '<keyId>.<base64sig>'): "
+              + headerValue);
     }
 
     String keyId = headerValue.substring(0, dot);

@@ -110,8 +110,8 @@ class WorkerResponder implements AutoCloseable {
 
   /**
    * Serializer that wraps a delegate, serialises the payload once, then attaches an Ed25519 {@code
-   * X-TaktX-Signature} header using a <em>captured</em> key — without reading from or writing to
-   * {@link io.taktx.security.SigningServiceHolder}.
+   * tx-sig} header using a <em>captured</em> key — without reading from or writing to {@link
+   * io.taktx.security.SigningServiceHolder}.
    */
   private static final class IsolatedSigningSerializer<T> implements Serializer<T> {
 

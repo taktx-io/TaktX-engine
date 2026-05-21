@@ -8,7 +8,6 @@
 
 package io.taktx.engine.pi.processor;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pi.model.Scope;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,7 +18,6 @@ import org.mockito.MockitoAnnotations;
 class IoMappingProcessorIntegrationTest {
 
   private IoMappingProcessor processor;
-  private ObjectMapper objectMapper;
 
   @Mock private FeelExpressionHandler feelExpressionHandler;
 
@@ -28,7 +26,6 @@ class IoMappingProcessorIntegrationTest {
   @BeforeEach
   void setUp() {
     MockitoAnnotations.openMocks(this);
-    objectMapper = new ObjectMapper();
-    processor = new IoMappingProcessor(feelExpressionHandler, objectMapper);
+    processor = new IoMappingProcessor(feelExpressionHandler);
   }
 }

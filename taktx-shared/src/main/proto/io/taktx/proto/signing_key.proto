@@ -1,0 +1,64 @@
+syntax = "proto3";
+
+package io.taktx.proto;
+
+option java_package = "io.taktx.proto";
+option java_multiple_files = true;
+option java_outer_classname = "SigningKeyProto";
+
+enum CommandTrustVerificationResult {
+  COMMAND_TRUST_VERIFICATION_UNSPECIFIED = 0;
+  JWT_AUTHORIZED = 1;
+  SIGNATURE_VERIFIED = 2;
+  ENGINE_SIGNED = 3;
+  AUTHORIZATION_DISABLED = 4;
+  LICENSE_BYPASSED = 5;
+}
+
+// Java: SigningKeyDTO.KeyStatus (inner enum)
+enum KeyStatus {
+  KEY_STATUS_UNSPECIFIED = 0;
+  KEY_STATUS_ACTIVE      = 1;
+  KEY_STATUS_TRUSTED     = 2;
+  KEY_STATUS_REVOKED     = 3;
+}
+
+enum KeyRole {
+  KEY_ROLE_UNSPECIFIED = 0;
+  KEY_ROLE_ENGINE      = 1;
+  KEY_ROLE_CLIENT      = 2;
+  KEY_ROLE_PLATFORM    = 3;
+}
+
+// Java: CommandTrustMetadataDTO.CommandAuthMethod (inner enum)
+enum CommandAuthMethod {
+  COMMAND_AUTH_METHOD_UNSPECIFIED  = 0;
+  COMMAND_AUTH_JWT                 = 1;
+  COMMAND_AUTH_ED25519             = 2;
+  COMMAND_AUTH_JWT_AND_ED25519     = 3;
+  COMMAND_AUTH_NONE                = 4;
+}
+
+// Java: CommandTrustMetadataDTO
+message CommandTrustMetadataMessage {
+  CommandAuthMethod              auth_method          = 1;
+  CommandTrustVerificationResult verification_result  = 2;
+  optional bool                  trusted              = 3;
+  string                         user_id              = 4;
+  string                         issuer               = 5;
+  string                         signer_key_id        = 6;
+  string                         signer_owner         = 7;
+  string                         signer_algorithm     = 8;
+}
+
+// Java: SigningKeyDTO
+message SigningKeyMessage {
+  string key_id = 1;
+  string public_key_base64 = 2;
+  string algorithm = 3;
+  optional sint64 created_at = 4;
+  KeyStatus status = 5;
+  string    owner  = 6;
+  KeyRole   role   = 7;
+  string registration_signature = 8;
+}

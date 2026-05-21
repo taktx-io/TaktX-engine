@@ -7,10 +7,7 @@
  */
 package io.taktx.dto;
 
-import io.quarkus.runtime.annotations.RegisterForReflection;
-
 /** Validation strictness for DMN evaluation. */
-@RegisterForReflection
 public enum DmnValidationMode {
   /** Preserve current best-effort behaviour and avoid turning validation issues into failures. */
   PERMISSIVE,

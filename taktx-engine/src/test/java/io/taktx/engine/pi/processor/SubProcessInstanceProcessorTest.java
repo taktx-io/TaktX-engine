@@ -14,7 +14,6 @@ import static org.mockito.Mockito.*;
 import io.taktx.dto.AbortTriggerDTO;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.dto.ExecutionState;
-import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.FlowElements;
 import io.taktx.engine.pd.model.SubProcess;
@@ -136,7 +135,7 @@ class SubProcessInstanceProcessorTest {
         .processStart(
             eq(instancePath),
             isNull(),
-            eq(VariablesDTO.empty()),
+            eq(java.util.Map.of()),
             eq(processingContext),
             eq(childScope),
             eq(variableScope));

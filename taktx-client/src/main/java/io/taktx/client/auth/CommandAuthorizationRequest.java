@@ -11,18 +11,38 @@ import jakarta.annotation.Nullable;
 import java.util.List;
 import java.util.UUID;
 
-/** Structured context for outbound command JWT lookup. */
+/**
+ * Structured context for outbound command JWT lookup.
+ *
+ * @param scope logical command scope for which authorization is requested
+ * @param processInstanceId target process instance ID when known
+ * @param processDefinitionId target process-definition ID for start commands
+ * @param processDefinitionVersion target process-definition version, or {@code -1} when not
+ *     applicable
+ * @param elementInstanceIdPath scope path for element-targeted commands, or {@code null} when not
+ *     applicable
+ */
 public record CommandAuthorizationRequest(
     CommandAuthorizationScope scope,
     @Nullable UUID processInstanceId,
     @Nullable String processDefinitionId,
     int processDefinitionVersion,
     @Nullable List<Long> elementInstanceIdPath) {
+
+  /** Canonical constructor that defensively copies the optional element-instance path. */
   public CommandAuthorizationRequest {
     elementInstanceIdPath =
         elementInstanceIdPath == null ? null : java.util.List.copyOf(elementInstanceIdPath);
   }
 
+  /**
+   * Creates an authorization request for a start-process command.
+   *
+   * @param processDefinitionId target process-definition ID
+   * @param processDefinitionVersion target process-definition version, or {@code -1} for latest
+   * @param processInstanceId client-generated process instance ID for the new instance
+   * @return an authorization request for the start-process scope
+   */
   public static CommandAuthorizationRequest startProcess(
       String processDefinitionId, int processDefinitionVersion, UUID processInstanceId) {
     return new CommandAuthorizationRequest(
@@ -33,6 +53,13 @@ public record CommandAuthorizationRequest(
         null);
   }
 
+  /**
+   * Creates an authorization request for aborting a process or element instance.
+   *
+   * @param processInstanceId active process instance ID
+   * @param elementInstanceIdPath path identifying the element instance to abort
+   * @return an authorization request for the abort scope
+   */
   public static CommandAuthorizationRequest abortProcessInstance(
       UUID processInstanceId, List<Long> elementInstanceIdPath) {
     return new CommandAuthorizationRequest(
@@ -43,6 +70,13 @@ public record CommandAuthorizationRequest(
         elementInstanceIdPath);
   }
 
+  /**
+   * Creates an authorization request for a set-variable command.
+   *
+   * @param processInstanceId active process instance ID
+   * @param elementInstanceIdPath path identifying the scope whose variables will be updated
+   * @return an authorization request for the set-variable scope
+   */
   public static CommandAuthorizationRequest setVariable(
       UUID processInstanceId, List<Long> elementInstanceIdPath) {
     return new CommandAuthorizationRequest(

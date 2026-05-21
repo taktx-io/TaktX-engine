@@ -16,7 +16,6 @@ import io.taktx.client.ExternalTaskTriggerConsumer;
 import io.taktx.client.InstanceUpdateRecord;
 import io.taktx.client.TaktXClient;
 import io.taktx.client.UserTaskTriggerConsumer;
-import io.taktx.client.serdes.TopicMetaJsonDeserializer;
 import io.taktx.dto.ActivityInstanceDTO;
 import io.taktx.dto.Constants;
 import io.taktx.dto.CorrelationMessageEventTriggerDTO;
@@ -133,7 +132,7 @@ public class BpmnTestEngine {
 
   /**
    * Initialises with a known engine Ed25519 public key. Use this overload in security tests so the
-   * client-side {@link io.taktx.serdes.JsonDeserializer} can verify engine-signed records.
+   * client-side protobuf deserializers can verify engine-signed records.
    */
   public void init(String enginePublicKeyBase64) {
     doInit(enginePublicKeyBase64);
@@ -187,7 +186,7 @@ public class BpmnTestEngine {
     // overwrite the engine's SigningServiceHolder registration.
     if (enginePublicKeyBase64 != null) {
       kakaProperties.put(
-          io.taktx.serdes.JsonDeserializer.ENGINE_PUBLIC_KEY_CONFIG, enginePublicKeyBase64);
+          io.taktx.serdes.ProtoDtoDeserializer.ENGINE_PUBLIC_KEY_CONFIG, enginePublicKeyBase64);
     }
 
     SigningIdentity topicRequestSigningIdentity = createTopicRequestSigningIdentity();
@@ -235,7 +234,7 @@ public class BpmnTestEngine {
             "test-group-topic-meta-" + UUID.randomUUID(),
             TOPIC_TEST_PREFIX + Topics.TOPIC_META_ACTUAL_TOPIC.getTopicName(),
             StringDeserializer.class.getName(),
-            TopicMetaJsonDeserializer.class.getName(),
+            TopicMetaDeserializer.class.getName(),
             this::consumeTopicMeta);
   }
 

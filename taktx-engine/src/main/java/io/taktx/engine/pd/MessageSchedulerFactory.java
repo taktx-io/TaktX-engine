@@ -13,7 +13,6 @@ import static com.cronutils.model.CronType.QUARTZ;
 import com.cronutils.model.definition.CronDefinition;
 import com.cronutils.model.definition.CronDefinitionBuilder;
 import com.cronutils.parser.CronParser;
-import com.fasterxml.jackson.databind.JsonNode;
 import io.taktx.dto.FixedRateMessageScheduleDTO;
 import io.taktx.dto.MessageScheduleDTO;
 import io.taktx.dto.OneTimeScheduleDTO;
@@ -22,6 +21,8 @@ import io.taktx.dto.SchedulableMessageDTO;
 import io.taktx.dto.TimerEventDefinitionDTO;
 import io.taktx.engine.feel.FeelExpressionHandlerImpl;
 import io.taktx.engine.pi.model.VariableScope;
+import io.taktx.proto.VariableValue;
+import io.taktx.variables.Variables;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.time.Duration;
@@ -55,13 +56,15 @@ public class MessageSchedulerFactory {
       VariableScope variables,
       long now) {
 
-    JsonNode jsonNode =
+    VariableValue durationValue =
         feelExpressionHandler.processFeelExpression(
             timerEventDefinition.getTimeDuration(), variables);
-    if (jsonNode == null || jsonNode.isNull()) {
+    if (durationValue == null
+        || durationValue.getKindCase() == VariableValue.KindCase.NULL_VALUE
+        || durationValue.getKindCase() == VariableValue.KindCase.KIND_NOT_SET) {
       throw new IllegalArgumentException("TimeDuration expression returned null");
     }
-    String timeDuration = jsonNode.asText();
+    String timeDuration = String.valueOf(Variables.toJavaObject(durationValue));
 
     RepeatDuration repeatDuration = RepeatDuration.parse(timeDuration);
     Duration duration = repeatDuration.getDuration();
@@ -75,12 +78,14 @@ public class MessageSchedulerFactory {
       SchedulableMessageDTO messages,
       VariableScope variables,
       long now) {
-    JsonNode jsonNode =
+    VariableValue timeDateValue =
         feelExpressionHandler.processFeelExpression(timerEventDefinition.getTimeDate(), variables);
-    if (jsonNode == null || jsonNode.isNull()) {
+    if (timeDateValue == null
+        || timeDateValue.getKindCase() == VariableValue.KindCase.NULL_VALUE
+        || timeDateValue.getKindCase() == VariableValue.KindCase.KIND_NOT_SET) {
       throw new IllegalArgumentException("TimeDate expression returned null");
     }
-    String timeDate = jsonNode.asText();
+    String timeDate = String.valueOf(Variables.toJavaObject(timeDateValue));
     return new OneTimeScheduleDTO(messages, now, Instant.parse(timeDate).toEpochMilli());
   }
 
@@ -102,13 +107,15 @@ public class MessageSchedulerFactory {
       VariableScope variables,
       long now) {
 
-    JsonNode jsonNode =
+    VariableValue timeCycleValue =
         feelExpressionHandler.processFeelExpression(timerEventDefinition.getTimeCycle(), variables);
-    if (jsonNode == null || jsonNode.isNull()) {
+    if (timeCycleValue == null
+        || timeCycleValue.getKindCase() == VariableValue.KindCase.NULL_VALUE
+        || timeCycleValue.getKindCase() == VariableValue.KindCase.KIND_NOT_SET) {
       throw new IllegalArgumentException("TimeCycle expression returned null");
     }
 
-    String timeCycle = jsonNode.asText();
+    String timeCycle = String.valueOf(Variables.toJavaObject(timeCycleValue));
 
     RepeatDuration repeatDuration = RepeatDuration.parse(timeCycle);
     return new FixedRateMessageScheduleDTO(
@@ -120,15 +127,14 @@ public class MessageSchedulerFactory {
       SchedulableMessageDTO messages,
       VariableScope variables,
       long now) {
-    JsonNode jsonNode =
+    VariableValue timeCycleValue =
         feelExpressionHandler.processFeelExpression(timerEventDefinition.getTimeCycle(), variables);
-    if (jsonNode == null || jsonNode.isNull()) {
+    if (timeCycleValue == null
+        || timeCycleValue.getKindCase() == VariableValue.KindCase.NULL_VALUE
+        || timeCycleValue.getKindCase() == VariableValue.KindCase.KIND_NOT_SET) {
       throw new IllegalArgumentException("TimeCycle expression returned null");
     }
-    String timeCycle =
-        feelExpressionHandler
-            .processFeelExpression(timerEventDefinition.getTimeCycle(), variables)
-            .asText();
+    String timeCycle = String.valueOf(Variables.toJavaObject(timeCycleValue));
     return new RecurringMessageScheduleDTO(messages, timeCycle, now);
   }
 
@@ -143,7 +149,7 @@ public class MessageSchedulerFactory {
       CronParser parser = new CronParser(cronDefinition);
       parser.parse(timeCycle);
       return true;
-    } catch (IllegalArgumentException e) {
+    } catch (IllegalArgumentException _) {
       return false;
     }
   }

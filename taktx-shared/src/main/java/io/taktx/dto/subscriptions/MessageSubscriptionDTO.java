@@ -7,7 +7,6 @@
  */
 package io.taktx.dto.subscriptions;
 
-import io.quarkus.runtime.annotations.RegisterForReflection;
 import io.taktx.dto.SubscriptionDTO;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -18,7 +17,6 @@ import lombok.ToString;
 @EqualsAndHashCode(callSuper = true)
 @Data
 @NoArgsConstructor
-@RegisterForReflection
 public class MessageSubscriptionDTO extends SubscriptionDTO {
   private String name;
   private String correlationKey;

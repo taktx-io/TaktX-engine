@@ -68,7 +68,7 @@ public class DmnDefinitionsProcessor
           "⚠ Null payload on dmn-definitions for key {}, routing to DLQ", definitionsRecord.key());
       emitDmnDefinitionsDlq(
           definitionsRecord,
-          "CBOR_DECODE_ERROR",
+          "PAYLOAD_DESERIALIZATION_ERROR",
           "Null payload for dmn-definitions record",
           "DESERIALIZER");
       return;

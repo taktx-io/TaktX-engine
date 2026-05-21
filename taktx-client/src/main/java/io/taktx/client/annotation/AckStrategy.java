@@ -9,7 +9,10 @@ package io.taktx.client.annotation;
 
 /** Acknowledgment strategies for message processing. */
 public enum AckStrategy {
+  /** The framework acknowledges automatically when the handler returns successfully. */
   IMPLICIT,
+  /** The handler acknowledges offsets in batches under its own control. */
   EXPLICIT_BATCH,
+  /** The handler acknowledges each message explicitly. */
   EXPLICIT_MESSAGE
 }

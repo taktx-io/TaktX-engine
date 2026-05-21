@@ -7,10 +7,6 @@
  */
 package io.taktx.dto;
 
-import com.fasterxml.jackson.annotation.JsonValue;
-import io.quarkus.runtime.annotations.RegisterForReflection;
-
-@RegisterForReflection
 public enum ExternalTaskResponseType {
   SUCCESS("S"),
   PROMISE("P"),
@@ -25,7 +21,6 @@ public enum ExternalTaskResponseType {
     this.code = code;
   }
 
-  @JsonValue
   public String getCode() {
     return code;
   }

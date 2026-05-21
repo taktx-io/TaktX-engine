@@ -11,7 +11,6 @@ package io.taktx.engine.pd;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import io.quarkus.kafka.client.serialization.ObjectMapperSerde;
 import io.taktx.dto.Constants;
 import io.taktx.dto.MessageScheduleDTO;
 import io.taktx.dto.OneTimeScheduleDTO;
@@ -21,6 +20,7 @@ import io.taktx.dto.VariablesDTO;
 import io.taktx.security.Ed25519Service;
 import io.taktx.security.EngineSigningKeysHolder;
 import io.taktx.security.SigningKeyGenerator;
+import io.taktx.serdes.MessageScheduleProtoMapper;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
 import java.util.Base64;
@@ -46,7 +46,7 @@ class ScheduleCommandDeserializerTest {
 
     assertThatThrownBy(() -> deserializer.deserialize(TOPIC, new RecordHeaders(), payload))
         .isInstanceOf(IllegalStateException.class)
-        .hasMessageContaining("no X-TaktX-Signature header");
+        .hasMessageContaining("no tx-sig header");
   }
 
   @Test
@@ -92,10 +92,7 @@ class ScheduleCommandDeserializerTest {
   }
 
   private byte[] serialize(MessageScheduleDTO schedule) {
-    try (ObjectMapperSerde<MessageScheduleDTO> serde =
-        new ObjectMapperSerde<>(MessageScheduleDTO.class)) {
-      return serde.serializer().serialize(TOPIC, schedule);
-    }
+    return MessageScheduleProtoMapper.toProto(schedule).toByteArray();
   }
 
   private OneTimeScheduleDTO oneTimeSchedule() {

@@ -11,7 +11,6 @@ package io.taktx.engine.pi.processor;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-import com.fasterxml.jackson.databind.node.TextNode;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.*;
 import io.taktx.engine.pi.DirectInstanceResult;
@@ -23,6 +22,7 @@ import io.taktx.engine.pi.model.EscalationEventSignal;
 import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.ThrowEventInstance;
 import io.taktx.engine.pi.model.VariableScope;
+import io.taktx.variables.Variables;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -91,7 +91,7 @@ class ThrowEventInstanceProcessorTest {
     when(throwEvent.getEscalationEventDefinition()).thenReturn(Optional.empty());
     when(throwEvent.getLinkventDefinition()).thenReturn(Optional.empty());
     when(feelExpressionHandler.processFeelExpression("signalName", variableScope))
-        .thenReturn(new TextNode("resolvedSignalName"));
+        .thenReturn(Variables.of("resolvedSignalName"));
     when(processingContext.getInstanceResult()).thenReturn(instanceResult);
 
     processor.processStartSpecificEventInstance(

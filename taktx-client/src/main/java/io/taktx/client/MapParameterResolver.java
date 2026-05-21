@@ -7,34 +7,17 @@
  */
 package io.taktx.client;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.taktx.dto.ExternalTaskTriggerDTO;
-import java.util.HashMap;
-import java.util.Map;
 
 /** A parameter resolver that converts the variables of an ExternalTaskTriggerDTO into a Map. */
 public class MapParameterResolver implements ParameterResolver {
 
-  private final ObjectMapper mapper;
-
-  /**
-   * Constructor for MapParameterResolver.
-   *
-   * @param mapper The ObjectMapper used for converting variable values.
-   */
-  public MapParameterResolver(ObjectMapper mapper) {
-    this.mapper = mapper;
+  public MapParameterResolver() {
+    // Default constructor used by the resolver factory.
   }
 
   @Override
   public Object resolve(ExternalTaskTriggerDTO externalTaskTriggerDTO) {
-    Map<String, Object> result = new HashMap<>();
-
-    externalTaskTriggerDTO
-        .getVariables()
-        .getVariables()
-        .forEach((key, value) -> result.put(key, mapper.convertValue(value, Object.class)));
-
-    return result;
+    return ClientValueMapper.toPlainJavaMap(externalTaskTriggerDTO.getVariables());
   }
 }

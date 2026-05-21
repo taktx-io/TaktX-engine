@@ -8,7 +8,6 @@
 
 package io.taktx.engine.pd;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.taktx.dto.CorrelationMessageSubscriptionDTO;
 import java.util.HashMap;
 import java.util.Map;
@@ -30,7 +29,6 @@ public class CorrelationMessageSubscriptions {
     this.instances = instances;
   }
 
-  @JsonIgnore
   public CorrelationMessageSubscriptions update(
       CorrelationMessageSubscriptionDTO messageSubscription) {
     Map<String, CorrelationMessageSubscriptionDTO> newInstances = new HashMap<>(instances);
@@ -38,14 +36,12 @@ public class CorrelationMessageSubscriptions {
     return new CorrelationMessageSubscriptions(newInstances);
   }
 
-  @JsonIgnore
   public CorrelationMessageSubscriptions remove(String correlationKey) {
     Map<String, CorrelationMessageSubscriptionDTO> newInstances = new HashMap<>(instances);
     newInstances.remove(correlationKey);
     return new CorrelationMessageSubscriptions(newInstances);
   }
 
-  @JsonIgnore
   public CorrelationMessageSubscriptions removeAll(Set<String> toRemove) {
     Map<String, CorrelationMessageSubscriptionDTO> newInstances = new HashMap<>(instances);
     toRemove.forEach(newInstances::remove);

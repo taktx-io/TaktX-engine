@@ -1,6 +1,5 @@
 package io.taktx.engine.pi.model.subscriptions;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import io.taktx.dto.subscriptions.SubScriptionType;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.EventSignal;
@@ -15,6 +14,8 @@ import io.taktx.engine.pi.model.NewInstanceSignalSubscriptionInfo;
 import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.SignalEventSignal;
 import io.taktx.engine.pi.model.VariableScope;
+import io.taktx.proto.VariableValue;
+import io.taktx.variables.Variables;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -40,15 +41,17 @@ public class SignalSubscription extends Subscription {
       throw new ProcessInstanceException(null, "SignalEventDefinition has no referenced signal");
     }
 
-    JsonNode jsonNode =
+    VariableValue signalNameValue =
         feelExpressionHandler.processFeelExpression(
             signalEventDefinition.getReferencedSignal().name(), variableScope);
 
-    if (jsonNode == null || jsonNode.isNull()) {
+    if (signalNameValue == null
+        || signalNameValue.getKindCase() == VariableValue.KindCase.NULL_VALUE
+        || signalNameValue.getKindCase() == VariableValue.KindCase.KIND_NOT_SET) {
       throw new ProcessInstanceException(null, "Signal name expression returned null");
     }
 
-    name = jsonNode.asText();
+    name = String.valueOf(Variables.toJavaObject(signalNameValue));
     NewInstanceSignalSubscriptionInfo subscriptionInfo =
         new NewInstanceSignalSubscriptionInfo(name, flowNodeInstance);
 

@@ -32,7 +32,7 @@ class DlqPublisherTest {
   private final DlqPublisher dlqPublisher = new DlqPublisher(mock(DlqObservabilityService.class));
 
   @Test
-  void toEnvelope_mapsDecodeFailureToCborErrorAndPreservesPayloadDetails() {
+  void toEnvelope_mapsDecodeFailureToPayloadDeserializationErrorAndPreservesPayloadDetails() {
     byte[] payload = new byte[] {1, 2, 3};
     byte[] authHeader = new byte[] {9, 8, 7};
     ProcessInstanceDlqEntryDTO entry =
@@ -45,8 +45,9 @@ class DlqPublisherTest {
     DlqEnvelope envelope = dlqPublisher.toEnvelope(entry, 1_700_000_000_000L, "engine-a");
 
     assertThat(envelope.getSourceTopic()).isEqualTo("process-instance");
-    assertThat(envelope.getReasonCode()).isEqualTo(DlqReasonCode.CBOR_DECODE_ERROR);
-    assertThat(envelope.getSeverity()).isEqualTo(DlqReasonCode.CBOR_DECODE_ERROR.getSeverity());
+    assertThat(envelope.getReasonCode()).isEqualTo(DlqReasonCode.PAYLOAD_DESERIALIZATION_ERROR);
+    assertThat(envelope.getSeverity())
+        .isEqualTo(DlqReasonCode.PAYLOAD_DESERIALIZATION_ERROR.getSeverity());
     assertThat(envelope.getCaptureStage().name()).isEqualTo("PROCESSOR");
     assertThat(envelope.getHeaders())
         .containsEntry("X-Test", Base64.getEncoder().encodeToString(authHeader));

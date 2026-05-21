@@ -8,6 +8,7 @@
 package io.taktx.engine.dlq;
 
 import io.taktx.Topics;
+import io.taktx.dto.Constants;
 import io.taktx.dto.DlqLineageDTO;
 import io.taktx.dto.DlqReplayCommand;
 import io.taktx.dto.DlqReplayResult;
@@ -43,8 +44,8 @@ import org.apache.kafka.streams.processor.api.Record;
  *   <li><b>ENGINE signing (DLQ-012)</b>: the corrected payload is signed with the engine's active
  *       Ed25519 key. {@code replaySigner} and {@code replaySignatureKeyId} are populated in the
  *       emitted {@link DlqReplayResult}.
- *   <li><b>Lineage headers</b>: every forwarded record carries {@code X-DLQ-Lineage-Ref}, {@code
- *       X-DLQ-Correction-Id} and {@code X-DLQ-Source-Offset}.
+ *   <li><b>Lineage headers</b>: every forwarded record carries {@code dlq-lin}, {@code dlq-cid} and
+ *       {@code dlq-off}.
  *   <li><b>Dry-run (DLQ-014)</b>: when {@code command.isDryRun() == true} all validation steps run
  *       but no {@link DlqReplayForwardRecord} is emitted; only a result with status {@code
  *       DRY_RUN_PASSED} or {@code DRY_RUN_FAILED} is produced.
@@ -66,10 +67,10 @@ public class DlqReplayProcessor implements Processor<String, DlqReplayCommand, O
   /** Schema version currently understood by this engine build. */
   static final int SUPPORTED_SCHEMA_VERSION = 1;
 
-  static final String HEADER_DLQ_LINEAGE_REF = "X-DLQ-Lineage-Ref";
-  static final String HEADER_DLQ_CORRECTION_ID = "X-DLQ-Correction-Id";
-  static final String HEADER_DLQ_SOURCE_OFFSET = "X-DLQ-Source-Offset";
-  private static final String HEADER_ENGINE_SIGNATURE = "X-TaktX-Signature";
+  static final String HEADER_DLQ_LINEAGE_REF = "dlq-lin";
+  static final String HEADER_DLQ_CORRECTION_ID = "dlq-cid";
+  static final String HEADER_DLQ_SOURCE_OFFSET = "dlq-off";
+  private static final String HEADER_ENGINE_SIGNATURE = Constants.HEADER_ENGINE_SIGNATURE;
 
   /**
    * Bare topic names (without tenant/namespace prefix) accepted as replay destinations. Mirrors the
@@ -217,7 +218,8 @@ public class DlqReplayProcessor implements Processor<String, DlqReplayCommand, O
 
     // ── DLQ-010: Forward replayed record ─────────────────────────────────────
     DlqReplayForwardRecord forwardRecord =
-        new DlqReplayForwardRecord(fullTargetTopic, payload, forwardHeaders);
+        new DlqReplayForwardRecord(
+            fullTargetTopic, command.getCorrectedKeyBytes(), payload, forwardHeaders);
     context.forward(new Record<>(null, forwardRecord, now));
 
     log.info(
@@ -246,7 +248,7 @@ public class DlqReplayProcessor implements Processor<String, DlqReplayCommand, O
     Map<String, byte[]> headers = new HashMap<>();
 
     // Decode operator-provided corrected headers (Map<String, String> where values are base64).
-    // Skip any existing X-TaktX-Signature — we replace it with a fresh ENGINE signature.
+    // Skip any existing tx-sig header — we replace it with a fresh ENGINE signature.
     if (command.getCorrectedHeaders() != null) {
       command
           .getCorrectedHeaders()

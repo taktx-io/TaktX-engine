@@ -7,29 +7,17 @@
  */
 package io.taktx.dto;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
-import com.fasterxml.jackson.annotation.JsonFormat.Shape;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
-import com.fasterxml.jackson.databind.annotation.JsonTypeIdResolver;
-import io.quarkus.runtime.annotations.RegisterForReflection;
-import io.taktx.MessageEventTypeIdResolver;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 
-@JsonTypeInfo(use = Id.CUSTOM, property = "c")
-@JsonTypeIdResolver(MessageEventTypeIdResolver.class)
-@JsonFormat(shape = Shape.ARRAY)
 @Getter
 @Setter
 @EqualsAndHashCode
 @NoArgsConstructor
 @ToString
-@RegisterForReflection
 public abstract class MessageEventDTO {
   private String messageName;
 
@@ -37,7 +25,6 @@ public abstract class MessageEventDTO {
     this.messageName = messageName;
   }
 
-  @JsonIgnore
   public MessageEventKeyDTO toMessageEventKey() {
     return new MessageEventKeyDTO(messageName);
   }

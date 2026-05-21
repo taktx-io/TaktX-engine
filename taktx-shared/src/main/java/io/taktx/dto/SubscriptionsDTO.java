@@ -7,7 +7,6 @@
  */
 package io.taktx.dto;
 
-import io.quarkus.runtime.annotations.RegisterForReflection;
 import java.util.List;
 import java.util.Map;
 import lombok.EqualsAndHashCode;
@@ -21,7 +20,6 @@ import lombok.ToString;
 @Setter
 @NoArgsConstructor
 @EqualsAndHashCode
-@RegisterForReflection
 public class SubscriptionsDTO {
   Map<Long, List<SubscriptionDTO>> instanceSubscriptions;
 }

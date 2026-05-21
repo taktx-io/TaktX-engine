@@ -8,7 +8,7 @@
 package io.taktx.client;
 
 import io.taktx.Topics;
-import io.taktx.client.serdes.InstanceUpdateJsonDeserializer;
+import io.taktx.client.serdes.InstanceUpdateDeserializer;
 import io.taktx.dto.InstanceUpdateDTO;
 import io.taktx.util.TaktPropertiesHelper;
 import io.taktx.util.TaktUUIDDeserializer;
@@ -192,10 +192,7 @@ public class ProcessInstanceUpdateConsumer {
         strategy == InstanceUpdateStartStrategy.EARLIEST ? "earliest" : "latest";
     Properties props =
         taktPropertiesHelper.getKafkaConsumerProperties(
-            groupId,
-            TaktUUIDDeserializer.class,
-            InstanceUpdateJsonDeserializer.class,
-            autoOffsetReset);
+            groupId, TaktUUIDDeserializer.class, InstanceUpdateDeserializer.class, autoOffsetReset);
     return new KafkaConsumer<>(props);
   }
 }

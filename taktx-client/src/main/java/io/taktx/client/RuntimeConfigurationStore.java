@@ -7,10 +7,10 @@
  */
 package io.taktx.client;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import io.taktx.dto.ConfigurationEventDTO;
+import io.taktx.proto.ConfigurationEventMessage;
 import io.taktx.security.RuntimeConfigurationHolder;
+import io.taktx.serdes.ConfigurationProtoMapper;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
@@ -37,8 +37,6 @@ import org.slf4j.LoggerFactory;
 public final class RuntimeConfigurationStore implements AutoCloseable {
 
   private static final Logger log = LoggerFactory.getLogger(RuntimeConfigurationStore.class);
-  private static final ObjectMapper OBJECT_MAPPER =
-      new ObjectMapper().registerModule(new JavaTimeModule());
   private static final String CONFIG_KEY = "config";
 
   private final KafkaConsumer<String, byte[]> consumer;
@@ -184,7 +182,7 @@ public final class RuntimeConfigurationStore implements AutoCloseable {
     }
     try {
       ConfigurationEventDTO event =
-          OBJECT_MAPPER.readValue(configRecord.value(), ConfigurationEventDTO.class);
+          ConfigurationProtoMapper.toDto(ConfigurationEventMessage.parseFrom(configRecord.value()));
       if (event != null && event.getConfiguration() != null) {
         RuntimeConfigurationHolder.set(event.getConfiguration());
         notifyRuntimeConfigurationChanged();

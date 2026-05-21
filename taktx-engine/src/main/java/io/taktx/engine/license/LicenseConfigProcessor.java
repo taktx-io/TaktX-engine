@@ -7,9 +7,10 @@
  */
 package io.taktx.engine.license;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.taktx.dto.ConfigurationEventDTO;
 import io.taktx.engine.config.GlobalConfigStore;
+import io.taktx.proto.ConfigurationEventMessage;
+import io.taktx.serdes.ConfigurationProtoMapper;
 import java.nio.charset.StandardCharsets;
 import org.apache.kafka.streams.processor.api.Processor;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
@@ -22,8 +23,8 @@ import org.slf4j.LoggerFactory;
  * registration. It handles the single {@code taktx-configuration} topic for both record keys:
  *
  * <ul>
- *   <li>{@code "config"} — deserialises {@link ConfigurationEventDTO} (JSON) and updates the shared
- *       {@link GlobalConfigStore} so {@code MessageSigningService} can read it.
+ *   <li>{@code "config"} — deserialises {@link ConfigurationEventDTO} (protobuf) and updates the
+ *       shared {@link GlobalConfigStore} so {@code MessageSigningService} can read it.
  *   <li>{@code "license"} — forwards the raw UTF-8 License3j text to {@link
  *       LicenseManager#parsePushedLicense(String)}.
  * </ul>
@@ -38,12 +39,6 @@ public class LicenseConfigProcessor implements Processor<String, byte[], Void, V
 
   static final String LICENSE_KEY = "license";
   static final String CONFIG_KEY = "config";
-
-  private static final ObjectMapper OBJECT_MAPPER =
-      new ObjectMapper()
-          .registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule())
-          .configure(
-              com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
 
   private final LicenseManager licenseManager;
   private final GlobalConfigStore globalConfigStore;
@@ -74,7 +69,7 @@ public class LicenseConfigProcessor implements Processor<String, byte[], Void, V
     } else if (CONFIG_KEY.equals(rec.key())) {
       try {
         ConfigurationEventDTO event =
-            OBJECT_MAPPER.readValue(rec.value(), ConfigurationEventDTO.class);
+            ConfigurationProtoMapper.toDto(ConfigurationEventMessage.parseFrom(rec.value()));
         if (event != null && event.getConfiguration() != null) {
           globalConfigStore.update(event.getConfiguration());
           log.info(

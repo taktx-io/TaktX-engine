@@ -166,13 +166,13 @@ If any condition is false, the record is produced without a signature. Unsigned 
 
 ### Signature format
 
-The `X-TaktX-Signature` header value is a compound string:
+The `tx-sig` header value is a compound string:
 
 ```
 <keyId>.<base64-Ed25519-signature>
 ```
 
-The signature is over the raw serialized record bytes (CBOR). The algorithm is always Ed25519.
+The signature is over the raw serialized record bytes (protobuf on current engine/client topics). The algorithm is always Ed25519.
 
 ---
 
@@ -190,7 +190,7 @@ It is **not** required for non-entry commands (`ExternalTaskResponseTriggerDTO`,
 
 ### JWT transport
 
-The JWT is attached in the `X-TaktX-Authorization` Kafka record header as a compact JWT string.
+The JWT is attached in the `tx-auth` Kafka record header as a compact JWT string.
 
 ### Validation steps (when `engineRequiresAuthorization=true`)
 
@@ -225,7 +225,7 @@ signed non-entry paths:
 - `TopicMetaDTO` on `topic-meta-requested` — 2 minute default dedup window
 
 For these phase-1 paths, the dedup key uses `messageId` when present and falls back to a derived
-identity from the exact signed record (`X-TaktX-Signature` header value + payload bytes) when
+identity from the exact signed record (`tx-sig` header value + payload bytes) when
 legacy producers do not yet supply `messageId`.
 
 #### Paths still outside dedup scope in the current release slice
@@ -292,7 +292,7 @@ TaktXClient.publishSigningKey(
 
 ## Signing keys topic
 
-The compacted Kafka topic `<tenantId>.<namespace>.taktx-signing-keys` stores `SigningKeyDTO` records serialized as CBOR.
+The compacted Kafka topic `<tenantId>.<namespace>.taktx-signing-keys` stores `SigningKeyDTO` records serialized with protobuf.
 
 ### Record format
 

@@ -1,0 +1,451 @@
+syntax = "proto3";
+
+package io.taktx.proto;
+
+option java_package = "io.taktx.proto";
+option java_multiple_files = true;
+option java_outer_classname = "FlowNodeInstanceProto";
+
+import "io/taktx/proto/common.proto";
+import "io/taktx/proto/variables.proto";
+import "io/taktx/proto/process_instance.proto";
+import "io/taktx/proto/schedule.proto";
+
+// FlowNodeInstanceEnvelope — replaces @JsonTypeInfo / FlowNodeInstanceTypeIdResolver
+// Field numbers are PERMANENT. Add new types only at the end.
+message FlowNodeInstanceEnvelope {
+  oneof instance {
+    StartEventInstanceMessage                  start_event     = 1;  // TypeId "A"
+    BoundaryEventInstanceMessage               boundary_event  = 2;  // TypeId "B"
+    CallActivityInstanceMessage                call_activity   = 3;  // TypeId "C"
+    SendTaskInstanceMessage                    send_task       = 4;  // TypeId "D"
+    EndEventInstanceMessage                    end_event       = 5;  // TypeId "E"
+    ScriptTaskInstanceMessage                  script_task     = 6;  // TypeId "F"
+    MessageEndEventInstanceMessage             msg_end_event   = 7;  // TypeId "G"
+    MessageIntermediateThrowEventInstanceMessage msg_throw_event = 8; // TypeId "H"
+    IntermediateCatchEventInstanceMessage      catch_event     = 9;  // TypeId "I"
+    EventBasedGatewayInstanceMessage           ebg             = 10; // TypeId "J"
+    BusinessRuleTaskInstanceMessage            brt             = 11; // TypeId "K"
+    MultiInstanceInstanceMessage               multi_instance  = 12; // TypeId "M"
+    InclusiveGatewayInstanceMessage            inclusive_gw    = 13; // TypeId "N"
+    ParallelGatewayInstanceMessage             parallel_gw     = 14; // TypeId "P"
+    ReceiveTaskInstanceMessage                 receive_task    = 15; // TypeId "R"
+    SubProcessInstanceMessage                  sub_process     = 16; // TypeId "S"
+    TaskInstanceMessage                        task            = 17; // TypeId "T"
+    UserTaskInstanceMessage                    user_task       = 18; // TypeId "U"
+    ServiceTaskInstanceMessage                 service_task    = 19; // TypeId "V"
+    IntermediateThrowEventInstanceMessage      throw_event     = 20; // TypeId "W"
+    ExclusiveGatewayInstanceMessage            exclusive_gw    = 21; // TypeId "X"
+  }
+}
+
+// Java: ActivityInstanceDTO (abstract)
+message ActivityInstanceMessage {
+  ExecutionState state = 1;
+  sint64 element_instance_id = 2;
+  sint64 parent_element_instance_id = 3;
+  int32 element_index = 4;
+  string element_id = 5;
+  int32 passed_cnt = 6;
+  bool incident = 7;
+  bool iteration = 8;
+  sint64 next_iteration_id = 9;
+  VariableValue input_element = 10;
+  VariableValue output_element = 11;
+  int32 loop_cnt = 12;
+}
+
+// Java: BoundaryEventInstanceDTO
+message BoundaryEventInstanceMessage {
+  ExecutionState state = 1;
+  sint64 element_instance_id = 2;
+  sint64 parent_element_instance_id = 3;
+  int32 element_index = 4;
+  string element_id = 5;
+  int32 passed_cnt = 6;
+  bool incident = 7;
+  sint64 attached_instance_id = 8;
+}
+
+// Java: BusinessRuleTaskInstanceDTO
+message BusinessRuleTaskInstanceMessage {
+  ExecutionState state = 1;
+  sint64 element_instance_id = 2;
+  sint64 parent_element_instance_id = 3;
+  int32 element_index = 4;
+  string element_id = 5;
+  int32 passed_cnt = 6;
+  bool incident = 7;
+  bool iteration = 8;
+  sint64 next_iteration_id = 9;
+  VariableValue input_element = 10;
+  VariableValue output_element = 11;
+  int32 loop_cnt = 12;
+}
+
+// Java: CallActivityInstanceDTO
+message CallActivityInstanceMessage {
+  ExecutionState state = 1;
+  sint64 element_instance_id = 2;
+  sint64 parent_element_instance_id = 3;
+  int32 element_index = 4;
+  string element_id = 5;
+  int32 passed_cnt = 6;
+  bool incident = 7;
+  bool iteration = 8;
+  sint64 next_iteration_id = 9;
+  VariableValue input_element = 10;
+  VariableValue output_element = 11;
+  int32 loop_cnt = 12;
+  Uuid child_process_instance_id = 13;
+}
+
+// Java: CatchEventInstanceDTO (abstract)
+message CatchEventInstanceMessage {
+  ExecutionState state = 1;
+  sint64 element_instance_id = 2;
+  sint64 parent_element_instance_id = 3;
+  int32 element_index = 4;
+  string element_id = 5;
+  int32 passed_cnt = 6;
+  bool incident = 7;
+}
+
+// Java: EndEventInstanceDTO
+message EndEventInstanceMessage {
+  ExecutionState state = 1;
+  sint64 element_instance_id = 2;
+  sint64 parent_element_instance_id = 3;
+  int32 element_index = 4;
+  string element_id = 5;
+  int32 passed_cnt = 6;
+  bool incident = 7;
+}
+
+// Java: EventBasedGatewayInstanceDTO
+message EventBasedGatewayInstanceMessage {
+  ExecutionState state = 1;
+  sint64 element_instance_id = 2;
+  sint64 parent_element_instance_id = 3;
+  int32 element_index = 4;
+  string element_id = 5;
+  int32 passed_cnt = 6;
+  bool incident = 7;
+  repeated string selected_output_flows = 8;
+  repeated sint64 connected_flow_node_instance_ids = 9;
+}
+
+// Java: EventInstanceDTO (abstract)
+message EventInstanceMessage {
+  ExecutionState state = 1;
+  sint64 element_instance_id = 2;
+  sint64 parent_element_instance_id = 3;
+  int32 element_index = 4;
+  string element_id = 5;
+  int32 passed_cnt = 6;
+  bool incident = 7;
+}
+
+// Java: ExclusiveGatewayInstanceDTO
+message ExclusiveGatewayInstanceMessage {
+  ExecutionState state = 1;
+  sint64 element_instance_id = 2;
+  sint64 parent_element_instance_id = 3;
+  int32 element_index = 4;
+  string element_id = 5;
+  int32 passed_cnt = 6;
+  bool incident = 7;
+  repeated string selected_output_flows = 8;
+}
+
+// Java: ExternalTaskInstanceDTO (abstract)
+message ExternalTaskInstanceMessage {
+  ExecutionState state = 1;
+  sint64 element_instance_id = 2;
+  sint64 parent_element_instance_id = 3;
+  int32 element_index = 4;
+  string element_id = 5;
+  int32 passed_cnt = 6;
+  bool incident = 7;
+  bool iteration = 8;
+  sint64 next_iteration_id = 9;
+  VariableValue input_element = 10;
+  VariableValue output_element = 11;
+  int32 loop_cnt = 12;
+  int32 attempt = 13;
+  repeated ScheduleKeyEnvelope scheduled_keys = 14;
+}
+
+// Java: FlowNodeInstanceDTO (abstract)
+message FlowNodeInstanceMessage {
+  ExecutionState state = 1;
+  sint64 element_instance_id = 2;
+  sint64 parent_element_instance_id = 3;
+  int32 element_index = 4;
+  string element_id = 5;
+  int32 passed_cnt = 6;
+  bool incident = 7;
+}
+
+// Java: GatewayInstanceDTO (abstract)
+message GatewayInstanceMessage {
+  ExecutionState state = 1;
+  sint64 element_instance_id = 2;
+  sint64 parent_element_instance_id = 3;
+  int32 element_index = 4;
+  string element_id = 5;
+  int32 passed_cnt = 6;
+  bool incident = 7;
+  repeated string selected_output_flows = 8;
+  repeated string triggered_flows = 9;
+}
+
+// Java: InclusiveGatewayInstanceDTO
+message InclusiveGatewayInstanceMessage {
+  ExecutionState state = 1;
+  sint64 element_instance_id = 2;
+  sint64 parent_element_instance_id = 3;
+  int32 element_index = 4;
+  string element_id = 5;
+  int32 passed_cnt = 6;
+  bool incident = 7;
+  repeated string selected_output_flows = 8;
+  repeated string triggered_input_flows = 9;
+}
+
+// Java: IntermediateCatchEventInstanceDTO
+message IntermediateCatchEventInstanceMessage {
+  ExecutionState state = 1;
+  sint64 element_instance_id = 2;
+  sint64 parent_element_instance_id = 3;
+  int32 element_index = 4;
+  string element_id = 5;
+  int32 passed_cnt = 6;
+  bool incident = 7;
+}
+
+// Java: IntermediateThrowEventInstanceDTO
+message IntermediateThrowEventInstanceMessage {
+  ExecutionState state = 1;
+  sint64 element_instance_id = 2;
+  sint64 parent_element_instance_id = 3;
+  int32 element_index = 4;
+  string element_id = 5;
+  int32 passed_cnt = 6;
+  bool incident = 7;
+}
+
+// Java: MessageEndEventInstanceDTO
+message MessageEndEventInstanceMessage {
+  ExecutionState state = 1;
+  sint64 element_instance_id = 2;
+  sint64 parent_element_instance_id = 3;
+  int32 element_index = 4;
+  string element_id = 5;
+  int32 passed_cnt = 6;
+  bool incident = 7;
+  bool iteration = 8;
+  sint64 next_iteration_id = 9;
+  VariableValue input_element = 10;
+  VariableValue output_element = 11;
+  int32 loop_cnt = 12;
+  int32 attempt = 13;
+  repeated ScheduleKeyEnvelope scheduled_keys = 14;
+}
+
+// Java: MessageIntermediateThrowEventInstanceDTO
+message MessageIntermediateThrowEventInstanceMessage {
+  ExecutionState state = 1;
+  sint64 element_instance_id = 2;
+  sint64 parent_element_instance_id = 3;
+  int32 element_index = 4;
+  string element_id = 5;
+  int32 passed_cnt = 6;
+  bool incident = 7;
+  bool iteration = 8;
+  sint64 next_iteration_id = 9;
+  VariableValue input_element = 10;
+  VariableValue output_element = 11;
+  int32 loop_cnt = 12;
+  int32 attempt = 13;
+  repeated ScheduleKeyEnvelope scheduled_keys = 14;
+}
+
+// Java: MultiInstanceInstanceDTO
+message MultiInstanceInstanceMessage {
+  ExecutionState state = 1;
+  sint64 element_instance_id = 2;
+  sint64 parent_element_instance_id = 3;
+  int32 element_index = 4;
+  string element_id = 5;
+  int32 passed_cnt = 6;
+  bool incident = 7;
+  bool iteration = 8;
+  sint64 next_iteration_id = 9;
+  VariableValue input_element = 10;
+  VariableValue output_element = 11;
+  int32 loop_cnt = 12;
+  ScopeMessage scope = 13;
+}
+
+// Java: ParallelGatewayInstanceDTO
+message ParallelGatewayInstanceMessage {
+  ExecutionState state = 1;
+  sint64 element_instance_id = 2;
+  sint64 parent_element_instance_id = 3;
+  int32 element_index = 4;
+  string element_id = 5;
+  int32 passed_cnt = 6;
+  bool incident = 7;
+  repeated string selected_output_flows = 8;
+  repeated string triggered_flows = 9;
+}
+
+// Java: ReceiveTaskInstanceDTO
+message ReceiveTaskInstanceMessage {
+  ExecutionState state = 1;
+  sint64 element_instance_id = 2;
+  sint64 parent_element_instance_id = 3;
+  int32 element_index = 4;
+  string element_id = 5;
+  int32 passed_cnt = 6;
+  bool incident = 7;
+  bool iteration = 8;
+  sint64 next_iteration_id = 9;
+  VariableValue input_element = 10;
+  VariableValue output_element = 11;
+  int32 loop_cnt = 12;
+  string         correlation_key    = 13;
+  // Java: Map<MessageEventKeyDTO, List<String>> — key = message_name, value = correlation keys
+  map<string, CorrelationKeyListMessage> message_event_keys = 14;
+}
+
+// Wrapper for map values that hold a list of correlation keys
+message CorrelationKeyListMessage {
+  repeated string values = 1;
+}
+
+// Java: ScriptTaskInstanceDTO
+message ScriptTaskInstanceMessage {
+  ExecutionState state = 1;
+  sint64 element_instance_id = 2;
+  sint64 parent_element_instance_id = 3;
+  int32 element_index = 4;
+  string element_id = 5;
+  int32 passed_cnt = 6;
+  bool incident = 7;
+  bool iteration = 8;
+  sint64 next_iteration_id = 9;
+  VariableValue input_element = 10;
+  VariableValue output_element = 11;
+  int32 loop_cnt = 12;
+  int32 attempt = 13;
+  repeated ScheduleKeyEnvelope scheduled_keys = 14;
+}
+
+// Java: SendTaskInstanceDTO
+message SendTaskInstanceMessage {
+  ExecutionState state = 1;
+  sint64 element_instance_id = 2;
+  sint64 parent_element_instance_id = 3;
+  int32 element_index = 4;
+  string element_id = 5;
+  int32 passed_cnt = 6;
+  bool incident = 7;
+  bool iteration = 8;
+  sint64 next_iteration_id = 9;
+  VariableValue input_element = 10;
+  VariableValue output_element = 11;
+  int32 loop_cnt = 12;
+  int32 attempt = 13;
+  repeated ScheduleKeyEnvelope scheduled_keys = 14;
+}
+
+// Java: ServiceTaskInstanceDTO
+message ServiceTaskInstanceMessage {
+  ExecutionState state = 1;
+  sint64 element_instance_id = 2;
+  sint64 parent_element_instance_id = 3;
+  int32 element_index = 4;
+  string element_id = 5;
+  int32 passed_cnt = 6;
+  bool incident = 7;
+  bool iteration = 8;
+  sint64 next_iteration_id = 9;
+  VariableValue input_element = 10;
+  VariableValue output_element = 11;
+  int32 loop_cnt = 12;
+  int32 attempt = 13;
+  repeated ScheduleKeyEnvelope scheduled_keys = 14;
+}
+
+// Java: StartEventInstanceDTO
+message StartEventInstanceMessage {
+  ExecutionState state = 1;
+  sint64 element_instance_id = 2;
+  sint64 parent_element_instance_id = 3;
+  int32 element_index = 4;
+  string element_id = 5;
+  int32 passed_cnt = 6;
+  bool incident = 7;
+}
+
+// Java: SubProcessInstanceDTO
+message SubProcessInstanceMessage {
+  ExecutionState state = 1;
+  sint64 element_instance_id = 2;
+  sint64 parent_element_instance_id = 3;
+  int32 element_index = 4;
+  string element_id = 5;
+  int32 passed_cnt = 6;
+  bool incident = 7;
+  bool iteration = 8;
+  sint64 next_iteration_id = 9;
+  VariableValue input_element = 10;
+  VariableValue output_element = 11;
+  int32 loop_cnt = 12;
+  ScopeMessage scope = 13;
+}
+
+// Java: TaskInstanceDTO
+message TaskInstanceMessage {
+  ExecutionState state = 1;
+  sint64 element_instance_id = 2;
+  sint64 parent_element_instance_id = 3;
+  int32 element_index = 4;
+  string element_id = 5;
+  int32 passed_cnt = 6;
+  bool incident = 7;
+  bool iteration = 8;
+  sint64 next_iteration_id = 9;
+  VariableValue input_element = 10;
+  VariableValue output_element = 11;
+  int32 loop_cnt = 12;
+}
+
+// Java: ThrowEventInstanceDTO (abstract)
+message ThrowEventInstanceMessage {
+  ExecutionState state = 1;
+  sint64 element_instance_id = 2;
+  sint64 parent_element_instance_id = 3;
+  int32 element_index = 4;
+  string element_id = 5;
+  int32 passed_cnt = 6;
+  bool incident = 7;
+}
+
+// Java: UserTaskInstanceDTO
+message UserTaskInstanceMessage {
+  ExecutionState state = 1;
+  sint64 element_instance_id = 2;
+  sint64 parent_element_instance_id = 3;
+  int32 element_index = 4;
+  string element_id = 5;
+  int32 passed_cnt = 6;
+  bool incident = 7;
+  bool iteration = 8;
+  sint64 next_iteration_id = 9;
+  VariableValue input_element = 10;
+  VariableValue output_element = 11;
+  int32 loop_cnt = 12;
+}

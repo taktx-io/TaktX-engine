@@ -7,7 +7,6 @@
  */
 package io.taktx.client;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import io.taktx.CleanupPolicy;
 import io.taktx.client.annotation.AckStrategy;
 import io.taktx.client.annotation.JobWorker;
@@ -278,7 +277,7 @@ public class AnnotationScanningExternalTaskTriggerConsumer implements ExternalTa
         return resultProcessor.process(result, externalTaskTrigger);
       }
     }
-    return new HashMap<String, JsonNode>();
+    return new HashMap<>();
   }
 
   private Object[] resolveParameters(Method method, ExternalTaskTriggerDTO externalTaskTriggerDTO) {

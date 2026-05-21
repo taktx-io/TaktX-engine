@@ -8,11 +8,6 @@
 
 package io.taktx.engine.dmn;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.taktx.dto.DmnCollectOperator;
 import io.taktx.dto.DmnDecisionDTO;
 import io.taktx.dto.DmnDecisionTableDTO;
@@ -25,10 +20,14 @@ import io.taktx.dto.DmnValidationMode;
 import io.taktx.engine.config.GlobalConfigStore;
 import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.pi.model.VariableScope;
+import io.taktx.proto.VarList;
+import io.taktx.proto.VariableValue;
+import io.taktx.variables.Variables;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -55,14 +54,11 @@ import scala.jdk.CollectionConverters;
 @Slf4j
 public class DmnEvaluatorImpl implements DmnEvaluator {
 
-  private static final BuiltinFunctions BUILTIN_FUNCTIONS =
-      new BuiltinFunctions(SystemClock$.MODULE$, ValueMapper.defaultValueMapper());
   private static final Pattern SIMPLE_REFERENCE_PATTERN =
       Pattern.compile(
           "^([A-Za-z_][A-Za-z0-9_]*)(?:\\[(\\d+)\\])?(?:\\.([A-Za-z_][A-Za-z0-9_]*))?$");
 
   private final FeelEngineApi feelEngineApi;
-  private final ObjectMapper objectMapper;
 
   /**
    * Optional: resolves required decisions from the deployed store to support DRG chaining. {@code
@@ -76,17 +72,17 @@ public class DmnEvaluatorImpl implements DmnEvaluator {
   /** Thread-safe cache of parsed FEEL expressions for performance. */
   private final Map<String, ParsedExpression> expressionCache = new ConcurrentHashMap<>();
 
+  private BuiltinFunctions builtinFunctions;
+
   /** CDI constructor used in production. */
   @Inject
   public DmnEvaluatorImpl(
       FeelEngineApi feelEngineApi,
-      ObjectMapper objectMapper,
       DmnDecisionResolver decisionResolver,
       GlobalConfigStore globalConfigStore,
       TaktConfiguration taktConfiguration) {
     this(
         feelEngineApi,
-        objectMapper,
         decisionResolver,
         globalConfigStore,
         taktConfiguration != null
@@ -96,12 +92,10 @@ public class DmnEvaluatorImpl implements DmnEvaluator {
 
   private DmnEvaluatorImpl(
       FeelEngineApi feelEngineApi,
-      ObjectMapper objectMapper,
       DmnDecisionResolver decisionResolver,
       GlobalConfigStore globalConfigStore,
       DmnValidationMode configuredValidationMode) {
     this.feelEngineApi = feelEngineApi;
-    this.objectMapper = objectMapper;
     this.decisionResolver = decisionResolver;
     this.globalConfigStore = globalConfigStore;
     this.configuredValidationMode =
@@ -109,46 +103,32 @@ public class DmnEvaluatorImpl implements DmnEvaluator {
   }
 
   /** Convenience constructor for unit tests — DRG chaining is disabled (resolver is null). */
-  public DmnEvaluatorImpl(FeelEngineApi feelEngineApi, ObjectMapper objectMapper) {
-    this(feelEngineApi, objectMapper, null, null, DmnValidationMode.PERMISSIVE);
+  public DmnEvaluatorImpl(FeelEngineApi feelEngineApi) {
+    this(feelEngineApi, null, null, DmnValidationMode.PERMISSIVE);
   }
 
   /** Convenience constructor for unit tests with DRG chaining support. */
-  public DmnEvaluatorImpl(
-      FeelEngineApi feelEngineApi,
-      ObjectMapper objectMapper,
-      DmnDecisionResolver decisionResolver) {
-    this(feelEngineApi, objectMapper, decisionResolver, null, DmnValidationMode.PERMISSIVE);
+  public DmnEvaluatorImpl(FeelEngineApi feelEngineApi, DmnDecisionResolver decisionResolver) {
+    this(feelEngineApi, decisionResolver, null, DmnValidationMode.PERMISSIVE);
   }
 
   /** Convenience constructor for unit tests with an explicit validation mode. */
   public DmnEvaluatorImpl(
       FeelEngineApi feelEngineApi,
-      ObjectMapper objectMapper,
       DmnDecisionResolver decisionResolver,
       DmnValidationMode validationMode) {
-    this(feelEngineApi, objectMapper, decisionResolver, null, validationMode);
+    this(feelEngineApi, decisionResolver, null, validationMode);
   }
 
-  // ── public API ───────────────────────────────────────────────────────────
-
   @Override
-  public JsonNode evaluate(DmnDecisionDTO decision, VariableScope variables) {
+  public VariableValue evaluate(DmnDecisionDTO decision, VariableScope variables) {
     return evaluateDecision(decision, variables, new HashMap<>(), new LinkedHashSet<>());
   }
 
-  // ── DRG-aware recursive evaluation ───────────────────────────────────────
-
-  /**
-   * Evaluates {@code decision} depth-first: required decisions are evaluated before the root, their
-   * results are memoised in {@code drgResults}, and made visible via a lightweight overlay scope.
-   *
-   * @param inProgress decision IDs currently on the call stack — used for cycle detection
-   */
-  private JsonNode evaluateDecision(
+  private VariableValue evaluateDecision(
       DmnDecisionDTO decision,
       VariableScope variables,
-      Map<String, JsonNode> drgResults,
+      Map<String, VariableValue> drgResults,
       LinkedHashSet<String> inProgress) {
 
     String decisionId = decision.getId();
@@ -182,8 +162,6 @@ public class DmnEvaluatorImpl implements DmnEvaluator {
       }
     }
 
-    // Build an overlay so required-decision results are readable as variables
-    // without polluting the process-instance scope.
     VariableScope evalScope =
         drgResults.isEmpty() ? variables : createDrgOverlayScope(variables, drgResults);
 
@@ -196,39 +174,26 @@ public class DmnEvaluatorImpl implements DmnEvaluator {
         "Decision '" + decisionId + "' has neither a decisionTable nor a literalExpression");
   }
 
-  /**
-   * Creates a thin read-only overlay scope whose in-memory map contains the DRG intermediate
-   * results. Any variable not found there is delegated to the underlying process {@code base} scope
-   * via the parent-scope chain that {@link VariableScope#get} already follows.
-   */
   private VariableScope createDrgOverlayScope(
-      VariableScope base, Map<String, JsonNode> drgResults) {
+      VariableScope base, Map<String, VariableValue> drgResults) {
     VariableScope overlay = new VariableScope(base, null, null, null);
-    drgResults.forEach((k, v) -> overlay.getVariables().put(k, v));
+    overlay.merge(drgResults);
     return overlay;
   }
 
-  // ── literal expression ───────────────────────────────────────────────────
-
-  private JsonNode evaluateLiteralExpression(
+  private VariableValue evaluateLiteralExpression(
       DmnLiteralExpressionDTO literalExpression, VariableScope variables) {
     String expr = literalExpression.getExpression();
     if (expr == null || expr.isBlank()) {
-      return objectMapper.nullNode();
+      return Variables.nullValue();
     }
     return evaluateFeelOutputExpression(expr, variables);
   }
 
-  // ── decision table ────────────────────────────────────────────────────────
-
-  private JsonNode evaluateDecisionTable(DmnDecisionTableDTO table, VariableScope variables) {
+  private VariableValue evaluateDecisionTable(DmnDecisionTableDTO table, VariableScope variables) {
     DmnHitPolicy hitPolicy =
         table.getHitPolicy() != null ? table.getHitPolicy() : DmnHitPolicy.UNIQUE;
 
-    // Derive how many matched rows we actually need before we can stop evaluating.
-    // FIRST / ANY / PRIORITY only need the first match.
-    // UNIQUE needs at most 2 so we can still detect (and warn about) a violation.
-    // Everything else must collect all matches.
     int maxMatches =
         switch (hitPolicy) {
           case FIRST, ANY, PRIORITY -> 1;
@@ -236,7 +201,7 @@ public class DmnEvaluatorImpl implements DmnEvaluator {
           default -> Integer.MAX_VALUE;
         };
 
-    List<ObjectNode> matchedRows = evaluateRules(table, variables, maxMatches);
+    List<Map<String, VariableValue>> matchedRows = evaluateRules(table, variables, maxMatches);
 
     return switch (hitPolicy) {
       case UNIQUE -> handleUnique(matchedRows, table);
@@ -249,19 +214,15 @@ public class DmnEvaluatorImpl implements DmnEvaluator {
     };
   }
 
-  /**
-   * Evaluates rules in order and returns matched output rows. Stops as soon as {@code maxMatches}
-   * rows have been collected, enabling early exit for hit policies that don't need all matches.
-   */
-  private List<ObjectNode> evaluateRules(
+  private List<Map<String, VariableValue>> evaluateRules(
       DmnDecisionTableDTO table, VariableScope variables, int maxMatches) {
-    List<ObjectNode> matched = new ArrayList<>();
+    List<Map<String, VariableValue>> matched = new ArrayList<>();
     for (DmnRuleDTO rule : table.getRules()) {
       if (matched.size() >= maxMatches) {
         break;
       }
       if (inputsMatch(table.getInputs(), rule, variables)) {
-        matched.add(buildOutputNode(table.getOutputs(), rule, variables));
+        matched.add(buildOutputRow(table.getOutputs(), rule, variables));
       }
     }
     return matched;
@@ -273,11 +234,11 @@ public class DmnEvaluatorImpl implements DmnEvaluator {
     for (int i = 0; i < inputs.size(); i++) {
       String entry = i < inputEntries.size() ? inputEntries.get(i) : "";
       if (entry == null || entry.isBlank()) {
-        // Wildcard – always matches
         continue;
       }
       DmnInputClauseDTO clause = inputs.get(i);
-      JsonNode inputValue = evaluateFeelOutputExpression(clause.getInputExpression(), variables);
+      VariableValue inputValue =
+          evaluateFeelOutputExpression(clause.getInputExpression(), variables);
       if (!validateTypeRef(
           clause.getTypeRef(),
           inputValue,
@@ -295,31 +256,30 @@ public class DmnEvaluatorImpl implements DmnEvaluator {
     return true;
   }
 
-  private ObjectNode buildOutputNode(
+  private Map<String, VariableValue> buildOutputRow(
       List<DmnOutputClauseDTO> outputs, DmnRuleDTO rule, VariableScope variables) {
-    ObjectNode result = objectMapper.createObjectNode();
+    Map<String, VariableValue> result = new LinkedHashMap<>();
     List<String> outputEntries = rule.getOutputEntries();
     for (int i = 0; i < outputs.size(); i++) {
       DmnOutputClauseDTO output = outputs.get(i);
       String entry = i < outputEntries.size() ? outputEntries.get(i) : "";
-      JsonNode value =
+      VariableValue value =
           (entry == null || entry.isBlank())
-              ? objectMapper.nullNode()
+              ? Variables.nullValue()
               : evaluateFeelOutputExpression(entry, variables);
       validateTypeRef(
           output.getTypeRef(),
           value,
           "Output clause '" + output.getName() + "' in decision table '" + rule.getId() + "'");
-      result.set(output.getName(), value == null ? objectMapper.nullNode() : value);
+      result.put(output.getName(), normalize(value));
     }
     return result;
   }
 
-  // ── hit-policy handlers ───────────────────────────────────────────────────
-
-  private JsonNode handleUnique(List<ObjectNode> matched, DmnDecisionTableDTO table) {
+  private VariableValue handleUnique(
+      List<Map<String, VariableValue>> matched, DmnDecisionTableDTO table) {
     if (matched.isEmpty()) {
-      return objectMapper.nullNode();
+      return Variables.nullValue();
     }
     if (matched.size() > 1) {
       log.warn(
@@ -330,94 +290,95 @@ public class DmnEvaluatorImpl implements DmnEvaluator {
     return flattenSingleOutput(matched.get(0), table);
   }
 
-  private JsonNode handleFirst(List<ObjectNode> matched, DmnDecisionTableDTO table) {
+  private VariableValue handleFirst(
+      List<Map<String, VariableValue>> matched, DmnDecisionTableDTO table) {
     if (matched.isEmpty()) {
-      return objectMapper.nullNode();
+      return Variables.nullValue();
     }
-    return flattenSingleOutput(matched.get(0), table);
+    return flattenSingleOutput(matched.getFirst(), table);
   }
 
-  private JsonNode handleAny(List<ObjectNode> matched, DmnDecisionTableDTO table) {
+  private VariableValue handleAny(
+      List<Map<String, VariableValue>> matched, DmnDecisionTableDTO table) {
     if (matched.isEmpty()) {
-      return objectMapper.nullNode();
+      return Variables.nullValue();
     }
-    return flattenSingleOutput(matched.get(0), table);
+    return flattenSingleOutput(matched.getFirst(), table);
   }
 
-  private JsonNode handleRuleOrder(List<ObjectNode> matched, DmnDecisionTableDTO table) {
+  private VariableValue handleRuleOrder(
+      List<Map<String, VariableValue>> matched, DmnDecisionTableDTO table) {
     if (matched.isEmpty()) {
-      return objectMapper.nullNode();
+      return Variables.nullValue();
     }
+    List<VariableValue> values = new ArrayList<>(matched.size());
     if (table.getOutputs().size() == 1) {
-      ArrayNode arr = objectMapper.createArrayNode();
-      for (ObjectNode row : matched) {
-        arr.add(row.get(table.getOutputs().get(0).getName()));
-      }
-      return arr;
+      String name = table.getOutputs().getFirst().getName();
+      matched.forEach(row -> values.add(normalize(row.get(name))));
+    } else {
+      matched.forEach(row -> values.add(mapValue(row)));
     }
-    ArrayNode arr = objectMapper.createArrayNode();
-    matched.forEach(arr::add);
-    return arr;
+    return listValue(values);
   }
 
-  private JsonNode handleOutputOrder(List<ObjectNode> matched, DmnDecisionTableDTO table) {
-    // Output order has the same structure as rule order (ordering is defined at authoring time)
+  private VariableValue handleOutputOrder(
+      List<Map<String, VariableValue>> matched, DmnDecisionTableDTO table) {
     return handleRuleOrder(matched, table);
   }
 
-  private JsonNode handlePriority(List<ObjectNode> matched, DmnDecisionTableDTO table) {
-    // Priority returns the first matched row (rules are already ordered by priority in the DMN)
+  private VariableValue handlePriority(
+      List<Map<String, VariableValue>> matched, DmnDecisionTableDTO table) {
     return handleFirst(matched, table);
   }
 
-  private JsonNode handleCollect(List<ObjectNode> matched, DmnDecisionTableDTO table) {
+  private VariableValue handleCollect(
+      List<Map<String, VariableValue>> matched, DmnDecisionTableDTO table) {
     DmnCollectOperator op =
         table.getCollectOperator() != null ? table.getCollectOperator() : DmnCollectOperator.NONE;
 
     if (matched.isEmpty()) {
-      return objectMapper.nullNode();
+      return Variables.nullValue();
     }
 
     if (op == DmnCollectOperator.NONE) {
       return handleRuleOrder(matched, table);
     }
 
-    // Aggregate operators work on the first output column
-    String outputName = table.getOutputs().isEmpty() ? null : table.getOutputs().get(0).getName();
+    String outputName =
+        table.getOutputs().isEmpty() ? null : table.getOutputs().getFirst().getName();
 
     List<Double> values = new ArrayList<>();
-    for (ObjectNode row : matched) {
-      JsonNode val = outputName != null ? row.get(outputName) : null;
-      if (val != null && val.isNumber()) {
-        values.add(val.asDouble());
+    for (Map<String, VariableValue> row : matched) {
+      VariableValue value = outputName != null ? row.get(outputName) : null;
+      if (value != null) {
+        switch (value.getKindCase()) {
+          case LONG_VALUE -> values.add((double) value.getLongValue());
+          case DOUBLE_VALUE -> values.add(value.getDoubleValue());
+          default -> {
+            // Ignore non-numeric collect values to match the previous permissive legacy handling.
+          }
+        }
       }
     }
 
     return switch (op) {
-      case SUM -> objectMapper.valueToTree(values.stream().mapToDouble(d -> d).sum());
+      case SUM -> Variables.of(values.stream().mapToDouble(d -> d).sum());
       case MIN -> {
         var min = values.stream().mapToDouble(d -> d).min();
-        yield min.isPresent()
-            ? objectMapper.valueToTree(min.getAsDouble())
-            : objectMapper.nullNode();
+        yield min.isPresent() ? Variables.of(min.getAsDouble()) : Variables.nullValue();
       }
       case MAX -> {
         var max = values.stream().mapToDouble(d -> d).max();
-        yield max.isPresent()
-            ? objectMapper.valueToTree(max.getAsDouble())
-            : objectMapper.nullNode();
+        yield max.isPresent() ? Variables.of(max.getAsDouble()) : Variables.nullValue();
       }
-      case COUNT -> objectMapper.valueToTree((double) matched.size());
+      case COUNT -> Variables.of((double) matched.size());
       default -> handleRuleOrder(matched, table);
     };
   }
 
-  // ── FEEL helpers ──────────────────────────────────────────────────────────
-
-  /** Evaluates a FEEL output expression (e.g. {@code "Roastbeef"}, {@code =someVar}). */
-  private JsonNode evaluateFeelOutputExpression(String expression, VariableScope variables) {
+  private VariableValue evaluateFeelOutputExpression(String expression, VariableScope variables) {
     if (expression == null || expression.isBlank()) {
-      return objectMapper.nullNode();
+      return Variables.nullValue();
     }
     String trimmed = expression.trim();
     String referenceCandidate = trimmed.startsWith("=") ? trimmed.substring(1).trim() : trimmed;
@@ -425,7 +386,6 @@ public class DmnEvaluatorImpl implements DmnEvaluator {
     if (directResolution.handled()) {
       return directResolution.value();
     }
-    // Prefix with '=' to use the full FEEL expression evaluator (same as FeelExpressionHandlerImpl)
     String feelExpr = trimmed.startsWith("=") ? trimmed : "=" + trimmed;
     ParsedExpression parsed = getOrParseExpression(feelExpr);
     if (parsed == null) {
@@ -434,36 +394,27 @@ public class DmnEvaluatorImpl implements DmnEvaluator {
     EvaluationResult result = feelEngineApi.evaluate(parsed, buildContext(variables));
     if (result.isSuccess()) {
       Object val = ((SuccessfulEvaluationResult) result).productIterator().next();
-      return objectMapper.valueToTree(val);
+      return Variables.of(val);
     }
     return handleExpressionFailure(
         "FEEL expression evaluation failed for '" + expression + "': " + result, null);
   }
 
-  /**
-   * Evaluates a FEEL unary test (e.g. {@code "Fall"}, {@code > 10}, {@code [1..5]}) against a given
-   * input value using the FEEL {@code evaluateWithInput} API.
-   */
   private boolean evaluateUnaryTest(
-      String unaryTest, JsonNode inputValue, VariableScope variables) {
+      String unaryTest, VariableValue inputValue, VariableScope variables) {
     ParsedExpression parsed = getOrParseUnaryTest(unaryTest.trim());
     if (parsed == null) {
       return handleUnaryFailure("Failed to parse FEEL unary test: " + unaryTest, null);
     }
-    try {
-      Object inputObj = objectMapper.treeToValue(inputValue, Object.class);
-      EvaluationResult result =
-          feelEngineApi.evaluateWithInput(parsed, inputObj, buildContext(variables));
-      if (result.isSuccess()) {
-        Object val = ((SuccessfulEvaluationResult) result).result();
-        JsonNode node = objectMapper.valueToTree(val);
-        return node.isBoolean() && node.booleanValue();
-      }
-      return handleUnaryFailure(
-          "FEEL unary test evaluation failed for '" + unaryTest + "': " + result, null);
-    } catch (JsonProcessingException e) {
-      return handleUnaryFailure("Failed to convert input value for FEEL unary test", e);
+    EvaluationResult result =
+        feelEngineApi.evaluateWithInput(
+            parsed, Variables.toJavaObject(inputValue), buildContext(variables));
+    if (result.isSuccess()) {
+      Object val = ((SuccessfulEvaluationResult) result).result();
+      return Boolean.TRUE.equals(val);
     }
+    return handleUnaryFailure(
+        "FEEL unary test evaluation failed for '" + unaryTest + "': " + result, null);
   }
 
   private ParsedExpression getOrParseExpression(String feelExpr) {
@@ -471,7 +422,7 @@ public class DmnEvaluatorImpl implements DmnEvaluator {
     if (cached != null) {
       return cached;
     }
-    ParseResult pr = feelEngineApi.parseExpression(feelExpr.substring(1)); // strip '='
+    ParseResult pr = feelEngineApi.parseExpression(feelExpr.substring(1));
     if (pr.isSuccess()) {
       expressionCache.put(feelExpr, pr.parsedExpression());
       return pr.parsedExpression();
@@ -500,15 +451,11 @@ public class DmnEvaluatorImpl implements DmnEvaluator {
         return new VariableProvider() {
           @Override
           public Option<Object> getVariable(String name) {
-            try {
-              JsonNode node = variables.get(name);
-              if (node == null) {
-                return Option.empty();
-              }
-              return Option.apply(objectMapper.treeToValue(node, Object.class));
-            } catch (JsonProcessingException e) {
-              throw new IllegalStateException(e);
+            VariableValue value = variables.get(name);
+            if (value == null) {
+              return Option.empty();
             }
+            return Option.apply(Variables.toJavaObject(value));
           }
 
           @Override
@@ -520,20 +467,25 @@ public class DmnEvaluatorImpl implements DmnEvaluator {
 
       @Override
       public FunctionProvider functionProvider() {
-        return BUILTIN_FUNCTIONS;
+        return getBuiltinFunctions();
       }
     };
   }
 
-  /**
-   * For single-output tables, returns the value directly. For multi-output tables, returns the full
-   * output object.
-   */
-  private JsonNode flattenSingleOutput(ObjectNode row, DmnDecisionTableDTO table) {
-    if (table.getOutputs() != null && table.getOutputs().size() == 1) {
-      return row.get(table.getOutputs().get(0).getName());
+  private synchronized BuiltinFunctions getBuiltinFunctions() {
+    if (builtinFunctions == null) {
+      builtinFunctions =
+          new BuiltinFunctions(SystemClock$.MODULE$, ValueMapper.defaultValueMapper());
     }
-    return row;
+    return builtinFunctions;
+  }
+
+  private VariableValue flattenSingleOutput(
+      Map<String, VariableValue> row, DmnDecisionTableDTO table) {
+    if (table.getOutputs() != null && table.getOutputs().size() == 1) {
+      return normalize(row.get(table.getOutputs().getFirst().getName()));
+    }
+    return mapValue(row);
   }
 
   private ReferenceResolution tryResolveSimpleReference(
@@ -554,19 +506,19 @@ public class DmnEvaluatorImpl implements DmnEvaluator {
     String indexPart = matcher.group(2);
     String fieldPart = matcher.group(3);
 
-    JsonNode current = variables.get(baseName);
+    VariableValue current = variables.get(baseName);
     if (current == null) {
       return validationReferenceFailure("Variable '" + baseName + "' was not found");
     }
 
     if (indexPart != null) {
-      if (!current.isArray()) {
+      if (current.getKindCase() != VariableValue.KindCase.LIST_VALUE) {
         return validationReferenceFailure(
             "Variable '" + baseName + "' is not a list and cannot be indexed");
       }
       int oneBasedIndex = Integer.parseInt(indexPart);
       int zeroBasedIndex = oneBasedIndex - 1;
-      if (zeroBasedIndex < 0 || zeroBasedIndex >= current.size()) {
+      if (zeroBasedIndex < 0 || zeroBasedIndex >= current.getListValue().getItemsCount()) {
         return validationReferenceFailure(
             "List variable '"
                 + baseName
@@ -574,27 +526,27 @@ public class DmnEvaluatorImpl implements DmnEvaluator {
                 + oneBasedIndex
                 + " (1-based)");
       }
-      current = current.get(zeroBasedIndex);
+      current = current.getListValue().getItems(zeroBasedIndex);
     }
 
     if (fieldPart != null) {
-      if (current == null || current.isNull()) {
+      if (isNullish(current)) {
         return validationReferenceFailure(
             "Reference '" + expression + "' points to null before field access");
       }
-      if (current.isArray()) {
+      if (current.getKindCase() == VariableValue.KindCase.LIST_VALUE) {
         return validationReferenceFailure(
             "Reference '"
                 + expression
                 + "' is invalid because list-valued results must be indexed before field access");
       }
-      if (!current.isObject()) {
+      if (current.getKindCase() != VariableValue.KindCase.MAP_VALUE) {
         return validationReferenceFailure(
             "Reference '"
                 + expression
                 + "' is invalid because field access requires a context/object");
       }
-      JsonNode fieldValue = current.get(fieldPart);
+      VariableValue fieldValue = current.getMapValue().getEntriesMap().get(fieldPart);
       if (fieldValue == null) {
         return validationReferenceFailure(
             "Reference '"
@@ -606,23 +558,25 @@ public class DmnEvaluatorImpl implements DmnEvaluator {
       current = fieldValue;
     }
 
-    return ReferenceResolution.handled(current == null ? objectMapper.nullNode() : current);
+    return ReferenceResolution.handled(normalize(current));
   }
 
-  private boolean validateTypeRef(String typeRef, JsonNode value, String location) {
+  private boolean validateTypeRef(String typeRef, VariableValue value, String location) {
     String normalizedTypeRef = normalizeTypeRef(typeRef);
-    if (normalizedTypeRef == null || value == null || value.isNull()) {
+    if (normalizedTypeRef == null || isNullish(value)) {
       return true;
     }
 
     boolean valid =
         switch (normalizedTypeRef) {
-          case "integer", "long" -> value.isIntegralNumber();
-          case "double", "number", "decimal" -> value.isNumber();
-          case "string" -> value.isTextual();
-          case "boolean" -> value.isBoolean();
-          case "context" -> value.isObject();
-          case "list" -> value.isArray();
+          case "integer", "long" -> value.getKindCase() == VariableValue.KindCase.LONG_VALUE;
+          case "double", "number", "decimal" ->
+              value.getKindCase() == VariableValue.KindCase.LONG_VALUE
+                  || value.getKindCase() == VariableValue.KindCase.DOUBLE_VALUE;
+          case "string" -> value.getKindCase() == VariableValue.KindCase.STRING_VALUE;
+          case "boolean" -> value.getKindCase() == VariableValue.KindCase.BOOL_VALUE;
+          case "context" -> value.getKindCase() == VariableValue.KindCase.MAP_VALUE;
+          case "list" -> value.getKindCase() == VariableValue.KindCase.LIST_VALUE;
           case "any" -> true;
           default -> true;
         };
@@ -633,7 +587,7 @@ public class DmnEvaluatorImpl implements DmnEvaluator {
               + " expected type '"
               + normalizedTypeRef
               + "' but got "
-              + describeNodeType(value);
+              + describeValueType(value);
       handleValidationIssue(message);
       return false;
     }
@@ -649,42 +603,33 @@ public class DmnEvaluatorImpl implements DmnEvaluator {
     return namespaceSeparator >= 0 ? normalized.substring(namespaceSeparator + 1) : normalized;
   }
 
-  private String describeNodeType(JsonNode value) {
-    if (value == null || value.isNull()) {
+  private String describeValueType(VariableValue value) {
+    if (isNullish(value)) {
       return "null";
     }
-    if (value.isObject()) {
-      return "context/object";
-    }
-    if (value.isArray()) {
-      return "list";
-    }
-    if (value.isTextual()) {
-      return "string";
-    }
-    if (value.isIntegralNumber()) {
-      return "integer";
-    }
-    if (value.isNumber()) {
-      return "number";
-    }
-    if (value.isBoolean()) {
-      return "boolean";
-    }
-    return value.getNodeType().name().toLowerCase();
+    return switch (value.getKindCase()) {
+      case MAP_VALUE -> "context/object";
+      case LIST_VALUE -> "list";
+      case STRING_VALUE -> "string";
+      case LONG_VALUE -> "integer";
+      case DOUBLE_VALUE -> "number";
+      case BOOL_VALUE -> "boolean";
+      case BYTES_VALUE -> "bytes";
+      case NULL_VALUE, KIND_NOT_SET -> "null";
+    };
   }
 
   private ReferenceResolution validationReferenceFailure(String message) {
     handleValidationIssue(message);
-    return ReferenceResolution.handled(objectMapper.nullNode());
+    return ReferenceResolution.handled(Variables.nullValue());
   }
 
-  private JsonNode handleExpressionFailure(String message, Throwable cause) {
+  private VariableValue handleExpressionFailure(String message, Throwable cause) {
     return switch (effectiveValidationMode()) {
       case STRICT -> throw new DmnValidationException(message, cause);
       case WARN, PERMISSIVE -> {
         log.warn(message, cause);
-        yield objectMapper.nullNode();
+        yield Variables.nullValue();
       }
     };
   }
@@ -717,8 +662,28 @@ public class DmnEvaluatorImpl implements DmnEvaluator {
     return configuredValidationMode;
   }
 
-  private record ReferenceResolution(boolean handled, JsonNode value) {
-    private static ReferenceResolution handled(JsonNode value) {
+  private static VariableValue normalize(VariableValue value) {
+    return value == null ? Variables.nullValue() : value;
+  }
+
+  private static boolean isNullish(VariableValue value) {
+    return value == null
+        || value.getKindCase() == VariableValue.KindCase.NULL_VALUE
+        || value.getKindCase() == VariableValue.KindCase.KIND_NOT_SET;
+  }
+
+  private static VariableValue mapValue(Map<String, VariableValue> row) {
+    return VariableValue.newBuilder().setMapValue(Variables.toVarMap(row)).build();
+  }
+
+  private static VariableValue listValue(List<VariableValue> values) {
+    VarList.Builder builder = VarList.newBuilder();
+    values.forEach(value -> builder.addItems(normalize(value)));
+    return VariableValue.newBuilder().setListValue(builder.build()).build();
+  }
+
+  private record ReferenceResolution(boolean handled, VariableValue value) {
+    private static ReferenceResolution handled(VariableValue value) {
       return new ReferenceResolution(true, value);
     }
 

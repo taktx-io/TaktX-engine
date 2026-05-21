@@ -8,7 +8,11 @@
 package io.taktx.client.spring;
 
 import io.taktx.client.ProcessInstanceResponder;
+import io.taktx.dto.ProcessInstanceTriggerDTO;
 import io.taktx.util.TaktPropertiesHelper;
+import java.util.UUID;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -21,12 +25,17 @@ public class ProcessInstanceResponderConfiguration {
    * Provides a default ProcessInstanceResponder bean.
    *
    * @param taktPropertiesHelper the TaktPropertiesHelper to be used
+   * @param processInstanceTriggerEmitter optional injected producer for process-instance trigger
+   *     records
    * @return a ProcessInstanceResponder instance
    */
   @Bean
   @ConditionalOnMissingBean
   public ProcessInstanceResponder processInstanceResponder(
-      TaktPropertiesHelper taktPropertiesHelper) {
-    return new ProcessInstanceResponder(taktPropertiesHelper);
+      TaktPropertiesHelper taktPropertiesHelper,
+      ObjectProvider<KafkaProducer<UUID, ProcessInstanceTriggerDTO>>
+          processInstanceTriggerEmitter) {
+    return new ProcessInstanceResponder(
+        taktPropertiesHelper, processInstanceTriggerEmitter.getIfAvailable());
   }
 }

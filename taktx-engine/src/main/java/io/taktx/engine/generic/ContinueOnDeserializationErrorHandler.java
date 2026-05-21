@@ -19,15 +19,16 @@ import org.slf4j.LoggerFactory;
  * Kafka Streams deserialization exception handler that logs the poison record and continues
  * processing, rather than stopping the stream thread.
  *
- * <p>A deserialization failure in Kafka Streams (e.g. a corrupt CBOR payload, or a signature
- * verification failure in a signing-aware Serde) would by default stop the affected stream thread
- * with {@code LogAndFailExceptionHandler}. This handler logs full details about the offending
- * record and tells Kafka Streams to skip it, keeping the engine alive.
+ * <p>A deserialization failure in Kafka Streams (e.g. a corrupt protobuf payload, a null/malformed
+ * UUID key, or a signing-aware Serde rejection) would by default stop the affected stream thread
+ * with the built-in {@code LogAndFailExceptionHandler}. This handler logs full details about the
+ * offending record and tells Kafka Streams to skip it, keeping the engine alive.
  *
- * <p>Configure via {@code application.properties}:
+ * <p>Configure via {@code application.properties} using the raw Kafka Streams property key (the
+ * {@code quarkus.kafka-streams.*} variant is silently ignored by Quarkus 3.35 / Kafka 4.x):
  *
  * <pre>
- * quarkus.kafka-streams.default-deserialization-exception-handler=io.taktx.engine.generic.ContinueOnDeserializationErrorHandler
+ * kafka-streams.default.deserialization.exception.handler=io.taktx.engine.generic.ContinueOnDeserializationErrorHandler
  * </pre>
  */
 public class ContinueOnDeserializationErrorHandler implements DeserializationExceptionHandler {
@@ -40,8 +41,13 @@ public class ContinueOnDeserializationErrorHandler implements DeserializationExc
     // no configuration needed
   }
 
+  /**
+   * Kafka Streams 4.x non-deprecated entry point. Logs the poison record, increments a Micrometer
+   * counter, and returns {@link Response#resume()} so the stream thread skips the record and
+   * continues.
+   */
   @Override
-  public DeserializationHandlerResponse handle(
+  public Response handleError(
       ErrorHandlerContext context,
       ConsumerRecord<byte[], byte[]> consumerRecord,
       Exception exception) {
@@ -58,13 +64,21 @@ public class ContinueOnDeserializationErrorHandler implements DeserializationExc
         exception);
 
     // DLQ-018A: increment observable counter so dashboards can detect excluded-topic poison
-    // records.
-    Metrics.globalRegistry
-        .counter("taktx.excluded.topic.deserialization.errors", "topic", consumerRecord.topic())
-        .increment();
+    // records. Guard against early-startup races where the global registry is not yet fully
+    // initialised — a metric increment failure must never cause the handler to throw and
+    // accidentally trigger SHUTDOWN_CLIENT behaviour.
+    try {
+      Metrics.globalRegistry
+          .counter("taktx.excluded.topic.deserialization.errors", "topic", consumerRecord.topic())
+          .increment();
+    } catch (Exception metricEx) {
+      log.warn(
+          "Failed to increment deserialization-error metric (non-fatal): {}",
+          metricEx.getMessage());
+    }
 
-    // CONTINUE tells Kafka Streams to commit the offset and move past this record.
+    // resume() tells Kafka Streams to commit the offset and move past this record.
     // The stream thread stays alive; no state store is corrupted.
-    return DeserializationHandlerResponse.CONTINUE;
+    return Response.resume();
   }
 }

@@ -117,7 +117,7 @@ public class VerificationCore {
    * verified by the Kafka deserializer <em>before</em> this method is called; this method verifies
    * <em>trust</em>: is the key known, non-revoked, and trusted for the required role?
    *
-   * @param sigHeader the {@code X-TaktX-Signature} header; {@code null} value causes a throw
+   * @param sigHeader the {@code tx-sig} header; {@code null} value causes a throw
    * @param requiredRole the minimum role the signer must hold
    * @return a {@link VerifiedMessageContext} describing the verified signer
    * @throws AuthorizationTokenException on any verification failure, with a descriptive reason
@@ -153,7 +153,7 @@ public class VerificationCore {
   }
 
   /**
-   * Extracts the key ID from the value of an {@code X-TaktX-Signature} header.
+   * Extracts the key ID from the value of a {@code tx-sig} header.
    *
    * <p>The header value format is {@code <keyId>.<base64signature>}; this method returns the
    * portion before the first {@code .}, or the entire value when no {@code .} is present.

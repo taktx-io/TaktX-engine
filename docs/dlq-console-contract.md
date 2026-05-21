@@ -35,9 +35,9 @@ Topics use **DELETE** cleanup (time-bounded retention) — see `docs/dlq-retenti
 {
   "sourceTopic":        "process-instance",
   "keyBytes":           null,
-  "valueBytes":         "<base64-encoded raw CBOR payload>",
+  "valueBytes":         "<base64-encoded raw payload bytes>",
   "headers": {
-    "X-TaktX-Signature": "<base64>",
+    "tx-sig": "<base64>",
     "Authorization":     "Bearer <jwt>"
   },
   "reasonCode":         "SIGNATURE_VERIFICATION_FAILED",
@@ -91,7 +91,7 @@ The `dlq` topic is append-only; the engine may produce duplicate entries when Ka
   "operatorId":         "ops-user@example.com",
   "approvedAtMs":       1714550100000,
   "operatorNotes":      "Fixed JWT expiry in Authorization header",
-  "correctedValueBytes": "<base64-encoded corrected CBOR payload>",
+  "correctedValueBytes": "<base64-encoded corrected payload bytes>",
   "correctedKeyBytes":  null,
   "correctedHeaders": {
     "Authorization": "<base64-encoded new JWT Bearer token>"
@@ -117,7 +117,7 @@ The `dlq` topic is append-only; the engine may produce duplicate entries when Ka
 **Key notes**:
 - `destinationTopic` must be a **bare** topic name (no prefix) from the 8 allowed ingress surfaces — the engine enforces this whitelist.
 - `correctedHeaders` values are base64-encoded; the engine decodes them before attaching to the forwarded record.
-- `X-TaktX-Signature` must **not** be included in `correctedHeaders` — the engine always replaces it with a fresh ENGINE-signed value.
+- `tx-sig` must **not** be included in `correctedHeaders` — the engine always replaces it with a fresh ENGINE-signed value.
 - `dryRun: true` runs all validation without forwarding the record; use for pre-flight checks.
 - `validationPolicy: "OPERATOR_OVERRIDE"` allows schema version mismatch with an explicit `overrideReason`.
 
@@ -172,10 +172,10 @@ Replayed records carry these Kafka headers:
 
 | Header | Value |
 |---|---|
-| `X-DLQ-Lineage-Ref` | `dlqEntryRef` of the originating DLQ entry |
-| `X-DLQ-Correction-Id` | UUID matching `DlqReplayResult.correctionId` |
-| `X-DLQ-Source-Offset` | Kafka offset of the original failed record |
-| `X-TaktX-Signature` | Fresh ENGINE Ed25519 signature (replaces any previous signature) |
+| `dlq-lin` | `dlqEntryRef` of the originating DLQ entry |
+| `dlq-cid` | UUID matching `DlqReplayResult.correctionId` |
+| `dlq-off` | Kafka offset of the original failed record |
+| `tx-sig` | Fresh ENGINE Ed25519 signature (replaces any previous signature) |
 
 ---
 
@@ -417,7 +417,7 @@ client.registerProcessInstanceUpdateConsumer("console-pi-group", update -> {
 ```
 
 `ProcessInstanceUpdateDTO` arrives via the `registerProcessInstanceUpdateConsumer` API, not a separate topic subscription. The `incidentInfoDTO.dlqEntryRef` is populated **only** when:
-- The incident was caused by a CBOR decode failure (`captureStage = DESERIALIZER`)
+- The incident was caused by a payload deserialization failure (`captureStage = DESERIALIZER`)
 - The incident was caused by an unhandled BPMN error event (`captureStage = PROCESSOR`, DLQ entry has empty payload, `dlqEntryRef` hash segment = `?`)
 
 ### 4. Payload correction and replay
@@ -426,7 +426,7 @@ client.registerProcessInstanceUpdateConsumer("console-pi-group", update -> {
 // Step 1 — dry-run to validate before committing
 DlqReplayCommand dryRun = DlqReplayCommandBuilder.from(envelope)
     .operatorId("ops@example.com")
-    .correctedPayload(correctedCborBytes)
+    .correctedPayload(correctedPayloadBytes)
     .correctedHeaders(Map.of("Authorization", base64NewJwt))
     .dryRun()
     .build();
@@ -437,7 +437,7 @@ client.registerReplayResultConsumer("console-results-group", result -> {
     if ("DRY_RUN_PASSED".equals(result.getStatus())) {
         DlqReplayCommand live = DlqReplayCommandBuilder.from(envelope)
             .operatorId("ops@example.com")
-            .correctedPayload(correctedCborBytes)
+            .correctedPayload(correctedPayloadBytes)
             .correctedHeaders(Map.of("Authorization", base64NewJwt))
             .build(); // dryRun defaults to false
         client.submitReplayCommand(live);
@@ -471,7 +471,7 @@ client.submitReplayCommand(override);
 | Navigate incident → DLQ entry | Local store lookup | `dlqEntryRef` equality |
 | Submit replay | `dlq.replay` topic via `submitReplayCommand` | `dlqEntryRef` |
 | Track replay outcome | `dlq.replay-results` topic via `registerReplayResultConsumer` | `dlqEntryRef` + `correctionId` |
-| Track forwarded record | Target ingress topic headers | `X-DLQ-Lineage-Ref`, `X-DLQ-Correction-Id` |
+| Track forwarded record | Target ingress topic headers | `dlq-lin`, `dlq-cid` |
 
 ### 7. Shutdown
 

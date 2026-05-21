@@ -7,10 +7,6 @@
  */
 package io.taktx.dto;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
-import com.fasterxml.jackson.annotation.JsonFormat.Shape;
-import com.fasterxml.jackson.annotation.JsonInclude;
-import io.quarkus.runtime.annotations.RegisterForReflection;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -20,9 +16,6 @@ import lombok.ToString;
 @NoArgsConstructor
 @EqualsAndHashCode
 @ToString
-@JsonFormat(shape = Shape.ARRAY)
-@JsonInclude(JsonInclude.Include.NON_NULL)
-@RegisterForReflection
 public class ExternalTaskResponseResultDTO {
   private ExternalTaskResponseType responseType;
 

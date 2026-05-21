@@ -7,8 +7,12 @@
  */
 package io.taktx.client.annotation;
 
+/** Defines how worker methods are executed after a task is dispatched to client code. */
 public enum ThreadingStrategy {
+  /** Execute work on the polling thread and wait synchronously for completion. */
   SINGLE_THREAD,
+  /** Execute work on a virtual thread and wait for completion before acknowledging the record. */
   VIRTUAL_THREAD_WAIT,
+  /** Execute work on a virtual thread and return immediately without waiting for completion. */
   VIRTUAL_THREAD_FIRE_AND_FORGET
 }

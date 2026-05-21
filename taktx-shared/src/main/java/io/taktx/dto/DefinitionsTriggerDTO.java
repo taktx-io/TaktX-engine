@@ -7,22 +7,11 @@
  */
 package io.taktx.dto;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
-import com.fasterxml.jackson.annotation.JsonFormat.Shape;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
-import com.fasterxml.jackson.databind.annotation.JsonTypeIdResolver;
-import io.quarkus.runtime.annotations.RegisterForReflection;
-import io.taktx.DefinitionsTriggerTypeIdResolver;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-@JsonTypeInfo(use = Id.CUSTOM, property = "c")
-@JsonTypeIdResolver(DefinitionsTriggerTypeIdResolver.class)
-@JsonFormat(shape = Shape.ARRAY)
 @Getter
 @EqualsAndHashCode
 @NoArgsConstructor
-@RegisterForReflection
 public abstract class DefinitionsTriggerDTO {}

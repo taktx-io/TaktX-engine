@@ -3,6 +3,7 @@ plugins {
     `maven-publish`
     alias(libs.plugins.xjc)
     alias(libs.plugins.spotless)
+    alias(libs.plugins.protobuf)
     id("org.jreleaser")
     jacoco
 }
@@ -12,6 +13,16 @@ java {
         languageVersion = JavaLanguageVersion.of(21)
     }
 }
+
+val goldenTestSourceSet = sourceSets.create("goldenTest") {
+    java.srcDir("src/goldenTest/java")
+    resources.srcDir("src/test/resources")
+    compileClasspath += sourceSets["main"].output + sourceSets["test"].output + sourceSets["test"].compileClasspath
+    runtimeClasspath += output + sourceSets["main"].output + sourceSets["test"].output + sourceSets["test"].runtimeClasspath
+}
+
+configurations[goldenTestSourceSet.implementationConfigurationName].extendsFrom(configurations.testImplementation.get())
+configurations[goldenTestSourceSet.runtimeOnlyConfigurationName].extendsFrom(configurations.testRuntimeOnly.get())
 
 tasks {
     withType<JavaCompile>().configureEach {
@@ -32,13 +43,10 @@ tasks {
 }
 
 dependencies {
-    api(libs.jackson.databind)
     api(libs.jjwt.api)
-    implementation(libs.jjwt.impl)
-    implementation(libs.jjwt.jackson)
+    api(libs.protobuf.javalite)
+    runtimeOnly(libs.jjwt.impl)
 
-    implementation(libs.jackson.cbor)
-    implementation(libs.jackson.datatype.jsr310)
     implementation(libs.kafka.clients)
     implementation(libs.cronutils)
 
@@ -48,18 +56,65 @@ dependencies {
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.junit.jupiter.params)
     testRuntimeOnly(libs.junit.platform.launcher)
+    testRuntimeOnly(libs.jjwt.impl)
+    testRuntimeOnly(libs.jjwt.jackson)
     testImplementation(libs.assertj.core)
     testImplementation(libs.mockito.core)
-//    testImplementation(libs.jackson.annotations)
     testImplementation(libs.reflections)
     testImplementation(libs.jaxb.runtime)
 
     annotationProcessor(libs.lombok)
 }
 
+// ── Protobuf ────────────────────────────────────────────────────────────────
+protobuf {
+    protoc {
+        artifact = "com.google.protobuf:protoc:${libs.versions.protobuf.get()}"
+    }
+    generateProtoTasks {
+        all().forEach { task ->
+            task.builtins {
+                named("java") {
+                    option("lite")
+                }
+            }
+        }
+    }
+}
+
 tasks.test {
     useJUnitPlatform()
     finalizedBy(tasks.jacocoTestReport)
+}
+
+val goldenTest by tasks.registering(Test::class) {
+    description = "Runs golden protobuf compatibility tests"
+    group = LifecycleBasePlugin.VERIFICATION_GROUP
+    useJUnitPlatform()
+    testClassesDirs = goldenTestSourceSet.output.classesDirs
+    classpath = goldenTestSourceSet.runtimeClasspath
+    systemProperty("updateGoldens", System.getProperty("updateGoldens", "false"))
+    shouldRunAfter(tasks.test)
+}
+
+val variableSizeBenchmark by tasks.registering(Test::class) {
+    description = "Runs the VariableValue/VarMap size benchmark against saved legacy CBOR fixtures"
+    group = LifecycleBasePlugin.VERIFICATION_GROUP
+    useJUnitPlatform()
+    filter {
+        includeTestsMatching("io.taktx.variables.VariablesEncodingBenchmarkTest")
+        includeTestsMatching("io.taktx.serdes.ProtoPayloadSizeExplorationTest")
+    }
+    testClassesDirs = sourceSets["test"].output.classesDirs
+    classpath = sourceSets["test"].runtimeClasspath
+    shouldRunAfter(tasks.test)
+    testLogging {
+        showStandardStreams = true
+    }
+}
+
+tasks.named("check") {
+    dependsOn(goldenTest)
 }
 
 tasks.jacocoTestReport {
@@ -72,7 +127,7 @@ tasks.jacocoTestReport {
     // coverage metric:
     //  - dto/**          : pure Lombok data-transfer objects (generated getters/equals/hashCode)
     //  - bpmn/**         : XJC-generated classes from the BPMN XML Schema
-    //  - *TypeIdResolver : Jackson polymorphism configuration wiring (no conditional logic)
+    //  - *TypeIdResolver : legacy resolver wiring kept out of the coverage metric if present
     //  - xml/Generic*    : Generic BPMN element mappers — exercised by engine integration tests
     //  - xml/Zeebe*      : Zeebe-specific BPMN mappers  — exercised by engine integration tests
     //  - xml/BpmnMapper* : Mapper interface + factory wiring

@@ -130,7 +130,7 @@ The M2 engine logic should derive the durable dedup key as follows:
 
 1. If `messageId` is present and non-blank, use it as the logical message identity.
 2. If `messageId` is absent or blank, fall back to a derived hash of the exact signed record identity
-   (`X-TaktX-Signature` header value + payload bytes as consumed from Kafka) for transition
+   (`tx-sig` header value + payload bytes as consumed from Kafka) for transition
    compatibility with existing producers.
 3. Prefix the stored key with a topic-class namespace so identical UUIDs on different protected
    paths do not collide.

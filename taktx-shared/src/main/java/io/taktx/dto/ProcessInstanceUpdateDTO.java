@@ -7,7 +7,6 @@
  */
 package io.taktx.dto;
 
-import io.quarkus.runtime.annotations.RegisterForReflection;
 import jakarta.annotation.Nullable;
 import java.util.List;
 import java.util.Set;
@@ -17,11 +16,15 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 
+/**
+ * Process-instance update DTO backed by {@code instance_update.proto} / {@code
+ * ProcessInstanceUpdateMessage}. Business metadata maps to {@code business_key = 11} and {@code
+ * tags = 12}.
+ */
 @Getter
 @ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
-@RegisterForReflection
 public class ProcessInstanceUpdateDTO extends InstanceUpdateDTO {
   private UUID parentProcessInstanceId;
 
@@ -38,7 +41,7 @@ public class ProcessInstanceUpdateDTO extends InstanceUpdateDTO {
   private Long processStartTime;
   private Long processEndTime;
 
-  // Business metadata — appended last for CBOR array backward compatibility
+  // Proto mapping: instance_update.proto / ProcessInstanceUpdateMessage.business_key = 11
   @Nullable private String businessKey;
 
   private Set<String> tags;

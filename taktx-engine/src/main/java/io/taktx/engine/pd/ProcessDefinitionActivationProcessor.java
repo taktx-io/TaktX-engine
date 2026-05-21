@@ -29,6 +29,7 @@ import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pi.DefinitionsCache;
 import io.taktx.engine.pi.model.VariableScope;
+import io.taktx.variables.Variables;
 import java.time.Clock;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;
@@ -175,11 +176,15 @@ public class ProcessDefinitionActivationProcessor {
             signalStartEventDefinition -> {
               String signalRef = signalStartEventDefinition.getSignalRef();
               String signalName =
-                  feelExpressionHandler
-                      .processFeelExpression(
-                          processDefinition.getDefinitions().getSignals().get(signalRef).getName(),
-                          VariableScope.empty(null, null))
-                      .asText();
+                  String.valueOf(
+                      Variables.toJavaObject(
+                          feelExpressionHandler.processFeelExpression(
+                              processDefinition
+                                  .getDefinitions()
+                                  .getSignals()
+                                  .get(signalRef)
+                                  .getName(),
+                              VariableScope.empty(null, null))));
               NewDefinitionSignalSubscriptionDTO signalSubscription =
                   new NewDefinitionSignalSubscriptionDTO(
                       processDefinitionKey, startEvent.getId(), signalName);

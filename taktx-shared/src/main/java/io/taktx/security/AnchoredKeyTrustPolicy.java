@@ -42,7 +42,7 @@ import java.util.Base64;
  * <ol>
  *   <li>Key is not {@code null}
  *   <li>Key status is not {@link SigningKeyDTO.KeyStatus#REVOKED}
- *   <li>{@link SigningKeyDTO#getRegistrationSignature()} is non-null and non-blank
+ *   <li>The key's {@code registrationSignature} field is non-null and non-blank
  *   <li>The registration signature verifies with {@code SHA256withRSA} against {@link
  *       SigningKeyRegistrar#computeCanonicalPayload(SigningKeyDTO)} using the platform root key
  *   <li>The key's declared role satisfies the required role via {@link OpenKeyTrustPolicy}
@@ -54,9 +54,9 @@ import java.util.Base64;
  *
  * <h2>Canonical payload and signature format</h2>
  *
- * <p>The {@link SigningKeyDTO#getRegistrationSignature()} value is the base64-encoded result of an
- * RSA/SHA-256 (PKCS#1 v1.5) signature produced by the platform's root private key over the
- * pipe-delimited UTF-8 canonical payload:
+ * <p>The key's {@code registrationSignature} value is the base64-encoded result of an RSA/SHA-256
+ * (PKCS#1 v1.5) signature produced by the platform's root private key over the pipe-delimited UTF-8
+ * canonical payload:
  *
  * <pre>{@code keyId|publicKeyBase64|algorithm|owner|role}</pre>
  *
@@ -96,8 +96,8 @@ public class AnchoredKeyTrustPolicy implements KeyTrustPolicy {
    * Constructs an anchored trust policy using the given RSA root public key.
    *
    * @param rootPublicKey the platform RSA public key corresponding to {@code
-   *     TAKTX_PLATFORM_PUBLIC_KEY}; used to verify {@link SigningKeyDTO#getRegistrationSignature()}
-   *     on every key lookup
+   *     TAKTX_PLATFORM_PUBLIC_KEY}; used to verify the key entry's {@code registrationSignature}
+   *     field on every key lookup
    * @throws IllegalArgumentException if {@code rootPublicKey} is {@code null}
    */
   public AnchoredKeyTrustPolicy(PublicKey rootPublicKey) {

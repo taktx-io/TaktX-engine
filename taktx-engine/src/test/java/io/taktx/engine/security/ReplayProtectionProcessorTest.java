@@ -14,7 +14,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import io.jsonwebtoken.Jwts;
-import io.quarkus.kafka.client.serialization.ObjectMapperSerde;
 import io.taktx.dto.Constants;
 import io.taktx.dto.DlqReasonCode;
 import io.taktx.dto.GlobalConfigurationDTO;
@@ -62,9 +61,6 @@ class ReplayProtectionProcessorTest {
   private static final String REPLAY_STORE_NAME = "test-tenant.default.replay-protection";
   private static final String PLATFORM_KID = "platform-key-replay-test";
   private static final String ISSUER = "taktx-platform";
-
-  private static final ObjectMapperSerde<ProcessInstanceDlqEntryDTO> DLQ_ENTRY_SERDE =
-      new ObjectMapperSerde<>(ProcessInstanceDlqEntryDTO.class);
 
   @Test
   void compatMode_rejectsDuplicateNonBlankAuditId() throws Exception {
@@ -151,11 +147,10 @@ class ReplayProtectionProcessorTest {
     assertThat(harness.outputQueueSize()).isEqualTo(1); // still only one normal output
     assertThat(harness.dlqQueueSize()).isEqualTo(1);
 
-    ProcessInstanceDlqEntryDTO dlqEntry = harness.readDlqEntry();
-    String reasonHint = new String(dlqEntry.getHeaders().get(REASON_HINT), StandardCharsets.UTF_8);
-    assertThat(reasonHint).isEqualTo(DlqReasonCode.REPLAY_DETECTED.name());
+    DlqObservation dlqObservation = harness.readDlqEntry();
+    assertThat(dlqObservation.reasonHint()).isEqualTo(DlqReasonCode.REPLAY_DETECTED.name());
     assertThat(DlqReasonCode.REPLAY_DETECTED.getSeverity().name()).isEqualTo("CRITICAL");
-    assertThat(dlqEntry.getProcessInstanceId()).isEqualTo(processInstanceId);
+    assertThat(dlqObservation.processInstanceId()).isEqualTo(processInstanceId);
   }
 
   @Test
@@ -243,8 +238,17 @@ class ReplayProtectionProcessorTest {
             (_, v) -> v instanceof ProcessInstanceDlqEntryDTO,
             Branched.withConsumer(
                 ks ->
-                    ks.map((_, v) -> KeyValue.pair((String) null, (ProcessInstanceDlqEntryDTO) v))
-                        .to(DLQ_OUTPUT_TOPIC, Produced.with(Serdes.String(), DLQ_ENTRY_SERDE))))
+                    ks.map(
+                            (_, v) -> {
+                              ProcessInstanceDlqEntryDTO dlqEntry = (ProcessInstanceDlqEntryDTO) v;
+                              String reasonHint =
+                                  new String(
+                                      dlqEntry.getHeaders().get(REASON_HINT),
+                                      StandardCharsets.UTF_8);
+                              return KeyValue.pair(
+                                  dlqEntry.getProcessInstanceId().toString(), reasonHint);
+                            })
+                        .to(DLQ_OUTPUT_TOPIC, Produced.with(Serdes.String(), Serdes.String()))))
         .branch(
             (_, v) -> v instanceof ProcessInstanceTriggerEnvelope,
             Branched.withConsumer(
@@ -277,17 +281,19 @@ class ReplayProtectionProcessorTest {
             OUTPUT_TOPIC,
             TopologyProducer.PROCESS_INSTANCE_KEY_SERDE.deserializer(),
             TopologyProducer.PROCESS_INSTANCE_TRIGGER_ENVELOPE_SERDE.deserializer());
-    TestOutputTopic<String, ProcessInstanceDlqEntryDTO> dlqTopic =
+    TestOutputTopic<String, String> dlqTopic =
         driver.createOutputTopic(
-            DLQ_OUTPUT_TOPIC, Serdes.String().deserializer(), DLQ_ENTRY_SERDE.deserializer());
+            DLQ_OUTPUT_TOPIC, Serdes.String().deserializer(), Serdes.String().deserializer());
     return new TestHarness(driver, inputTopic, outputTopic, dlqTopic, rsaKeyPair, nowMs);
   }
+
+  private record DlqObservation(UUID processInstanceId, String reasonHint) {}
 
   private record TestHarness(
       TopologyTestDriver driver,
       TestInputTopic<UUID, ProcessInstanceTriggerEnvelope> inputTopic,
       TestOutputTopic<UUID, ProcessInstanceTriggerEnvelope> outputTopic,
-      TestOutputTopic<String, ProcessInstanceDlqEntryDTO> dlqTopic,
+      TestOutputTopic<String, String> dlqTopic,
       KeyPair rsaKeyPair,
       AtomicLong nowMs) {
 
@@ -311,8 +317,9 @@ class ReplayProtectionProcessorTest {
       return dlqTopic.getQueueSize();
     }
 
-    private ProcessInstanceDlqEntryDTO readDlqEntry() {
-      return dlqTopic.readValue();
+    private DlqObservation readDlqEntry() {
+      TestRecord<String, String> record = dlqTopic.readRecord();
+      return new DlqObservation(UUID.fromString(record.key()), record.value());
     }
 
     private void advanceMillis() {

@@ -88,6 +88,7 @@ public class DlqReplayCommandBuilder {
    * </ul>
    *
    * @param envelope the DLQ entry to replay; must not be {@code null}
+   * @return a builder initialised from the supplied envelope
    */
   public static DlqReplayCommandBuilder from(DlqEnvelope envelope) {
     if (envelope == null) {
@@ -115,6 +116,8 @@ public class DlqReplayCommandBuilder {
   /**
    * Creates an empty builder for fully-manual command construction. Prefer {@link
    * #from(DlqEnvelope)} whenever an envelope is available.
+   *
+   * @return a new empty replay-command builder
    */
   public static DlqReplayCommandBuilder newBuilder() {
     return new DlqReplayCommandBuilder();
@@ -126,6 +129,7 @@ public class DlqReplayCommandBuilder {
    * Identity of the operator approving the replay (e.g. an email address or service account name).
    *
    * @param operatorId operator identity string; must not be {@code null} or blank
+   * @return this builder
    */
   public DlqReplayCommandBuilder operatorId(String operatorId) {
     this.operatorId = operatorId;
@@ -138,7 +142,8 @@ public class DlqReplayCommandBuilder {
    * Overrides the corrected payload bytes. When omitted, the raw {@code valueBytes} from the
    * original envelope are reused as-is.
    *
-   * @param correctedValueBytes corrected CBOR-encoded payload bytes
+   * @param correctedValueBytes corrected protobuf payload bytes
+   * @return this builder
    */
   public DlqReplayCommandBuilder correctedPayload(byte[] correctedValueBytes) {
     this.correctedValueBytes = correctedValueBytes;
@@ -148,6 +153,9 @@ public class DlqReplayCommandBuilder {
   /**
    * Overrides the corrected key bytes. Required only for keyed surfaces; most DLQ ingress surfaces
    * use a {@code null} key.
+   *
+   * @param correctedKeyBytes corrected key bytes, or {@code null} for keyless records
+   * @return this builder
    */
   public DlqReplayCommandBuilder correctedKey(@Nullable byte[] correctedKeyBytes) {
     this.correctedKeyBytes = correctedKeyBytes;
@@ -158,10 +166,11 @@ public class DlqReplayCommandBuilder {
    * Sets the corrected Kafka headers snapshot. Values must be base64-encoded strings — the engine
    * replay processor decodes them before attaching to the forwarded record.
    *
-   * <p>The engine always replaces {@code X-TaktX-Signature} with a fresh ENGINE-signed value; there
-   * is no need to include it here.
+   * <p>The engine always replaces {@code tx-sig} with a fresh ENGINE-signed value; there is no need
+   * to include it here.
    *
    * @param correctedHeaders map of header name → base64-encoded header value
+   * @return this builder
    */
   public DlqReplayCommandBuilder correctedHeaders(Map<String, String> correctedHeaders) {
     this.correctedHeaders = correctedHeaders;
@@ -177,6 +186,9 @@ public class DlqReplayCommandBuilder {
    *   <li>{@link ReplayValidationPolicy#OPERATOR_OVERRIDE}: schema version mismatch is allowed with
    *       an explicit {@link #overrideReason(String)}.
    * </ul>
+   *
+   * @param validationPolicy validation policy to apply during replay
+   * @return this builder
    */
   public DlqReplayCommandBuilder validationPolicy(ReplayValidationPolicy validationPolicy) {
     this.validationPolicy = validationPolicy;
@@ -186,13 +198,21 @@ public class DlqReplayCommandBuilder {
   /**
    * Enables dry-run mode. The engine runs all validation steps but does NOT forward the record to
    * the target ingress topic. The result status will be {@code DRY_RUN_PASSED} or {@code FAILED}.
+   *
+   * @param dryRun {@code true} to validate without replaying, {@code false} to perform a live
+   *     replay
+   * @return this builder
    */
   public DlqReplayCommandBuilder dryRun(boolean dryRun) {
     this.dryRun = dryRun;
     return this;
   }
 
-  /** Convenience method — enables dry-run mode. Equivalent to {@code dryRun(true)}. */
+  /**
+   * Convenience method — enables dry-run mode. Equivalent to {@code dryRun(true)}.
+   *
+   * @return this builder
+   */
   public DlqReplayCommandBuilder dryRun() {
     return dryRun(true);
   }
@@ -200,6 +220,9 @@ public class DlqReplayCommandBuilder {
   /**
    * Human-readable justification required when using {@link
    * ReplayValidationPolicy#OPERATOR_OVERRIDE}. Also recorded in the replay-result audit trail.
+   *
+   * @param overrideReason operator-supplied reason for bypassing strict validation
+   * @return this builder
    */
   public DlqReplayCommandBuilder overrideReason(String overrideReason) {
     this.overrideReason = overrideReason;
@@ -209,6 +232,9 @@ public class DlqReplayCommandBuilder {
   /**
    * Documents which fields were changed in this correction (for the audit trail). Example: {@code
    * List.of("headers.Authorization", "payload.variables.priority")}.
+   *
+   * @param changedFields logical field paths changed by the operator
+   * @return this builder
    */
   public DlqReplayCommandBuilder changedFields(List<String> changedFields) {
     this.changedFields = changedFields;
@@ -218,6 +244,9 @@ public class DlqReplayCommandBuilder {
   /**
    * Optional free-text notes for the operator. Stored in the command but not evaluated by the
    * engine.
+   *
+   * @param operatorNotes free-text audit notes from the operator
+   * @return this builder
    */
   public DlqReplayCommandBuilder operatorNotes(String operatorNotes) {
     this.operatorNotes = operatorNotes;
@@ -227,6 +256,9 @@ public class DlqReplayCommandBuilder {
   /**
    * Sets the approval timestamp in epoch milliseconds. Defaults to the current system time at
    * builder creation.
+   *
+   * @param approvedAtMs approval timestamp in epoch milliseconds
+   * @return this builder
    */
   public DlqReplayCommandBuilder approvedAtMs(long approvedAtMs) {
     this.approvedAtMs = approvedAtMs;
@@ -237,6 +269,9 @@ public class DlqReplayCommandBuilder {
    * Overrides the expected schema version of the corrected payload. When unset the engine uses the
    * schema version recorded in the original envelope (populated automatically by {@link
    * #from(DlqEnvelope)}).
+   *
+   * @param expectedSchemaVersion schema version expected by the replay processor
+   * @return this builder
    */
   public DlqReplayCommandBuilder expectedSchemaVersion(int expectedSchemaVersion) {
     this.expectedSchemaVersion = expectedSchemaVersion;
@@ -249,6 +284,9 @@ public class DlqReplayCommandBuilder {
    *
    * <p>Must be one of the 8 allowed ingress surfaces — the engine enforces this whitelist
    * regardless.
+   *
+   * @param destinationTopic bare destination topic name
+   * @return this builder
    */
   public DlqReplayCommandBuilder destinationTopic(String destinationTopic) {
     this.destinationTopic = destinationTopic;
@@ -258,6 +296,9 @@ public class DlqReplayCommandBuilder {
   /**
    * Explicitly sets the DLQ entry reference. Normally derived automatically from the envelope by
    * {@link #from(DlqEnvelope)}.
+   *
+   * @param dlqEntryRef stable DLQ entry identifier in {@code topic:partition:offset:hash} form
+   * @return this builder
    */
   public DlqReplayCommandBuilder dlqEntryRef(String dlqEntryRef) {
     this.dlqEntryRef = dlqEntryRef;
@@ -267,6 +308,7 @@ public class DlqReplayCommandBuilder {
   /**
    * Builds the {@link DlqReplayCommand}.
    *
+   * @return the validated replay command
    * @throws IllegalStateException if required fields are missing
    */
   public DlqReplayCommand build() {

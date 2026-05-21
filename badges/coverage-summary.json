@@ -1,46 +1,46 @@
 {
   "overall": {
-    "coverage": 72.36,
-    "covered": 8824,
-    "missed": 3370,
-    "total": 12194
+    "coverage": 40.57,
+    "covered": 22265,
+    "missed": 32617,
+    "total": 54882
   },
   "modules": {
     "taktx-engine": {
-      "coverage": 85.65,
-      "covered": 7327,
-      "missed": 1228,
-      "total": 8555
+      "coverage": 85.45,
+      "covered": 7583,
+      "missed": 1291,
+      "total": 8874
     },
     "taktx-client": {
-      "coverage": 31.29,
-      "covered": 708,
-      "missed": 1555,
-      "total": 2263
+      "coverage": 38.0,
+      "covered": 904,
+      "missed": 1475,
+      "total": 2379
     },
     "taktx-client-quarkus": {
-      "coverage": 53.95,
-      "covered": 41,
-      "missed": 35,
-      "total": 76
+      "coverage": 58.02,
+      "covered": 47,
+      "missed": 34,
+      "total": 81
     },
     "taktx-client-spring-boot-3": {
-      "coverage": 55.93,
-      "covered": 33,
-      "missed": 26,
-      "total": 59
+      "coverage": 60.0,
+      "covered": 36,
+      "missed": 24,
+      "total": 60
     },
     "taktx-client-spring-boot-4": {
-      "coverage": 55.93,
-      "covered": 33,
-      "missed": 26,
-      "total": 59
+      "coverage": 60.0,
+      "covered": 36,
+      "missed": 24,
+      "total": 60
     },
     "taktx-shared": {
-      "coverage": 57.7,
-      "covered": 682,
-      "missed": 500,
-      "total": 1182
+      "coverage": 31.45,
+      "covered": 13659,
+      "missed": 29769,
+      "total": 43428
     }
   }
 }

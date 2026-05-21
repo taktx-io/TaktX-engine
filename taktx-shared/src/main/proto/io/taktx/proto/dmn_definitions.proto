@@ -1,0 +1,110 @@
+syntax = "proto3";
+
+package io.taktx.proto;
+
+option java_package = "io.taktx.proto";
+option java_multiple_files = true;
+option java_outer_classname = "DmnDefinitionsProto";
+
+import "io/taktx/proto/common.proto";
+
+enum DmnCollectOperator {
+  DMN_COLLECT_UNSPECIFIED  = 0;
+  DMN_COLLECT_NONE         = 1;
+  DMN_COLLECT_SUM          = 2;
+  DMN_COLLECT_MIN          = 3;
+  DMN_COLLECT_MAX          = 4;
+  DMN_COLLECT_COUNT        = 5;
+}
+
+enum DmnDefinitionStateEnum {
+  DMN_DEFINITION_STATE_UNSPECIFIED = 0;
+  DMN_DEFINITION_STATE_ACTIVE      = 1;
+  DMN_DEFINITION_STATE_INACTIVE    = 2;
+}
+
+enum DmnHitPolicy {
+  DMN_HIT_POLICY_UNSPECIFIED   = 0;
+  DMN_HIT_POLICY_UNIQUE        = 1;
+  DMN_HIT_POLICY_FIRST         = 2;
+  DMN_HIT_POLICY_ANY           = 3;
+  DMN_HIT_POLICY_COLLECT       = 4;
+  DMN_HIT_POLICY_RULE_ORDER    = 5;
+  DMN_HIT_POLICY_OUTPUT_ORDER  = 6;
+  DMN_HIT_POLICY_PRIORITY      = 7;
+}
+
+// NOTE: DmnValidationMode (PERMISSIVE / WARN / STRICT) is defined in configuration.proto
+
+// Java: DmnDecisionDTO
+message DmnDecisionMessage {
+  string id = 1;
+  string name = 2;
+  DmnDecisionTableMessage decision_table = 3;
+  DmnLiteralExpressionMessage literal_expression = 4;
+  repeated string required_decision_ids = 5;
+}
+
+// Java: DmnDecisionTableDTO
+message DmnDecisionTableMessage {
+  string id = 1;
+  DmnHitPolicy hit_policy = 2;
+  DmnCollectOperator collect_operator = 3;
+  repeated DmnInputClauseMessage inputs = 4;
+  repeated DmnOutputClauseMessage outputs = 5;
+  repeated DmnRuleMessage rules = 6;
+}
+
+// Java: DmnDefinitionDTO
+message DmnDefinitionMessage {
+  ParsedDmnDefinitionsMessage definitions = 1;
+  int32 version = 2;
+  DmnDefinitionStateEnum state = 3;
+}
+
+// Java: DmnDefinitionsTriggerDTO (abstract)
+message DmnDefinitionsTriggerMessage {
+  // no own fields (abstract base or marker)
+}
+
+// Java: DmnInputClauseDTO
+message DmnInputClauseMessage {
+  string id = 1;
+  string label = 2;
+  string input_expression = 3;
+  string type_ref = 4;
+}
+
+// Java: DmnLiteralExpressionDTO
+message DmnLiteralExpressionMessage {
+  string id = 1;
+  string expression = 2;
+  string type_ref = 3;
+}
+
+// Java: DmnOutputClauseDTO
+message DmnOutputClauseMessage {
+  string id = 1;
+  string label = 2;
+  string name = 3;
+  string type_ref = 4;
+}
+
+// Java: DmnRuleDTO
+message DmnRuleMessage {
+  string id = 1;
+  repeated string input_entries = 2;
+  repeated string output_entries = 3;
+}
+
+// Java: ParsedDmnDefinitionsDTO
+message ParsedDmnDefinitionsMessage {
+  DmnDefinitionsKeyMessage definitions_key = 1;
+  string name = 2;
+  repeated DmnDecisionMessage decisions = 3;
+}
+
+// Java: XmlDmnDefinitionsDTO
+message XmlDmnDefinitionsMessage {
+  string xml = 1;
+}

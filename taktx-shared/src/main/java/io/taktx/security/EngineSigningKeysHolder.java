@@ -9,11 +9,11 @@ package io.taktx.security;
 
 /**
  * Process-wide holder for an Ed25519 public-key resolver function, used by {@link
- * io.taktx.serdes.JsonDeserializer} when running inside the engine.
+ * io.taktx.serdes.ProtoDtoDeserializer} when running inside the engine.
  *
  * <p>On the engine side the signing keys live in a Kafka Streams {@code GlobalKTable} rather than a
  * standalone {@link SigningKeysStore} consumer. This holder lets the engine register a thin lambda
- * that delegates to the KTable, so {@code JsonDeserializer} can verify Ed25519 signatures on
+ * that delegates to the KTable, so the protobuf DTO deserializers can verify Ed25519 signatures on
  * incoming {@code process-instance-trigger} records without a separate Kafka consumer and without
  * re-serialising the payload in the processor.
  *

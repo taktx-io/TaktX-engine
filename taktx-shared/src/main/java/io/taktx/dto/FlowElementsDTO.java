@@ -7,9 +7,6 @@
  */
 package io.taktx.dto;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import io.quarkus.runtime.annotations.RegisterForReflection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -23,8 +20,6 @@ import lombok.ToString;
 @EqualsAndHashCode
 @ToString
 @NoArgsConstructor
-@JsonFormat(shape = JsonFormat.Shape.ARRAY)
-@RegisterForReflection
 public class FlowElementsDTO {
 
   private Map<String, FlowElementDTO> elements;
@@ -33,22 +28,18 @@ public class FlowElementsDTO {
     this.elements = elements;
   }
 
-  @JsonIgnore
   public List<BaseElementDTO> values() {
     return List.copyOf(elements.values());
   }
 
-  @JsonIgnore
   public Set<String> keySet() {
     return Set.copyOf(elements.keySet());
   }
 
-  @JsonIgnore
   public FlowElementDTO get(String id) {
     return elements.get(id);
   }
 
-  @JsonIgnore
   public List<StartEventDTO> getStartEvents() {
     return elements.values().stream()
         .filter(StartEventDTO.class::isInstance)
@@ -56,7 +47,6 @@ public class FlowElementsDTO {
         .toList();
   }
 
-  @JsonIgnore
   public FlowElementDTO getStartNode(String elementId) {
     FlowElementDTO flowNodeDTO;
     if (elementId != null) {
@@ -82,7 +72,6 @@ public class FlowElementsDTO {
     return flowNodeDTO;
   }
 
-  @JsonIgnore
   public Optional<FlowNodeDTO> getFlowNode(String elementId) {
     return elements.values().stream()
         .filter(FlowNodeDTO.class::isInstance)

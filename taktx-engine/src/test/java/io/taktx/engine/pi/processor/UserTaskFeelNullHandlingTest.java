@@ -22,6 +22,7 @@ import io.taktx.engine.pi.ProcessInstanceProcessingContext;
 import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.UserTaskInstance;
 import io.taktx.engine.pi.model.VariableScope;
+import io.taktx.variables.Variables;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -107,7 +108,7 @@ class UserTaskFeelNullHandlingTest {
     when(feelExpressionHandler.processFeelExpression("invalidExpression", variableScope))
         .thenReturn(null);
     when(feelExpressionHandler.processFeelExpression("P1D", variableScope))
-        .thenReturn(com.fasterxml.jackson.databind.node.TextNode.valueOf("P1D"));
+        .thenReturn(Variables.of("P1D"));
 
     assertDoesNotThrow(
         () ->

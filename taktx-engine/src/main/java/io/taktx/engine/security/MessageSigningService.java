@@ -35,7 +35,7 @@ import lombok.extern.slf4j.Slf4j;
  * Signs engine-internal Kafka messages with Ed25519.
  *
  * <p>Registers itself as a {@link SigningServiceHolder.SigningFunction} at startup so that {@link
- * io.taktx.serdes.SigningSerializer} can sign records in a single serialisation pass — no
+ * io.taktx.serdes.ProtoSigningSerializer} can sign records in a single serialisation pass — no
  * double-serialisation.
  */
 @ApplicationScoped
@@ -173,14 +173,14 @@ public class MessageSigningService {
   }
 
   /**
-   * Returns the {@code X-TaktX-Signature} header value for the given payload bytes, or {@code null}
-   * if no active engine signing identity is available yet.
+   * Returns the {@code tx-sig} header value for the given payload bytes, or {@code null} if no
+   * active engine signing identity is available yet.
    *
    * <p>Engine-emitted Kafka records are signed independently of runtime authorization toggles once
    * the engine key has been published. This keeps internal control-plane topics such as {@code
    * schedule-commands} compatible with strict consumers that always require an engine signature,
    * while still delaying outbound signatures until the public key is resolvable by consumers.
-   * Called by {@link io.taktx.serdes.SigningSerializer} via {@link SigningServiceHolder}.
+   * Called by {@link io.taktx.serdes.ProtoSigningSerializer} via {@link SigningServiceHolder}.
    */
   public String signToHeaderValue(byte[] payloadBytes) {
     SigningIdentity identity = refreshActiveIdentity();

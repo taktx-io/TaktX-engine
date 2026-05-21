@@ -10,8 +10,6 @@ package io.taktx.engine.generic;
 
 import static org.apache.kafka.streams.state.Stores.keyValueStoreBuilder;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import io.quarkus.kafka.client.serialization.ObjectMapperSerde;
 import io.taktx.Topics;
 import io.taktx.dto.AbortTriggerDTO;
 import io.taktx.dto.Constants;
@@ -42,6 +40,7 @@ import io.taktx.dto.SigningKeyDTO;
 import io.taktx.dto.StartCommandDTO;
 import io.taktx.dto.TimeBucket;
 import io.taktx.dto.TopicMetaDTO;
+import io.taktx.dto.TopicMetaDlqEntryDTO;
 import io.taktx.dto.UserTaskResponseTriggerDTO;
 import io.taktx.dto.UserTaskTriggerDTO;
 import io.taktx.dto.VariableKeyDTO;
@@ -87,21 +86,63 @@ import io.taktx.engine.security.ReplayProtectionProcessor;
 import io.taktx.engine.topicmanagement.DynamicTopicManager;
 import io.taktx.engine.topicmanagement.RequestedTopicValidator;
 import io.taktx.engine.topicmanagement.TopicMetaRequestIngressProcessor;
+import io.taktx.proto.VariableValue;
+import io.taktx.serdes.DefinitionsProtoMapper;
+import io.taktx.serdes.DefinitionsTriggerDtoDeserializer;
+import io.taktx.serdes.DlqEnvelopeDtoDeserializer;
+import io.taktx.serdes.DlqProtoMapper;
+import io.taktx.serdes.DlqReplayCommandDtoDeserializer;
+import io.taktx.serdes.DlqReplayResultDtoDeserializer;
+import io.taktx.serdes.DmnDefinitionDtoDeserializer;
+import io.taktx.serdes.DmnDefinitionKeyDtoDeserializer;
+import io.taktx.serdes.DmnDefinitionKeyProtoMapper;
+import io.taktx.serdes.DmnDefinitionsProtoMapper;
 import io.taktx.serdes.ExternalTaskMetaDeserializer;
-import io.taktx.serdes.SigningSerializer;
+import io.taktx.serdes.ExternalTaskTriggerProtoDeserializer;
+import io.taktx.serdes.FlowNodeInstanceDtoDeserializer;
+import io.taktx.serdes.FlowNodeInstanceProtoMapper;
+import io.taktx.serdes.InstanceUpdateDtoDeserializer;
+import io.taktx.serdes.InstanceUpdateProtoMapper;
+import io.taktx.serdes.MessageEventDtoDeserializer;
+import io.taktx.serdes.MessageEventKeyDtoDeserializer;
+import io.taktx.serdes.MessageEventProtoMapper;
+import io.taktx.serdes.MessageScheduleDtoDeserializer;
+import io.taktx.serdes.MessageScheduleProtoMapper;
+import io.taktx.serdes.ProcessDefinitionDtoDeserializer;
+import io.taktx.serdes.ProcessInstanceDtoDeserializer;
+import io.taktx.serdes.ProcessInstanceProtoMapper;
+import io.taktx.serdes.ProcessInstanceTriggerDtoDeserializer;
+import io.taktx.serdes.ProcessInstanceTriggerProtoMapper;
+import io.taktx.serdes.ProtoSigningSerializer;
+import io.taktx.serdes.ScheduleKeyDtoDeserializer;
+import io.taktx.serdes.ScheduleKeyProtoMapper;
+import io.taktx.serdes.SignalDtoDeserializer;
+import io.taktx.serdes.SignalProtoMapper;
+import io.taktx.serdes.SigningKeyDtoDeserializer;
+import io.taktx.serdes.SigningKeyProtoMapper;
+import io.taktx.serdes.TopicMetaDlqEntryDtoDeserializer;
+import io.taktx.serdes.TopicMetaDlqEntrySerializer;
+import io.taktx.serdes.TopicMetaDtoDeserializer;
+import io.taktx.serdes.TopicMetaProtoMapper;
+import io.taktx.serdes.UserTaskResponseTriggerProtoDeserializer;
+import io.taktx.serdes.UserTaskTriggerProtoDeserializer;
+import io.taktx.serdes.WorkerTriggerProtoMapper;
+import io.taktx.serdes.XmlDmnDefinitionsDtoDeserializer;
 import io.taktx.serdes.ZippedStringSerde;
+import io.taktx.util.FlowNodeInstanceKeySerde;
+import io.taktx.util.ProcessDefinitionKeySerde;
 import io.taktx.util.TaktUUIDSerde;
+import io.taktx.util.VariableKeySerde;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Produces;
 import java.time.Clock;
 import java.time.Duration;
-import java.util.HashMap;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.apache.kafka.common.errors.SerializationException;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.serialization.Serdes.StringSerde;
-import org.apache.kafka.common.serialization.Serializer;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.Topology;
@@ -121,109 +162,151 @@ public class TopologyProducer {
   private static final long TOPIC_META_REQUEST_DEDUP_RETENTION_MS =
       Duration.ofMinutes(2).toMillis();
 
-  public static final ObjectMapperSerde<MessageEventDTO> MESSAGE_EVENT_SERDE =
-      new ObjectMapperSerde<>(MessageEventDTO.class);
+  public static final Serde<MessageEventDTO> MESSAGE_EVENT_SERDE =
+      Serdes.serdeFrom(
+          (_, data) -> data == null ? null : MessageEventProtoMapper.toProto(data).toByteArray(),
+          new MessageEventDtoDeserializer());
   public static final Serde<SignalInstanceSubscriptionKeyDTO>
-      SIGNAL_INSTANCE_SUBSCRIPTION_KEY_SERDE =
-          new ObjectMapperSerde<>(SignalInstanceSubscriptionKeyDTO.class);
+      SIGNAL_INSTANCE_SUBSCRIPTION_KEY_SERDE = new SignalInstanceSubscriptionKeySerde();
   public static final Serde<SignalDefinitionSubscriptionKeyDTO>
-      SIGNAL_DEFINITION_SUBSCRIPTION_KEY_SERDE =
-          new ObjectMapperSerde<>(SignalDefinitionSubscriptionKeyDTO.class);
-  public static final ObjectMapperSerde<SignalDTO> SIGNAL_SERDE =
-      new ObjectMapperSerde<>(SignalDTO.class);
-  public static final ObjectMapperSerde<DefinitionMessageSubscriptions>
-      DEFINITION_SUBSCRIPTIONS_SERDE =
-          new ObjectMapperSerde<>(DefinitionMessageSubscriptions.class);
-  public static final ObjectMapperSerde<CorrelationMessageSubscriptions>
-      CORRELATION_SUBSCRIPTIONS_SERDE =
-          new ObjectMapperSerde<>(CorrelationMessageSubscriptions.class);
-  public static final ObjectMapperSerde<ProcessDefinitionKey> PROCESS_DEFINITION_KEY_SERDE =
-      new ObjectMapperSerde<>(ProcessDefinitionKey.class);
-  public static final ObjectMapperSerde<ScheduleKeyDTO> SCHEDULE_KEY_SERDE =
-      new ObjectMapperSerde<>(ScheduleKeyDTO.class);
-  public static final ObjectMapperSerde<MessageEventKeyDTO> MESSAGE_EVENT_KEY_SERDE =
-      new ObjectMapperSerde<>(MessageEventKeyDTO.class);
+      SIGNAL_DEFINITION_SUBSCRIPTION_KEY_SERDE = new SignalDefinitionSubscriptionKeySerde();
+  public static final Serde<SignalDTO> SIGNAL_SERDE =
+      Serdes.serdeFrom(
+          (_, data) -> data == null ? null : SignalProtoMapper.toProto(data).toByteArray(),
+          new SignalDtoDeserializer());
+  public static final Serde<DefinitionMessageSubscriptions> DEFINITION_SUBSCRIPTIONS_SERDE =
+      new DefinitionMessageSubscriptionsSerde();
+  public static final Serde<CorrelationMessageSubscriptions> CORRELATION_SUBSCRIPTIONS_SERDE =
+      new CorrelationMessageSubscriptionsSerde();
+  public static final Serde<ProcessDefinitionKey> PROCESS_DEFINITION_KEY_SERDE =
+      new ProcessDefinitionKeySerde();
+  public static final Serde<ScheduleKeyDTO> SCHEDULE_KEY_SERDE =
+      Serdes.serdeFrom(TopologyProducer::serializeScheduleKey, new ScheduleKeyDtoDeserializer());
+  public static final Serde<MessageEventKeyDTO> MESSAGE_EVENT_KEY_SERDE =
+      Serdes.serdeFrom(
+          (_, data) -> data == null ? null : MessageEventProtoMapper.toProto(data).toByteArray(),
+          new MessageEventKeyDtoDeserializer());
   public static final Serde<UUID> PROCESS_INSTANCE_KEY_SERDE = new TaktUUIDSerde();
   public static final Serde<FlowNodeInstanceKeyDTO> FLOW_NODE_INSTANCE_KEY_SERDE =
-      new ObjectMapperSerde<>(FlowNodeInstanceKeyDTO.class);
-  public static final ObjectMapperSerde<MessageScheduleDTO> MESSAGE_SCHEDULE_SERDE =
-      new ObjectMapperSerde<>(MessageScheduleDTO.class);
-  public static final Serde<MessageScheduleDTO> SIGNED_MESSAGE_SCHEDULE_SERDE =
+      new FlowNodeInstanceKeySerde();
+  public static final Serde<MessageScheduleDTO> MESSAGE_SCHEDULE_SERDE =
       Serdes.serdeFrom(
-          new SigningSerializer<>(MESSAGE_SCHEDULE_SERDE.serializer()),
-          MESSAGE_SCHEDULE_SERDE.deserializer());
+          new ProtoSigningSerializer<>(MessageScheduleProtoMapper::toProto),
+          new MessageScheduleDtoDeserializer());
+  public static final Serde<MessageScheduleDTO> SIGNED_MESSAGE_SCHEDULE_SERDE =
+      MESSAGE_SCHEDULE_SERDE;
   public static final Serde<MessageScheduleDTO> SCHEDULE_COMMAND_INPUT_SERDE =
-      Serdes.serdeFrom(MESSAGE_SCHEDULE_SERDE.serializer(), new ScheduleCommandDeserializer());
-  public static final ObjectMapperSerde<ProcessInstanceTriggerDTO> PROCESS_INSTANCE_TRIGGER_SERDE =
-      new ObjectMapperSerde<>(ProcessInstanceTriggerDTO.class) {
-        @Override
-        public Serializer<ProcessInstanceTriggerDTO> serializer() {
-          return new SigningSerializer<>(super.serializer());
-        }
-      };
+      Serdes.serdeFrom(
+          new ProtoSigningSerializer<>(MessageScheduleProtoMapper::toProto),
+          new ScheduleCommandDeserializer());
+  public static final Serde<ProcessInstanceTriggerDTO> PROCESS_INSTANCE_TRIGGER_SERDE =
+      Serdes.serdeFrom(
+          new ProtoSigningSerializer<>(ProcessInstanceTriggerProtoMapper::toProto),
+          new ProcessInstanceTriggerDtoDeserializer());
   public static final Serde<ProcessInstanceTriggerEnvelope>
       PROCESS_INSTANCE_TRIGGER_ENVELOPE_SERDE =
           Serdes.serdeFrom(
               new ProcessInstanceTriggerEnvelopeSerializer(),
               new ProcessInstanceTriggerEnvelopeDeserializer());
-  public static final ObjectMapperSerde<DmnDefinitionKey> DMN_DEFINITION_KEY_SERDE =
-      new ObjectMapperSerde<>(DmnDefinitionKey.class);
-  public static final ObjectMapperSerde<DmnDefinitionDTO> DMN_DEFINITION_SERDE =
-      new ObjectMapperSerde<>(DmnDefinitionDTO.class);
-  public static final ObjectMapperSerde<XmlDmnDefinitionsDTO> DMN_TRIGGER_SERDE =
-      new ObjectMapperSerde<>(XmlDmnDefinitionsDTO.class);
+  public static final Serde<DmnDefinitionKey> DMN_DEFINITION_KEY_SERDE =
+      Serdes.serdeFrom(
+          (_, data) ->
+              data == null ? null : DmnDefinitionKeyProtoMapper.toProto(data).toByteArray(),
+          new DmnDefinitionKeyDtoDeserializer());
+  public static final Serde<DmnDefinitionDTO> DMN_DEFINITION_SERDE =
+      Serdes.serdeFrom(
+          (_, data) -> data == null ? null : DmnDefinitionsProtoMapper.toProto(data).toByteArray(),
+          new DmnDefinitionDtoDeserializer());
+  public static final Serde<XmlDmnDefinitionsDTO> DMN_TRIGGER_SERDE =
+      Serdes.serdeFrom(
+          (_, data) -> data == null ? null : DmnDefinitionsProtoMapper.toProto(data).toByteArray(),
+          new XmlDmnDefinitionsDtoDeserializer());
 
-  public static final ObjectMapperSerde<ProcessDefinitionDTO> PROCESS_DEFINITION_SERDE =
-      new ObjectMapperSerde<>(ProcessDefinitionDTO.class);
+  public static final Serde<ProcessDefinitionDTO> PROCESS_DEFINITION_SERDE =
+      Serdes.serdeFrom(
+          (_, data) -> data == null ? null : DefinitionsProtoMapper.toProto(data).toByteArray(),
+          new ProcessDefinitionDtoDeserializer());
   public static final Serde<String> ZIPPED_STRING_SERDE = new ZippedStringSerde();
-  public static final ObjectMapperSerde<JsonNode> VARIABLES_SERDE =
-      new ObjectMapperSerde<>(JsonNode.class);
-  public static final ObjectMapperSerde<DefinitionsTriggerDTO> DEFINITIONS_TRIGGER_SERDE =
-      new ObjectMapperSerde<>(DefinitionsTriggerDTO.class);
-  public static final ObjectMapperSerde<ProcessInstanceDTO> PROCESS_INSTANCE_SERDE =
-      new ObjectMapperSerde<>(ProcessInstanceDTO.class);
-  public static final ObjectMapperSerde<InstanceUpdateDTO> INSTANCE_UPDATE_SERDE =
-      new ObjectMapperSerde<>(InstanceUpdateDTO.class) {
-        @Override
-        public Serializer<InstanceUpdateDTO> serializer() {
-          return new SigningSerializer<>(super.serializer());
-        }
-      };
-  public static final ObjectMapperSerde<FlowNodeInstanceDTO> FLOW_NODE_INSTANCE_SERDE =
-      new ObjectMapperSerde<>(FlowNodeInstanceDTO.class);
-  public static final ObjectMapperSerde<ExternalTaskTriggerDTO> EXTERNAL_TASK_TRIGGER_SERDE =
-      new ObjectMapperSerde<>(ExternalTaskTriggerDTO.class) {
-        @Override
-        public Serializer<ExternalTaskTriggerDTO> serializer() {
-          return new SigningSerializer<>(super.serializer());
-        }
-      };
-  public static final ObjectMapperSerde<UserTaskTriggerDTO> USER_TASK_TRIGGER_SERDE =
-      new ObjectMapperSerde<>(UserTaskTriggerDTO.class) {
-        @Override
-        public Serializer<UserTaskTriggerDTO> serializer() {
-          return new SigningSerializer<>(super.serializer());
-        }
-      };
-  public static final ObjectMapperSerde<UserTaskResponseTriggerDTO> USER_TASK_RESPONSE_SERDE =
-      new ObjectMapperSerde<>(UserTaskResponseTriggerDTO.class);
-  public static final ObjectMapperSerde<StartCommandDTO> START_COMMAND_SERDE =
-      new ObjectMapperSerde<>(StartCommandDTO.class);
-  private static final Serde<VariableKeyDTO> VARIABLES_KEY_SERDE =
-      new ObjectMapperSerde<>(VariableKeyDTO.class);
+  public static final Serde<VariableValue> VARIABLES_SERDE =
+      Serdes.serdeFrom(
+          (_, data) -> data == null ? null : data.toByteArray(),
+          (_, data) -> {
+            if (data == null) {
+              return null;
+            }
+            try {
+              return VariableValue.parseFrom(data);
+            } catch (Exception e) {
+              throw new SerializationException("Failed to deserialize VariableValue", e);
+            }
+          });
+  public static final Serde<DefinitionsTriggerDTO> DEFINITIONS_TRIGGER_SERDE =
+      Serdes.serdeFrom(
+          (_, data) -> data == null ? null : DefinitionsProtoMapper.toProto(data).toByteArray(),
+          new DefinitionsTriggerDtoDeserializer());
+  public static final Serde<ProcessInstanceDTO> PROCESS_INSTANCE_SERDE =
+      Serdes.serdeFrom(
+          (_, data) -> data == null ? null : ProcessInstanceProtoMapper.toProto(data).toByteArray(),
+          new ProcessInstanceDtoDeserializer());
+  public static final Serde<InstanceUpdateDTO> INSTANCE_UPDATE_SERDE =
+      Serdes.serdeFrom(
+          new ProtoSigningSerializer<>(InstanceUpdateProtoMapper::toProto),
+          new InstanceUpdateDtoDeserializer());
+  public static final Serde<FlowNodeInstanceDTO> FLOW_NODE_INSTANCE_SERDE =
+      Serdes.serdeFrom(
+          (_, data) ->
+              data == null ? null : FlowNodeInstanceProtoMapper.toProto(data).toByteArray(),
+          new FlowNodeInstanceDtoDeserializer());
+  public static final Serde<ExternalTaskTriggerDTO> EXTERNAL_TASK_TRIGGER_SERDE =
+      Serdes.serdeFrom(
+          new ProtoSigningSerializer<>(WorkerTriggerProtoMapper::toProto),
+          new ExternalTaskTriggerProtoDeserializer());
+  public static final Serde<UserTaskTriggerDTO> USER_TASK_TRIGGER_SERDE =
+      Serdes.serdeFrom(
+          new ProtoSigningSerializer<>(WorkerTriggerProtoMapper::toProto),
+          new UserTaskTriggerProtoDeserializer());
+  public static final Serde<UserTaskResponseTriggerDTO> USER_TASK_RESPONSE_SERDE =
+      Serdes.serdeFrom(
+          new ProtoSigningSerializer<>(ProcessInstanceTriggerProtoMapper::toProto),
+          new UserTaskResponseTriggerProtoDeserializer());
+  private static final Serde<VariableKeyDTO> VARIABLES_KEY_SERDE = new VariableKeySerde();
+  private static final Serde<java.util.Map<String, Integer>> HASH_VERSION_MAP_SERDE =
+      new HashVersionMapSerde();
   public static final Serde<String> TOPIC_META_KEY_SERDE = new StringSerde();
   public static final Serde<TopicMetaDTO> TOPIC_META_SERDE =
-      new ObjectMapperSerde<>(TopicMetaDTO.class);
+      Serdes.serdeFrom(
+          (topic, data) -> data == null ? null : TopicMetaProtoMapper.toProto(data).toByteArray(),
+          new TopicMetaDtoDeserializer());
   public static final Serde<TopicMetaDTO> TOPIC_META_REQUEST_INPUT_SERDE =
       Serdes.serdeFrom(TOPIC_META_SERDE.serializer(), new ExternalTaskMetaDeserializer());
+  public static final Serde<TopicMetaDlqEntryDTO> TOPIC_META_DLQ_ENTRY_SERDE =
+      Serdes.serdeFrom(new TopicMetaDlqEntrySerializer(), new TopicMetaDlqEntryDtoDeserializer());
   public static final Serde<DlqEnvelope> DLQ_ENVELOPE_SERDE =
-      new ObjectMapperSerde<>(DlqEnvelope.class);
-  public static final ObjectMapperSerde<DlqReplayCommand> DLQ_REPLAY_COMMAND_SERDE =
-      new ObjectMapperSerde<>(DlqReplayCommand.class);
-  public static final ObjectMapperSerde<DlqReplayResult> DLQ_REPLAY_RESULT_SERDE =
-      new ObjectMapperSerde<>(DlqReplayResult.class);
-  public static final ObjectMapperSerde<SigningKeyDTO> SIGNING_KEY_SERDE =
-      new ObjectMapperSerde<>(SigningKeyDTO.class);
+      Serdes.serdeFrom(
+          (topic, data) -> data == null ? null : DlqProtoMapper.toProto(data).toByteArray(),
+          new DlqEnvelopeDtoDeserializer());
+  public static final Serde<DlqReplayCommand> DLQ_REPLAY_COMMAND_SERDE =
+      Serdes.serdeFrom(
+          (topic, data) -> data == null ? null : DlqProtoMapper.toProto(data).toByteArray(),
+          new DlqReplayCommandDtoDeserializer());
+  public static final Serde<DlqReplayResult> DLQ_REPLAY_RESULT_SERDE =
+      Serdes.serdeFrom(
+          (topic, data) -> data == null ? null : DlqProtoMapper.toProto(data).toByteArray(),
+          new DlqReplayResultDtoDeserializer());
+  private static final Serde<DlqReplayForwardRecord> DLQ_REPLAY_FORWARD_PAYLOAD_SERDE =
+      Serdes.serdeFrom((topic, data) -> data == null ? null : data.payload(), (_, __) -> null);
+  public static final Serde<SigningKeyDTO> SIGNING_KEY_SERDE =
+      Serdes.serdeFrom(
+          (topic, data) -> data == null ? null : SigningKeyProtoMapper.toProto(data).toByteArray(),
+          new SigningKeyDtoDeserializer());
+
+  private static byte[] serializeScheduleKey(String topic, ScheduleKeyDTO data) {
+    try {
+      return data == null ? null : ScheduleKeyProtoMapper.toProto(data).toByteArray();
+    } catch (RuntimeException e) {
+      throw new SerializationException("Failed to serialize ScheduleKeyDTO for topic=" + topic, e);
+    }
+  }
 
   private final MessageSchedulerFactory messageSchedulerFactory;
   private final Clock clock;
@@ -325,8 +408,7 @@ public class TopologyProducer {
         keyValueStoreBuilder(
             keyValueStoreSupplier.get(Stores.DMN_VERSION_BY_HASH),
             Serdes.String(),
-            new ObjectMapperSerde<>(
-                (Class<HashMap<String, Integer>>) new HashMap<String, Integer>().getClass())));
+            HASH_VERSION_MAP_SERDE));
 
     builder.globalTable(
         taktConfiguration.getPrefixed(Topics.DMN_DEFINITION_ACTIVATION_TOPIC.getTopicName()),
@@ -390,8 +472,7 @@ public class TopologyProducer {
         keyValueStoreBuilder(
             keyValueStoreSupplier.get(Stores.VERSION_BY_HASH),
             Serdes.String(),
-            new ObjectMapperSerde<>(
-                (Class<HashMap<String, Integer>>) new HashMap<String, Integer>().getClass())));
+            HASH_VERSION_MAP_SERDE));
 
     builder.globalTable(
         taktConfiguration.getPrefixed(Topics.PROCESS_DEFINITION_ACTIVATION_TOPIC.getTopicName()),
@@ -685,15 +766,6 @@ public class TopologyProducer {
                                     + value.getExternalTaskId(),
                             Produced.with(
                                 PROCESS_INSTANCE_KEY_SERDE, EXTERNAL_TASK_TRIGGER_SERDE))))
-        .branch(
-            (_, value) -> value instanceof StartCommandDTO,
-            Branched.withConsumer(
-                ks ->
-                    ks.map((key, value) -> KeyValue.pair((String) key, (StartCommandDTO) value))
-                        .to(
-                            taktConfiguration.getPrefixed(
-                                Topics.PROCESS_DEFINITIONS_TRIGGER_TOPIC.getTopicName()),
-                            Produced.with(Serdes.String(), START_COMMAND_SERDE))))
         .branch(
             (key, _) -> key instanceof ScheduleKeyDTO,
             Branched.withConsumer(
@@ -1007,8 +1079,8 @@ public class TopologyProducer {
                 ks ->
                     ks.process(DlqForwardingProcessor::new)
                         .to(
-                            (key, value, ctx) -> key,
-                            Produced.with(Serdes.String(), Serdes.ByteArray()))));
+                            (key, value, ctx) -> value.targetTopic(),
+                            Produced.with(Serdes.ByteArray(), DLQ_REPLAY_FORWARD_PAYLOAD_SERDE))));
   }
 
   private String engineInstanceId() {

@@ -1,0 +1,91 @@
+syntax = "proto3";
+
+package io.taktx.proto;
+
+option java_package = "io.taktx.proto";
+option java_multiple_files = true;
+option java_outer_classname = "ScheduleProto";
+
+import "io/taktx/proto/common.proto";
+import "io/taktx/proto/process_instance_trigger.proto";
+
+// ScheduleKeyEnvelope — replaces ScheduleKeyTypeIdResolver
+message ScheduleKeyEnvelope {
+  oneof key {
+    DefinitionScheduleKeyMessage definition_key = 1; // TypeId "D"
+    InstanceScheduleKeyMessage   instance_key   = 2; // TypeId "I"
+  }
+}
+
+// MessageScheduleEnvelope — replaces MessageSchedulerTypeIdResolver
+message MessageScheduleEnvelope {
+  oneof schedule {
+    RecurringMessageScheduleMessage recurring    = 1; // TypeId "R"
+    FixedRateMessageScheduleMessage fixed_rate   = 2; // TypeId "F"
+    OneTimeScheduleMessage          one_time     = 3; // TypeId "O"
+  }
+}
+
+// Java: SchedulableMessageDTO hierarchy
+message SchedulableMessageEnvelope {
+  oneof message {
+    ProcessInstanceTriggerEnvelope process_instance_trigger = 1;
+    ExternalTaskTriggerMessage     external_task_trigger    = 2;
+  }
+}
+
+enum TimeBucket {
+  MINUTE = 0;
+  HOURLY = 1;
+  DAILY = 2;
+  WEEKLY = 3;
+  YEARLY = 4;
+}
+
+// Java: DefinitionScheduleKeyDTO
+message DefinitionScheduleKeyMessage {
+  TimeBucket time_bucket = 1;
+  ProcessDefinitionKeyMessage process_definition_key = 2;
+  string flow_node_id = 3;
+}
+
+// Java: FixedRateMessageScheduleDTO
+message FixedRateMessageScheduleMessage {
+  SchedulableMessageEnvelope message = 1;
+  sint64 instantiation_time = 2;
+  sint64 period = 3;
+  int32 repetitions = 4;
+}
+
+// Java: InstanceScheduleKeyDTO
+message InstanceScheduleKeyMessage {
+  TimeBucket time_bucket = 1;
+  Uuid process_instance_id = 2;
+  repeated sint64 element_instance_id_path = 3;
+  string element_id = 4;
+}
+
+// Java: MessageScheduleDTO (abstract)
+message MessageScheduleMessage {
+  SchedulableMessageEnvelope message = 1;
+  sint64 instantiation_time = 2;
+}
+
+// Java: OneTimeScheduleDTO
+message OneTimeScheduleMessage {
+  SchedulableMessageEnvelope message = 1;
+  sint64 instantiation_time = 2;
+  sint64 when = 3;
+}
+
+// Java: RecurringMessageScheduleDTO
+message RecurringMessageScheduleMessage {
+  SchedulableMessageEnvelope message = 1;
+  sint64 instantiation_time = 2;
+  string cron = 3;
+}
+
+// Java: ScheduleKeyDTO (abstract)
+message ScheduleKeyMessage {
+  TimeBucket time_bucket = 1;
+}

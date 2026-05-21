@@ -7,8 +7,6 @@
  */
 package io.taktx.dto;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
-import io.quarkus.runtime.annotations.RegisterForReflection;
 import java.time.Instant;
 import lombok.*;
 
@@ -31,8 +29,6 @@ import lombok.*;
 @Builder
 @EqualsAndHashCode
 @ToString
-@RegisterForReflection
-@JsonFormat(shape = JsonFormat.Shape.ARRAY)
 public class SigningKeyDTO {
 
   /** Lifecycle status of a distributed public key. */
@@ -69,9 +65,8 @@ public class SigningKeyDTO {
   /**
    * Actor role of this key — determines what operations the key is trusted to authorize.
    *
-   * <p>Field is declared last to preserve CBOR array order for backward compatibility. Pre-role
-   * keys (without this field) deserialize to {@code null}; use {@link #effectiveRole()} to get the
-   * safe default.
+   * <p>Matches {@code signing_key.proto} / {@code SigningKeyMessage.role = 7}. Pre-role legacy
+   * payloads may deserialize to {@code null}; use {@link #effectiveRole()} to get the safe default.
    */
   @Builder.Default private KeyRole role = KeyRole.CLIENT;
 

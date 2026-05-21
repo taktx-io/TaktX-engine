@@ -8,11 +8,9 @@
 
 package io.taktx.engine.feel;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.TextNode;
 import io.taktx.engine.pi.model.VariableScope;
+import io.taktx.proto.VariableValue;
+import io.taktx.variables.Variables;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.util.HashMap;
 import java.util.Map;
@@ -36,20 +34,17 @@ import scala.jdk.CollectionConverters;
 @Slf4j
 public class FeelExpressionHandlerImpl implements FeelExpressionHandler {
 
-  private static final BuiltinFunctions BUILTIN_FUNCTIONS =
-      new BuiltinFunctions(SystemClock$.MODULE$, ValueMapper.defaultValueMapper());
   private final FeelEngineProvider feelEngineProvider;
-  private final ObjectMapper objectMapper;
   private final Map<String, ParsedExpression> parsedExpressionCache = new HashMap<>();
+  private BuiltinFunctions builtinFunctions;
 
-  public FeelExpressionHandlerImpl(
-      FeelEngineProvider feelEngineProvider, ObjectMapper objectMapper) {
+  public FeelExpressionHandlerImpl(FeelEngineProvider feelEngineProvider) {
     this.feelEngineProvider = feelEngineProvider;
-    this.objectMapper = objectMapper;
   }
 
-  public JsonNode processFeelExpression(String expression, VariableScope variables) {
-    JsonNode resultNode;
+  @Override
+  public VariableValue processFeelExpression(String expression, VariableScope variables) {
+    VariableValue resultNode;
     expression = expression == null ? "" : expression.trim();
     if (expression.startsWith("=")) {
       FeelEngineApi feelEngineApi = feelEngineProvider.getFeelEngineApi();
@@ -59,14 +54,14 @@ public class FeelExpressionHandlerImpl implements FeelExpressionHandler {
       if (evaluationResult.isSuccess()) {
         Object expressionResult =
             ((SuccessfulEvaluationResult) evaluationResult).productIterator().next();
-        resultNode = objectMapper.valueToTree(expressionResult);
+        resultNode = Variables.of(expressionResult);
       } else {
         resultNode = null;
       }
     } else {
       resultNode = variables.get(expression);
       if (resultNode == null) {
-        resultNode = new TextNode(expression);
+        resultNode = Variables.of(expression);
       }
     }
 
@@ -80,16 +75,12 @@ public class FeelExpressionHandlerImpl implements FeelExpressionHandler {
         return new VariableProvider() {
           @Override
           public Option<Object> getVariable(String name) {
-            try {
-              return Option.apply(objectMapper.treeToValue(variables.get(name), Object.class));
-            } catch (JsonProcessingException e) {
-              throw new IllegalStateException(e);
-            }
+            return Option.apply(Variables.toJavaObject(variables.get(name)));
           }
 
           @Override
           public Iterable<String> keys() {
-            log.error("THe keys method is called although not all variables might be available");
+            log.error("The keys method is called although not all variables might be available");
             return CollectionConverters.SetHasAsScala(variables.getVariables().keySet()).asScala();
           }
         };
@@ -97,9 +88,17 @@ public class FeelExpressionHandlerImpl implements FeelExpressionHandler {
 
       @Override
       public FunctionProvider functionProvider() {
-        return BUILTIN_FUNCTIONS;
+        return getBuiltinFunctions();
       }
     };
+  }
+
+  private synchronized BuiltinFunctions getBuiltinFunctions() {
+    if (builtinFunctions == null) {
+      builtinFunctions =
+          new BuiltinFunctions(SystemClock$.MODULE$, ValueMapper.defaultValueMapper());
+    }
+    return builtinFunctions;
   }
 
   private ParsedExpression getParsedExpression(FeelEngineApi feelEngineApi, String expression) {

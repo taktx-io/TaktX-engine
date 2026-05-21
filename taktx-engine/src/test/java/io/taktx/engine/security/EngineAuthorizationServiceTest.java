@@ -92,6 +92,27 @@ class EngineAuthorizationServiceTest {
     assertThat(service.authorize(new RecordHeaders(), envelope(startCommand("proc", -1)))).isNull();
   }
 
+  // ── null trigger (payload deserialization failed) ─────────────────────────
+
+  @Test
+  void nullTrigger_securityDisabled_returnsNullWithoutThrowing() {
+    // When payload deserialization fails, the envelope carries a null trigger.
+    // authorize() must return null gracefully so that ProcessInstanceProcessor's
+    // handleUnDecodedTrigger() can emit the PAYLOAD_DESERIALIZATION_ERROR DLQ entry.
+    ProcessInstanceTriggerEnvelope nullTriggerEnvelope =
+        new ProcessInstanceTriggerEnvelope(new byte[0], null, false, null);
+    assertThat(service.authorize(new RecordHeaders(), nullTriggerEnvelope)).isNull();
+  }
+
+  @Test
+  void nullTrigger_securityEnabled_returnsNullWithoutThrowing() {
+    // Security active, but trigger is null — must still not throw NullPointerException.
+    globalConfigStore.update(authorizationConfig());
+    ProcessInstanceTriggerEnvelope nullTriggerEnvelope =
+        new ProcessInstanceTriggerEnvelope(new byte[0], null, false, null);
+    assertThat(service.authorize(new RecordHeaders(), nullTriggerEnvelope)).isNull();
+  }
+
   // ── valid JWT token ────────────────────────────────────────────────────────
 
   @Test
@@ -193,7 +214,7 @@ class EngineAuthorizationServiceTest {
 
     assertThatThrownBy(() -> service.authorizeTopicMetaRequest(new RecordHeaders(), request))
         .isInstanceOf(AuthorizationTokenException.class)
-        .hasMessageContaining("X-TaktX-Signature");
+        .hasMessageContaining("tx-sig");
   }
 
   @Test
@@ -293,7 +314,7 @@ class EngineAuthorizationServiceTest {
                 service.authorizeScheduleCommand(
                     new RecordHeaders(), scheduleKey(), oneTimeSchedule(startCommand("proc", -1))))
         .isInstanceOf(AuthorizationTokenException.class)
-        .hasMessageContaining("X-TaktX-Signature");
+        .hasMessageContaining("tx-sig");
   }
 
   @Test
@@ -349,7 +370,7 @@ class EngineAuthorizationServiceTest {
     when(signingKeysStore.get(keyId)).thenReturn(keyEntry);
 
     RecordHeaders headers = new RecordHeaders();
-    headers.add("X-TaktX-Signature", (keyId + ".AABB").getBytes(StandardCharsets.UTF_8));
+    headers.add("tx-sig", (keyId + ".AABB").getBytes(StandardCharsets.UTF_8));
 
     // CLIENT-role key satisfies the signing gate but NOT the auth gate (no JWT, not ENGINE-role).
     assertThatThrownBy(
@@ -378,7 +399,7 @@ class EngineAuthorizationServiceTest {
     when(signingKeysStore.get(keyId)).thenReturn(keyEntry);
 
     RecordHeaders headers = new RecordHeaders();
-    headers.add("X-TaktX-Signature", (keyId + ".AABB").getBytes(StandardCharsets.UTF_8));
+    headers.add("tx-sig", (keyId + ".AABB").getBytes(StandardCharsets.UTF_8));
 
     CommandTrustMetadataDTO result =
         service.authorize(
@@ -404,7 +425,7 @@ class EngineAuthorizationServiceTest {
     when(signingKeysStore.get(keyId)).thenReturn(nullRoleKey);
 
     RecordHeaders headers = new RecordHeaders();
-    headers.add("X-TaktX-Signature", (keyId + ".AABB").getBytes(StandardCharsets.UTF_8));
+    headers.add("tx-sig", (keyId + ".AABB").getBytes(StandardCharsets.UTF_8));
 
     // Null-role → effectiveRole()=CLIENT. Satisfies signing gate but not auth gate (no JWT).
     assertThatThrownBy(
@@ -433,7 +454,7 @@ class EngineAuthorizationServiceTest {
     when(signingKeysStore.get(keyId)).thenReturn(keyEntry);
 
     RecordHeaders headers = new RecordHeaders();
-    headers.add("X-TaktX-Signature", (keyId + ".AABB").getBytes(StandardCharsets.UTF_8));
+    headers.add("tx-sig", (keyId + ".AABB").getBytes(StandardCharsets.UTF_8));
 
     AbortTriggerDTO cmd = new AbortTriggerDTO(java.util.UUID.randomUUID(), List.of());
     CommandTrustMetadataDTO result =
@@ -507,7 +528,7 @@ class EngineAuthorizationServiceTest {
                 .build());
 
     RecordHeaders headers = new RecordHeaders();
-    headers.add("X-TaktX-Signature", (keyId + ".AABB").getBytes(StandardCharsets.UTF_8));
+    headers.add("tx-sig", (keyId + ".AABB").getBytes(StandardCharsets.UTF_8));
 
     CommandTrustMetadataDTO result =
         service.authorize(
@@ -541,7 +562,7 @@ class EngineAuthorizationServiceTest {
                 .build());
 
     RecordHeaders headers = new RecordHeaders();
-    headers.add("X-TaktX-Signature", (keyId + ".AABB").getBytes(StandardCharsets.UTF_8));
+    headers.add("tx-sig", (keyId + ".AABB").getBytes(StandardCharsets.UTF_8));
 
     CommandTrustMetadataDTO result =
         service.authorize(
@@ -575,7 +596,7 @@ class EngineAuthorizationServiceTest {
                 .build());
 
     RecordHeaders headers = new RecordHeaders();
-    headers.add("X-TaktX-Signature", (keyId + ".AABB").getBytes(StandardCharsets.UTF_8));
+    headers.add("tx-sig", (keyId + ".AABB").getBytes(StandardCharsets.UTF_8));
 
     assertThatThrownBy(
             () ->
@@ -594,7 +615,7 @@ class EngineAuthorizationServiceTest {
     assertThatThrownBy(
             () -> service.authorize(new RecordHeaders(), envelope(continueFlowElementTrigger())))
         .isInstanceOf(AuthorizationTokenException.class)
-        .hasMessageContaining("X-TaktX-Signature");
+        .hasMessageContaining("tx-sig");
   }
 
   @Test
@@ -615,7 +636,7 @@ class EngineAuthorizationServiceTest {
 
     assertThatThrownBy(() -> service.authorize(new RecordHeaders(), envelope(trigger)))
         .isInstanceOf(AuthorizationTokenException.class)
-        .hasMessageContaining("X-TaktX-Signature");
+        .hasMessageContaining("tx-sig");
   }
 
   @Test
@@ -633,7 +654,7 @@ class EngineAuthorizationServiceTest {
                 .build());
 
     RecordHeaders headers = new RecordHeaders();
-    headers.add("X-TaktX-Signature", (keyId + ".AABB").getBytes(StandardCharsets.UTF_8));
+    headers.add("tx-sig", (keyId + ".AABB").getBytes(StandardCharsets.UTF_8));
 
     assertThatThrownBy(
             () ->
@@ -685,7 +706,7 @@ class EngineAuthorizationServiceTest {
                 .build());
 
     RecordHeaders headers = new RecordHeaders();
-    headers.add("X-TaktX-Signature", (keyId + ".AABB").getBytes(StandardCharsets.UTF_8));
+    headers.add("tx-sig", (keyId + ".AABB").getBytes(StandardCharsets.UTF_8));
 
     CommandTrustMetadataDTO result =
         service.authorize(
@@ -759,13 +780,13 @@ class EngineAuthorizationServiceTest {
 
   private Headers headersWithAuth(String jwt) {
     RecordHeaders headers = new RecordHeaders();
-    headers.add("X-TaktX-Authorization", jwt.getBytes(StandardCharsets.UTF_8));
+    headers.add("tx-auth", jwt.getBytes(StandardCharsets.UTF_8));
     return headers;
   }
 
   private Headers headersWithSignature(String keyId) {
     RecordHeaders headers = new RecordHeaders();
-    headers.add("X-TaktX-Signature", (keyId + ".AABB").getBytes(StandardCharsets.UTF_8));
+    headers.add("tx-sig", (keyId + ".AABB").getBytes(StandardCharsets.UTF_8));
     return headers;
   }
 

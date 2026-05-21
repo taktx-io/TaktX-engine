@@ -7,8 +7,6 @@
  */
 package io.taktx.dto;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import io.quarkus.runtime.annotations.RegisterForReflection;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
@@ -24,8 +22,6 @@ import lombok.ToString;
 @AllArgsConstructor
 @EqualsAndHashCode
 @ToString
-@JsonInclude(JsonInclude.Include.NON_NULL)
-@RegisterForReflection
 public class CommandTrustMetadataDTO {
   private CommandAuthMethod authMethod;
   private CommandTrustVerificationResult verificationResult;

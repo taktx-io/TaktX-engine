@@ -8,11 +8,9 @@
 
 package io.taktx.engine.pi.processor;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import io.taktx.dto.AbortTriggerDTO;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.dto.ExecutionState;
-import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.CallActivity;
 import io.taktx.engine.pd.model.NewStartCommand;
@@ -22,6 +20,8 @@ import io.taktx.engine.pi.ProcessInstanceProcessingContext;
 import io.taktx.engine.pi.model.CallActivityInstance;
 import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.VariableScope;
+import io.taktx.proto.VariableValue;
+import io.taktx.variables.Variables;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.time.Clock;
@@ -57,19 +57,19 @@ public class CallActivityInstanceProcessor
     callActivityInstance.setChildProcessInstanceId(newProcessInstanceId);
     CallActivity flowNode = callActivityInstance.getFlowNode();
 
-    JsonNode jsonNode =
+    VariableValue calledElementValue =
         feelExpressionHandler.processFeelExpression(flowNode.getCalledElement(), variableScope);
-    if (jsonNode == null || jsonNode.isNull()) {
+    if (calledElementValue == null
+        || calledElementValue.getKindCase() == VariableValue.KindCase.NULL_VALUE
+        || calledElementValue.getKindCase() == VariableValue.KindCase.KIND_NOT_SET) {
       throw new ProcessInstanceException(
           callActivityInstance, "Called element expression returned null");
     }
 
-    VariablesDTO commandVariables;
-    if (callActivityInstance.getFlowNode().isPropagateAllParentVariables()) {
-      commandVariables = variableScope.scopeAndParentsToDto();
-    } else {
-      commandVariables = variableScope.scopeToDTO();
-    }
+    var commandVariables =
+        callActivityInstance.getFlowNode().isPropagateAllParentVariables()
+            ? variableScope.scopeAndParentsToMap()
+            : variableScope.scopeToMap();
 
     processInstanceProcessingContext
         .getInstanceResult()
@@ -78,7 +78,7 @@ public class CallActivityInstanceProcessor
                 newProcessInstanceId,
                 flowNode,
                 callActivityInstance,
-                jsonNode.asText(),
+                String.valueOf(Variables.toJavaObject(calledElementValue)),
                 commandVariables,
                 callActivityInstance.getFlowNode().isPropagateAllChildVariables(),
                 callActivityInstance.getFlowNode().getIoMapping().getOutputMappings()));
