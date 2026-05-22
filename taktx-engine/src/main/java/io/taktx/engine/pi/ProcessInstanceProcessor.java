@@ -760,7 +760,8 @@ public class ProcessInstanceProcessor
         && !(triggerEnvelope.trigger() instanceof ExternalTaskResponseTriggerDTO)) {
       return null;
     }
-    if (!engineAuthorizationService.isTaskCompletionAuthorizationActive(triggerEnvelope.trigger())) {
+    if (!engineAuthorizationService.isTaskCompletionAuthorizationActive(
+        triggerEnvelope.trigger())) {
       return null;
     }
     Header authHeader = headers != null ? headers.lastHeader(Constants.HEADER_AUTHORIZATION) : null;

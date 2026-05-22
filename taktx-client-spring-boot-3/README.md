@@ -156,6 +156,43 @@ public class UserTaskHandler {
 }
 ```
 
+### Direct task-completion helpers
+
+You can also use the injected `TaktXClient` to publish task outcomes directly when you already
+have the process instance ID and element path:
+
+```java
+taktxClient.errorUserTask(
+    processInstanceId,
+    List.of(1001L, 1002L),
+    "USR-REJECTED",
+    "User rejected the request",
+    VariablesDTO.of("approved", false));
+
+taktxClient.escalateUserTask(
+    processInstanceId,
+    List.of(1001L, 1002L),
+    "USR-SUPERVISOR",
+    "Supervisor review required",
+    VariablesDTO.of("reviewLevel", "supervisor"));
+
+taktxClient.errorExternalTask(
+    processInstanceId,
+    List.of(2001L, 2002L),
+    "PAYMENT-FAILED",
+    "Payment provider rejected the request",
+    VariablesDTO.of("providerStatus", "DECLINED"));
+
+taktxClient.escalateExternalTask(
+    processInstanceId,
+    List.of(2001L, 2002L),
+    "PAYMENT-MANUAL-REVIEW",
+    "Manual payment review required",
+    VariablesDTO.of("riskScore", 87));
+```
+
+When command authorization is enabled, overloads with a final JWT parameter are also available.
+
 ---
 
 ## Instance update events

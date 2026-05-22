@@ -1042,6 +1042,87 @@ public class TaktXClient {
   }
 
   /**
+   * Completes a user task with a BPMN error using the generated process-instance trigger publisher.
+   *
+   * @param processInstanceId The UUID of the process instance.
+   * @param elementInstanceIdPath The path of element instance IDs leading to the active user task.
+   * @param code The BPMN error code.
+   * @param message The BPMN error message.
+   * @param variables The variables to merge with the BPMN error response.
+   */
+  public void errorUserTask(
+      UUID processInstanceId,
+      List<Long> elementInstanceIdPath,
+      String code,
+      String message,
+      VariablesDTO variables) {
+    processInstanceResponder.errorUserTask(
+        processInstanceId, elementInstanceIdPath, code, message, variables);
+  }
+
+  /**
+   * Completes a user task with a BPMN error, attaching a Platform Service authorization token.
+   *
+   * @param processInstanceId The UUID of the process instance.
+   * @param elementInstanceIdPath The path of element instance IDs leading to the active user task.
+   * @param code The BPMN error code.
+   * @param message The BPMN error message.
+   * @param variables The variables to merge with the BPMN error response.
+   * @param authorizationToken RS256 JWT from the Platform Service, or {@code null}
+   */
+  public void errorUserTask(
+      UUID processInstanceId,
+      List<Long> elementInstanceIdPath,
+      String code,
+      String message,
+      VariablesDTO variables,
+      @Nullable String authorizationToken) {
+    processInstanceResponder.errorUserTask(
+        processInstanceId, elementInstanceIdPath, code, message, variables, authorizationToken);
+  }
+
+  /**
+   * Completes a user task with a BPMN escalation using the generated process-instance trigger
+   * publisher.
+   *
+   * @param processInstanceId The UUID of the process instance.
+   * @param elementInstanceIdPath The path of element instance IDs leading to the active user task.
+   * @param code The BPMN escalation code.
+   * @param message The BPMN escalation message.
+   * @param variables The variables to merge with the BPMN escalation response.
+   */
+  public void escalateUserTask(
+      UUID processInstanceId,
+      List<Long> elementInstanceIdPath,
+      String code,
+      String message,
+      VariablesDTO variables) {
+    processInstanceResponder.escalateUserTask(
+        processInstanceId, elementInstanceIdPath, code, message, variables);
+  }
+
+  /**
+   * Completes a user task with a BPMN escalation, attaching a Platform Service authorization token.
+   *
+   * @param processInstanceId The UUID of the process instance.
+   * @param elementInstanceIdPath The path of element instance IDs leading to the active user task.
+   * @param code The BPMN escalation code.
+   * @param message The BPMN escalation message.
+   * @param variables The variables to merge with the BPMN escalation response.
+   * @param authorizationToken RS256 JWT from the Platform Service, or {@code null}
+   */
+  public void escalateUserTask(
+      UUID processInstanceId,
+      List<Long> elementInstanceIdPath,
+      String code,
+      String message,
+      VariablesDTO variables,
+      @Nullable String authorizationToken) {
+    processInstanceResponder.escalateUserTask(
+        processInstanceId, elementInstanceIdPath, code, message, variables, authorizationToken);
+  }
+
+  /**
    * Completes an external task using the generated process-instance trigger publisher.
    *
    * @param processInstanceId The UUID of the process instance.
@@ -1071,6 +1152,93 @@ public class TaktXClient {
       @Nullable String authorizationToken) {
     processInstanceResponder.completeExternalTask(
         processInstanceId, elementInstanceIdPath, variables, authorizationToken);
+  }
+
+  /**
+   * Completes an external task with a BPMN error using the generated process-instance trigger
+   * publisher.
+   *
+   * @param processInstanceId The UUID of the process instance.
+   * @param elementInstanceIdPath The path of element instance IDs leading to the active external
+   *     task.
+   * @param code The BPMN error code.
+   * @param message The BPMN error message.
+   * @param variables The variables to merge with the BPMN error response.
+   */
+  public void errorExternalTask(
+      UUID processInstanceId,
+      List<Long> elementInstanceIdPath,
+      String code,
+      String message,
+      VariablesDTO variables) {
+    processInstanceResponder.errorExternalTask(
+        processInstanceId, elementInstanceIdPath, code, message, variables);
+  }
+
+  /**
+   * Completes an external task with a BPMN error, attaching a Platform Service authorization token.
+   *
+   * @param processInstanceId The UUID of the process instance.
+   * @param elementInstanceIdPath The path of element instance IDs leading to the active external
+   *     task.
+   * @param code The BPMN error code.
+   * @param message The BPMN error message.
+   * @param variables The variables to merge with the BPMN error response.
+   * @param authorizationToken RS256 JWT from the Platform Service, or {@code null}
+   */
+  public void errorExternalTask(
+      UUID processInstanceId,
+      List<Long> elementInstanceIdPath,
+      String code,
+      String message,
+      VariablesDTO variables,
+      @Nullable String authorizationToken) {
+    processInstanceResponder.errorExternalTask(
+        processInstanceId, elementInstanceIdPath, code, message, variables, authorizationToken);
+  }
+
+  /**
+   * Completes an external task with a BPMN escalation using the generated process-instance trigger
+   * publisher.
+   *
+   * @param processInstanceId The UUID of the process instance.
+   * @param elementInstanceIdPath The path of element instance IDs leading to the active external
+   *     task.
+   * @param code The BPMN escalation code.
+   * @param message The BPMN escalation message.
+   * @param variables The variables to merge with the BPMN escalation response.
+   */
+  public void escalateExternalTask(
+      UUID processInstanceId,
+      List<Long> elementInstanceIdPath,
+      String code,
+      String message,
+      VariablesDTO variables) {
+    processInstanceResponder.escalateExternalTask(
+        processInstanceId, elementInstanceIdPath, code, message, variables);
+  }
+
+  /**
+   * Completes an external task with a BPMN escalation, attaching a Platform Service authorization
+   * token.
+   *
+   * @param processInstanceId The UUID of the process instance.
+   * @param elementInstanceIdPath The path of element instance IDs leading to the active external
+   *     task.
+   * @param code The BPMN escalation code.
+   * @param message The BPMN escalation message.
+   * @param variables The variables to merge with the BPMN escalation response.
+   * @param authorizationToken RS256 JWT from the Platform Service, or {@code null}
+   */
+  public void escalateExternalTask(
+      UUID processInstanceId,
+      List<Long> elementInstanceIdPath,
+      String code,
+      String message,
+      VariablesDTO variables,
+      @Nullable String authorizationToken) {
+    processInstanceResponder.escalateExternalTask(
+        processInstanceId, elementInstanceIdPath, code, message, variables, authorizationToken);
   }
 
   /**
