@@ -27,6 +27,9 @@ class RuntimeConfigurationHolderTest {
 
     assertThat(RuntimeConfigurationHolder.isSigningEnabled()).isFalse();
     assertThat(RuntimeConfigurationHolder.isEngineRequiresAuthorization()).isFalse();
+    assertThat(RuntimeConfigurationHolder.isEngineRequiresExternalTaskAuthorization()).isFalse();
+    assertThat(RuntimeConfigurationHolder.isEngineRequiresUserTaskAuthorization()).isFalse();
+    assertThat(RuntimeConfigurationHolder.isAnyAuthorizationEnabled()).isFalse();
     assertThat(RuntimeConfigurationHolder.getReplayProtectionMode())
         .isEqualTo(ReplayProtectionMode.COMPAT);
     assertThat(RuntimeConfigurationHolder.getReplayProtectionRetentionMs()).isEqualTo(600_000L);
@@ -38,12 +41,17 @@ class RuntimeConfigurationHolderTest {
         GlobalConfigurationDTO.builder()
             .signingEnabled(true)
             .engineRequiresAuthorization(true)
+            .engineRequiresExternalTaskAuthorization(true)
+            .engineRequiresUserTaskAuthorization(true)
             .replayProtectionMode(ReplayProtectionMode.STRICT)
             .replayProtectionRetentionMs(123_456L)
             .build());
 
     assertThat(RuntimeConfigurationHolder.isSigningEnabled()).isTrue();
     assertThat(RuntimeConfigurationHolder.isEngineRequiresAuthorization()).isTrue();
+    assertThat(RuntimeConfigurationHolder.isEngineRequiresExternalTaskAuthorization()).isTrue();
+    assertThat(RuntimeConfigurationHolder.isEngineRequiresUserTaskAuthorization()).isTrue();
+    assertThat(RuntimeConfigurationHolder.isAnyAuthorizationEnabled()).isTrue();
     assertThat(RuntimeConfigurationHolder.getReplayProtectionMode())
         .isEqualTo(ReplayProtectionMode.STRICT);
     assertThat(RuntimeConfigurationHolder.getReplayProtectionRetentionMs()).isEqualTo(123_456L);

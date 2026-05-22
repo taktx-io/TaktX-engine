@@ -138,9 +138,11 @@ public final class RuntimeConfigurationStore implements AutoCloseable {
       }
       ready.set(true);
       log.info(
-          "RuntimeConfigurationStore: initial load complete — signingEnabled={} engineRequiresAuthorization={} replayProtectionMode={} replayProtectionRetentionMs={}",
+          "RuntimeConfigurationStore: initial load complete — signingEnabled={} engineRequiresAuthorization={} engineRequiresExternalTaskAuthorization={} engineRequiresUserTaskAuthorization={} replayProtectionMode={} replayProtectionRetentionMs={}",
           RuntimeConfigurationHolder.isSigningEnabled(),
           RuntimeConfigurationHolder.isEngineRequiresAuthorization(),
+          RuntimeConfigurationHolder.isEngineRequiresExternalTaskAuthorization(),
+          RuntimeConfigurationHolder.isEngineRequiresUserTaskAuthorization(),
           RuntimeConfigurationHolder.getReplayProtectionMode(),
           RuntimeConfigurationHolder.getReplayProtectionRetentionMs());
     } catch (Exception e) {
@@ -187,9 +189,11 @@ public final class RuntimeConfigurationStore implements AutoCloseable {
         RuntimeConfigurationHolder.set(event.getConfiguration());
         notifyRuntimeConfigurationChanged();
         log.info(
-            "RuntimeConfigurationStore: updated config signingEnabled={} engineRequiresAuthorization={} replayProtectionMode={} replayProtectionRetentionMs={}",
+            "RuntimeConfigurationStore: updated config signingEnabled={} engineRequiresAuthorization={} engineRequiresExternalTaskAuthorization={} engineRequiresUserTaskAuthorization={} replayProtectionMode={} replayProtectionRetentionMs={}",
             event.getConfiguration().isSigningEnabled(),
             event.getConfiguration().isEngineRequiresAuthorization(),
+            event.getConfiguration().isEngineRequiresExternalTaskAuthorization(),
+            event.getConfiguration().isEngineRequiresUserTaskAuthorization(),
             event.getConfiguration().getReplayProtectionMode(),
             event.getConfiguration().getReplayProtectionRetentionMs());
       }

@@ -33,6 +33,10 @@ import io.taktx.dto.InstanceUpdateDTO;
 import io.taktx.dto.ProcessInstanceTriggerDTO;
 import io.taktx.dto.SigningKeyDTO;
 import io.taktx.dto.SigningKeyDTO.KeyStatus;
+import io.taktx.dto.UserTaskResponseResultDTO;
+import io.taktx.dto.UserTaskResponseTriggerDTO;
+import io.taktx.dto.UserTaskResponseType;
+import io.taktx.dto.UserTaskTriggerDTO;
 import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.config.GlobalConfigStore;
 import io.taktx.engine.generic.ClockProducer;
@@ -119,6 +123,7 @@ import org.junit.jupiter.api.Test;
 class SecurityIntegrationTest {
 
   private static final String TASK_SINGLE_PROCESS_ID = "task-single";
+  private static final String USER_TASK_PROCESS_ID = "process-user-task";
   private static final String SERVICE_TASK_PROCESS_ID = "service-task-single";
   private static final String SERVICE_TASK_THEN_TIMER_PROCESS_ID = "service-task-then-timer";
 
@@ -447,6 +452,166 @@ class SecurityIntegrationTest {
     await()
         .atMost(Duration.ofSeconds(10))
         .untilAsserted(() -> assertThat(engine.getProcessInstanceMap()).containsKey(validId));
+  }
+
+  @Test
+  void userTaskCompletion_withJwtAndSignature_completesProcess() throws IOException {
+    engine.deployProcessDefinitionAndWait("/bpmn/usertask.bpmn");
+
+    String startJwt =
+        buildJwt(
+            "START",
+            USER_TASK_PROCESS_ID,
+            -1,
+            UUID.randomUUID().toString(),
+            "user-1",
+            Date.from(Instant.now().plusSeconds(300)));
+    UUID instanceId =
+        engine
+            .getTaktClient()
+            .startProcess(USER_TASK_PROCESS_ID, -1, VariablesDTO.empty(), startJwt);
+
+    engine.waitForNewProcessInstance().waitUntilUserTaskIsWaitingForResponse("UserTask_1");
+    UserTaskTriggerDTO trigger = engine.getActiveUserTaskTrigger();
+
+    String completionJwt =
+        buildJwt(
+            "USER_TASK_COMPLETE",
+            engine.deployedProcessDefinition().getDefinitions().getRootProcess().getId(),
+            engine.deployedProcessDefinition().getVersion(),
+            UUID.randomUUID().toString(),
+            "service-account://console/user-task",
+            Date.from(Instant.now().plusSeconds(300)));
+
+    sendSignedProcessInstanceTrigger(
+        new UserTaskResponseTriggerDTO(
+            trigger.getProcessInstanceId(),
+            trigger.getElementInstanceIdPath(),
+            new UserTaskResponseResultDTO(UserTaskResponseType.COMPLETED, null, null),
+            VariablesDTO.of("approved", true)),
+        WORKER_KEY_ID,
+        workerPrivateKeyBase64,
+        completionJwt);
+
+    awaitProcessCompleted(instanceId);
+  }
+
+  @Test
+  void externalTaskCompletion_withJwtAndSignature_completesProcess() throws IOException {
+    engine
+        .registerAndSubscribeToExternalTaskIds(SERVICE_TASK_TYPE)
+        .deployProcessDefinitionAndWait("/bpmn/servicetask-single.bpmn");
+
+    UUID instanceId = startJwtProtectedProcessAndWaitForExternalTask();
+    ExternalTaskTriggerDTO trigger = engine.getActiveExternalTaskTrigger(SERVICE_TASK_TYPE);
+
+    String completionJwt =
+        buildJwt(
+            "EXTERNAL_TASK_COMPLETE",
+            engine.deployedProcessDefinition().getDefinitions().getRootProcess().getId(),
+            engine.deployedProcessDefinition().getVersion(),
+            UUID.randomUUID().toString(),
+            "user-1",
+            Date.from(Instant.now().plusSeconds(300)));
+
+    sendSignedProcessInstanceTrigger(
+        new ExternalTaskResponseTriggerDTO(
+            trigger.getProcessInstanceId(),
+            trigger.getElementInstanceIdPath(),
+            new ExternalTaskResponseResultDTO(
+                ExternalTaskResponseType.SUCCESS, true, null, null, 0L),
+            VariablesDTO.of("var1", "ok")),
+        WORKER_KEY_ID,
+        workerPrivateKeyBase64,
+        completionJwt);
+
+    awaitProcessCompleted(instanceId);
+  }
+
+  @Test
+  void externalTaskCompletion_wrongDefinitionClaim_rejected() throws IOException {
+    engine
+        .registerAndSubscribeToExternalTaskIds(SERVICE_TASK_TYPE)
+        .deployProcessDefinitionAndWait("/bpmn/servicetask-single.bpmn");
+
+    UUID instanceId = startJwtProtectedProcessAndWaitForExternalTask();
+    ExternalTaskTriggerDTO trigger = engine.getActiveExternalTaskTrigger(SERVICE_TASK_TYPE);
+
+    String completionJwt =
+        buildJwt(
+            "EXTERNAL_TASK_COMPLETE",
+            "wrong-definition",
+            engine.deployedProcessDefinition().getVersion(),
+            UUID.randomUUID().toString(),
+            "user-1",
+            Date.from(Instant.now().plusSeconds(300)));
+
+    sendSignedProcessInstanceTrigger(
+        new ExternalTaskResponseTriggerDTO(
+            trigger.getProcessInstanceId(),
+            trigger.getElementInstanceIdPath(),
+            new ExternalTaskResponseResultDTO(
+                ExternalTaskResponseType.SUCCESS, true, null, null, 0L),
+            VariablesDTO.empty()),
+        WORKER_KEY_ID,
+        workerPrivateKeyBase64,
+        completionJwt);
+
+    await()
+        .during(Duration.ofSeconds(3))
+        .atMost(Duration.ofSeconds(4))
+        .untilAsserted(
+            () ->
+                assertThat(engine.getProcessInstanceMap().get(instanceId).getScope().getState())
+                    .isNotEqualTo(ExecutionState.COMPLETED));
+  }
+
+  @Test
+  void userTaskCompletion_wrongVersionClaim_rejected() throws IOException {
+    engine.deployProcessDefinitionAndWait("/bpmn/usertask.bpmn");
+
+    String startJwt =
+        buildJwt(
+            "START",
+            USER_TASK_PROCESS_ID,
+            -1,
+            UUID.randomUUID().toString(),
+            "user-1",
+            Date.from(Instant.now().plusSeconds(300)));
+    UUID instanceId =
+        engine
+            .getTaktClient()
+            .startProcess(USER_TASK_PROCESS_ID, -1, VariablesDTO.empty(), startJwt);
+
+    engine.waitForNewProcessInstance().waitUntilUserTaskIsWaitingForResponse("UserTask_1");
+    UserTaskTriggerDTO trigger = engine.getActiveUserTaskTrigger();
+
+    String completionJwt =
+        buildJwt(
+            "USER_TASK_COMPLETE",
+            engine.deployedProcessDefinition().getDefinitions().getRootProcess().getId(),
+            engine.deployedProcessDefinition().getVersion() + 1,
+            UUID.randomUUID().toString(),
+            "user-1",
+            Date.from(Instant.now().plusSeconds(300)));
+
+    sendSignedProcessInstanceTrigger(
+        new UserTaskResponseTriggerDTO(
+            trigger.getProcessInstanceId(),
+            trigger.getElementInstanceIdPath(),
+            new UserTaskResponseResultDTO(UserTaskResponseType.COMPLETED, null, null),
+            VariablesDTO.empty()),
+        WORKER_KEY_ID,
+        workerPrivateKeyBase64,
+        completionJwt);
+
+    await()
+        .during(Duration.ofSeconds(3))
+        .atMost(Duration.ofSeconds(4))
+        .untilAsserted(
+            () ->
+                assertThat(engine.getProcessInstanceMap().get(instanceId).getScope().getState())
+                    .isNotEqualTo(ExecutionState.COMPLETED));
   }
 
   // ── Ed25519 inbound path ───────────────────────────────────────────────────
@@ -1222,6 +1387,14 @@ class SecurityIntegrationTest {
 
   private void sendSignedProcessInstanceTrigger(
       ProcessInstanceTriggerDTO trigger, String keyId, String privateKeyBase64) {
+    sendSignedProcessInstanceTrigger(trigger, keyId, privateKeyBase64, null);
+  }
+
+  private void sendSignedProcessInstanceTrigger(
+      ProcessInstanceTriggerDTO trigger,
+      String keyId,
+      String privateKeyBase64,
+      String authorizationToken) {
     String topic = prefixed(Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName());
     byte[] payload;
     try (io.taktx.client.serdes.ProcessInstanceTriggerSerializer rawSerializer =
@@ -1251,6 +1424,13 @@ class SecurityIntegrationTest {
           .add(
               Constants.HEADER_ENGINE_SIGNATURE,
               signatureHeaderValue.getBytes(StandardCharsets.UTF_8));
+      if (authorizationToken != null && !authorizationToken.isBlank()) {
+        record
+            .headers()
+            .add(
+                Constants.HEADER_AUTHORIZATION,
+                authorizationToken.getBytes(StandardCharsets.UTF_8));
+      }
       producer.send(record);
       producer.flush();
     }
@@ -1274,6 +1454,8 @@ class SecurityIntegrationTest {
           GlobalConfigurationDTO.builder()
               .signingEnabled(true)
               .engineRequiresAuthorization(true)
+              .engineRequiresExternalTaskAuthorization(true)
+              .engineRequiresUserTaskAuthorization(true)
               .trustedKeyIds(List.of(WORKER_KEY_ID))
               .build();
 

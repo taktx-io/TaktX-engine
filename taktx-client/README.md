@@ -393,7 +393,7 @@ See [docs/security.md](../docs/security.md) for the complete anchored mode refer
 
 ## Command authorization (JWT)
 
-When `engineRequiresAuthorization=true` in the engine runtime configuration, entry commands (`startProcess`, `abortElementInstance`, `setVariable`) require a JWT.
+When `engineRequiresAuthorization=true` in the engine runtime configuration, externally authorized commands require a JWT. That includes `startProcess`, `abortElementInstance`, `setVariable`, `completeUserTask`, and `completeExternalTask`.
 
 ### Attaching a JWT explicitly
 
@@ -402,7 +402,31 @@ String jwt = myAuthService.getToken();
 client.startProcess("invoice-process", -1, VariablesDTO.empty(), jwt);
 client.abortElementInstance(instanceId, List.of(), jwt);
 client.setVariable(instanceId, List.of(), VariablesDTO.of("approved", true), jwt);
+client.completeUserTask(instanceId, List.of(1001L, 1002L), VariablesDTO.of("approved", true), jwt);
+client.completeExternalTask(instanceId, List.of(2001L, 2002L), VariablesDTO.of("result", "ok"), jwt);
 ```
+
+### Generated task-completion APIs
+
+The generated client now publishes task-completion triggers internally, including topic routing,
+DTO construction, `messageId` generation, and `tx-auth` header attachment:
+
+```java
+client.completeUserTask(
+    processInstanceId,
+    elementInstanceIdPath,
+    VariablesDTO.of("approved", true),
+    jwt);
+
+client.completeExternalTask(
+    processInstanceId,
+    elementInstanceIdPath,
+    VariablesDTO.of("result", "ok"),
+    jwt);
+```
+
+Overloads without the final JWT parameter are also available and will use the configured
+`AuthorizationTokenProvider` when present.
 
 ### Automatic JWT via OpenID client-credentials
 

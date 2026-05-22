@@ -62,6 +62,8 @@ final class SecurityEndToEndHelper {
           GlobalConfigurationDTO.builder()
               .signingEnabled(true)
               .engineRequiresAuthorization(true)
+              .engineRequiresExternalTaskAuthorization(true)
+              .engineRequiresUserTaskAuthorization(true)
               .trustedKeyIds(allTrusted)
               .build();
 

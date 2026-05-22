@@ -14,6 +14,7 @@ import io.taktx.dto.CommandAuthMethod;
 import io.taktx.dto.CommandTrustMetadataDTO;
 import io.taktx.dto.CommandTrustVerificationResult;
 import io.taktx.dto.Constants;
+import io.taktx.dto.ExternalTaskResponseTriggerDTO;
 import io.taktx.dto.GlobalConfigurationDTO;
 import io.taktx.dto.KeyRole;
 import io.taktx.dto.MessageScheduleDTO;
@@ -25,6 +26,7 @@ import io.taktx.dto.SigningKeyDTO;
 import io.taktx.dto.StartCommandDTO;
 import io.taktx.dto.TokenClaims;
 import io.taktx.dto.TopicMetaDTO;
+import io.taktx.dto.UserTaskResponseTriggerDTO;
 import io.taktx.engine.config.GlobalConfigStore;
 import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.pi.ProcessInstanceTriggerEnvelope;
@@ -200,7 +202,7 @@ public class EngineAuthorizationService {
     // ── Entry commands: AND-logic across both gates
     // ───────────────────────────────────────────────
     if (isEntryCommand) {
-      boolean authActive = cfg.isEngineRequiresAuthorization();
+      boolean authActive = isAuthorizationGateActive(cfg, policy);
       boolean signingActive = cfg.isSigningEnabled();
 
       if (!authActive && !signingActive) {
@@ -224,6 +226,7 @@ public class EngineAuthorizationService {
 
       // Auth gate: JWT or ENGINE-role Ed25519 satisfies it
       if (authActive
+          && !policy.allowSignatureAsJwtEquivalent()
           && policy.allowEngineSignatureAsJwtEquivalent()
           && jwtMeta == null
           && !sigIsEngine) {
@@ -235,6 +238,32 @@ public class EngineAuthorizationService {
                 + " (JWT) or "
                 + SIG_HEADER
                 + " from an ENGINE-role key");
+      }
+
+      if (authActive
+          && !policy.allowEngineSignatureAsJwtEquivalent()
+          && !policy.allowSignatureAsJwtEquivalent()
+          && jwtMeta == null) {
+        throw new AuthorizationTokenException(
+            "Entry command "
+                + trigger.getClass().getSimpleName()
+                + " requires "
+                + AUTH_HEADER
+                + " (JWT)");
+      }
+
+      if (authActive
+          && policy.allowSignatureAsJwtEquivalent()
+          && jwtMeta == null
+          && sigMeta == null) {
+        throw new AuthorizationTokenException(
+            "Entry command "
+                + trigger.getClass().getSimpleName()
+                + " requires "
+                + AUTH_HEADER
+                + " (JWT) or "
+                + SIG_HEADER
+                + " from a trusted key");
       }
 
       // Signing gate: any valid Ed25519 satisfies it
@@ -267,7 +296,7 @@ public class EngineAuthorizationService {
 
     // ── Gate 2: Non-entry command Ed25519 signing
     // ─────────────────────────────────────────────────
-    boolean authActive = cfg.isEngineRequiresAuthorization();
+    boolean authActive = isAnyAuthorizationGateActive(cfg);
     boolean signingActive = cfg.isSigningEnabled();
 
     if (sigHeader != null && sigHeader.value() != null) {
@@ -305,7 +334,7 @@ public class EngineAuthorizationService {
    */
   public SigningKeyDTO authorizeTopicMetaRequest(Headers headers, TopicMetaDTO request) {
     GlobalConfigurationDTO cfg = effectiveConfig();
-    if (!cfg.isEngineRequiresAuthorization() && !cfg.isSigningEnabled()) {
+    if (!isSecurityActive(cfg)) {
       log.debug(
           "Security gates disabled — skipping signature enforcement for topic-meta-requested");
       return null;
@@ -343,7 +372,7 @@ public class EngineAuthorizationService {
   public SigningKeyDTO authorizeScheduleCommand(
       Headers headers, ScheduleKeyDTO scheduleKey, MessageScheduleDTO schedule) {
     GlobalConfigurationDTO cfg = effectiveConfig();
-    if (!cfg.isEngineRequiresAuthorization() && !cfg.isSigningEnabled()) {
+    if (!isSecurityActive(cfg)) {
       log.debug("Security gates disabled — skipping signature enforcement for schedule-commands");
       return null;
     }
@@ -390,6 +419,28 @@ public class EngineAuthorizationService {
 
   public boolean isEntryAuthorizationGateActive() {
     return effectiveConfig().isEngineRequiresAuthorization();
+  }
+
+  /**
+   * Returns whether a presented task-completion JWT should be validated for the given trigger.
+   *
+   * <p>User-task and external-task response JWTs are optional unless their respective runtime
+   * authorization gates are active. This helper lets callers ignore stray {@code tx-auth} headers
+   * when those gates are disabled, while still fail-closing to a DLQ rejection once the relevant
+   * gate is enabled.
+   */
+  public boolean isTaskCompletionAuthorizationActive(ProcessInstanceTriggerDTO trigger) {
+    if (trigger == null) {
+      return false;
+    }
+    GlobalConfigurationDTO cfg = effectiveConfig();
+    if (trigger instanceof ExternalTaskResponseTriggerDTO) {
+      return cfg.isEngineRequiresExternalTaskAuthorization();
+    }
+    if (trigger instanceof UserTaskResponseTriggerDTO) {
+      return cfg.isEngineRequiresUserTaskAuthorization();
+    }
+    return false;
   }
 
   public String canonicalReplayKey(TokenClaims claims) {
@@ -502,6 +553,26 @@ public class EngineAuthorizationService {
     return requiredRole;
   }
 
+  private static boolean isAuthorizationGateActive(
+      GlobalConfigurationDTO cfg, MessageSecurityPolicy policy) {
+    return switch (policy.authorizationScope()) {
+      case COMMANDS -> cfg.isEngineRequiresAuthorization();
+      case EXTERNAL_TASKS -> cfg.isEngineRequiresExternalTaskAuthorization();
+      case USER_TASKS -> cfg.isEngineRequiresUserTaskAuthorization();
+      case NONE -> false;
+    };
+  }
+
+  private static boolean isAnyAuthorizationGateActive(GlobalConfigurationDTO cfg) {
+    return cfg.isEngineRequiresAuthorization()
+        || cfg.isEngineRequiresExternalTaskAuthorization()
+        || cfg.isEngineRequiresUserTaskAuthorization();
+  }
+
+  private static boolean isSecurityActive(GlobalConfigurationDTO cfg) {
+    return cfg.isSigningEnabled() || isAnyAuthorizationGateActive(cfg);
+  }
+
   private GlobalConfigurationDTO effectiveConfig() {
     if (globalConfigStore == null || globalConfigStore.get() == null) {
       return GlobalConfigurationDTO.builder().build();
@@ -558,6 +629,17 @@ public class EngineAuthorizationService {
       case SetVariableTriggerDTO _ when !"SET_VARIABLE".equals(claims.getAction()) ->
           throw new AuthorizationTokenException(
               "Token action '" + claims.getAction() + "' does not match SET_VARIABLE command");
+      case UserTaskResponseTriggerDTO _ when !"USER_TASK_COMPLETE".equals(claims.getAction()) ->
+          throw new AuthorizationTokenException(
+              "Token action '"
+                  + claims.getAction()
+                  + "' does not match USER_TASK_COMPLETE command");
+      case ExternalTaskResponseTriggerDTO _ when !"EXTERNAL_TASK_COMPLETE"
+              .equals(claims.getAction()) ->
+          throw new AuthorizationTokenException(
+              "Token action '"
+                  + claims.getAction()
+                  + "' does not match EXTERNAL_TASK_COMPLETE command");
       default ->
           log.debug(
               "No claim matching defined for {}, allowing", trigger.getClass().getSimpleName());

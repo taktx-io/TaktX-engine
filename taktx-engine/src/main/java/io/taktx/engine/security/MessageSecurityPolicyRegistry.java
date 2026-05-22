@@ -46,10 +46,10 @@ public class MessageSecurityPolicyRegistry {
               entryCommandPolicy(SetVariableTriggerDTO.class)),
           Map.entry(
               new PolicyKey(PROCESS_INSTANCE_TOPIC, ExternalTaskResponseTriggerDTO.class),
-              signedProcessInstancePolicy(ExternalTaskResponseTriggerDTO.class, KeyRole.CLIENT)),
+              taskCompletionPolicy(ExternalTaskResponseTriggerDTO.class)),
           Map.entry(
               new PolicyKey(PROCESS_INSTANCE_TOPIC, UserTaskResponseTriggerDTO.class),
-              signedProcessInstancePolicy(UserTaskResponseTriggerDTO.class, KeyRole.CLIENT)),
+              taskCompletionPolicy(UserTaskResponseTriggerDTO.class)),
           Map.entry(
               new PolicyKey(PROCESS_INSTANCE_TOPIC, ContinueFlowElementTriggerDTO.class),
               signedProcessInstancePolicy(ContinueFlowElementTriggerDTO.class, KeyRole.ENGINE)),
@@ -88,6 +88,7 @@ public class MessageSecurityPolicyRegistry {
   private static MessageSecurityPolicy entryCommandPolicy(Class<?> messageClass) {
     return MessageSecurityPolicy.builder(PROCESS_INSTANCE_TOPIC, messageClass)
         .allowedRoles(Set.of(KeyRole.CLIENT))
+        .authorizationScope(MessageSecurityPolicy.AuthorizationScope.COMMANDS)
         .requireSignature(true)
         .requireReplay(true)
         .requireJwt(true)
@@ -100,6 +101,21 @@ public class MessageSecurityPolicyRegistry {
     return MessageSecurityPolicy.builder(PROCESS_INSTANCE_TOPIC, messageClass)
         .allowedRoles(Set.of(minimumRole))
         .requireSignature(true)
+        .build();
+  }
+
+  private static MessageSecurityPolicy taskCompletionPolicy(Class<?> messageClass) {
+    MessageSecurityPolicy.AuthorizationScope authorizationScope =
+        ExternalTaskResponseTriggerDTO.class.equals(messageClass)
+            ? MessageSecurityPolicy.AuthorizationScope.EXTERNAL_TASKS
+            : MessageSecurityPolicy.AuthorizationScope.USER_TASKS;
+    return MessageSecurityPolicy.builder(PROCESS_INSTANCE_TOPIC, messageClass)
+        .allowedRoles(Set.of(KeyRole.CLIENT))
+        .authorizationScope(authorizationScope)
+        .requireSignature(true)
+        .requireReplay(true)
+        .requireJwt(true)
+        .allowSignatureAsJwtEquivalent(true)
         .build();
   }
 

@@ -93,7 +93,8 @@ class AnnotationScanningExternalTaskTriggerConsumerTest {
       try {
         return clazz.getDeclaredConstructor().newInstance();
       } catch (ReflectiveOperationException e) {
-        throw new IllegalStateException("Unable to create worker instance for " + clazz.getName(), e);
+        throw new IllegalStateException(
+            "Unable to create worker instance for " + clazz.getName(), e);
       }
     }
   }
@@ -124,7 +125,3 @@ class AnnotationScanningExternalTaskTriggerConsumerTest {
     }
   }
 }
-
-
-
-

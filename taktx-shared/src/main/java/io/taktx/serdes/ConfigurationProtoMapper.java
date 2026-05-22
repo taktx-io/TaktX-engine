@@ -61,6 +61,9 @@ public final class ConfigurationProtoMapper {
     }
     builder.setSigningEnabled(dto.isSigningEnabled());
     builder.setEngineRequiresAuthorization(dto.isEngineRequiresAuthorization());
+    builder.setEngineRequiresExternalTaskAuthorization(
+        dto.isEngineRequiresExternalTaskAuthorization());
+    builder.setEngineRequiresUserTaskAuthorization(dto.isEngineRequiresUserTaskAuthorization());
     List<String> trustedKeyIds = dto.getTrustedKeyIds();
     if (trustedKeyIds != null) {
       builder.addAllTrustedKeyIds(trustedKeyIds);
@@ -82,6 +85,9 @@ public final class ConfigurationProtoMapper {
     return GlobalConfigurationDTO.builder()
         .signingEnabled(message.getSigningEnabled())
         .engineRequiresAuthorization(message.getEngineRequiresAuthorization())
+        .engineRequiresExternalTaskAuthorization(
+            message.getEngineRequiresExternalTaskAuthorization())
+        .engineRequiresUserTaskAuthorization(message.getEngineRequiresUserTaskAuthorization())
         .trustedKeyIds(List.copyOf(message.getTrustedKeyIdsList()))
         .dmnValidationMode(toDto(message.getDmnValidationMode()))
         .replayProtectionMode(toDto(message.getReplayProtectionMode()))

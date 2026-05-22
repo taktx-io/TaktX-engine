@@ -18,9 +18,6 @@ import io.taktx.dto.CommandAuthMethod;
 import io.taktx.dto.CommandTrustMetadataDTO;
 import io.taktx.dto.CommandTrustVerificationResult;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
-import io.taktx.dto.ExternalTaskResponseResultDTO;
-import io.taktx.dto.ExternalTaskResponseTriggerDTO;
-import io.taktx.dto.ExternalTaskResponseType;
 import io.taktx.dto.GlobalConfigurationDTO;
 import io.taktx.dto.KeyRole;
 import io.taktx.dto.ProcessDefinitionKey;
@@ -165,20 +162,12 @@ class EngineAuthorizationServiceMatrixTest {
 
   private ProcessInstanceTriggerEnvelope clientNonEntryEnvelope(boolean sigVerified, String keyId) {
     return new ProcessInstanceTriggerEnvelope(
-        new byte[0], externalTaskResponseTrigger(), sigVerified, keyId);
+        new byte[0], continueFlowElementTrigger(), sigVerified, keyId);
   }
 
   private ContinueFlowElementTriggerDTO continueFlowElementTrigger() {
     return new ContinueFlowElementTriggerDTO(
         UUID.randomUUID(), List.of(1L), "flow-1", VariablesDTO.empty());
-  }
-
-  private ExternalTaskResponseTriggerDTO externalTaskResponseTrigger() {
-    return new ExternalTaskResponseTriggerDTO(
-        UUID.randomUUID(),
-        List.of(1L),
-        new ExternalTaskResponseResultDTO(ExternalTaskResponseType.SUCCESS, true, null, null, 0L),
-        VariablesDTO.empty());
   }
 
   private SetVariableTriggerDTO setVariableTrigger() {
@@ -255,7 +244,7 @@ class EngineAuthorizationServiceMatrixTest {
   void row2_bothDisabled_nonEntry_sigPresent_sigIgnored_returnsNull() {
     EngineAuthorizationService svc = service(false, false);
     assertThat(
-            svc.authorize(sigHeaders(WORKER_KEY_ID), clientNonEntryEnvelope(true, WORKER_KEY_ID)))
+            svc.authorize(sigHeaders(ENGINE_KEY_ID), clientNonEntryEnvelope(true, ENGINE_KEY_ID)))
         .isNull();
   }
 
@@ -289,17 +278,17 @@ class EngineAuthorizationServiceMatrixTest {
   //         non-entry, sig present → verify Ed25519 and return trust metadata
   // ══════════════════════════════════════════════════════════════════════════
   @Test
-  void row7_signingOnly_nonEntry_sigPresent_verifies_ed25519() {
+  void row7_signingOnly_nonEntry_engineSigPresent_verifies_ed25519() {
     EngineAuthorizationService svc = service(false, true);
     CommandTrustMetadataDTO result =
-        svc.authorize(sigHeaders(WORKER_KEY_ID), clientNonEntryEnvelope(true, WORKER_KEY_ID));
+        svc.authorize(sigHeaders(ENGINE_KEY_ID), clientNonEntryEnvelope(true, ENGINE_KEY_ID));
     assertThat(result).isNotNull();
     assertThat(result.getAuthMethod()).isEqualTo(CommandAuthMethod.ED25519);
     assertThat(result.getVerificationResult())
-        .isEqualTo(CommandTrustVerificationResult.SIGNATURE_VERIFIED);
+        .isEqualTo(CommandTrustVerificationResult.ENGINE_SIGNED);
     assertThat(result.getTrusted()).isTrue();
-    assertThat(result.getSignerKeyId()).isEqualTo(WORKER_KEY_ID);
-    assertThat(result.getSignerOwner()).isEqualTo("billing-worker");
+    assertThat(result.getSignerKeyId()).isEqualTo(ENGINE_KEY_ID);
+    assertThat(result.getSignerOwner()).isEqualTo("engine");
   }
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -372,13 +361,13 @@ class EngineAuthorizationServiceMatrixTest {
   //          non-entry, sig present → verify Ed25519
   // ══════════════════════════════════════════════════════════════════════════
   @Test
-  void row11_authOnly_nonEntry_sigPresent_verifiesEd25519() {
+  void row11_authOnly_nonEntry_engineSigPresent_verifiesEd25519() {
     EngineAuthorizationService svc = service(true, false);
     CommandTrustMetadataDTO result =
-        svc.authorize(sigHeaders(WORKER_KEY_ID), clientNonEntryEnvelope(true, WORKER_KEY_ID));
+        svc.authorize(sigHeaders(ENGINE_KEY_ID), clientNonEntryEnvelope(true, ENGINE_KEY_ID));
     assertThat(result.getAuthMethod()).isEqualTo(CommandAuthMethod.ED25519);
     assertThat(result.getVerificationResult())
-        .isEqualTo(CommandTrustVerificationResult.SIGNATURE_VERIFIED);
+        .isEqualTo(CommandTrustVerificationResult.ENGINE_SIGNED);
     assertThat(result.getTrusted()).isTrue();
   }
 
@@ -399,13 +388,13 @@ class EngineAuthorizationServiceMatrixTest {
   //          non-entry, sig present → verify Ed25519
   // ══════════════════════════════════════════════════════════════════════════
   @Test
-  void row13_bothActive_nonEntry_sigPresent_verifiesEd25519() {
+  void row13_bothActive_nonEntry_engineSigPresent_verifiesEd25519() {
     EngineAuthorizationService svc = service(true, true);
     CommandTrustMetadataDTO result =
-        svc.authorize(sigHeaders(WORKER_KEY_ID), clientNonEntryEnvelope(true, WORKER_KEY_ID));
+        svc.authorize(sigHeaders(ENGINE_KEY_ID), clientNonEntryEnvelope(true, ENGINE_KEY_ID));
     assertThat(result.getAuthMethod()).isEqualTo(CommandAuthMethod.ED25519);
     assertThat(result.getVerificationResult())
-        .isEqualTo(CommandTrustVerificationResult.SIGNATURE_VERIFIED);
+        .isEqualTo(CommandTrustVerificationResult.ENGINE_SIGNED);
     assertThat(result.getTrusted()).isTrue();
   }
 
@@ -426,13 +415,13 @@ class EngineAuthorizationServiceMatrixTest {
   //          non-entry, sig present → verify Ed25519
   // ══════════════════════════════════════════════════════════════════════════
   @Test
-  void row15_bothActive_nonEntry_sigPresent_verifiesEd25519() {
+  void row15_bothActive_nonEntry_engineSigPresent_verifiesEd25519() {
     EngineAuthorizationService svc = service(true, true);
     CommandTrustMetadataDTO result =
-        svc.authorize(sigHeaders(WORKER_KEY_ID), clientNonEntryEnvelope(true, WORKER_KEY_ID));
+        svc.authorize(sigHeaders(ENGINE_KEY_ID), clientNonEntryEnvelope(true, ENGINE_KEY_ID));
     assertThat(result.getAuthMethod()).isEqualTo(CommandAuthMethod.ED25519);
     assertThat(result.getVerificationResult())
-        .isEqualTo(CommandTrustVerificationResult.SIGNATURE_VERIFIED);
+        .isEqualTo(CommandTrustVerificationResult.ENGINE_SIGNED);
     assertThat(result.getTrusted()).isTrue();
   }
 

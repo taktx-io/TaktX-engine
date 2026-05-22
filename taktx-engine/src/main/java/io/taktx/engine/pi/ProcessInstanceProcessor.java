@@ -13,11 +13,13 @@ import static io.taktx.dto.Constants.MAX_LONG;
 import io.taktx.dto.AbortTriggerDTO;
 import io.taktx.dto.CommandTrustMetadataDTO;
 import io.taktx.dto.CommandTrustVerificationResult;
+import io.taktx.dto.Constants;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.dto.DlqEntryDTO;
 import io.taktx.dto.EventSignalDTO;
 import io.taktx.dto.EventSignalTriggerDTO;
 import io.taktx.dto.ExecutionState;
+import io.taktx.dto.ExternalTaskResponseTriggerDTO;
 import io.taktx.dto.FlowElementDTO;
 import io.taktx.dto.FlowNodeInstanceDTO;
 import io.taktx.dto.FlowNodeInstanceKeyDTO;
@@ -31,6 +33,8 @@ import io.taktx.dto.ScopeDTO;
 import io.taktx.dto.SetVariableTriggerDTO;
 import io.taktx.dto.StartCommandDTO;
 import io.taktx.dto.StartFlowElementTriggerDTO;
+import io.taktx.dto.TokenClaims;
+import io.taktx.dto.UserTaskResponseTriggerDTO;
 import io.taktx.dto.VariableKeyDTO;
 import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.config.TaktConfiguration;
@@ -41,10 +45,12 @@ import io.taktx.engine.pd.model.FlowElements;
 import io.taktx.engine.pd.model.IoVariableMapping;
 import io.taktx.engine.pi.model.ErrorEventSignal;
 import io.taktx.engine.pi.model.EscalationEventSignal;
+import io.taktx.engine.pi.model.ExternalTaskInstance;
 import io.taktx.engine.pi.model.FlowNodeInstance;
 import io.taktx.engine.pi.model.FlowNodeInstances;
 import io.taktx.engine.pi.model.ProcessInstance;
 import io.taktx.engine.pi.model.Scope;
+import io.taktx.engine.pi.model.UserTaskInstance;
 import io.taktx.engine.pi.model.VariableScope;
 import io.taktx.engine.pi.model.WithScope;
 import io.taktx.engine.pi.processor.IoMappingProcessor;
@@ -159,6 +165,21 @@ public class ProcessInstanceProcessor
       return;
     }
 
+    TokenClaims validatedJwtClaims;
+    try {
+      validatedJwtClaims = resolveValidatedJwtClaims(triggerRecord.headers(), triggerEnvelope);
+    } catch (AuthorizationTokenException e) {
+      log.error("⛔ Command rejected — task-completion JWT validation failed: {}", e.getMessage());
+      emitProcessInstanceDlq(
+          triggerRecord.key(),
+          triggerRecord.headers(),
+          triggerEnvelope,
+          reasonHintForAuthorizationFailure(triggerEnvelope, e),
+          e.getMessage(),
+          "PROCESSOR");
+      return;
+    }
+
     trigger.setCurrentTrustMetadata(currentTrustMetadata);
     trigger.setOriginTrustMetadata(resolveOriginTrustMetadata(trigger, currentTrustMetadata));
 
@@ -209,7 +230,7 @@ public class ProcessInstanceProcessor
         case ContinueFlowElementTriggerDTO continueFlowElementTrigger2 -> {
           processingStatistics.recordExternalTaskResponseLatency(
               kafkaTimestamp, continueFlowElementTrigger2.getClass().getSimpleName());
-          handleContinue(continueFlowElementTrigger2);
+          handleContinue(continueFlowElementTrigger2, validatedJwtClaims);
         }
         case EventSignalTriggerDTO eventSignalTrigger -> {
           processingStatistics.recordProcessInstanceLatency(
@@ -565,7 +586,8 @@ public class ProcessInstanceProcessor
     }
   }
 
-  public void handleContinue(ContinueFlowElementTriggerDTO trigger) {
+  public void handleContinue(
+      ContinueFlowElementTriggerDTO trigger, TokenClaims validatedJwtClaims) {
 
     InstanceResult instanceResult = InstanceResult.empty();
     UUID processInstanceId = trigger.getProcessInstanceId();
@@ -578,6 +600,7 @@ public class ProcessInstanceProcessor
         enrichScope(processInstance.getScope(), processInstanceId, flowElements);
         ProcessDefinitionKey processDefinitionKey = processInstance.getProcessDefinitionKey();
         processDefinitionKeyThreadLocal.set(processDefinitionKey);
+        validateAuthorizedTaskCompletion(processInstance, trigger, validatedJwtClaims);
 
         ProcessInstanceProcessingContext processInstanceProcessingContext =
             createProcessInstanceProcessingContext(
@@ -602,6 +625,149 @@ public class ProcessInstanceProcessor
     } else {
       log.warn("Process instanceToContinue not found for key: {}", processInstanceId);
     }
+  }
+
+  private void validateAuthorizedTaskCompletion(
+      ProcessInstance processInstance,
+      ContinueFlowElementTriggerDTO trigger,
+      TokenClaims validatedJwtClaims) {
+    if (validatedJwtClaims == null
+        || (!(trigger instanceof UserTaskResponseTriggerDTO)
+            && !(trigger instanceof ExternalTaskResponseTriggerDTO))) {
+      return;
+    }
+
+    if (validatedJwtClaims.getNamespaceId() == null) {
+      throw new AuthorizationTokenException(
+          "Task-completion JWT is missing required namespaceId claim");
+    }
+
+    UUID configuredNamespaceId = configuredNamespaceId();
+    if (configuredNamespaceId != null
+        && !configuredNamespaceId.equals(validatedJwtClaims.getNamespaceId())) {
+      throw new AuthorizationTokenException(
+          "Token namespaceId '"
+              + validatedJwtClaims.getNamespaceId()
+              + "' does not match engine namespace '"
+              + configuredNamespaceId
+              + "'");
+    }
+
+    ProcessDefinitionKey processDefinitionKey = processInstance.getProcessDefinitionKey();
+    String actualProcessDefinitionId =
+        processDefinitionKey != null ? processDefinitionKey.getProcessDefinitionId() : null;
+    Integer actualVersion = processDefinitionKey != null ? processDefinitionKey.getVersion() : null;
+
+    if (validatedJwtClaims.getProcessDefinitionId() == null
+        || validatedJwtClaims.getProcessDefinitionId().isBlank()) {
+      throw new AuthorizationTokenException(
+          "Task-completion JWT is missing required processDefinitionId claim");
+    }
+    if (!validatedJwtClaims.getProcessDefinitionId().equals(actualProcessDefinitionId)) {
+      throw new AuthorizationTokenException(
+          "Token processDefinitionId '"
+              + validatedJwtClaims.getProcessDefinitionId()
+              + "' does not match runtime definition '"
+              + actualProcessDefinitionId
+              + "'");
+    }
+    if (validatedJwtClaims.getVersion() <= 0) {
+      throw new AuthorizationTokenException(
+          "Task-completion JWT must carry the concrete process-definition version");
+    }
+    if (actualVersion != null && validatedJwtClaims.getVersion() != actualVersion) {
+      throw new AuthorizationTokenException(
+          "Token version "
+              + validatedJwtClaims.getVersion()
+              + " does not match runtime version "
+              + actualVersion);
+    }
+
+    FlowNodeInstance<?> targetInstance =
+        resolveFlowNodeInstance(processInstance.getScope(), trigger.getElementInstanceIdPath());
+    if (targetInstance == null) {
+      throw new AuthorizationTokenException(
+          "Task-completion target path "
+              + trigger.getElementInstanceIdPath()
+              + " does not resolve to an active runtime task instance");
+    }
+
+    if (trigger instanceof UserTaskResponseTriggerDTO
+        && !(targetInstance instanceof UserTaskInstance)) {
+      throw new AuthorizationTokenException(
+          "Task-completion target path "
+              + trigger.getElementInstanceIdPath()
+              + " does not resolve to a user task");
+    }
+    if (trigger instanceof ExternalTaskResponseTriggerDTO
+        && !(targetInstance instanceof ExternalTaskInstance<?>)) {
+      throw new AuthorizationTokenException(
+          "Task-completion target path "
+              + trigger.getElementInstanceIdPath()
+              + " does not resolve to an external task");
+    }
+  }
+
+  private FlowNodeInstance<?> resolveFlowNodeInstance(
+      Scope scope, List<Long> elementInstanceIdPath) {
+    if (scope == null || elementInstanceIdPath == null || elementInstanceIdPath.isEmpty()) {
+      return null;
+    }
+    int subProcessLevel = scope.getSubProcessLevel();
+    if (subProcessLevel >= elementInstanceIdPath.size()) {
+      return null;
+    }
+    FlowNodeInstance<?> flowNodeInstance =
+        scope
+            .getFlowNodeInstances()
+            .getInstanceWithInstanceId(elementInstanceIdPath.get(subProcessLevel));
+    if (flowNodeInstance == null) {
+      return null;
+    }
+    if (subProcessLevel == elementInstanceIdPath.size() - 1) {
+      return flowNodeInstance;
+    }
+    if (flowNodeInstance instanceof io.taktx.engine.pi.model.WithScope withScope) {
+      return resolveFlowNodeInstance(withScope.getScope(), elementInstanceIdPath);
+    }
+    return null;
+  }
+
+  private UUID configuredNamespaceId() {
+    String configuredNamespace = taktConfiguration.getNamespace();
+    if (configuredNamespace == null || configuredNamespace.isBlank()) {
+      return null;
+    }
+    try {
+      return UUID.fromString(configuredNamespace);
+    } catch (IllegalArgumentException e) {
+      log.debug(
+          "Engine namespace '{}' is not a UUID namespaceId; skipping strict namespaceId comparison",
+          configuredNamespace);
+      return null;
+    }
+  }
+
+  private TokenClaims resolveValidatedJwtClaims(
+      Headers headers, ProcessInstanceTriggerEnvelope triggerEnvelope) {
+    if (triggerEnvelope == null || triggerEnvelope.trigger() == null) {
+      return null;
+    }
+    if (triggerEnvelope.validatedJwtClaims() != null) {
+      return triggerEnvelope.validatedJwtClaims();
+    }
+    if (!(triggerEnvelope.trigger() instanceof UserTaskResponseTriggerDTO)
+        && !(triggerEnvelope.trigger() instanceof ExternalTaskResponseTriggerDTO)) {
+      return null;
+    }
+    if (!engineAuthorizationService.isTaskCompletionAuthorizationActive(triggerEnvelope.trigger())) {
+      return null;
+    }
+    Header authHeader = headers != null ? headers.lastHeader(Constants.HEADER_AUTHORIZATION) : null;
+    if (authHeader == null || authHeader.value() == null || authHeader.value().length == 0) {
+      return null;
+    }
+    return engineAuthorizationService.validateJwtClaims(authHeader, triggerEnvelope.trigger());
   }
 
   public void handleEvent(EventSignalTriggerDTO trigger) {

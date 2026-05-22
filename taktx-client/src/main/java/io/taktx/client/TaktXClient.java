@@ -206,9 +206,11 @@ public class TaktXClient {
               consumerProps, topic, this::refreshWorkerSigningFunctionRegistration);
       runtimeConfigurationStore.awaitReady(java.time.Duration.ofSeconds(10));
       log.info(
-          "✅ RuntimeConfigurationStore ready — signingEnabled={} engineRequiresAuthorization={} replayProtectionMode={} replayProtectionRetentionMs={}",
+          "✅ RuntimeConfigurationStore ready — signingEnabled={} engineRequiresAuthorization={} engineRequiresExternalTaskAuthorization={} engineRequiresUserTaskAuthorization={} replayProtectionMode={} replayProtectionRetentionMs={}",
           RuntimeConfigurationHolder.isSigningEnabled(),
           RuntimeConfigurationHolder.isEngineRequiresAuthorization(),
+          RuntimeConfigurationHolder.isEngineRequiresExternalTaskAuthorization(),
+          RuntimeConfigurationHolder.isEngineRequiresUserTaskAuthorization(),
           RuntimeConfigurationHolder.getReplayProtectionMode(),
           RuntimeConfigurationHolder.getReplayProtectionRetentionMs());
     } catch (Exception e) {
@@ -561,15 +563,26 @@ public class TaktXClient {
 
   void refreshWorkerSigningFunctionRegistration() {
     boolean signingEnabled = RuntimeConfigurationHolder.isSigningEnabled();
-    boolean authRequired = RuntimeConfigurationHolder.isEngineRequiresAuthorization();
+    boolean commandAuthRequired = RuntimeConfigurationHolder.isEngineRequiresAuthorization();
+    boolean externalTaskAuthRequired =
+        RuntimeConfigurationHolder.isEngineRequiresExternalTaskAuthorization();
+    boolean userTaskAuthRequired =
+        RuntimeConfigurationHolder.isEngineRequiresUserTaskAuthorization();
+    boolean anyAuthRequired =
+        commandAuthRequired || externalTaskAuthRequired || userTaskAuthRequired;
 
     // ── Auth gate check ───────────────────────────────────────────────────
-    if (authRequired && authorizationTokenProvider == null) {
+    if (anyAuthRequired && authorizationTokenProvider == null) {
       log.warn(
-          "engineRequiresAuthorization=true in runtime config but no AuthorizationTokenProvider"
-              + " is configured — entry commands (startProcess / abortElementInstance / setVariable) sent"
-              + " without an explicit JWT token will be rejected by the engine."
-              + " Configure taktx.oidc.* or supply an AuthorizationTokenProvider.");
+          "Authorization is enabled in runtime config (engineRequiresAuthorization={}"
+              + ", engineRequiresExternalTaskAuthorization={}"
+              + ", engineRequiresUserTaskAuthorization={}) but no AuthorizationTokenProvider"
+              + " is configured — commands sent without an explicit JWT may be rejected by the engine."
+              + " Trusted Ed25519 signatures can still satisfy external-task/user-task authorization"
+              + " when signing is enabled. Configure taktx.oidc.* or supply an AuthorizationTokenProvider.",
+          commandAuthRequired,
+          externalTaskAuthRequired,
+          userTaskAuthRequired);
     }
 
     // ── Signing gate check ────────────────────────────────────────────────
@@ -577,10 +590,20 @@ public class TaktXClient {
       logWorkerSigningRegistrationState(
           "runtime-disabled",
           "Worker response signing inactive — runtime configuration signingEnabled=false");
-      if (authRequired) {
+      if (commandAuthRequired) {
         log.info(
             "engineRequiresAuthorization=true — entry commands require JWT"
                 + " (tx-auth); non-entry commands are accepted without Ed25519");
+      }
+      if (externalTaskAuthRequired) {
+        log.info(
+            "engineRequiresExternalTaskAuthorization=true — external task completions require JWT"
+                + " (tx-auth) when worker signing is inactive");
+      }
+      if (userTaskAuthRequired) {
+        log.info(
+            "engineRequiresUserTaskAuthorization=true — user task completions require JWT"
+                + " (tx-auth) when worker signing is inactive");
       }
       return;
     }
@@ -598,7 +621,7 @@ public class TaktXClient {
     }
 
     SigningServiceHolder.set(this::signWorkerPayload);
-    if (authRequired) {
+    if (commandAuthRequired) {
       // AND mode: entry commands need BOTH JWT (auth gate) AND Ed25519 (signing gate).
       // ENGINE-role keys satisfy both gates without JWT.
       logWorkerSigningRegistrationState(
@@ -990,6 +1013,67 @@ public class TaktXClient {
   }
 
   /**
+   * Completes a user task using the generated process-instance trigger publisher.
+   *
+   * @param processInstanceId The UUID of the process instance.
+   * @param elementInstanceIdPath The path of element instance IDs leading to the active user task.
+   * @param variables The variables to merge on completion.
+   */
+  public void completeUserTask(
+      UUID processInstanceId, List<Long> elementInstanceIdPath, VariablesDTO variables) {
+    processInstanceResponder.completeUserTask(processInstanceId, elementInstanceIdPath, variables);
+  }
+
+  /**
+   * Completes a user task, attaching a Platform Service authorization token.
+   *
+   * @param processInstanceId The UUID of the process instance.
+   * @param elementInstanceIdPath The path of element instance IDs leading to the active user task.
+   * @param variables The variables to merge on completion.
+   * @param authorizationToken RS256 JWT from the Platform Service, or {@code null}
+   */
+  public void completeUserTask(
+      UUID processInstanceId,
+      List<Long> elementInstanceIdPath,
+      VariablesDTO variables,
+      @Nullable String authorizationToken) {
+    processInstanceResponder.completeUserTask(
+        processInstanceId, elementInstanceIdPath, variables, authorizationToken);
+  }
+
+  /**
+   * Completes an external task using the generated process-instance trigger publisher.
+   *
+   * @param processInstanceId The UUID of the process instance.
+   * @param elementInstanceIdPath The path of element instance IDs leading to the active external
+   *     task.
+   * @param variables The variables to merge on completion.
+   */
+  public void completeExternalTask(
+      UUID processInstanceId, List<Long> elementInstanceIdPath, VariablesDTO variables) {
+    processInstanceResponder.completeExternalTask(
+        processInstanceId, elementInstanceIdPath, variables);
+  }
+
+  /**
+   * Completes an external task, attaching a Platform Service authorization token.
+   *
+   * @param processInstanceId The UUID of the process instance.
+   * @param elementInstanceIdPath The path of element instance IDs leading to the active external
+   *     task.
+   * @param variables The variables to merge on completion.
+   * @param authorizationToken RS256 JWT from the Platform Service, or {@code null}
+   */
+  public void completeExternalTask(
+      UUID processInstanceId,
+      List<Long> elementInstanceIdPath,
+      VariablesDTO variables,
+      @Nullable String authorizationToken) {
+    processInstanceResponder.completeExternalTask(
+        processInstanceId, elementInstanceIdPath, variables, authorizationToken);
+  }
+
+  /**
    * Set variables in a scope.
    *
    * @param processInstanceId The UUID of the process instance.
@@ -1311,7 +1395,10 @@ public class TaktXClient {
               new ProtoSigningSerializer<>(ProcessInstanceTriggerProtoMapper::toProto));
 
       ProcessInstanceResponder externalTaskResponder =
-          new ProcessInstanceResponder(taktPropertiesHelper, processInstanceTriggerEmitter);
+          new ProcessInstanceResponder(
+              taktPropertiesHelper,
+              processInstanceTriggerEmitter,
+              effectiveAuthorizationTokenProvider);
 
       ParameterResolverFactory clientParameterResolverFactory =
           this.parameterResolverFactory != null
@@ -1341,7 +1428,7 @@ public class TaktXClient {
       }
       if (effectiveAuthorizationTokenProvider != null) {
         log.info(
-            "Client command authorization configured via provider={} for start/abort commands",
+            "Client command authorization configured via provider={} for start/abort/set-variable/task-completion commands",
             effectiveAuthorizationTokenProvider.getClass().getSimpleName());
       }
       return client;

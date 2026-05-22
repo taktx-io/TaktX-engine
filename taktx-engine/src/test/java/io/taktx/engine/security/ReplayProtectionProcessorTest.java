@@ -19,8 +19,12 @@ import io.taktx.dto.DlqReasonCode;
 import io.taktx.dto.GlobalConfigurationDTO;
 import io.taktx.dto.ProcessDefinitionKey;
 import io.taktx.dto.ProcessInstanceDlqEntryDTO;
+import io.taktx.dto.ProcessInstanceTriggerDTO;
 import io.taktx.dto.ReplayProtectionMode;
 import io.taktx.dto.StartCommandDTO;
+import io.taktx.dto.UserTaskResponseResultDTO;
+import io.taktx.dto.UserTaskResponseTriggerDTO;
+import io.taktx.dto.UserTaskResponseType;
 import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.config.GlobalConfigStore;
 import io.taktx.engine.config.TaktConfiguration;
@@ -70,6 +74,18 @@ class ReplayProtectionProcessorTest {
 
     harness.pipe(processInstanceId, jwt);
     harness.pipe(processInstanceId, jwt);
+
+    assertThat(harness.outputQueueSize()).isEqualTo(1);
+  }
+
+  @Test
+  void compatMode_rejectsDuplicateAuditId_forJwtBackedUserTaskCompletion() throws Exception {
+    TestHarness harness = createHarness(ReplayProtectionMode.COMPAT, 600_000L, true);
+    UUID processInstanceId = UUID.randomUUID();
+    String jwt = harness.buildJwt("USER_TASK_COMPLETE", "audit-user-task-1");
+
+    harness.pipe(processInstanceId, userTaskResponse(processInstanceId), jwt);
+    harness.pipe(processInstanceId, userTaskResponse(processInstanceId), jwt);
 
     assertThat(harness.outputQueueSize()).isEqualTo(1);
   }
@@ -298,13 +314,16 @@ class ReplayProtectionProcessorTest {
       AtomicLong nowMs) {
 
     private void pipe(UUID processInstanceId, String jwt) {
+      pipe(processInstanceId, startCommand(processInstanceId), jwt);
+    }
+
+    private void pipe(UUID processInstanceId, ProcessInstanceTriggerDTO trigger, String jwt) {
       RecordHeaders headers = new RecordHeaders();
       headers.add(Constants.HEADER_AUTHORIZATION, jwt.getBytes(StandardCharsets.UTF_8));
       inputTopic.pipeInput(
           new TestRecord<>(
               processInstanceId,
-              new ProcessInstanceTriggerEnvelope(
-                  new byte[0], startCommand(processInstanceId), false, null),
+              new ProcessInstanceTriggerEnvelope(new byte[0], trigger, false, null),
               headers,
               Instant.ofEpochMilli(nowMs.get())));
     }
@@ -328,13 +347,17 @@ class ReplayProtectionProcessorTest {
     }
 
     private String buildJwt(String auditId) {
+      return buildJwt("START", auditId);
+    }
+
+    private String buildJwt(String action, String auditId) {
       return Jwts.builder()
           .header()
           .keyId(PLATFORM_KID)
           .and()
           .subject("user-replay")
           .issuer(ISSUER)
-          .claim("action", "START")
+          .claim("action", action)
           .claim("version", -1)
           .claim("namespaceId", UUID.randomUUID().toString())
           .claim("auditId", auditId)
@@ -352,6 +375,14 @@ class ReplayProtectionProcessorTest {
           new ProcessDefinitionKey("proc", -1),
           VariablesDTO.empty());
     }
+  }
+
+  private static UserTaskResponseTriggerDTO userTaskResponse(UUID processInstanceId) {
+    return new UserTaskResponseTriggerDTO(
+        processInstanceId,
+        java.util.List.of(1L),
+        new UserTaskResponseResultDTO(UserTaskResponseType.COMPLETED, null, null),
+        VariablesDTO.empty());
   }
 
   private static final class TestClock extends Clock {

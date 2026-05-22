@@ -33,6 +33,9 @@ import io.taktx.dto.SigningKeyDTO.KeyStatus;
 import io.taktx.dto.StartCommandDTO;
 import io.taktx.dto.TimeBucket;
 import io.taktx.dto.TopicMetaDTO;
+import io.taktx.dto.UserTaskResponseResultDTO;
+import io.taktx.dto.UserTaskResponseTriggerDTO;
+import io.taktx.dto.UserTaskResponseType;
 import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.config.GlobalConfigStore;
 import io.taktx.engine.config.TaktConfiguration;
@@ -166,6 +169,69 @@ class EngineAuthorizationServiceTest {
         .isEqualTo(CommandTrustVerificationResult.JWT_AUTHORIZED);
     assertThat(result.getTrusted()).isTrue();
     assertThat(result.getUserId()).isEqualTo("user-1");
+    assertThat(result.getIssuer()).isEqualTo(ISSUER);
+  }
+
+  @Test
+  void validToken_userTaskCompletion_returnsJwtMetadata() {
+    globalConfigStore.update(userTaskAuthorizationConfig(false));
+
+    String jwt =
+        buildJwt(
+            "USER_TASK_COMPLETE", null, -1, UUID.randomUUID().toString(), "user-1", futureExpiry());
+
+    CommandTrustMetadataDTO result =
+        service.authorize(headersWithAuth(jwt), envelope(userTaskResponseTrigger()));
+
+    assertThat(result.getAuthMethod()).isEqualTo(CommandAuthMethod.JWT);
+    assertThat(result.getVerificationResult())
+        .isEqualTo(CommandTrustVerificationResult.JWT_AUTHORIZED);
+    assertThat(result.getTrusted()).isTrue();
+    assertThat(result.getUserId()).isEqualTo("user-1");
+    assertThat(result.getIssuer()).isEqualTo(ISSUER);
+  }
+
+  @Test
+  void validToken_externalTaskCompletion_returnsJwtMetadata() {
+    globalConfigStore.update(externalTaskAuthorizationConfig(false));
+
+    String jwt =
+        buildJwt(
+            "EXTERNAL_TASK_COMPLETE",
+            null,
+            -1,
+            UUID.randomUUID().toString(),
+            "user-1",
+            futureExpiry());
+
+    CommandTrustMetadataDTO result =
+        service.authorize(headersWithAuth(jwt), envelope(externalTaskResponseTrigger()));
+
+    assertThat(result.getAuthMethod()).isEqualTo(CommandAuthMethod.JWT);
+    assertThat(result.getVerificationResult())
+        .isEqualTo(CommandTrustVerificationResult.JWT_AUTHORIZED);
+    assertThat(result.getTrusted()).isTrue();
+    assertThat(result.getUserId()).isEqualTo("user-1");
+    assertThat(result.getIssuer()).isEqualTo(ISSUER);
+  }
+
+  @Test
+  void validToken_userTaskCompletion_acceptsServiceAccountSubjectAsOpaqueString() {
+    globalConfigStore.update(userTaskAuthorizationConfig(false));
+
+    String jwt =
+        buildJwt(
+            "USER_TASK_COMPLETE",
+            null,
+            -1,
+            UUID.randomUUID().toString(),
+            "service-account://console/backend",
+            futureExpiry());
+
+    CommandTrustMetadataDTO result =
+        service.authorize(headersWithAuth(jwt), envelope(userTaskResponseTrigger()));
+
+    assertThat(result.getUserId()).isEqualTo("service-account://console/backend");
     assertThat(result.getIssuer()).isEqualTo(ISSUER);
   }
 
@@ -514,7 +580,7 @@ class EngineAuthorizationServiceTest {
 
   @Test
   void nonEntryTrigger_clientSignedExternalTaskResponse_returnsSignerMetadata() {
-    globalConfigStore.update(authorizationConfig());
+    globalConfigStore.update(externalTaskAuthorizationConfig(false));
 
     String keyId = "worker-test-001";
     when(signingKeysStore.get(keyId))
@@ -731,40 +797,170 @@ class EngineAuthorizationServiceTest {
         .hasMessageContaining("action");
   }
 
+  @Test
+  void userTaskCompletion_wrongAction_throwsAuthorizationTokenException() {
+    globalConfigStore.update(userTaskAuthorizationConfig(false));
+
+    String jwt = buildJwt("START", null, -1, UUID.randomUUID().toString(), futureExpiry());
+
+    assertThatThrownBy(
+            () -> service.authorize(headersWithAuth(jwt), envelope(userTaskResponseTrigger())))
+        .isInstanceOf(AuthorizationTokenException.class)
+        .hasMessageContaining("USER_TASK_COMPLETE");
+  }
+
+  @Test
+  void userTaskCompletion_missingJwt_authRequired_throws() {
+    globalConfigStore.update(userTaskAuthorizationConfig(false));
+
+    assertThatThrownBy(
+            () -> service.authorize(new RecordHeaders(), envelope(userTaskResponseTrigger())))
+        .isInstanceOf(AuthorizationTokenException.class)
+        .hasMessageContaining("tx-auth")
+        .hasMessageContaining("tx-sig");
+  }
+
+  @Test
+  void userTaskCompletion_missingSignature_whenSigningEnabled_throws() {
+    globalConfigStore.update(userTaskAuthorizationConfig(true));
+
+    String jwt =
+        buildJwt("USER_TASK_COMPLETE", null, -1, UUID.randomUUID().toString(), futureExpiry());
+
+    assertThatThrownBy(
+            () -> service.authorize(headersWithAuth(jwt), envelope(userTaskResponseTrigger())))
+        .isInstanceOf(AuthorizationTokenException.class)
+        .hasMessageContaining("tx-sig");
+  }
+
+  @Test
+  void externalTaskCompletion_clientSignatureWithoutJwt_authRequired_isAccepted() {
+    globalConfigStore.update(externalTaskAuthorizationConfig(false));
+
+    String keyId = "worker-task-complete-key";
+    when(signingKeysStore.get(keyId))
+        .thenReturn(
+            SigningKeyDTO.builder()
+                .keyId(keyId)
+                .publicKeyBase64("dummy")
+                .status(KeyStatus.ACTIVE)
+                .owner("worker-billing")
+                .role(KeyRole.CLIENT)
+                .build());
+
+    CommandTrustMetadataDTO result =
+        service.authorize(
+            headersWithSignature(keyId),
+            new ProcessInstanceTriggerEnvelope(
+                new byte[0], externalTaskResponseTrigger(), true, keyId));
+
+    assertThat(result.getAuthMethod()).isEqualTo(CommandAuthMethod.ED25519);
+    assertThat(result.getVerificationResult())
+        .isEqualTo(CommandTrustVerificationResult.SIGNATURE_VERIFIED);
+    assertThat(result.getSignerKeyId()).isEqualTo(keyId);
+  }
+
+  @Test
+  void commandAuthorizationFlagDoesNotApplyToUserTaskCompletion() {
+    globalConfigStore.update(commandAuthorizationOnlyConfig());
+
+    assertThat(service.authorize(new RecordHeaders(), envelope(userTaskResponseTrigger())))
+        .isNull();
+  }
+
+  @Test
+  void commandAuthorizationFlagDoesNotApplyToExternalTaskCompletion() {
+    globalConfigStore.update(commandAuthorizationOnlyConfig());
+
+    assertThat(service.authorize(new RecordHeaders(), envelope(externalTaskResponseTrigger())))
+        .isNull();
+  }
+
+  @Test
+  void taskCompletionAuthorizationHelper_externalTaskReflectsItsOwnGateOnly() {
+    globalConfigStore.update(externalTaskAuthorizationConfig(false));
+    assertThat(service.isTaskCompletionAuthorizationActive(externalTaskResponseTrigger())).isTrue();
+
+    globalConfigStore.update(commandAuthorizationOnlyConfig());
+    assertThat(service.isTaskCompletionAuthorizationActive(externalTaskResponseTrigger())).isFalse();
+  }
+
+  @Test
+  void taskCompletionAuthorizationHelper_userTaskReflectsItsOwnGateOnly() {
+    globalConfigStore.update(userTaskAuthorizationConfig(false));
+    assertThat(service.isTaskCompletionAuthorizationActive(userTaskResponseTrigger())).isTrue();
+
+    globalConfigStore.update(commandAuthorizationOnlyConfig());
+    assertThat(service.isTaskCompletionAuthorizationActive(userTaskResponseTrigger())).isFalse();
+  }
+
+  @Test
+  void taskCompletionAuthorizationHelper_nonTaskTriggerReturnsFalse() {
+    globalConfigStore.update(authorizationConfig());
+
+    assertThat(service.isTaskCompletionAuthorizationActive(startCommand("proc", -1))).isFalse();
+  }
+
   private GlobalConfigurationDTO authorizationConfig() {
-    return config(true, false, ReplayProtectionMode.COMPAT);
+    return config(true, true, true, false, ReplayProtectionMode.COMPAT);
   }
 
   /** Config with only {@code signingEnabled=true} — used for topic-meta and schedule-commands. */
   private GlobalConfigurationDTO signingConfig() {
-    return config(false, true, ReplayProtectionMode.COMPAT);
+    return config(false, false, false, true, ReplayProtectionMode.COMPAT);
   }
 
   private GlobalConfigurationDTO config(boolean signingEnabled) {
-    return config(true, signingEnabled, ReplayProtectionMode.COMPAT);
+    return config(true, true, true, signingEnabled, ReplayProtectionMode.COMPAT);
   }
 
   private GlobalConfigurationDTO config(
       boolean engineRequiresAuthorization,
+      boolean engineRequiresExternalTaskAuthorization,
+      boolean engineRequiresUserTaskAuthorization,
       boolean signingEnabled,
       ReplayProtectionMode replayProtectionMode) {
     return GlobalConfigurationDTO.builder()
         .engineRequiresAuthorization(engineRequiresAuthorization)
+        .engineRequiresExternalTaskAuthorization(engineRequiresExternalTaskAuthorization)
+        .engineRequiresUserTaskAuthorization(engineRequiresUserTaskAuthorization)
         .signingEnabled(signingEnabled)
         .replayProtectionMode(replayProtectionMode)
         .build();
+  }
+
+  private GlobalConfigurationDTO commandAuthorizationOnlyConfig() {
+    return config(true, false, false, false, ReplayProtectionMode.COMPAT);
+  }
+
+  private GlobalConfigurationDTO userTaskAuthorizationConfig(boolean signingEnabled) {
+    return config(false, false, true, signingEnabled, ReplayProtectionMode.COMPAT);
+  }
+
+  private GlobalConfigurationDTO externalTaskAuthorizationConfig(boolean signingEnabled) {
+    return config(false, true, false, signingEnabled, ReplayProtectionMode.COMPAT);
   }
 
   // ── helpers ────────────────────────────────────────────────────────────────
 
   private String buildJwt(
       String action, String processDefinitionId, int version, String auditId, Date expiry) {
+    return buildJwt(action, processDefinitionId, version, auditId, "user-1", expiry);
+  }
+
+  private String buildJwt(
+      String action,
+      String processDefinitionId,
+      int version,
+      String auditId,
+      String subject,
+      Date expiry) {
     var builder =
         Jwts.builder()
             .header()
             .keyId(PLATFORM_KID)
             .and()
-            .subject("user-1")
+            .subject(subject)
             .issuer(ISSUER)
             .claim("action", action)
             .claim("version", version)
@@ -836,6 +1032,22 @@ class EngineAuthorizationServiceTest {
         List.of(1L),
         new ExternalTaskResponseResultDTO(ExternalTaskResponseType.SUCCESS, true, null, null, 0L),
         VariablesDTO.empty());
+  }
+
+  private UserTaskResponseTriggerDTO userTaskResponseTrigger() {
+    return new UserTaskResponseTriggerDTO(
+        UUID.randomUUID(),
+        List.of(1L),
+        new UserTaskResponseResultDTO(UserTaskResponseType.COMPLETED, null, null),
+        VariablesDTO.empty());
+  }
+
+  private ProcessInstanceTriggerEnvelope envelope(ExternalTaskResponseTriggerDTO trigger) {
+    return new ProcessInstanceTriggerEnvelope(new byte[0], trigger, false, null);
+  }
+
+  private ProcessInstanceTriggerEnvelope envelope(UserTaskResponseTriggerDTO trigger) {
+    return new ProcessInstanceTriggerEnvelope(new byte[0], trigger, false, null);
   }
 
   private SetVariableTriggerDTO setVariableTrigger() {

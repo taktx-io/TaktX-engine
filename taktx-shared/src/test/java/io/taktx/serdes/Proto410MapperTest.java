@@ -52,6 +52,8 @@ class Proto410MapperTest {
                 GlobalConfigurationDTO.builder()
                     .signingEnabled(true)
                     .engineRequiresAuthorization(true)
+                    .engineRequiresExternalTaskAuthorization(true)
+                    .engineRequiresUserTaskAuthorization(true)
                     .trustedKeyIds(List.of("worker-a", "worker-b"))
                     .replayProtectionMode(ReplayProtectionMode.STRICT)
                     .replayProtectionRetentionMs(123_456L)

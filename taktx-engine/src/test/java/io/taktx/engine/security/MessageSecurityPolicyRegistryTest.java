@@ -70,6 +70,25 @@ class MessageSecurityPolicyRegistryTest {
   }
 
   @Test
+  void taskCompletionPolicies_useDedicatedAuthorizationScopes() {
+    String processInstanceTopic = Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName();
+
+    MessageSecurityPolicy externalTaskPolicy =
+        registry.resolve(processInstanceTopic, ExternalTaskResponseTriggerDTO.class);
+    MessageSecurityPolicy userTaskPolicy =
+        registry.resolve(processInstanceTopic, UserTaskResponseTriggerDTO.class);
+
+    assertTaskCompletionPolicy(
+        externalTaskPolicy,
+        ExternalTaskResponseTriggerDTO.class,
+        MessageSecurityPolicy.AuthorizationScope.EXTERNAL_TASKS);
+    assertTaskCompletionPolicy(
+        userTaskPolicy,
+        UserTaskResponseTriggerDTO.class,
+        MessageSecurityPolicy.AuthorizationScope.USER_TASKS);
+  }
+
+  @Test
   void controlPlanePolicies_requireExpectedRoles() {
     MessageSecurityPolicy schedulePolicy =
         registry.resolve(Topics.SCHEDULE_COMMANDS.getTopicName(), MessageScheduleDTO.class);
@@ -103,10 +122,26 @@ class MessageSecurityPolicyRegistryTest {
   private static void assertEntryCommandPolicy(
       MessageSecurityPolicy policy, Class<?> expectedMessageClass) {
     assertThat(policy.messageClass()).isEqualTo(expectedMessageClass);
+    assertThat(policy.authorizationScope())
+        .isEqualTo(MessageSecurityPolicy.AuthorizationScope.COMMANDS);
     assertThat(policy.requireSignature()).isTrue();
     assertThat(policy.requireReplay()).isTrue();
     assertThat(policy.requireJwt()).isTrue();
     assertThat(policy.allowEngineSignatureAsJwtEquivalent()).isTrue();
+    assertThat(policy.minimumAllowedRole()).isEqualTo(KeyRole.CLIENT);
+  }
+
+  private static void assertTaskCompletionPolicy(
+      MessageSecurityPolicy policy,
+      Class<?> expectedMessageClass,
+      MessageSecurityPolicy.AuthorizationScope expectedScope) {
+    assertThat(policy.messageClass()).isEqualTo(expectedMessageClass);
+    assertThat(policy.authorizationScope()).isEqualTo(expectedScope);
+    assertThat(policy.requireSignature()).isTrue();
+    assertThat(policy.requireReplay()).isTrue();
+    assertThat(policy.requireJwt()).isTrue();
+    assertThat(policy.allowSignatureAsJwtEquivalent()).isTrue();
+    assertThat(policy.allowEngineSignatureAsJwtEquivalent()).isFalse();
     assertThat(policy.minimumAllowedRole()).isEqualTo(KeyRole.CLIENT);
   }
 
