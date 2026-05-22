@@ -882,7 +882,8 @@ class EngineAuthorizationServiceTest {
     assertThat(service.isTaskCompletionAuthorizationActive(externalTaskResponseTrigger())).isTrue();
 
     globalConfigStore.update(commandAuthorizationOnlyConfig());
-    assertThat(service.isTaskCompletionAuthorizationActive(externalTaskResponseTrigger())).isFalse();
+    assertThat(service.isTaskCompletionAuthorizationActive(externalTaskResponseTrigger()))
+        .isFalse();
   }
 
   @Test

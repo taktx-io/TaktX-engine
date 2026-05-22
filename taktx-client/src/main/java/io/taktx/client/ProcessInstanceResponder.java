@@ -165,12 +165,114 @@ public class ProcessInstanceResponder {
       List<Long> elementInstanceIdPath,
       VariablesDTO variables,
       @Nullable String authorizationToken) {
+    sendUserTaskResponse(
+        processInstanceId,
+        elementInstanceIdPath,
+        new UserTaskResponseResultDTO(UserTaskResponseType.COMPLETED, null, null),
+        variables,
+        authorizationToken);
+  }
+
+  /**
+   * Completes a user task with a BPMN error without an explicit authorization token.
+   *
+   * @param processInstanceId process instance ID owning the user task
+   * @param elementInstanceIdPath path identifying the active user-task instance
+   * @param code BPMN error code
+   * @param message BPMN error message
+   * @param variables variables to merge with the BPMN error response
+   */
+  public void errorUserTask(
+      UUID processInstanceId,
+      List<Long> elementInstanceIdPath,
+      String code,
+      String message,
+      VariablesDTO variables) {
+    errorUserTask(processInstanceId, elementInstanceIdPath, code, message, variables, null);
+  }
+
+  /**
+   * Completes a user task with a BPMN error, optionally attaching a Platform Service authorization
+   * token.
+   *
+   * @param processInstanceId process instance ID owning the user task
+   * @param elementInstanceIdPath path identifying the active user-task instance
+   * @param code BPMN error code
+   * @param message BPMN error message
+   * @param variables variables to merge with the BPMN error response
+   * @param authorizationToken RS256 JWT from the Platform Service, or {@code null}
+   */
+  public void errorUserTask(
+      UUID processInstanceId,
+      List<Long> elementInstanceIdPath,
+      String code,
+      String message,
+      VariablesDTO variables,
+      @Nullable String authorizationToken) {
+    sendUserTaskResponse(
+        processInstanceId,
+        elementInstanceIdPath,
+        new UserTaskResponseResultDTO(UserTaskResponseType.ERROR, code, message),
+        variables,
+        authorizationToken);
+  }
+
+  /**
+   * Completes a user task with a BPMN escalation without an explicit authorization token.
+   *
+   * @param processInstanceId process instance ID owning the user task
+   * @param elementInstanceIdPath path identifying the active user-task instance
+   * @param code BPMN escalation code
+   * @param message BPMN escalation message
+   * @param variables variables to merge with the BPMN escalation response
+   */
+  public void escalateUserTask(
+      UUID processInstanceId,
+      List<Long> elementInstanceIdPath,
+      String code,
+      String message,
+      VariablesDTO variables) {
+    escalateUserTask(processInstanceId, elementInstanceIdPath, code, message, variables, null);
+  }
+
+  /**
+   * Completes a user task with a BPMN escalation, optionally attaching a Platform Service
+   * authorization token.
+   *
+   * @param processInstanceId process instance ID owning the user task
+   * @param elementInstanceIdPath path identifying the active user-task instance
+   * @param code BPMN escalation code
+   * @param message BPMN escalation message
+   * @param variables variables to merge with the BPMN escalation response
+   * @param authorizationToken RS256 JWT from the Platform Service, or {@code null}
+   */
+  public void escalateUserTask(
+      UUID processInstanceId,
+      List<Long> elementInstanceIdPath,
+      String code,
+      String message,
+      VariablesDTO variables,
+      @Nullable String authorizationToken) {
+    sendUserTaskResponse(
+        processInstanceId,
+        elementInstanceIdPath,
+        new UserTaskResponseResultDTO(UserTaskResponseType.ESCALATION, code, message),
+        variables,
+        authorizationToken);
+  }
+
+  private void sendUserTaskResponse(
+      UUID processInstanceId,
+      List<Long> elementInstanceIdPath,
+      UserTaskResponseResultDTO responseResult,
+      VariablesDTO variables,
+      @Nullable String authorizationToken) {
     UserTaskResponseTriggerDTO trigger =
         new UserTaskResponseTriggerDTO(
             processInstanceId,
             elementInstanceIdPath,
             UUID.randomUUID().toString(),
-            new UserTaskResponseResultDTO(UserTaskResponseType.COMPLETED, null, null),
+            responseResult,
             variables == null ? VariablesDTO.empty() : variables);
     send(
         trigger,
@@ -203,13 +305,115 @@ public class ProcessInstanceResponder {
       List<Long> elementInstanceIdPath,
       VariablesDTO variables,
       @Nullable String authorizationToken) {
+    sendExternalTaskResponse(
+        processInstanceId,
+        elementInstanceIdPath,
+        new ExternalTaskResponseResultDTO(ExternalTaskResponseType.SUCCESS, true, null, null, 0L),
+        variables,
+        authorizationToken);
+  }
+
+  /**
+   * Completes an external task with a BPMN error without an explicit authorization token.
+   *
+   * @param processInstanceId process instance ID owning the external task
+   * @param elementInstanceIdPath path identifying the active external-task instance
+   * @param code BPMN error code
+   * @param message BPMN error message
+   * @param variables variables to merge with the BPMN error response
+   */
+  public void errorExternalTask(
+      UUID processInstanceId,
+      List<Long> elementInstanceIdPath,
+      String code,
+      String message,
+      VariablesDTO variables) {
+    errorExternalTask(processInstanceId, elementInstanceIdPath, code, message, variables, null);
+  }
+
+  /**
+   * Completes an external task with a BPMN error, optionally attaching a Platform Service
+   * authorization token.
+   *
+   * @param processInstanceId process instance ID owning the external task
+   * @param elementInstanceIdPath path identifying the active external-task instance
+   * @param code BPMN error code
+   * @param message BPMN error message
+   * @param variables variables to merge with the BPMN error response
+   * @param authorizationToken RS256 JWT from the Platform Service, or {@code null}
+   */
+  public void errorExternalTask(
+      UUID processInstanceId,
+      List<Long> elementInstanceIdPath,
+      String code,
+      String message,
+      VariablesDTO variables,
+      @Nullable String authorizationToken) {
+    sendExternalTaskResponse(
+        processInstanceId,
+        elementInstanceIdPath,
+        new ExternalTaskResponseResultDTO(ExternalTaskResponseType.ERROR, false, code, message, 0L),
+        variables,
+        authorizationToken);
+  }
+
+  /**
+   * Completes an external task with a BPMN escalation without an explicit authorization token.
+   *
+   * @param processInstanceId process instance ID owning the external task
+   * @param elementInstanceIdPath path identifying the active external-task instance
+   * @param code BPMN escalation code
+   * @param message BPMN escalation message
+   * @param variables variables to merge with the BPMN escalation response
+   */
+  public void escalateExternalTask(
+      UUID processInstanceId,
+      List<Long> elementInstanceIdPath,
+      String code,
+      String message,
+      VariablesDTO variables) {
+    escalateExternalTask(processInstanceId, elementInstanceIdPath, code, message, variables, null);
+  }
+
+  /**
+   * Completes an external task with a BPMN escalation, optionally attaching a Platform Service
+   * authorization token.
+   *
+   * @param processInstanceId process instance ID owning the external task
+   * @param elementInstanceIdPath path identifying the active external-task instance
+   * @param code BPMN escalation code
+   * @param message BPMN escalation message
+   * @param variables variables to merge with the BPMN escalation response
+   * @param authorizationToken RS256 JWT from the Platform Service, or {@code null}
+   */
+  public void escalateExternalTask(
+      UUID processInstanceId,
+      List<Long> elementInstanceIdPath,
+      String code,
+      String message,
+      VariablesDTO variables,
+      @Nullable String authorizationToken) {
+    sendExternalTaskResponse(
+        processInstanceId,
+        elementInstanceIdPath,
+        new ExternalTaskResponseResultDTO(
+            ExternalTaskResponseType.ESCALATION, true, code, message, 0L),
+        variables,
+        authorizationToken);
+  }
+
+  private void sendExternalTaskResponse(
+      UUID processInstanceId,
+      List<Long> elementInstanceIdPath,
+      ExternalTaskResponseResultDTO responseResult,
+      VariablesDTO variables,
+      @Nullable String authorizationToken) {
     ExternalTaskResponseTriggerDTO trigger =
         new ExternalTaskResponseTriggerDTO(
             processInstanceId,
             elementInstanceIdPath,
             UUID.randomUUID().toString(),
-            new ExternalTaskResponseResultDTO(
-                ExternalTaskResponseType.SUCCESS, true, null, null, 0L),
+            responseResult,
             variables == null ? VariablesDTO.empty() : variables);
     send(
         trigger,

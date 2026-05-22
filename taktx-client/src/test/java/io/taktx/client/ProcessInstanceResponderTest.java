@@ -15,11 +15,16 @@ import static org.mockito.Mockito.verify;
 import io.taktx.client.auth.AuthorizationTokenProvider;
 import io.taktx.client.auth.CommandAuthorizationScope;
 import io.taktx.dto.Constants;
+import io.taktx.dto.ExternalTaskResponseResultDTO;
 import io.taktx.dto.ExternalTaskResponseTriggerDTO;
+import io.taktx.dto.ExternalTaskResponseType;
 import io.taktx.dto.ProcessInstanceTriggerDTO;
+import io.taktx.dto.UserTaskResponseResultDTO;
 import io.taktx.dto.UserTaskResponseTriggerDTO;
+import io.taktx.dto.UserTaskResponseType;
 import io.taktx.dto.VariablesDTO;
 import io.taktx.util.TaktPropertiesHelper;
+import io.taktx.variables.Variables;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Properties;
@@ -54,12 +59,12 @@ class ProcessInstanceResponderTest {
     responder.completeUserTask(
         processInstanceId, List.of(10L, 20L), VariablesDTO.of("approved", true), "jwt-explicit");
 
-    ProducerRecord<UUID, ProcessInstanceTriggerDTO> record = capture();
-    assertThat(record.key()).isEqualTo(processInstanceId);
-    assertThat(record.value()).isInstanceOf(UserTaskResponseTriggerDTO.class);
-    assertThat(headerValue(record)).isEqualTo("jwt-explicit");
+    ProducerRecord<UUID, ProcessInstanceTriggerDTO> triggerRecord = capture();
+    assertThat(triggerRecord.key()).isEqualTo(processInstanceId);
+    assertThat(triggerRecord.value()).isInstanceOf(UserTaskResponseTriggerDTO.class);
+    assertThat(headerValue(triggerRecord)).isEqualTo("jwt-explicit");
 
-    UserTaskResponseTriggerDTO trigger = (UserTaskResponseTriggerDTO) record.value();
+    UserTaskResponseTriggerDTO trigger = (UserTaskResponseTriggerDTO) triggerRecord.value();
     assertThat(trigger.getMessageId()).isNotBlank();
     assertThat(trigger.getElementInstanceIdPath()).containsExactly(10L, 20L);
   }
@@ -79,12 +84,12 @@ class ProcessInstanceResponderTest {
     responder.completeExternalTask(
         processInstanceId, List.of(11L, 22L), VariablesDTO.of("status", "done"), null);
 
-    ProducerRecord<UUID, ProcessInstanceTriggerDTO> record = capture();
-    assertThat(record.key()).isEqualTo(processInstanceId);
-    assertThat(record.value()).isInstanceOf(ExternalTaskResponseTriggerDTO.class);
-    assertThat(headerValue(record)).isEqualTo("jwt-from-provider");
+    ProducerRecord<UUID, ProcessInstanceTriggerDTO> triggerRecord = capture();
+    assertThat(triggerRecord.key()).isEqualTo(processInstanceId);
+    assertThat(triggerRecord.value()).isInstanceOf(ExternalTaskResponseTriggerDTO.class);
+    assertThat(headerValue(triggerRecord)).isEqualTo("jwt-from-provider");
 
-    ExternalTaskResponseTriggerDTO trigger = (ExternalTaskResponseTriggerDTO) record.value();
+    ExternalTaskResponseTriggerDTO trigger = (ExternalTaskResponseTriggerDTO) triggerRecord.value();
     assertThat(trigger.getMessageId()).isNotBlank();
     assertThat(trigger.getElementInstanceIdPath()).containsExactly(11L, 22L);
   }
@@ -96,8 +101,145 @@ class ProcessInstanceResponderTest {
 
     responder.completeExternalTask(UUID.randomUUID(), List.of(1L), VariablesDTO.empty());
 
-    ProducerRecord<UUID, ProcessInstanceTriggerDTO> record = capture();
-    assertThat(record.headers().lastHeader(Constants.HEADER_AUTHORIZATION)).isNull();
+    ProducerRecord<UUID, ProcessInstanceTriggerDTO> triggerRecord = capture();
+    assertThat(triggerRecord.headers().lastHeader(Constants.HEADER_AUTHORIZATION)).isNull();
+  }
+
+  @Test
+  void errorUserTask_explicitTokenAddsAuthorizationHeaderAndErrorPayload() {
+    ProcessInstanceResponder responder =
+        new ProcessInstanceResponder(propertiesHelper, producer, null);
+    UUID processInstanceId = UUID.randomUUID();
+
+    responder.errorUserTask(
+        processInstanceId,
+        List.of(1L, 2L),
+        "USR-ERR-1",
+        "needs correction",
+        VariablesDTO.of("field", "email"),
+        "jwt-explicit");
+
+    ProducerRecord<UUID, ProcessInstanceTriggerDTO> triggerRecord = capture();
+    assertThat(triggerRecord.key()).isEqualTo(processInstanceId);
+    assertThat(triggerRecord.value()).isInstanceOf(UserTaskResponseTriggerDTO.class);
+    assertThat(headerValue(triggerRecord)).isEqualTo("jwt-explicit");
+
+    UserTaskResponseTriggerDTO trigger = (UserTaskResponseTriggerDTO) triggerRecord.value();
+    assertThat(trigger.getMessageId()).isNotBlank();
+    assertThat(trigger.getElementInstanceIdPath()).containsExactly(1L, 2L);
+    assertThat(Variables.toJavaObject(trigger.getVariables().get("field"))).isEqualTo("email");
+
+    UserTaskResponseResultDTO result = trigger.getUserTaskResponseResult();
+    assertThat(result.getResponseType()).isEqualTo(UserTaskResponseType.ERROR);
+    assertThat(result.getCode()).isEqualTo("USR-ERR-1");
+    assertThat(result.getMessage()).isEqualTo("needs correction");
+  }
+
+  @Test
+  void escalateUserTask_usesAuthorizationTokenProviderWhenExplicitTokenMissing() {
+    AuthorizationTokenProvider provider =
+        request -> {
+          assertThat(request.scope()).isEqualTo(CommandAuthorizationScope.USER_TASK_COMPLETE);
+          assertThat(request.elementInstanceIdPath()).containsExactly(5L, 6L);
+          return "jwt-from-provider";
+        };
+    ProcessInstanceResponder responder =
+        new ProcessInstanceResponder(propertiesHelper, producer, provider);
+    UUID processInstanceId = UUID.randomUUID();
+
+    responder.escalateUserTask(
+        processInstanceId,
+        List.of(5L, 6L),
+        "USR-ESC-1",
+        "supervisor review",
+        VariablesDTO.of("priority", "urgent"),
+        null);
+
+    ProducerRecord<UUID, ProcessInstanceTriggerDTO> triggerRecord = capture();
+    assertThat(triggerRecord.key()).isEqualTo(processInstanceId);
+    assertThat(triggerRecord.value()).isInstanceOf(UserTaskResponseTriggerDTO.class);
+    assertThat(headerValue(triggerRecord)).isEqualTo("jwt-from-provider");
+
+    UserTaskResponseTriggerDTO trigger = (UserTaskResponseTriggerDTO) triggerRecord.value();
+    assertThat(trigger.getMessageId()).isNotBlank();
+    assertThat(trigger.getElementInstanceIdPath()).containsExactly(5L, 6L);
+    assertThat(Variables.toJavaObject(trigger.getVariables().get("priority"))).isEqualTo("urgent");
+
+    UserTaskResponseResultDTO result = trigger.getUserTaskResponseResult();
+    assertThat(result.getResponseType()).isEqualTo(UserTaskResponseType.ESCALATION);
+    assertThat(result.getCode()).isEqualTo("USR-ESC-1");
+    assertThat(result.getMessage()).isEqualTo("supervisor review");
+  }
+
+  @Test
+  void errorExternalTask_explicitTokenAddsAuthorizationHeaderAndErrorPayload() {
+    ProcessInstanceResponder responder =
+        new ProcessInstanceResponder(propertiesHelper, producer, null);
+    UUID processInstanceId = UUID.randomUUID();
+
+    responder.errorExternalTask(
+        processInstanceId,
+        List.of(3L, 4L),
+        "ERR-42",
+        "business failure",
+        VariablesDTO.of("reason", "validation"),
+        "jwt-explicit");
+
+    ProducerRecord<UUID, ProcessInstanceTriggerDTO> triggerRecord = capture();
+    assertThat(triggerRecord.key()).isEqualTo(processInstanceId);
+    assertThat(triggerRecord.value()).isInstanceOf(ExternalTaskResponseTriggerDTO.class);
+    assertThat(headerValue(triggerRecord)).isEqualTo("jwt-explicit");
+
+    ExternalTaskResponseTriggerDTO trigger = (ExternalTaskResponseTriggerDTO) triggerRecord.value();
+    assertThat(trigger.getMessageId()).isNotBlank();
+    assertThat(trigger.getElementInstanceIdPath()).containsExactly(3L, 4L);
+    assertThat(Variables.toJavaObject(trigger.getVariables().get("reason")))
+        .isEqualTo("validation");
+
+    ExternalTaskResponseResultDTO result = trigger.getExternalTaskResponseResult();
+    assertThat(result.getResponseType()).isEqualTo(ExternalTaskResponseType.ERROR);
+    assertThat(result.getAllowRetry()).isFalse();
+    assertThat(result.getCode()).isEqualTo("ERR-42");
+    assertThat(result.getMessage()).isEqualTo("business failure");
+    assertThat(result.getTimeout()).isZero();
+  }
+
+  @Test
+  void escalateExternalTask_usesAuthorizationTokenProviderWhenExplicitTokenMissing() {
+    AuthorizationTokenProvider provider =
+        request -> {
+          assertThat(request.scope()).isEqualTo(CommandAuthorizationScope.EXTERNAL_TASK_COMPLETE);
+          assertThat(request.elementInstanceIdPath()).containsExactly(7L, 8L);
+          return "jwt-from-provider";
+        };
+    ProcessInstanceResponder responder =
+        new ProcessInstanceResponder(propertiesHelper, producer, provider);
+    UUID processInstanceId = UUID.randomUUID();
+
+    responder.escalateExternalTask(
+        processInstanceId,
+        List.of(7L, 8L),
+        "ESC-9",
+        "needs escalation",
+        VariablesDTO.of("priority", "high"),
+        null);
+
+    ProducerRecord<UUID, ProcessInstanceTriggerDTO> triggerRecord = capture();
+    assertThat(triggerRecord.key()).isEqualTo(processInstanceId);
+    assertThat(triggerRecord.value()).isInstanceOf(ExternalTaskResponseTriggerDTO.class);
+    assertThat(headerValue(triggerRecord)).isEqualTo("jwt-from-provider");
+
+    ExternalTaskResponseTriggerDTO trigger = (ExternalTaskResponseTriggerDTO) triggerRecord.value();
+    assertThat(trigger.getMessageId()).isNotBlank();
+    assertThat(trigger.getElementInstanceIdPath()).containsExactly(7L, 8L);
+    assertThat(Variables.toJavaObject(trigger.getVariables().get("priority"))).isEqualTo("high");
+
+    ExternalTaskResponseResultDTO result = trigger.getExternalTaskResponseResult();
+    assertThat(result.getResponseType()).isEqualTo(ExternalTaskResponseType.ESCALATION);
+    assertThat(result.getAllowRetry()).isTrue();
+    assertThat(result.getCode()).isEqualTo("ESC-9");
+    assertThat(result.getMessage()).isEqualTo("needs escalation");
+    assertThat(result.getTimeout()).isZero();
   }
 
   @Test
@@ -122,9 +264,9 @@ class ProcessInstanceResponderTest {
     return captor.getValue();
   }
 
-  private String headerValue(ProducerRecord<UUID, ProcessInstanceTriggerDTO> record) {
+  private String headerValue(ProducerRecord<UUID, ProcessInstanceTriggerDTO> triggerRecord) {
     return new String(
-        record.headers().lastHeader(Constants.HEADER_AUTHORIZATION).value(),
+        triggerRecord.headers().lastHeader(Constants.HEADER_AUTHORIZATION).value(),
         StandardCharsets.UTF_8);
   }
 }

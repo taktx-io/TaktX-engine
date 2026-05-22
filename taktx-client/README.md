@@ -425,6 +425,48 @@ client.completeExternalTask(
     jwt);
 ```
 
+You can also publish BPMN error and escalation outcomes directly:
+
+```java
+client.errorUserTask(
+    processInstanceId,
+    List.of(1001L, 1002L),
+    "USR-REJECTED",
+    "User rejected the request",
+    VariablesDTO.of("approved", false),
+    jwt);
+
+client.escalateUserTask(
+    processInstanceId,
+    List.of(1001L, 1002L),
+    "USR-SUPERVISOR",
+    "Supervisor review required",
+    VariablesDTO.of("reviewLevel", "supervisor"),
+    jwt);
+
+client.errorExternalTask(
+    processInstanceId,
+    List.of(2001L, 2002L),
+    "PAYMENT-FAILED",
+    "Payment provider rejected the request",
+    VariablesDTO.of("providerStatus", "DECLINED"),
+    jwt);
+
+client.escalateExternalTask(
+    processInstanceId,
+    List.of(2001L, 2002L),
+    "PAYMENT-MANUAL-REVIEW",
+    "Manual payment review required",
+    VariablesDTO.of("riskScore", 87),
+    jwt);
+```
+
+Notes:
+
+- `errorUserTask(...)` and `errorExternalTask(...)` publish BPMN error responses.
+- `escalateUserTask(...)` and `escalateExternalTask(...)` publish BPMN escalation responses.
+- Direct external-task errors are sent with `allowRetry=false`.
+
 Overloads without the final JWT parameter are also available and will use the configured
 `AuthorizationTokenProvider` when present.
 
