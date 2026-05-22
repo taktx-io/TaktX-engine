@@ -44,9 +44,9 @@ TaktX has **two orthogonal security mechanisms** that can be enabled or disabled
 | Mechanism | Controlled by | Applies to | Always enforced? |
 |---|---|---|---|
 | **Ed25519 message signing** | `signingEnabled` | Engine outbound records, worker responses, engine-internal continuations | No — opt-in per config topic |
-| **RS256 JWT command authorization** | `engineRequiresAuthorization` | `StartCommandDTO`, `AbortTriggerDTO`, `SetVariableTriggerDTO` (entry commands) | No — opt-in per config topic |
+| **RS256 JWT command authorization** | `engineRequiresAuthorization` | `StartCommandDTO`, `AbortTriggerDTO`, `SetVariableTriggerDTO`, `UserTaskResponseTriggerDTO`, `ExternalTaskResponseTriggerDTO` | No — opt-in per config topic |
 
-Replay protection now has two layers: durable `auditId`-based replay protection for JWT-bearing entry commands and short-lived duplicate suppression for the current phase-1 externally originated signed non-entry paths (`ExternalTaskResponseTriggerDTO`, `UserTaskResponseTriggerDTO`, and `TopicMetaDTO`). Coverage remains intentionally scoped rather than blanket across all signed and control-plane topics; see [Replay protection scope](#replay-protection-scope).
+Replay protection now has two layers: durable `auditId`-based replay protection for JWT-bearing externally authorized commands and short-lived duplicate suppression for signed process-instance responses plus `TopicMetaDTO`. Coverage remains intentionally scoped rather than blanket across all signed and control-plane topics; see [Replay protection scope](#replay-protection-scope).
 
 Both mechanisms share a single trust registry: the compacted Kafka topic **`taktx-signing-keys`**.
 
@@ -180,13 +180,15 @@ The signature is over the raw serialized record bytes (protobuf on current engin
 
 ### Scope
 
-JWT authorization applies **only** to entry commands:
+JWT authorization applies to externally authorized command ingress:
 
 - `StartCommandDTO`
 - `AbortTriggerDTO`
 - `SetVariableTriggerDTO`
+- `UserTaskResponseTriggerDTO` (`USER_TASK_COMPLETE`)
+- `ExternalTaskResponseTriggerDTO` (`EXTERNAL_TASK_COMPLETE`)
 
-It is **not** required for non-entry commands (`ExternalTaskResponseTriggerDTO`, `ContinueFlowElementTriggerDTO`, etc.). Those are governed by the Ed25519 signing gate instead.
+Engine-internal continuations (`ContinueFlowElementTriggerDTO`, `StartFlowElementTriggerDTO`, `EventSignalTriggerDTO`) remain on the Ed25519 signing path only. For task-completion messages, a valid JWT is required when `engineRequiresAuthorization=true`, while trusted signed worker/runtime-originated messages can continue to satisfy the authorization gate through the existing signing trust chain.
 
 ### JWT transport
 
@@ -204,7 +206,7 @@ The JWT is attached in the `tx-auth` Kafka record header as a compact JWT string
 
 TaktX now applies two distinct replay / dedup mechanisms, each with its own scope.
 
-#### 1. Durable replay protection for JWT-bearing entry commands
+#### 1. Durable replay protection for JWT-bearing externally authorized commands
 
 This is the original `auditId`-based control governed by `replayProtectionMode` and
 `replayProtectionRetentionMs`. It applies to:
@@ -212,6 +214,8 @@ This is the original `auditId`-based control governed by `replayProtectionMode` 
 - `StartCommandDTO`
 - `AbortTriggerDTO`
 - `SetVariableTriggerDTO`
+- `UserTaskResponseTriggerDTO`
+- `ExternalTaskResponseTriggerDTO`
 
 The durable replay store remains keyed by the canonical JWT replay identity (`issuer + auditId`).
 
@@ -516,7 +520,7 @@ The compacted topic `<tenantId>.<namespace>.taktx-configuration` carries `Config
 | Field | Type | Default | Meaning |
 |---|---|---|---|
 | `signingEnabled` | `boolean` | `false` | Enables Ed25519 signing of outbound engine records and verification of inbound non-entry commands |
-| `engineRequiresAuthorization` | `boolean` | `false` | Enables RS256 JWT authorization for entry commands (`StartCommandDTO`, `AbortTriggerDTO`, `SetVariableTriggerDTO`) |
+| `engineRequiresAuthorization` | `boolean` | `false` | Enables RS256 JWT authorization for externally authorized commands (`StartCommandDTO`, `AbortTriggerDTO`, `SetVariableTriggerDTO`, `UserTaskResponseTriggerDTO`, `ExternalTaskResponseTriggerDTO`) |
 | `trustedKeyIds` | `List<String>` | `[]` | Reserved compatibility surface |
 | `dmnValidationMode` | `DmnValidationMode` | `PERMISSIVE` | Cluster-wide DMN validation strictness |
 | `replayProtectionMode` | `ReplayProtectionMode` | `COMPAT` | Entry-command replay enforcement mode: `OFF`, `COMPAT`, or `STRICT` |
@@ -530,10 +534,11 @@ The compacted topic `<tenantId>.<namespace>.taktx-configuration` carries `Config
 | `COMPAT` | allowed | rejected when `auditId` is non-blank | staged rollout default |
 | `STRICT` | rejected | rejected | fail-closed mode for compliant issuers |
 
-These modes apply to JWT-bearing entry commands only. Separate topology-owned dedup windows now
-protect `ExternalTaskResponseTriggerDTO` / `UserTaskResponseTriggerDTO` on `process-instance`
-(10 minutes) and `TopicMetaDTO` on `topic-meta-requested` (2 minutes). `schedule-commands` and
-engine-internal non-entry continuations remain outside dedup scope in the current release slice.
+These modes apply to JWT-bearing externally authorized commands only. Separate topology-owned dedup
+windows still protect signed `ExternalTaskResponseTriggerDTO` / `UserTaskResponseTriggerDTO` on
+`process-instance` (10 minutes) and `TopicMetaDTO` on `topic-meta-requested` (2 minutes).
+`schedule-commands` and engine-internal non-entry continuations remain outside dedup scope in the
+current release slice.
 
 ### Publishing runtime configuration
 

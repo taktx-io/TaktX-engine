@@ -14,7 +14,11 @@ public enum CommandAuthorizationScope {
   /** Authorizes aborting a running process or nested element instance. */
   ABORT_PROCESS_INSTANCE("CANCEL"),
   /** Authorizes updating variables in an existing process scope. */
-  SET_VARIABLE("SET_VARIABLE");
+  SET_VARIABLE("SET_VARIABLE"),
+  /** Authorizes completing an active user task. */
+  USER_TASK_COMPLETE("USER_TASK_COMPLETE"),
+  /** Authorizes completing an active external task. */
+  EXTERNAL_TASK_COMPLETE("EXTERNAL_TASK_COMPLETE");
   private final String tokenAction;
 
   CommandAuthorizationScope(String tokenAction) {

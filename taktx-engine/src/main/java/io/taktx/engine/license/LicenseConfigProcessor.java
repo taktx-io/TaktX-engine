@@ -73,9 +73,11 @@ public class LicenseConfigProcessor implements Processor<String, byte[], Void, V
         if (event != null && event.getConfiguration() != null) {
           globalConfigStore.update(event.getConfiguration());
           log.info(
-              "Global configuration updated from taktx-configuration topic — signingEnabled={} engineRequiresAuthorization={} replayProtectionMode={} replayProtectionRetentionMs={}",
+              "Global configuration updated from taktx-configuration topic — signingEnabled={} engineRequiresAuthorization={} engineRequiresExternalTaskAuthorization={} engineRequiresUserTaskAuthorization={} replayProtectionMode={} replayProtectionRetentionMs={}",
               event.getConfiguration().isSigningEnabled(),
               event.getConfiguration().isEngineRequiresAuthorization(),
+              event.getConfiguration().isEngineRequiresExternalTaskAuthorization(),
+              event.getConfiguration().isEngineRequiresUserTaskAuthorization(),
               event.getConfiguration().getReplayProtectionMode(),
               event.getConfiguration().getReplayProtectionRetentionMs());
         }

@@ -1132,6 +1132,11 @@ public class BpmnTestEngine {
     return activeExternalTaskTriggers.getOrDefault(activeProcessInstanceId, Map.of()).get(taskId);
   }
 
+  /** Returns the currently active user-task trigger on the active process instance, if any. */
+  public UserTaskTriggerDTO getActiveUserTaskTrigger() {
+    return activeUserTaskTrigger;
+  }
+
   public Map<UUID, ProcessInstanceDTO> getProcessInstanceMap() {
     return processInstanceMap;
   }

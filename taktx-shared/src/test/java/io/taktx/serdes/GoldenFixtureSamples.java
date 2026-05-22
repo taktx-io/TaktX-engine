@@ -307,6 +307,8 @@ final class GoldenFixtureSamples {
         GlobalConfigurationDTO.builder()
             .signingEnabled(true)
             .engineRequiresAuthorization(true)
+            .engineRequiresExternalTaskAuthorization(true)
+            .engineRequiresUserTaskAuthorization(true)
             .trustedKeyIds(List.of("worker-a", "worker-b", "engine-key"))
             .dmnValidationMode(io.taktx.dto.DmnValidationMode.STRICT)
             .replayProtectionMode(ReplayProtectionMode.STRICT)

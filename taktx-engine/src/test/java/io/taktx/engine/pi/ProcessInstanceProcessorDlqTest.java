@@ -12,15 +12,23 @@ import static io.taktx.engine.dlq.DlqHeaders.REASON_HINT;
 import static io.taktx.engine.dlq.DlqHeaders.REASON_TEXT;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import io.taktx.dto.ExternalTaskResponseResultDTO;
+import io.taktx.dto.ExternalTaskResponseTriggerDTO;
+import io.taktx.dto.ExternalTaskResponseType;
 import io.taktx.dto.ProcessDefinitionKey;
 import io.taktx.dto.ProcessInstanceDTO;
 import io.taktx.dto.ProcessInstanceDlqEntryDTO;
 import io.taktx.dto.StartCommandDTO;
+import io.taktx.dto.UserTaskResponseResultDTO;
+import io.taktx.dto.UserTaskResponseTriggerDTO;
+import io.taktx.dto.UserTaskResponseType;
 import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.pi.processor.IoMappingProcessor;
@@ -233,6 +241,71 @@ class ProcessInstanceProcessorDlqTest {
         .isEqualTo("SIGNATURE_KEY_UNKNOWN");
     assertThat(new String(dlqEntry.getHeaders().get(CAPTURE_STAGE), StandardCharsets.UTF_8))
         .isEqualTo("PROCESSOR");
+  }
+
+  @Test
+  void process_taskCompletionWithStrayJwt_authDisabled_ignoresJwtAndDoesNotEmitDlq() {
+    UUID processInstanceId = UUID.randomUUID();
+    byte[] payload = new byte[] {31, 32, 33};
+    RecordHeaders headers = new RecordHeaders();
+    headers.add("tx-auth", "stray-jwt".getBytes(StandardCharsets.UTF_8));
+    ExternalTaskResponseTriggerDTO trigger =
+        new ExternalTaskResponseTriggerDTO(
+            processInstanceId,
+            java.util.List.of(1L),
+            "msg-1",
+            new ExternalTaskResponseResultDTO(
+                ExternalTaskResponseType.SUCCESS, true, null, null, 0L),
+            VariablesDTO.empty());
+    ProcessInstanceTriggerEnvelope envelope =
+        new ProcessInstanceTriggerEnvelope(payload, trigger, false, null);
+    when(engineAuthorizationService.authorize(headers, envelope)).thenReturn(null);
+    when(engineAuthorizationService.isTaskCompletionAuthorizationActive(trigger)).thenReturn(false);
+
+    processor.process(new Record<>(processInstanceId, envelope, 77L, headers));
+
+    verify(engineAuthorizationService).authorize(headers, envelope);
+    verify(engineAuthorizationService).isTaskCompletionAuthorizationActive(trigger);
+    verify(engineAuthorizationService, never()).validateJwtClaims(any(), eq(trigger));
+    verify(context, never()).forward(any());
+  }
+
+  @Test
+  void process_taskCompletionJwtValidationFailure_emitsDlqInsteadOfThrowing() {
+    UUID processInstanceId = UUID.randomUUID();
+    byte[] payload = new byte[] {41, 42, 43};
+    RecordHeaders headers = new RecordHeaders();
+    headers.add("tx-auth", "bad-jwt".getBytes(StandardCharsets.UTF_8));
+    UserTaskResponseTriggerDTO trigger =
+        new UserTaskResponseTriggerDTO(
+            processInstanceId,
+            java.util.List.of(2L),
+            "msg-2",
+            new UserTaskResponseResultDTO(UserTaskResponseType.COMPLETED, null, null),
+            VariablesDTO.empty());
+    ProcessInstanceTriggerEnvelope envelope =
+        new ProcessInstanceTriggerEnvelope(payload, trigger, false, null);
+    when(engineAuthorizationService.authorize(headers, envelope)).thenReturn(null);
+    when(engineAuthorizationService.isTaskCompletionAuthorizationActive(trigger)).thenReturn(true);
+    when(engineAuthorizationService.validateJwtClaims(any(), eq(trigger)))
+        .thenThrow(
+            new AuthorizationTokenException(
+                "Signing key kid='bad-kid' is not trusted as a PLATFORM JWT issuer key"));
+
+    processor.process(new Record<>(processInstanceId, envelope, 88L, headers));
+
+    ArgumentCaptor<Record> recordCaptor = ArgumentCaptor.forClass(Record.class);
+    verify(context).forward(recordCaptor.capture());
+    ProcessInstanceDlqEntryDTO dlqEntry =
+        (ProcessInstanceDlqEntryDTO) recordCaptor.getValue().value();
+
+    assertThat(dlqEntry.getProcessInstanceId()).isEqualTo(processInstanceId);
+    assertThat(new String(dlqEntry.getHeaders().get(REASON_HINT), StandardCharsets.UTF_8))
+        .isEqualTo("AUTHORIZATION_FAILED");
+    assertThat(new String(dlqEntry.getHeaders().get(CAPTURE_STAGE), StandardCharsets.UTF_8))
+        .isEqualTo("PROCESSOR");
+    assertThat(new String(dlqEntry.getHeaders().get(REASON_TEXT), StandardCharsets.UTF_8))
+        .contains("PLATFORM JWT issuer key");
   }
 
   @Test

@@ -24,6 +24,8 @@ import lombok.*;
 public class GlobalConfigurationDTO {
   @Builder.Default private boolean signingEnabled = false;
   @Builder.Default private boolean engineRequiresAuthorization = false;
+  @Builder.Default private boolean engineRequiresExternalTaskAuthorization = false;
+  @Builder.Default private boolean engineRequiresUserTaskAuthorization = false;
 
   /** All key IDs accepted for signature verification. */
   @Builder.Default private List<String> trustedKeyIds = List.of();

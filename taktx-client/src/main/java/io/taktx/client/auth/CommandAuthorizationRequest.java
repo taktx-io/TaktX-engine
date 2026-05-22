@@ -82,4 +82,38 @@ public record CommandAuthorizationRequest(
     return new CommandAuthorizationRequest(
         CommandAuthorizationScope.SET_VARIABLE, processInstanceId, null, -1, elementInstanceIdPath);
   }
+
+  /**
+   * Creates an authorization request for completing a user task.
+   *
+   * @param processInstanceId active process instance ID
+   * @param elementInstanceIdPath path identifying the user-task instance to complete
+   * @return an authorization request for the user-task-complete scope
+   */
+  public static CommandAuthorizationRequest userTaskComplete(
+      UUID processInstanceId, List<Long> elementInstanceIdPath) {
+    return new CommandAuthorizationRequest(
+        CommandAuthorizationScope.USER_TASK_COMPLETE,
+        processInstanceId,
+        null,
+        -1,
+        elementInstanceIdPath);
+  }
+
+  /**
+   * Creates an authorization request for completing an external task.
+   *
+   * @param processInstanceId active process instance ID
+   * @param elementInstanceIdPath path identifying the external-task instance to complete
+   * @return an authorization request for the external-task-complete scope
+   */
+  public static CommandAuthorizationRequest externalTaskComplete(
+      UUID processInstanceId, List<Long> elementInstanceIdPath) {
+    return new CommandAuthorizationRequest(
+        CommandAuthorizationScope.EXTERNAL_TASK_COMPLETE,
+        processInstanceId,
+        null,
+        -1,
+        elementInstanceIdPath);
+  }
 }

@@ -44,6 +44,21 @@ public final class RuntimeConfigurationHolder {
     return get().isEngineRequiresAuthorization();
   }
 
+  public static boolean isEngineRequiresExternalTaskAuthorization() {
+    return get().isEngineRequiresExternalTaskAuthorization();
+  }
+
+  public static boolean isEngineRequiresUserTaskAuthorization() {
+    return get().isEngineRequiresUserTaskAuthorization();
+  }
+
+  public static boolean isAnyAuthorizationEnabled() {
+    GlobalConfigurationDTO config = get();
+    return config.isEngineRequiresAuthorization()
+        || config.isEngineRequiresExternalTaskAuthorization()
+        || config.isEngineRequiresUserTaskAuthorization();
+  }
+
   public static ReplayProtectionMode getReplayProtectionMode() {
     return get().getReplayProtectionMode();
   }

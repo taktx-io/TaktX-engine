@@ -636,20 +636,21 @@ public class TopologyProducer {
             Consumed.with(PROCESS_INSTANCE_KEY_SERDE, PROCESS_INSTANCE_TRIGGER_ENVELOPE_SERDE));
 
     KStream<UUID, ProcessInstanceTriggerEnvelope> responseDedupProtectedStream =
-        processInstanceTriggerStream.filter(
-            (_, envelope) -> isProcessInstanceResponseDedupProtected(envelope));
+        processInstanceTriggerStream
+            .filter((_, envelope) -> isProcessInstanceResponseDedupProtected(envelope))
+            .filter((_, envelope) -> !isReplayProtectedJwtCommand(envelope));
 
     KStream<UUID, ProcessInstanceTriggerEnvelope> replayBypassStream =
         processInstanceTriggerStream.filter(
             (_, envelope) ->
-                !isReplayProtectedEntryCommand(envelope)
+                !isReplayProtectedJwtCommand(envelope)
                     && !isProcessInstanceResponseDedupProtected(envelope));
 
     // ReplayProtectionProcessor outputs Object,Object so DLQ entries and normal envelopes
     // can share the same forward path. Split them here before the UUID repartition.
     KStream<Object, Object> replayCheckedStream =
         processInstanceTriggerStream
-            .filter((_, envelope) -> isReplayProtectedEntryCommand(envelope))
+            .filter((_, envelope) -> isReplayProtectedJwtCommand(envelope))
             // Re-key to issuer:auditId so the replay-protection store shard is co-located.
             .selectKey((_, envelope) -> envelope.replayRoutingKeyHint())
             .repartition(
@@ -681,7 +682,7 @@ public class TopologyProducer {
     // Re-partition normal envelopes by processInstanceId (UUID) so ProcessInstanceProcessor always
     // runs in the same task — and thus the same processInstanceStore shard — as the
     // UUID-keyed bypass path and all subsequent process-instance response/continuation messages.
-    KStream<UUID, ProcessInstanceTriggerEnvelope> replayProtectedEntryStream =
+    KStream<UUID, ProcessInstanceTriggerEnvelope> replayProtectedJwtStream =
         replayCheckedStream
             .filter((_, value) -> value instanceof ProcessInstanceTriggerEnvelope)
             .map((key, value) -> KeyValue.pair((UUID) key, (ProcessInstanceTriggerEnvelope) value))
@@ -691,19 +692,30 @@ public class TopologyProducer {
                     .withKeySerde(PROCESS_INSTANCE_KEY_SERDE)
                     .withValueSerde(PROCESS_INSTANCE_TRIGGER_ENVELOPE_SERDE));
 
+    KStream<UUID, ProcessInstanceTriggerEnvelope> replayProtectedTaskResponseStream =
+        replayProtectedJwtStream.filter(
+            (_, envelope) -> isProcessInstanceResponseDedupProtected(envelope));
+
+    KStream<UUID, ProcessInstanceTriggerEnvelope> replayProtectedNonResponseStream =
+        replayProtectedJwtStream.filter(
+            (_, envelope) -> !isProcessInstanceResponseDedupProtected(envelope));
+
     KStream<UUID, ProcessInstanceTriggerEnvelope> dedupedProcessInstanceResponseStream =
-        responseDedupProtectedStream.process(
-            () ->
-                new ProcessInstanceResponseDedupProcessor(
-                    clock,
-                    PROCESS_INSTANCE_RESPONSE_DEDUP_RETENTION_MS,
-                    taktConfiguration.getPrefixed(
-                        Stores.PROCESS_INSTANCE_RESPONSE_DEDUP.getStorename())),
-            taktConfiguration.getPrefixed(Stores.PROCESS_INSTANCE_RESPONSE_DEDUP.getStorename()));
+        responseDedupProtectedStream
+            .merge(replayProtectedTaskResponseStream)
+            .process(
+                () ->
+                    new ProcessInstanceResponseDedupProcessor(
+                        clock,
+                        PROCESS_INSTANCE_RESPONSE_DEDUP_RETENTION_MS,
+                        taktConfiguration.getPrefixed(
+                            Stores.PROCESS_INSTANCE_RESPONSE_DEDUP.getStorename())),
+                taktConfiguration.getPrefixed(
+                    Stores.PROCESS_INSTANCE_RESPONSE_DEDUP.getStorename()));
 
     replayBypassStream
         .merge(dedupedProcessInstanceResponseStream)
-        .merge(replayProtectedEntryStream)
+        .merge(replayProtectedNonResponseStream)
         .process(
             () ->
                 new ProcessInstanceProcessor(
@@ -845,13 +857,15 @@ public class TopologyProducer {
             Produced.with(Serdes.String(), DLQ_ENVELOPE_SERDE));
   }
 
-  private static boolean isReplayProtectedEntryCommand(ProcessInstanceTriggerEnvelope envelope) {
+  private static boolean isReplayProtectedJwtCommand(ProcessInstanceTriggerEnvelope envelope) {
     return envelope != null
         && envelope.trigger() != null
         && envelope.replayRoutingKeyHint() != null
         && (envelope.trigger() instanceof StartCommandDTO
             || envelope.trigger() instanceof AbortTriggerDTO
-            || envelope.trigger() instanceof SetVariableTriggerDTO);
+            || envelope.trigger() instanceof SetVariableTriggerDTO
+            || envelope.trigger() instanceof ExternalTaskResponseTriggerDTO
+            || envelope.trigger() instanceof UserTaskResponseTriggerDTO);
   }
 
   private static boolean isProcessInstanceResponseDedupProtected(
