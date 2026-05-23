@@ -714,7 +714,7 @@ or pre-policy namespaces.
 - [ ] **SP-06.1** Add migration tests for existing namespaces created under the old boolean model.
 - [ ] **SP-06.2** Add compatibility tests proving a namespace with the default policy still behaves as
       the current lightweight unsecured default.
-- [ ] **SP-06.3** Add negative tests proving invalid policy combinations fail closed.
+- [x] **SP-06.3** Add negative tests proving invalid policy combinations fail closed.
 - [ ] **SP-06.4** Add tests proving status messages and incidents do not influence trust decisions.
 - [ ] **SP-06.4a** Add tests proving false participant compatibility claims do not weaken runtime
       enforcement.
