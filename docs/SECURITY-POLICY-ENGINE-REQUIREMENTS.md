@@ -954,9 +954,12 @@ on unpublished or bespoke patches.
 - [x] ensure stale participant status expires via TTL/incarnation handling
 - [x] ensure activation timeout / rollback behavior is deterministic and fail-closed
 - [ ] ensure break-glass downgrade requires privileged role + reason + audit event
-- [ ] ensure downgrade transitions are observable / auditable
+- [x] ensure downgrade transitions are observable / auditable
 
 ### Acceptance criteria
+
+- Engine-side downgrade handling requires explicit break-glass actor/reason metadata and emits audit
+  events; full privileged-role verification remains part of the authoritative control-plane contract.
 - Engine behavior is proven by tests for both default-community and secured-policy flows.
 - Negative cases fail clearly and predictably.
 - The engine slice is safe to pair with the Console-side rollout plan.
