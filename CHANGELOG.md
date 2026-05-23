@@ -10,6 +10,46 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ---
 
+## [Unreleased]
+
+### Added
+
+- Explicit namespace-security-policy control-plane support across `taktx-engine`, `taktx-client`,
+  and `taktx-shared`, including desired-vs-active policy identities and shared observability DTOs.
+- Official `TaktXClient` helpers for authoritative namespace-security-policy publication and
+  compacted-topic clear/tombstone semantics.
+- Client-side namespace-security-policy observation and protected-runtime participation gating so
+  protected client traffic is blocked unless the authoritative policy is `ACTIVE` and the client is
+  locally `READY`.
+
+### Changed
+
+- Authoritative namespace-security-policy mutations now require the trusted writer path: explicit
+  signature headers, trusted `PLATFORM` signer verification, and signed tombstone/clear semantics.
+- Policy-required JWT/signature/trust-anchor enforcement now follows the authoritative active
+  namespace policy directly instead of depending only on legacy global toggles.
+- Quarkus and Spring runtime integrations now request worker topics through
+  `TaktXClient.requestExternalTaskTopic(...)` rather than wiring equivalent lower-level topic
+  publishers directly.
+
+### Security
+
+- Missing policy-required JWT, signature, or trust-anchor conditions now fail closed at protected
+  runtime ingress.
+- Break-glass downgrade handling requires privileged writer verification plus explicit actor/reason
+  audit data.
+
+### Compatibility notes
+
+- Console/runtime integrations should migrate from legacy namespace-security booleans to explicit
+  `NamespaceSecurityPolicyDTO` payloads.
+- Status and security events are observability signals, not an authority source.
+- Secured authoritative policy publication now requires an explicit configured signing identity.
+- Protected runtime traffic may remain blocked during `REQUESTED` / `VALIDATING` until the
+  authoritative policy becomes `ACTIVE` and participants are `READY`.
+
+---
+
 ## [0.3.0-beta-1] — 2026-03-28
 
 ### 🎉 Highlights

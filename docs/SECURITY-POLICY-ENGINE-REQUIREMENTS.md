@@ -961,8 +961,14 @@ on unpublished or bespoke patches.
 ### Tasks
 - [ ] Publish an engine/client release containing the required shared DTO and `TaktXClient` changes.
 - [ ] Document the exact released version(s) the Console repo should consume.
-- [ ] Document any migration notes or compatibility constraints relevant to Console integration.
-- [ ] Ensure release notes clearly identify which namespace-security-policy capabilities are included.
+- [x] Document any migration notes or compatibility constraints relevant to Console integration.
+- [x] Ensure release notes clearly identify which namespace-security-policy capabilities are included.
+
+**Current status note:** prerelease handoff material now exists in-repo: `CHANGELOG.md` has an
+explicit `[Unreleased]` namespace-security-policy release-notes section, and
+`docs/console-namespace-security-migration-notes.md` captures the Console migration and
+compatibility constraints. The only remaining release-gate items are publishing the actual
+engine/client artifacts and recording the exact released version(s) to consume.
 
 ### Acceptance criteria
 - A concrete released engine/client version exists for Console adoption.
