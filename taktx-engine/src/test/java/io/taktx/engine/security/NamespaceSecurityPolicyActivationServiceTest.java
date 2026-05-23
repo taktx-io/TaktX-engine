@@ -199,6 +199,92 @@ class NamespaceSecurityPolicyActivationServiceTest {
         .containsExactly(SecurityEventType.ACTIVATION_TIMEOUT, SecurityEventType.POLICY_REJECTION);
   }
 
+  @Test
+  void activePolicyDrift_emitsReadinessMismatchWithoutReplacingActivePolicy() {
+    NamespaceSecurityPolicyDTO active = activePolicy(41L);
+    policyStore.update(active);
+    addReadyParticipant(ParticipantRole.ENGINE, active, clock.millis() + 500L);
+    addReadyParticipant(ParticipantRole.INGESTER, active, clock.millis() + 500L);
+    participantStatusStore.update(
+        "console-1",
+        ParticipantStatusDTO.builder()
+            .participantId("tenant.bank.payments.console")
+            .participantInstanceId("console-1")
+            .role(ParticipantRole.CONSOLE)
+            .namespace("bank.payments")
+            .startedAt(clock.millis() - 100L)
+            .lastSeenAt(clock.millis())
+            .statusExpiresAt(clock.millis() + 500L)
+            .statusVerificationLevel(StatusVerificationLevel.LOCALLY_VERIFIED_STATUS)
+            .effectiveState(ParticipantEffectiveState.READY)
+            .readyForDataPlane(true)
+            .observedPolicyVersion(active.getActivePolicyVersion())
+            .observedPolicyHash("different-hash")
+            .build());
+
+    activationService.reevaluate();
+    activationService.reevaluate();
+
+    assertThat(policyStore.get()).isEqualTo(active);
+    assertThat(policyStore.getActivePolicy()).isEqualTo(active);
+    ArgumentCaptor<SecurityEventDTO> captor = ArgumentCaptor.forClass(SecurityEventDTO.class);
+    verify(securityEventPublisher, Mockito.times(1)).publish(captor.capture());
+    assertThat(captor.getValue().getEventType()).isEqualTo(SecurityEventType.READINESS_MISMATCH);
+    assertThat(captor.getValue().getMetadata())
+        .containsEntry("postActivationDrift", "true")
+        .containsEntry("policyMismatchParticipants", "console-1");
+  }
+
+  @Test
+  void activePolicyDrift_recoveryResetsFingerprintForFutureIncidents() {
+    NamespaceSecurityPolicyDTO active = activePolicy(41L);
+    policyStore.update(active);
+    addReadyParticipant(ParticipantRole.ENGINE, active, clock.millis() + 500L);
+    addReadyParticipant(ParticipantRole.INGESTER, active, clock.millis() + 500L);
+    participantStatusStore.update(
+        "console-1",
+        ParticipantStatusDTO.builder()
+            .participantId("tenant.bank.payments.console")
+            .participantInstanceId("console-1")
+            .role(ParticipantRole.CONSOLE)
+            .namespace("bank.payments")
+            .startedAt(clock.millis() - 100L)
+            .lastSeenAt(clock.millis())
+            .statusExpiresAt(clock.millis() + 500L)
+            .statusVerificationLevel(StatusVerificationLevel.LOCALLY_VERIFIED_STATUS)
+            .effectiveState(ParticipantEffectiveState.MISMATCH)
+            .readyForDataPlane(false)
+            .observedPolicyVersion(active.getActivePolicyVersion())
+            .observedPolicyHash(active.getActivePolicyHash())
+            .build());
+
+    activationService.reevaluate();
+
+    addReadyParticipant(ParticipantRole.CONSOLE, active, clock.millis() + 500L);
+    activationService.reevaluate();
+
+    participantStatusStore.update(
+        "console-1",
+        ParticipantStatusDTO.builder()
+            .participantId("tenant.bank.payments.console")
+            .participantInstanceId("console-1")
+            .role(ParticipantRole.CONSOLE)
+            .namespace("bank.payments")
+            .startedAt(clock.millis() - 100L)
+            .lastSeenAt(clock.millis())
+            .statusExpiresAt(clock.millis() + 500L)
+            .statusVerificationLevel(StatusVerificationLevel.LOCALLY_VERIFIED_STATUS)
+            .effectiveState(ParticipantEffectiveState.MISMATCH)
+            .readyForDataPlane(false)
+            .observedPolicyVersion(active.getActivePolicyVersion())
+            .observedPolicyHash(active.getActivePolicyHash())
+            .build());
+
+    activationService.reevaluate();
+
+    verify(securityEventPublisher, Mockito.times(2)).publish(any(SecurityEventDTO.class));
+  }
+
   private void addReadyParticipant(
       ParticipantRole role, NamespaceSecurityPolicyDTO policy, long statusExpiresAt) {
     String instanceId = role.name().toLowerCase() + "-1";
@@ -276,6 +362,7 @@ class NamespaceSecurityPolicyActivationServiceTest {
     }
   }
 }
+
 
 
 
