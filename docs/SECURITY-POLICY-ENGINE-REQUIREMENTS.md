@@ -894,12 +894,12 @@ as engine+client work, not engine-only work.
 custom Kafka logic.
 
 ### Tasks
-- [ ] Add the required official `TaktXClient` methods for control-plane publication/consumption used
+- [x] Add the required official `TaktXClient` methods for control-plane publication/consumption used
       by the policy model.
-- [ ] Document the expected security properties of those methods.
+- [x] Document the expected security properties of those methods.
 - [ ] Update runtime/ingester integrations to use those methods rather than bespoke duplicate
       publishers where equivalent semantics are needed.
-- [ ] Add the official shared DTO/contract support needed for desired-vs-active policy identities.
+- [x] Add the official shared DTO/contract support needed for desired-vs-active policy identities.
 
 ### Acceptance criteria
 - Required control-plane operations have an official supported client surface.
@@ -950,7 +950,7 @@ on unpublished or bespoke patches.
 - [ ] ensure bare engine remains functional with sensible `COMMUNITY_OPEN` defaults when no external
       control plane is present
 - [ ] ensure authoritative control-plane mutation is rejected when attempted from untrusted writers
-- [ ] ensure the required control-plane client operations are available via `TaktXClient`
+- [x] ensure the required control-plane client operations are available via `TaktXClient`
 - [x] ensure stale participant status expires via TTL/incarnation handling
 - [x] ensure activation timeout / rollback behavior is deterministic and fail-closed
 - [ ] ensure break-glass downgrade requires privileged role + reason + audit event
