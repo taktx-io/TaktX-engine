@@ -876,6 +876,10 @@ policy requests are still accepted while a previous policy is validating, topic-
 available through its own trusted control-plane path, and blocked-participation observability events
 continue to publish during convergence/recovery.
 
+Fail-closed verification coverage now also explicitly exercises missing policy-required JWT,
+signature, and trust-anchor conditions at both authorization-service and process-instance ingress
+boundaries so those required checks are proven to reject rather than silently pass.
+
 ### Acceptance criteria
 - Runtime enforcement matches the active policy requirements.
 - Required checks fail closed when missing.
@@ -960,9 +964,9 @@ on unpublished or bespoke patches.
 - [x] reject incompatible policy activation
 - [x] reject activation when required participants observe different canonical policy identities
 - [x] emit explicit mismatch reasons
-- [ ] ensure missing required signature fails closed
-- [ ] ensure missing required JWT fails closed
-- [ ] ensure missing required trust anchor fails closed
+- [x] ensure missing required signature fails closed
+- [x] ensure missing required JWT fails closed
+- [x] ensure missing required trust anchor fails closed
 - [x] ensure participant status never changes trust outcomes
 - [x] ensure false compatibility reports do not weaken runtime enforcement
 - [x] ensure post-activation drift yields `NOT READY` posture and incident/event output
