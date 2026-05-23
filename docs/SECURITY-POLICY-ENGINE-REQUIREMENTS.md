@@ -905,12 +905,18 @@ when no authoritative policy is present.
 ### Tasks
 - [x] Emit participant status updates with observed policy version and mismatch reasons.
 - [x] Emit append-only security events for policy changes, rejection, and incidents.
-- [ ] Ensure anchored-mode event signing is supported if the final shared contract requires it.
+- [x] Ensure anchored-mode event signing is supported if the final shared contract requires it.
 - [x] Emit explicit events for convergence failure and post-activation drift.
 - [x] Emit explicit events when protected data-plane participation is blocked because policy is not
       yet `ACTIVE` or participant is not `READY`.
 - [x] Emit explicit events when authoritative control-plane mutation is rejected for security reasons.
 - [x] Emit explicit events for activation timeout, rollback, and break-glass downgrade.
+
+**Current status note:** the final shared security-event contract remains append-only observability
+payloads (`SecurityEventDTO` / `SecurityEventMessage`) without embedded signature fields, and this
+requirements document only treats signed anchored-mode events as preferred when the contract
+supports them. Because status/events are explicitly diagnostic rather than an authority source, no
+additional anchored-mode event-signing implementation is required for the current released contract.
 
 ### Acceptance criteria
 - Ops can distinguish policy activation, mismatch, and incident events.
