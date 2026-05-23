@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 
@@ -49,6 +50,7 @@ public class NamespaceSecurityPolicyActivationService {
   private final SecurityEventPublisher securityEventPublisher;
   private final Clock clock;
   private final long activationTimeoutMs;
+  private final AtomicReference<String> lastActiveDriftFingerprint = new AtomicReference<>(null);
 
   public NamespaceSecurityPolicyActivationService(
       TaktConfiguration configuration,
@@ -127,12 +129,14 @@ public class NamespaceSecurityPolicyActivationService {
   public synchronized void reevaluate() {
     NamespaceSecurityPolicyDTO current = namespaceSecurityPolicyStore.get();
     if (current == null) {
+      lastActiveDriftFingerprint.set(null);
       return;
     }
 
     if (current.getActivationState() == SecurityActivationState.ACTIVE) {
       namespaceSecurityPolicyStore.setActivePolicy(current);
       namespaceSecurityPolicyStore.setValidationStartedAtMs(null);
+      emitPostActivationDriftIfNeeded(current, clock.millis());
       return;
     }
 
@@ -178,6 +182,14 @@ public class NamespaceSecurityPolicyActivationService {
   }
 
   private ConvergenceAssessment assess(NamespaceSecurityPolicyDTO policy, long nowMs) {
+    Long expectedPolicyVersion =
+        policy.getActivationState() == SecurityActivationState.ACTIVE
+            ? policy.getActivePolicyVersion()
+            : policy.getDesiredPolicyVersion();
+    String expectedPolicyHash =
+        policy.getActivationState() == SecurityActivationState.ACTIVE
+            ? policy.getActivePolicyHash()
+            : policy.getDesiredPolicyHash();
     Map<String, ParticipantStatusDTO> currentStatuses =
         participantStatusStore.currentSnapshot(REQUIRED_ACTIVATION_ROLES, nowMs);
 
@@ -202,8 +214,8 @@ public class NamespaceSecurityPolicyActivationService {
       if (status.getEffectiveState() != ParticipantEffectiveState.READY || !status.isReadyForDataPlane()) {
         notReadyParticipants.add(status.getParticipantInstanceId());
       }
-      if (!Objects.equals(policy.getDesiredPolicyVersion(), status.getObservedPolicyVersion())
-          || !Objects.equals(policy.getDesiredPolicyHash(), status.getObservedPolicyHash())) {
+      if (!Objects.equals(expectedPolicyVersion, status.getObservedPolicyVersion())
+          || !Objects.equals(expectedPolicyHash, status.getObservedPolicyHash())) {
         policyMismatchParticipants.add(status.getParticipantInstanceId());
       }
     }
@@ -219,6 +231,38 @@ public class NamespaceSecurityPolicyActivationService {
 
     return new ConvergenceAssessment(
         ConvergenceOutcome.SUCCESS, List.of(), List.of(), List.of(), currentStatuses.size());
+  }
+
+  private void emitPostActivationDriftIfNeeded(NamespaceSecurityPolicyDTO activePolicy, long nowMs) {
+    ConvergenceAssessment assessment = assess(activePolicy, nowMs);
+    if (assessment.outcome() == ConvergenceOutcome.SUCCESS) {
+      lastActiveDriftFingerprint.set(null);
+      return;
+    }
+
+    Map<String, String> metadata = new LinkedHashMap<>(metadataForAssessment(assessment, nowMs, nowMs));
+    metadata.put("phase", SecurityActivationState.ACTIVE.name());
+    metadata.put("postActivationDrift", Boolean.TRUE.toString());
+    String fingerprint =
+        String.join(
+            "|",
+            metadata.getOrDefault("missingRoles", ""),
+            metadata.getOrDefault("notReadyParticipants", ""),
+            metadata.getOrDefault("policyMismatchParticipants", ""),
+            String.valueOf(activePolicy.getActivePolicyVersion()),
+            String.valueOf(activePolicy.getActivePolicyHash()));
+    if (fingerprint.equals(lastActiveDriftFingerprint.get())) {
+      return;
+    }
+
+    publish(
+        SecurityEventType.READINESS_MISMATCH,
+        SecurityEventSeverity.WARNING,
+        READINESS_MISMATCH_CODE,
+        "Required participants diverged from the ACTIVE policy identity or readiness state after activation",
+        activePolicy,
+        Map.copyOf(metadata));
+    lastActiveDriftFingerprint.set(fingerprint);
   }
 
   private void rejectForTimeout(
@@ -389,5 +433,6 @@ public class NamespaceSecurityPolicyActivationService {
       List<String> policyMismatchParticipants,
       int observedRequiredParticipantCount) {}
 }
+
 
 
