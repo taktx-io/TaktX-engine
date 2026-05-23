@@ -511,6 +511,42 @@ class EngineAuthorizationServiceTest {
         .hasMessageContaining("required role PLATFORM");
   }
 
+  @Test
+  void namespaceSecurityPolicyMutation_breakGlassDowngradeStillRequiresPlatformRole() {
+    java.security.KeyPair ed25519KeyPair = SigningKeyGenerator.generate();
+    String privateKeyBase64 = SigningKeyGenerator.encodePrivateKey(ed25519KeyPair.getPrivate());
+    String publicKeyBase64 = SigningKeyGenerator.encodePublicKey(ed25519KeyPair.getPublic());
+    String keyId = "client-break-glass-key";
+    SigningKeyDTO keyEntry =
+        SigningKeyDTO.builder()
+            .keyId(keyId)
+            .publicKeyBase64(publicKeyBase64)
+            .algorithm("Ed25519")
+            .status(KeyStatus.ACTIVE)
+            .owner("console")
+            .role(KeyRole.CLIENT)
+            .build();
+    when(signingKeysStore.get(keyId)).thenReturn(keyEntry);
+
+    byte[] payload =
+        NamespaceSecurityPolicyProtoMapper.toProto(
+                NamespaceSecurityPolicyDTO.builder()
+                    .mode(io.taktx.dto.SecurityMode.COMMUNITY_OPEN)
+                    .activationState(SecurityActivationState.REQUESTED)
+                    .desiredPolicyVersion(77L)
+                    .breakGlassActor("ops-admin")
+                    .breakGlassReason("temporary containment downgrade")
+                    .build())
+            .toByteArray();
+
+    assertThatThrownBy(
+            () ->
+                service.authorizeNamespaceSecurityPolicyMutation(
+                    headersWithSignedPayload(keyId, privateKeyBase64, payload), payload))
+        .isInstanceOf(AuthorizationTokenException.class)
+        .hasMessageContaining("required role PLATFORM");
+  }
+
   // ── missing header ─────────────────────────────────────────────────────────
 
   @Test
