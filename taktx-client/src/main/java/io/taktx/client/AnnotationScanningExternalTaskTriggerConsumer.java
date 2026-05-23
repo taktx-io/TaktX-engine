@@ -65,8 +65,30 @@ public class AnnotationScanningExternalTaskTriggerConsumer implements ExternalTa
         parameterResolverFactory,
         resultProcessorFactory,
         externalTaskResponder,
+        externalTaskTopicRequester::requestExternalTaskTopic,
+        partitions,
+        cleanupPolicy,
+        replicationFactor);
+  }
+
+  /**
+   * Constructor using the default PlainJavaInstanceProvider and the official client topic-request
+   * gateway.
+   */
+  public AnnotationScanningExternalTaskTriggerConsumer(
+      ParameterResolverFactory parameterResolverFactory,
+      ResultProcessorFactory resultProcessorFactory,
+      ProcessInstanceResponder externalTaskResponder,
+      ExternalTaskTopicRequestGateway externalTaskTopicRequestGateway,
+      int partitions,
+      CleanupPolicy cleanupPolicy,
+      short replicationFactor) {
+    this(
+        parameterResolverFactory,
+        resultProcessorFactory,
+        externalTaskResponder,
         new PlainJavaInstanceProvider(),
-        externalTaskTopicRequester,
+        externalTaskTopicRequestGateway,
         partitions,
         cleanupPolicy,
         replicationFactor);
@@ -90,6 +112,39 @@ public class AnnotationScanningExternalTaskTriggerConsumer implements ExternalTa
       ProcessInstanceResponder externalTaskResponder,
       WorkerBeanInstanceProvider instanceProvider,
       ExternalTaskTopicRequester externalTaskTopicRequester,
+      int partitions,
+      CleanupPolicy cleanupPolicy,
+      short replicationFactor) {
+    this(
+        parameterResolverFactory,
+        resultProcessorFactory,
+        externalTaskResponder,
+        instanceProvider,
+        externalTaskTopicRequester::requestExternalTaskTopic,
+        partitions,
+        cleanupPolicy,
+        replicationFactor);
+  }
+
+  /**
+   * Constructor.
+   *
+   * @param parameterResolverFactory Factory to create parameter resolvers for method parameters
+   * @param resultProcessorFactory Factory to create result processor for method parameters
+   * @param externalTaskResponder Responder to handle external task instances
+   * @param instanceProvider THe provider for worker bean instances
+   * @param externalTaskTopicRequestGateway Official client gateway used to request external task
+   *     topics
+   * @param partitions THe number of partitions for the external task topic
+   * @param cleanupPolicy The cleanup policy for the external task topic
+   * @param replicationFactor The replication factor for the external task topic
+   */
+  public AnnotationScanningExternalTaskTriggerConsumer(
+      ParameterResolverFactory parameterResolverFactory,
+      ResultProcessorFactory resultProcessorFactory,
+      ProcessInstanceResponder externalTaskResponder,
+      WorkerBeanInstanceProvider instanceProvider,
+      ExternalTaskTopicRequestGateway externalTaskTopicRequestGateway,
       int partitions,
       CleanupPolicy cleanupPolicy,
       short replicationFactor) {
@@ -118,7 +173,7 @@ public class AnnotationScanningExternalTaskTriggerConsumer implements ExternalTa
                 workerInstances.put(type, instance);
                 ackStrategies.put(type, annotation.ackStrategy());
                 threadingStrategies.put(type, annotation.threadingStrategy());
-                externalTaskTopicRequester.requestExternalTaskTopic(
+                externalTaskTopicRequestGateway.requestExternalTaskTopic(
                     type, partitions, cleanupPolicy, replicationFactor);
               });
     }

@@ -130,7 +130,7 @@ public class TaktXClientProvider {
                 taktClient.getResultProcessorFactory(),
                 taktClient.getProcessInstanceResponder(),
                 instanceProvider,
-                taktClient.getExternalTaskTopicRequester(),
+                taktClient::requestExternalTaskTopic,
                 partitions,
                 CleanupPolicy.COMPACT,
                 replicationFactor);
