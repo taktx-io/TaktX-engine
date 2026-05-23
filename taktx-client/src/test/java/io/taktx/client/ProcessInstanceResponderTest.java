@@ -10,6 +10,7 @@ package io.taktx.client;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import io.taktx.client.auth.AuthorizationTokenProvider;
@@ -254,6 +255,41 @@ class ProcessInstanceResponderTest {
                     UUID.randomUUID(), List.of(1L), VariablesDTO.empty(), null))
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("AuthorizationTokenProvider returned no token");
+  }
+
+  @Test
+  void completeExternalTask_guardBlocksProtectedTrafficBeforeSend() {
+    ProcessInstanceResponder responder =
+        new ProcessInstanceResponder(propertiesHelper, producer, null);
+    responder.setProtectedDataPlaneGuard(
+        (operation, explicitAuthorizationToken) -> {
+          throw new IllegalStateException("blocked by policy");
+        });
+
+    assertThatThrownBy(
+            () ->
+                responder.completeExternalTask(UUID.randomUUID(), List.of(1L), VariablesDTO.empty()))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("blocked by policy");
+
+    verify(producer, never()).send(org.mockito.ArgumentMatchers.any());
+  }
+
+  @Test
+  void responderForExternalTask_guardBlocksResponderObjectBeforeSend() {
+    ProcessInstanceResponder responder =
+        new ProcessInstanceResponder(propertiesHelper, producer, null);
+    responder.setProtectedDataPlaneGuard(
+        (operation, explicitAuthorizationToken) -> {
+          throw new IllegalStateException("blocked by policy");
+        });
+
+    assertThatThrownBy(
+            () -> responder.responderForExternalTask(UUID.randomUUID(), List.of(9L)).respondSuccess())
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("blocked by policy");
+
+    verify(producer, never()).send(org.mockito.ArgumentMatchers.any());
   }
 
   @SuppressWarnings("unchecked")

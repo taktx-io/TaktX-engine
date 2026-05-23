@@ -22,6 +22,7 @@ import java.util.concurrent.Executor;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.common.TopicPartition;
 import org.slf4j.Logger;
 
 /**
@@ -40,6 +41,7 @@ public class UserTaskTriggerTopicConsumer {
   private final TaktPropertiesHelper taktPropertiesHelper;
   private final Executor executor;
   private final ProcessInstanceResponder processInstanceResponder;
+  private volatile Runnable beforeDispatchHook = () -> {};
   private KafkaConsumer<UUID, DeserializationResult<UserTaskTriggerDTO>>
       userTaskTriggerKafkaConsumer;
   private final Object consumerLock = new Object();
@@ -60,6 +62,10 @@ public class UserTaskTriggerTopicConsumer {
     this.taktPropertiesHelper = taktPropertiesHelper;
     this.executor = executor;
     this.processInstanceResponder = processInstanceResponder;
+  }
+
+  void setBeforeDispatchHook(Runnable beforeDispatchHook) {
+    this.beforeDispatchHook = beforeDispatchHook != null ? beforeDispatchHook : () -> {};
   }
 
   /**
@@ -121,7 +127,16 @@ public class UserTaskTriggerTopicConsumer {
                         }
 
                         try {
+                          beforeDispatchHook.run();
                           userTaskTriggerConsumer.accept(result.getValue());
+                        } catch (IllegalStateException readinessException) {
+                          log.warn(
+                              "Protected user-task traffic blocked for processInstanceId={}: {}",
+                              result.getValue().getProcessInstanceId(),
+                              readinessException.getMessage());
+                          userTaskTriggerKafkaConsumer.seek(
+                              new TopicPartition(rec.topic(), rec.partition()), rec.offset());
+                          break;
                         } catch (Exception e) {
                           log.error(
                               "Error processing UserTaskTrigger for processInstanceId={}: {}",

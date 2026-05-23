@@ -24,6 +24,8 @@ public class MessageEventSender {
 
   private final KafkaProducer<MessageEventKeyDTO, MessageEventDTO> messageEventEmitter;
   private final TaktPropertiesHelper taktPropertiesHelper;
+  private volatile ProtectedClientDataPlaneGuard protectedDataPlaneGuard =
+      ProtectedClientDataPlaneGuard.noop();
 
   /**
    * Constructor for MessageEventSender.
@@ -39,12 +41,20 @@ public class MessageEventSender {
             new MessageEventSerializer());
   }
 
+  void setProtectedDataPlaneGuard(@jakarta.annotation.Nullable ProtectedClientDataPlaneGuard protectedDataPlaneGuard) {
+    this.protectedDataPlaneGuard =
+        protectedDataPlaneGuard != null
+            ? protectedDataPlaneGuard
+            : ProtectedClientDataPlaneGuard.noop();
+  }
+
   /**
    * Sends a message event to the configured Kafka topic.
    *
    * @param messageEventDTO the MessageEventDTO to send
    */
   public void sendMessage(MessageEventDTO messageEventDTO) {
+    protectedDataPlaneGuard.check(ProtectedClientDataPlaneOperation.MESSAGE_EVENT, null);
     messageEventEmitter.send(
         new ProducerRecord<>(
             taktPropertiesHelper.getPrefixedTopicName(Topics.MESSAGE_EVENT_TOPIC.getTopicName()),

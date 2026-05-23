@@ -10,6 +10,7 @@ package io.taktx.client;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import io.taktx.client.auth.AuthorizationTokenProvider;
@@ -164,6 +165,23 @@ class ProcessInstanceProducerTest {
     assertThat(record.key()).isEqualTo(processInstanceId);
     assertThat(record.value()).isInstanceOf(SetVariableTriggerDTO.class);
     assertThat(record.headers().lastHeader(Constants.HEADER_AUTHORIZATION)).isNull();
+  }
+
+  @Test
+  void startProcess_guardBlocksProtectedTrafficBeforeSend() {
+    ProcessInstanceProducer processInstanceProducer =
+        new ProcessInstanceProducer(propertiesHelper, producer, null);
+    processInstanceProducer.setProtectedDataPlaneGuard(
+        (operation, explicitAuthorizationToken) -> {
+          throw new IllegalStateException("blocked by policy");
+        });
+
+    assertThatThrownBy(
+            () -> processInstanceProducer.startProcess("invoice", 3, VariablesDTO.empty(), null))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("blocked by policy");
+
+    verify(producer, never()).send(org.mockito.ArgumentMatchers.any());
   }
 
   private String headerValue(

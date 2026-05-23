@@ -59,6 +59,7 @@ import jakarta.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -105,6 +106,7 @@ public class TaktXClient {
   private final TaktPropertiesHelper taktPropertiesHelper;
   private final SigningIdentitySource signingIdentitySource;
   private final @Nullable AuthorizationTokenProvider authorizationTokenProvider;
+  private final ClientProtectedDataPlaneParticipationGuard protectedDataPlaneParticipationGuard;
 
   // ── DLQ client (lazily initialised on first use) ──────────────────────────────
   private DlqEntryConsumer dlqEntryConsumer;
@@ -131,6 +133,8 @@ public class TaktXClient {
 
   private SigningKeysStore signingKeysStore;
   private RuntimeConfigurationStore runtimeConfigurationStore;
+  private ClientNamespaceSecurityPolicyStore namespaceSecurityPolicyStore;
+  private NamespaceSecurityPolicyTopicStore namespaceSecurityPolicyTopicStore;
   private volatile String publishedWorkerKeyId;
   private volatile String workerSigningRegistrationState = "uninitialized";
 
@@ -172,6 +176,26 @@ public class TaktXClient {
             taktPropertiesHelper, executor, processInstanceResponder);
     this.userTaskTriggerTopicConsumer =
         new UserTaskTriggerTopicConsumer(taktPropertiesHelper, executor, processInstanceResponder);
+    this.protectedDataPlaneParticipationGuard =
+        new ClientProtectedDataPlaneParticipationGuard(
+            taktPropertiesHelper,
+            () -> namespaceSecurityPolicyStore,
+            this::currentSigningIdentity,
+            this::hasPublishedSigningCapability,
+            () -> authorizationTokenProvider != null,
+            this::resolvePlatformPublicKey,
+            Clock.systemUTC());
+    ProtectedClientDataPlaneGuard guard = this::ensureProtectedDataPlaneOperationAllowed;
+    this.processInstanceProducer.setProtectedDataPlaneGuard(guard);
+    this.messageEventSender.setProtectedDataPlaneGuard(guard);
+    this.signalSender.setProtectedDataPlaneGuard(guard);
+    this.processInstanceResponder.setProtectedDataPlaneGuard(guard);
+    this.externalTaskTriggerTopicConsumer.setBeforeDispatchHook(
+        () -> ensureProtectedDataPlaneOperationAllowed(
+            ProtectedClientDataPlaneOperation.EXTERNAL_TASK_CONSUME, null));
+    this.userTaskTriggerTopicConsumer.setBeforeDispatchHook(
+        () -> ensureProtectedDataPlaneOperationAllowed(
+            ProtectedClientDataPlaneOperation.USER_TASK_CONSUME, null));
   }
 
   /**
@@ -189,6 +213,7 @@ public class TaktXClient {
    */
   public void start() {
     initRuntimeConfigurationStore();
+    initNamespaceSecurityPolicyStore();
     refreshWorkerSigningFunctionRegistration();
     initSigningKeysStore();
     this.processDefinitionConsumer.subscribeToDefinitionRecords();
@@ -230,6 +255,56 @@ public class TaktXClient {
       RuntimeConfigurationHolder.clear();
       log.warn(
           "RuntimeConfigurationStore initialisation failed — using default runtime config: {}",
+          e.getMessage());
+    }
+  }
+
+  private void initNamespaceSecurityPolicyStore() {
+    String bootstrapServers = taktPropertiesHelper.getBootstrapServers();
+    if (bootstrapServers == null || bootstrapServers.isBlank()) {
+      log.debug(
+          "No bootstrap.servers configured — skipping NamespaceSecurityPolicyTopicStore initialisation");
+      return;
+    }
+    String topic =
+        taktPropertiesHelper.getPrefixedTopicName(
+            io.taktx.Topics.SECURITY_POLICY_TOPIC.getTopicName());
+    try {
+      Properties consumerProps =
+          taktPropertiesHelper.getKafkaConsumerProperties(
+              "namespace-security-policy-store-" + ProcessHandle.current().pid(),
+              org.apache.kafka.common.serialization.StringDeserializer.class,
+              org.apache.kafka.common.serialization.ByteArrayDeserializer.class,
+              "earliest");
+      namespaceSecurityPolicyStore = new ClientNamespaceSecurityPolicyStore();
+      namespaceSecurityPolicyTopicStore =
+          new NamespaceSecurityPolicyTopicStore(
+              consumerProps,
+              topic,
+              namespaceSecurityPolicyStore,
+              this::refreshWorkerSigningFunctionRegistration);
+      namespaceSecurityPolicyTopicStore.awaitReady(java.time.Duration.ofSeconds(10));
+      NamespaceSecurityPolicyDTO authoritativePolicy =
+          namespaceSecurityPolicyStore.getAuthoritativePolicy();
+      log.info(
+          "✅ NamespaceSecurityPolicyTopicStore ready — currentActivationState={} activePolicyVersion={} activePolicyHash={}",
+          namespaceSecurityPolicyStore.get() != null
+              ? namespaceSecurityPolicyStore.get().getActivationState()
+              : null,
+          authoritativePolicy != null ? authoritativePolicy.getActivePolicyVersion() : null,
+          authoritativePolicy != null ? authoritativePolicy.getActivePolicyHash() : null);
+    } catch (Exception e) {
+      namespaceSecurityPolicyStore = null;
+      if (namespaceSecurityPolicyTopicStore != null) {
+        try {
+          namespaceSecurityPolicyTopicStore.close();
+        } catch (Exception closeEx) {
+          log.debug("Error closing failed NamespaceSecurityPolicyTopicStore", closeEx);
+        }
+      }
+      namespaceSecurityPolicyTopicStore = null;
+      log.warn(
+          "NamespaceSecurityPolicyTopicStore initialisation failed — using default open behavior: {}",
           e.getMessage());
     }
   }
@@ -873,12 +948,10 @@ public class TaktXClient {
   }
 
   void refreshWorkerSigningFunctionRegistration() {
-    boolean signingEnabled = RuntimeConfigurationHolder.isSigningEnabled();
-    boolean commandAuthRequired = RuntimeConfigurationHolder.isEngineRequiresAuthorization();
-    boolean externalTaskAuthRequired =
-        RuntimeConfigurationHolder.isEngineRequiresExternalTaskAuthorization();
-    boolean userTaskAuthRequired =
-        RuntimeConfigurationHolder.isEngineRequiresUserTaskAuthorization();
+    boolean signingEnabled = isEffectiveSigningEnabled();
+    boolean commandAuthRequired = isStartCommandAuthorizationRequired();
+    boolean externalTaskAuthRequired = isExternalTaskAuthorizationRequired();
+    boolean userTaskAuthRequired = isUserTaskAuthorizationRequired();
     boolean anyAuthRequired =
         commandAuthRequired || externalTaskAuthRequired || userTaskAuthRequired;
 
@@ -900,7 +973,7 @@ public class TaktXClient {
     if (!signingEnabled) {
       logWorkerSigningRegistrationState(
           "runtime-disabled",
-          "Worker response signing inactive — runtime configuration signingEnabled=false");
+          "Worker response signing inactive — runtime configuration and authoritative policy do not require signing");
       if (commandAuthRequired) {
         log.info(
             "engineRequiresAuthorization=true — entry commands require JWT"
@@ -1006,7 +1079,7 @@ public class TaktXClient {
   }
 
   private String signWorkerPayload(byte[] payload) {
-    if (!RuntimeConfigurationHolder.isSigningEnabled()) {
+    if (!isEffectiveSigningEnabled()) {
       return null;
     }
     SigningIdentity identity = currentSigningIdentity();
@@ -1023,6 +1096,81 @@ public class TaktXClient {
       log.warn("Worker signing failed: {}", e.getMessage());
       return null;
     }
+  }
+
+  private void ensureProtectedDataPlaneOperationAllowed(
+      ProtectedClientDataPlaneOperation operation,
+      @Nullable String explicitAuthorizationToken) {
+    protectedDataPlaneParticipationGuard.check(operation, explicitAuthorizationToken);
+  }
+
+  private boolean hasPublishedSigningCapability() {
+    if (!isEffectiveSigningEnabled()) {
+      return false;
+    }
+    SigningIdentity identity = currentSigningIdentity();
+    if (identity == null) {
+      return false;
+    }
+    return ensureWorkerKeyPublished(identity);
+  }
+
+  private boolean isEffectiveSigningEnabled() {
+    if (RuntimeConfigurationHolder.isSigningEnabled()) {
+      return true;
+    }
+    NamespaceSecurityPolicyDTO policy = authoritativeNamespaceSecurityPolicy();
+    return policy != null
+        && policy.getRequiredSigning() != null
+        && (policy.getRequiredSigning().isClientCommands()
+            || policy.getRequiredSigning().isWorkerResponses());
+  }
+
+  private boolean isStartCommandAuthorizationRequired() {
+    if (RuntimeConfigurationHolder.isEngineRequiresAuthorization()) {
+      return true;
+    }
+    NamespaceSecurityPolicyDTO policy = authoritativeNamespaceSecurityPolicy();
+    return policy != null
+        && policy.getRequiredAuthorization() != null
+        && policy.getRequiredAuthorization().isStartCommands();
+  }
+
+  private boolean isExternalTaskAuthorizationRequired() {
+    if (RuntimeConfigurationHolder.isEngineRequiresExternalTaskAuthorization()) {
+      return true;
+    }
+    NamespaceSecurityPolicyDTO policy = authoritativeNamespaceSecurityPolicy();
+    return policy != null
+        && policy.getRequiredAuthorization() != null
+        && policy.getRequiredAuthorization().isExternalTaskCompletion();
+  }
+
+  private boolean isUserTaskAuthorizationRequired() {
+    if (RuntimeConfigurationHolder.isEngineRequiresUserTaskAuthorization()) {
+      return true;
+    }
+    NamespaceSecurityPolicyDTO policy = authoritativeNamespaceSecurityPolicy();
+    return policy != null
+        && policy.getRequiredAuthorization() != null
+        && policy.getRequiredAuthorization().isUserTaskCompletion();
+  }
+
+  private @Nullable NamespaceSecurityPolicyDTO authoritativeNamespaceSecurityPolicy() {
+    return namespaceSecurityPolicyStore != null ? namespaceSecurityPolicyStore.getAuthoritativePolicy() : null;
+  }
+
+  private @Nullable String resolvePlatformPublicKey() {
+    String configured = taktPropertiesHelper.getTaktProperties().getProperty("taktx.platform.public-key");
+    if (configured != null && !configured.isBlank()) {
+      return configured;
+    }
+    configured = System.getProperty("taktx.platform.public-key");
+    if (configured != null && !configured.isBlank()) {
+      return configured;
+    }
+    configured = System.getenv("TAKTX_PLATFORM_PUBLIC_KEY");
+    return configured != null && !configured.isBlank() ? configured : null;
   }
 
   /**
@@ -1064,6 +1212,11 @@ public class TaktXClient {
       runtimeConfigurationStore.close();
       runtimeConfigurationStore = null;
     }
+    if (namespaceSecurityPolicyTopicStore != null) {
+      namespaceSecurityPolicyTopicStore.close();
+      namespaceSecurityPolicyTopicStore = null;
+    }
+    namespaceSecurityPolicyStore = null;
     publishedWorkerKeyId = null;
     workerSigningRegistrationState = "uninitialized";
     RuntimeConfigurationHolder.clear();

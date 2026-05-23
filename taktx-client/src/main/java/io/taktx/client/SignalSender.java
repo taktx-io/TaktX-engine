@@ -23,6 +23,8 @@ public class SignalSender {
 
   private final KafkaProducer<String, SignalDTO> signalEmitter;
   private final TaktPropertiesHelper taktPropertiesHelper;
+  private volatile ProtectedClientDataPlaneGuard protectedDataPlaneGuard =
+      ProtectedClientDataPlaneGuard.noop();
 
   /**
    * Constructor for MessageEventSender.
@@ -38,12 +40,20 @@ public class SignalSender {
             new SignalSerializer());
   }
 
+  void setProtectedDataPlaneGuard(@jakarta.annotation.Nullable ProtectedClientDataPlaneGuard protectedDataPlaneGuard) {
+    this.protectedDataPlaneGuard =
+        protectedDataPlaneGuard != null
+            ? protectedDataPlaneGuard
+            : ProtectedClientDataPlaneGuard.noop();
+  }
+
   /**
    * Sends a signal to the configured Kafka topic.
    *
    * @param signalDTO the SignalDTO to send
    */
   public void sendMSignal(SignalDTO signalDTO) {
+    protectedDataPlaneGuard.check(ProtectedClientDataPlaneOperation.SIGNAL_EVENT, null);
     signalEmitter.send(
         new ProducerRecord<>(
             taktPropertiesHelper.getPrefixedTopicName(Topics.SIGNAL_TOPIC.getTopicName()),
