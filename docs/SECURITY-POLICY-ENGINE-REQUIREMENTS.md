@@ -783,7 +783,7 @@ as engine+client work, not engine-only work.
 - [ ] Reject invalid partial policy payloads.
 - [ ] Document or encode which policy elements are relevant to each participant role so protected
       data-plane gating can be applied consistently.
-- [ ] Define the client/runtime contract for authoritative control-plane mutation, including the
+- [x] Define the client/runtime contract for authoritative control-plane mutation, including the
       security properties expected of writers.
 - [ ] Define desired-vs-active identity fields and activation-state semantics.
 - [ ] Define activation authority handoff/ownership explicitly.
