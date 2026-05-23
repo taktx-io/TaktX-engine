@@ -856,6 +856,11 @@ as engine+client work, not engine-only work.
 - [ ] Ensure authoritative control-plane updates are accepted only from trusted/authorized writer
       paths and never from arbitrary message injection.
 
+**Current status note:** process-instance trigger ingress now fail-closes when a requested policy is
+not yet authoritative or when the local engine is not `READY` for the authoritative active policy
+identity. Equivalent protected data-plane gating still needs to be applied to the remaining runtime
+channels before the broader task can be closed.
+
 ### Acceptance criteria
 - Runtime enforcement matches the active policy requirements.
 - Required checks fail closed when missing.
