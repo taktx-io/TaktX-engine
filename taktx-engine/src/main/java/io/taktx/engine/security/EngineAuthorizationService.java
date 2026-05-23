@@ -251,6 +251,7 @@ public class EngineAuthorizationService {
     GlobalConfigurationDTO cfg = effectiveConfig();
     MessageSecurityPolicy policy = resolveProcessInstancePolicy(trigger);
     NamespaceSecurityPolicyDTO authoritativePolicy = authoritativePolicy();
+    assertTrustAnchorRequirementSatisfied(authoritativePolicy);
 
     Header authHeader = lastHeader(headers, AUTH_HEADER);
     Header sigHeader = lastHeader(headers, SIG_HEADER);
@@ -434,6 +435,7 @@ public class EngineAuthorizationService {
         messageSecurityPolicyRegistry.resolve(
             Topics.SCHEDULE_COMMANDS.getTopicName(), MessageScheduleDTO.class);
     NamespaceSecurityPolicyDTO authoritativePolicy = authoritativePolicy();
+    assertTrustAnchorRequirementSatisfied(authoritativePolicy);
     if (!isSignatureGateActive(cfg, policy, authoritativePolicy)
         && !isAnyAuthorizationGateActive(cfg, authoritativePolicy)) {
       log.debug("Security gates disabled — skipping signature enforcement for schedule-commands");
@@ -711,6 +713,16 @@ public class EngineAuthorizationService {
     return requiresCommandAuthorization(authoritativePolicy)
         || requiresExternalTaskAuthorization(authoritativePolicy)
         || requiresUserTaskAuthorization(authoritativePolicy);
+  }
+
+  private void assertTrustAnchorRequirementSatisfied(NamespaceSecurityPolicyDTO authoritativePolicy) {
+    if (authoritativePolicy == null || !authoritativePolicy.isTrustAnchorRequired()) {
+      return;
+    }
+    if (config.getPlatformPublicKey() == null || config.getPlatformPublicKey().isBlank()) {
+      throw new AuthorizationTokenException(
+          "Namespace security policy requires anchored trust but no platform public key is configured");
+    }
   }
 
   private GlobalConfigurationDTO effectiveConfig() {
