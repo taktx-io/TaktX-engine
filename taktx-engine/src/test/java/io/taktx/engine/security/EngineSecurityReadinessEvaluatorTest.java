@@ -171,4 +171,56 @@ class EngineSecurityReadinessEvaluatorTest {
         .extracting(io.taktx.dto.PolicyMismatchReasonDTO::getCode)
         .contains(EngineSecurityReadinessEvaluator.ENGINE_SIGNING_UNAVAILABLE);
   }
+
+  @Test
+  void activePolicy_statusIncludesAuthoritativeObservedIdentityAndTtlFields() {
+    policyStore.update(
+        NamespaceSecurityPolicyDTO.builder()
+            .mode(SecurityMode.COMMUNITY_SECURED)
+            .activationState(SecurityActivationState.ACTIVE)
+            .desiredPolicyVersion(42L)
+            .requiredSigning(RequiredSigningDTO.builder().engineOutbound(true).build())
+            .activePolicyVersion(42L)
+            .build());
+
+    EngineSecurityReadinessEvaluator evaluator =
+        new EngineSecurityReadinessEvaluator(
+            configuration, policyStore, messageSigningService, clock);
+
+    var status = evaluator.evaluateCurrentStatus();
+
+    assertThat(status.getObservedPolicyVersion()).isEqualTo(42L);
+    assertThat(status.getObservedPolicyHash())
+        .isEqualTo(policyStore.getActivePolicy().getActivePolicyHash());
+    assertThat(status.getLastSeenAt()).isEqualTo(1_716_450_000_000L);
+    assertThat(status.getStatusExpiresAt())
+        .isEqualTo(1_716_450_000_000L + EngineSecurityReadinessEvaluator.STATUS_TTL_MS);
+    assertThat(status.getParticipantInstanceId()).contains("tenant.bank.payments@");
+  }
+
+  @Test
+  void mismatchReasons_includeHumanReadableMessages() {
+    policyStore.update(
+        NamespaceSecurityPolicyDTO.builder()
+            .mode(SecurityMode.ANCHORED_SECURED)
+            .activationState(SecurityActivationState.ACTIVE)
+            .desiredPolicyVersion(42L)
+            .requiredSigning(RequiredSigningDTO.builder().engineOutbound(true).build())
+            .trustAnchorRequired(true)
+            .activePolicyVersion(42L)
+            .build());
+
+    EngineSecurityReadinessEvaluator evaluator =
+        new EngineSecurityReadinessEvaluator(
+            configuration, policyStore, messageSigningService, clock);
+
+    var status = evaluator.evaluateCurrentStatus();
+
+    assertThat(status.getMismatchReasons())
+        .allSatisfy(
+            reason -> {
+              assertThat(reason.getCode()).isNotBlank();
+              assertThat(reason.getMessage()).isNotBlank();
+            });
+  }
 }
