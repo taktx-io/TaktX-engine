@@ -239,6 +239,11 @@ public class MessageSigningService {
     return cachedPublicKeyBase64;
   }
 
+  public boolean isPublicKeyPublished() {
+    refreshActiveIdentity();
+    return publicKeyPublished.get();
+  }
+
   private SigningIdentity refreshActiveIdentity() {
     SigningIdentity identity = signingIdentitySource.currentIdentity();
     if (identity == null) {
