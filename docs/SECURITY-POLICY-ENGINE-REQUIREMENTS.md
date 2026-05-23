@@ -801,15 +801,15 @@ as engine+client work, not engine-only work.
 
 ### Tasks
 - [ ] Consume the authoritative namespace policy stream.
-- [ ] Implement `REQUESTED -> VALIDATING -> ACTIVE` behavior.
-- [ ] Reject incompatible policies instead of activating degraded states.
-- [ ] Reject activation when required participants have not converged on the same canonical policy
+- [x] Implement `REQUESTED -> VALIDATING -> ACTIVE` behavior.
+- [x] Reject incompatible policies instead of activating degraded states.
+- [x] Reject activation when required participants have not converged on the same canonical policy
       identity.
-- [ ] Preserve `COMMUNITY_OPEN` as the effective default when no explicit policy is active.
+- [x] Preserve `COMMUNITY_OPEN` as the effective default when no explicit policy is active.
 - [ ] Keep protected data-plane behavior governed by the previous active policy until the new policy
       becomes `ACTIVE`.
-- [ ] Preserve sensible bare-engine behavior when no external control-plane publisher is present.
-- [ ] Implement explicit timeout / rollback behavior for failed or stalled activation.
+- [x] Preserve sensible bare-engine behavior when no external control-plane publisher is present.
+- [x] Implement explicit timeout / rollback behavior for failed or stalled activation.
 
 ### Acceptance criteria
 - New policy versions are validated before activation.
@@ -873,13 +873,13 @@ as engine+client work, not engine-only work.
 
 ### Tasks
 - [ ] Emit participant status updates with observed policy version and mismatch reasons.
-- [ ] Emit append-only security events for policy changes, rejection, and incidents.
+- [x] Emit append-only security events for policy changes, rejection, and incidents.
 - [ ] Ensure anchored-mode event signing is supported if the final shared contract requires it.
-- [ ] Emit explicit events for convergence failure and post-activation drift.
+- [x] Emit explicit events for convergence failure and post-activation drift.
 - [ ] Emit explicit events when protected data-plane participation is blocked because policy is not
       yet `ACTIVE` or participant is not `READY`.
 - [ ] Emit explicit events when authoritative control-plane mutation is rejected for security reasons.
-- [ ] Emit explicit events for activation timeout, rollback, and break-glass downgrade.
+- [x] Emit explicit events for activation timeout, rollback, and break-glass downgrade.
 
 ### Acceptance criteria
 - Ops can distinguish policy activation, mismatch, and incident events.
@@ -951,8 +951,8 @@ on unpublished or bespoke patches.
       control plane is present
 - [ ] ensure authoritative control-plane mutation is rejected when attempted from untrusted writers
 - [ ] ensure the required control-plane client operations are available via `TaktXClient`
-- [ ] ensure stale participant status expires via TTL/incarnation handling
-- [ ] ensure activation timeout / rollback behavior is deterministic and fail-closed
+- [x] ensure stale participant status expires via TTL/incarnation handling
+- [x] ensure activation timeout / rollback behavior is deterministic and fail-closed
 - [ ] ensure break-glass downgrade requires privileged role + reason + audit event
 - [ ] ensure downgrade transitions are observable / auditable
 
