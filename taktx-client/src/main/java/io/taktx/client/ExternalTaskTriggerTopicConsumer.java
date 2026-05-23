@@ -53,6 +53,7 @@ public class ExternalTaskTriggerTopicConsumer {
   private final int maxPollRecords;
   private final int pollTimeoutMs;
   private final ProcessInstanceResponder processInstanceResponder;
+  private volatile Runnable beforeDispatchHook = () -> {};
   private List<KafkaConsumer<UUID, DeserializationResult<ExternalTaskTriggerDTO>>>
       externalTaskTriggerKafkaConsumers;
   private final Object consumerLock = new Object();
@@ -84,6 +85,10 @@ public class ExternalTaskTriggerTopicConsumer {
         consumerThreads,
         maxPollRecords,
         pollTimeoutMs);
+  }
+
+  void setBeforeDispatchHook(Runnable beforeDispatchHook) {
+    this.beforeDispatchHook = beforeDispatchHook != null ? beforeDispatchHook : () -> {};
   }
 
   /**
@@ -381,6 +386,7 @@ public class ExternalTaskTriggerTopicConsumer {
         case SINGLE_THREAD -> {
           // Process batch synchronously
           try {
+            beforeDispatchHook.run();
             consumer.acceptBatch(batch);
             return true;
           } catch (Exception e) {
@@ -397,6 +403,7 @@ public class ExternalTaskTriggerTopicConsumer {
                 CompletableFuture.supplyAsync(
                     () -> {
                       try {
+                            beforeDispatchHook.run();
                         consumer.acceptBatch(List.of(dto));
                         return true;
                       } catch (Exception e) {
@@ -440,6 +447,7 @@ public class ExternalTaskTriggerTopicConsumer {
             CompletableFuture.runAsync(
                 () -> {
                   try {
+                    beforeDispatchHook.run();
                     consumer.acceptBatch(List.of(dto));
                   } catch (Exception e) {
                     log.error(

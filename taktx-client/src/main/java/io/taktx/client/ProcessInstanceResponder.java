@@ -42,6 +42,8 @@ public class ProcessInstanceResponder {
   private final String topicName;
   private final @Nullable AuthorizationTokenProvider authorizationTokenProvider;
   private volatile Runnable beforeSendHook = () -> {};
+  private volatile ProtectedClientDataPlaneGuard protectedDataPlaneGuard =
+      ProtectedClientDataPlaneGuard.noop();
 
   /**
    * Constructor for ProcessInstanceResponder.
@@ -95,6 +97,13 @@ public class ProcessInstanceResponder {
     this.beforeSendHook = beforeSendHook != null ? beforeSendHook : () -> {};
   }
 
+  void setProtectedDataPlaneGuard(@Nullable ProtectedClientDataPlaneGuard protectedDataPlaneGuard) {
+    this.protectedDataPlaneGuard =
+        protectedDataPlaneGuard != null
+            ? protectedDataPlaneGuard
+            : ProtectedClientDataPlaneGuard.noop();
+  }
+
   /**
    * Creates an ExternalTaskInstanceResponder for the given ExternalTaskTriggerDTO.
    *
@@ -108,7 +117,7 @@ public class ProcessInstanceResponder {
         topicName,
         externalTaskTriggerDTO.getProcessInstanceId(),
         externalTaskTriggerDTO.getElementInstanceIdPath(),
-        beforeSendHook);
+        composeBeforeSendHook(ProtectedClientDataPlaneOperation.EXTERNAL_TASK_RESPONSE));
   }
 
   /**
@@ -121,7 +130,11 @@ public class ProcessInstanceResponder {
   public ExternalTaskInstanceResponder responderForExternalTask(
       UUID processInstanceId, List<Long> elementInstanceIdPath) {
     return new ExternalTaskInstanceResponder(
-        responseEmitter, topicName, processInstanceId, elementInstanceIdPath, beforeSendHook);
+        responseEmitter,
+        topicName,
+        processInstanceId,
+        elementInstanceIdPath,
+        composeBeforeSendHook(ProtectedClientDataPlaneOperation.EXTERNAL_TASK_RESPONSE));
   }
 
   /**
@@ -137,7 +150,7 @@ public class ProcessInstanceResponder {
         topicName,
         userTaskTriggerDTO.getProcessInstanceId(),
         userTaskTriggerDTO.getElementInstanceIdPath(),
-        beforeSendHook);
+        composeBeforeSendHook(ProtectedClientDataPlaneOperation.USER_TASK_RESPONSE));
   }
 
   /**
@@ -277,7 +290,8 @@ public class ProcessInstanceResponder {
     send(
         trigger,
         authorizationToken,
-        CommandAuthorizationRequest.userTaskComplete(processInstanceId, elementInstanceIdPath));
+        CommandAuthorizationRequest.userTaskComplete(processInstanceId, elementInstanceIdPath),
+        ProtectedClientDataPlaneOperation.USER_TASK_RESPONSE);
   }
 
   /**
@@ -418,13 +432,16 @@ public class ProcessInstanceResponder {
     send(
         trigger,
         authorizationToken,
-        CommandAuthorizationRequest.externalTaskComplete(processInstanceId, elementInstanceIdPath));
+        CommandAuthorizationRequest.externalTaskComplete(processInstanceId, elementInstanceIdPath),
+        ProtectedClientDataPlaneOperation.EXTERNAL_TASK_RESPONSE);
   }
 
   private void send(
       ProcessInstanceTriggerDTO trigger,
       @Nullable String explicitAuthorizationToken,
-      CommandAuthorizationRequest authorizationRequest) {
+      CommandAuthorizationRequest authorizationRequest,
+      ProtectedClientDataPlaneOperation operation) {
+    protectedDataPlaneGuard.check(operation, explicitAuthorizationToken);
     beforeSendHook.run();
     ProducerRecord<UUID, ProcessInstanceTriggerDTO> producerRecord =
         new ProducerRecord<>(topicName, trigger.getProcessInstanceId(), trigger);
@@ -459,5 +476,12 @@ public class ProcessInstanceResponder {
           "AuthorizationTokenProvider returned no token for " + authorizationRequest.scope());
     }
     return authorizationToken;
+  }
+
+  private Runnable composeBeforeSendHook(ProtectedClientDataPlaneOperation operation) {
+    return () -> {
+      protectedDataPlaneGuard.check(operation, null);
+      beforeSendHook.run();
+    };
   }
 }
