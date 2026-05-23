@@ -10,6 +10,7 @@ package io.taktx.engine.pd;
 import io.taktx.dto.UserTaskResponseDlqEntryDTO;
 import io.taktx.dto.UserTaskResponseTriggerDTO;
 import io.taktx.engine.dlq.DlqHeaders;
+import io.taktx.engine.security.ProtectedDataPlaneParticipationGuard;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.util.Arrays;
@@ -17,7 +18,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.common.header.Header;
 import org.apache.kafka.streams.processor.api.Processor;
@@ -31,7 +31,6 @@ import org.apache.kafka.streams.processor.api.Record;
  * UserTaskResponseDlqEntryDTO} to DLQ.
  */
 @Slf4j
-@RequiredArgsConstructor
 public class UserTaskResponseProcessor
     implements Processor<UUID, UserTaskResponseTriggerDTO, Object, Object> {
 
@@ -40,8 +39,19 @@ public class UserTaskResponseProcessor
   private static final String DLQ_CAPTURE_STAGE_HEADER = DlqHeaders.CAPTURE_STAGE;
 
   private final Clock clock;
+  private final ProtectedDataPlaneParticipationGuard protectedDataPlaneParticipationGuard;
 
   private ProcessorContext<Object, Object> context;
+
+  public UserTaskResponseProcessor(Clock clock) {
+    this(clock, null);
+  }
+
+  public UserTaskResponseProcessor(
+      Clock clock, ProtectedDataPlaneParticipationGuard protectedDataPlaneParticipationGuard) {
+    this.clock = clock;
+    this.protectedDataPlaneParticipationGuard = protectedDataPlaneParticipationGuard;
+  }
 
   @Override
   public void init(ProcessorContext<Object, Object> context) {
@@ -60,6 +70,9 @@ public class UserTaskResponseProcessor
       return;
     }
     try {
+      if (shouldBlockProtectedDataPlane(userTaskResponseTriggerRecord)) {
+        return;
+      }
       context.forward(
           new Record<>(
               userTaskResponseTriggerRecord.value().getProcessInstanceId(),
@@ -73,6 +86,21 @@ public class UserTaskResponseProcessor
       emitUserTaskResponseDlq(
           userTaskResponseTriggerRecord, "PROCESSOR_EXCEPTION", e.getMessage(), "PROCESSOR");
     }
+  }
+
+  private boolean shouldBlockProtectedDataPlane(
+      Record<UUID, UserTaskResponseTriggerDTO> userTaskResponseTriggerRecord) {
+    if (protectedDataPlaneParticipationGuard == null) {
+      return false;
+    }
+    ProtectedDataPlaneParticipationGuard.Decision decision =
+        protectedDataPlaneParticipationGuard.evaluate();
+    if (decision.permitted()) {
+      return false;
+    }
+    emitUserTaskResponseDlq(
+        userTaskResponseTriggerRecord, decision.reasonHint(), decision.reasonText(), "PROCESSOR");
+    return true;
   }
 
   private void emitUserTaskResponseDlq(
