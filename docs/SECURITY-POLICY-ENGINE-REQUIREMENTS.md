@@ -786,7 +786,7 @@ as engine+client work, not engine-only work.
 - [x] Define the client/runtime contract for authoritative control-plane mutation, including the
       security properties expected of writers.
 - [x] Define desired-vs-active identity fields and activation-state semantics.
-- [ ] Define activation authority handoff/ownership explicitly.
+- [x] Define activation authority handoff/ownership explicitly.
 
 ### Acceptance criteria
 - Engine code can parse and validate explicit namespace security policy.
