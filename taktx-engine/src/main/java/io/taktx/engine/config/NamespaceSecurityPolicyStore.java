@@ -51,6 +51,21 @@ public class NamespaceSecurityPolicyStore {
     return currentPolicy.get();
   }
 
+  /**
+   * Returns the policy currently authoritative for protected data-plane behavior.
+   *
+   * <p>If a newer policy is still `REQUESTED` / `VALIDATING`, the previous `ACTIVE` policy remains
+   * authoritative until activation succeeds.
+   */
+  public synchronized NamespaceSecurityPolicyDTO getAuthoritativePolicy() {
+    NamespaceSecurityPolicyDTO current = currentPolicy.get();
+    if (current != null
+        && current.getActivationState() == io.taktx.dto.SecurityActivationState.ACTIVE) {
+      return current;
+    }
+    return activePolicy.get();
+  }
+
   /** Replaces only the current policy view used by runtime readers. */
   public synchronized void setCurrentPolicy(NamespaceSecurityPolicyDTO dto) {
     currentPolicy.set(dto == null ? null : NamespaceSecurityPolicySupport.requireValid(dto));

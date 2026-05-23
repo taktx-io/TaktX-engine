@@ -503,7 +503,7 @@ in assumptions that later have to be unwound.
       canonical policy identity before a stricter policy becomes `ACTIVE`.
 - [x] **SP-02.5b** Keep the previously active policy in force when convergence/compatibility checks
       fail.
-- [ ] **SP-02.5c** Keep protected data-plane behavior governed by the previously active policy until
+- [x] **SP-02.5c** Keep protected data-plane behavior governed by the previously active policy until
       the new policy becomes `ACTIVE`.
 - [x] **SP-02.5d** If there is no previous secured policy, continue operating under
       `COMMUNITY_OPEN` semantics until a stricter policy successfully activates.

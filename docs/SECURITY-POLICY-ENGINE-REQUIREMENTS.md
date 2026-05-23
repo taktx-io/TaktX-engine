@@ -806,7 +806,7 @@ as engine+client work, not engine-only work.
 - [x] Reject activation when required participants have not converged on the same canonical policy
       identity.
 - [x] Preserve `COMMUNITY_OPEN` as the effective default when no explicit policy is active.
-- [ ] Keep protected data-plane behavior governed by the previous active policy until the new policy
+- [x] Keep protected data-plane behavior governed by the previous active policy until the new policy
       becomes `ACTIVE`.
 - [x] Preserve sensible bare-engine behavior when no external control-plane publisher is present.
 - [x] Implement explicit timeout / rollback behavior for failed or stalled activation.
@@ -942,7 +942,7 @@ on unpublished or bespoke patches.
 - [ ] ensure participant status never changes trust outcomes
 - [ ] ensure false compatibility reports do not weaken runtime enforcement
 - [ ] ensure post-activation drift yields `NOT READY` posture and incident/event output
-- [ ] ensure protected data-plane behavior remains on previous active policy during `REQUESTED` /
+- [x] ensure protected data-plane behavior remains on previous active policy during `REQUESTED` /
       `VALIDATING`
 - [ ] ensure control-plane traffic remains available during convergence/recovery
 - [ ] ensure engine and client participants do not publish/consume/process protected runtime traffic
