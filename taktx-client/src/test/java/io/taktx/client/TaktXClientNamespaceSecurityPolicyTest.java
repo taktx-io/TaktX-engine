@@ -10,6 +10,7 @@ package io.taktx.client;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import io.taktx.dto.GlobalConfigurationDTO;
 import io.taktx.dto.NamespaceSecurityPolicyDTO;
 import io.taktx.dto.RequiredAuthorizationDTO;
 import io.taktx.dto.RequiredSigningDTO;
@@ -214,5 +215,53 @@ class TaktXClientNamespaceSecurityPolicyTest {
   void namespaceSecurityPolicyActivationAuthority_exposesPlatformServiceAsSoleAuthority() {
     assertThat(TaktXClient.namespaceSecurityPolicyActivationAuthority())
         .isEqualTo(NamespaceSecurityPolicyActivationAuthority.PLATFORM_SERVICE);
+  }
+
+  @Test
+  void legacyGlobalSecurityConfigToNamespaceSecurityPolicy_mapsSecuredFlags() {
+    NamespaceSecurityPolicyDTO policy =
+        TaktXClient.legacyGlobalSecurityConfigToNamespaceSecurityPolicy(
+            GlobalConfigurationDTO.builder()
+                .signingEnabled(true)
+                .engineRequiresAuthorization(true)
+                .engineRequiresExternalTaskAuthorization(true)
+                .engineRequiresUserTaskAuthorization(false)
+                .build(),
+            42L);
+
+    assertThat(policy.getMode()).isEqualTo(SecurityMode.COMMUNITY_SECURED);
+    assertThat(policy.getActivationState()).isEqualTo(SecurityActivationState.REQUESTED);
+    assertThat(policy.getDesiredPolicyVersion()).isEqualTo(42L);
+    assertThat(policy.getRequiredSigning().isEngineOutbound()).isTrue();
+    assertThat(policy.getRequiredAuthorization().isStartCommands()).isTrue();
+    assertThat(policy.getRequiredAuthorization().isExternalTaskCompletion()).isTrue();
+    assertThat(policy.getRequiredAuthorization().isUserTaskCompletion()).isFalse();
+    assertThat(policy.isTrustAnchorRequired()).isFalse();
+  }
+
+  @Test
+  void legacyGlobalSecurityConfigToNamespaceSecurityPolicy_mapsDefaultOpenMode() {
+    NamespaceSecurityPolicyDTO policy =
+        TaktXClient.legacyGlobalSecurityConfigToNamespaceSecurityPolicy(
+            GlobalConfigurationDTO.builder().build(), 7L, SecurityActivationState.VALIDATING);
+
+    assertThat(policy.getMode()).isEqualTo(SecurityMode.COMMUNITY_OPEN);
+    assertThat(policy.getActivationState()).isEqualTo(SecurityActivationState.VALIDATING);
+    assertThat(policy.getRequiredSigning().isAnyRequired()).isFalse();
+    assertThat(policy.getRequiredAuthorization().isAnyRequired()).isFalse();
+  }
+
+  @Test
+  void legacyGlobalSecurityConfigToNamespaceSecurityPolicy_rejectsInvalidInputs() {
+    assertThatThrownBy(
+            () -> TaktXClient.legacyGlobalSecurityConfigToNamespaceSecurityPolicy(null, 1L))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("configuration must not be null");
+    assertThatThrownBy(
+            () ->
+                TaktXClient.legacyGlobalSecurityConfigToNamespaceSecurityPolicy(
+                    GlobalConfigurationDTO.builder().build(), 0L))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("desiredPolicyVersion must be > 0");
   }
 }
