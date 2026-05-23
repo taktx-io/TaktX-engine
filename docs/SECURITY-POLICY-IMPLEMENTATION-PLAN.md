@@ -528,6 +528,8 @@ in assumptions that later have to be unwound.
 - The shared namespace security policy model now includes parsing helpers for security mode and
   requirement tokens, canonical digest handling, policy-version normalization, and explicit
   desired-vs-active identity validation.
+- The shared model now also encodes a participant-role relevance matrix so downstream readiness and
+  protected data-plane gating logic can reason about role-specific policy subsets consistently.
 - The first slice should reject incompatible changes instead of activating degraded or excluded
   participant states.
 - This keeps edge cases down and makes rollout behavior easier to reason about.
