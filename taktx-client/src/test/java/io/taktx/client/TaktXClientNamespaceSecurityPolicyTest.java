@@ -163,4 +163,22 @@ class TaktXClientNamespaceSecurityPolicyTest {
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("topic must not be blank");
   }
+
+  @Test
+  void buildNamespaceSecurityPolicyTombstoneRecord_usesPolicyKeyAndNullValue() {
+    var record =
+        TaktXClient.buildNamespaceSecurityPolicyTombstoneRecord(
+            "tenant.bank.payments.taktx-security-policy");
+
+    assertThat(record.topic()).isEqualTo("tenant.bank.payments.taktx-security-policy");
+    assertThat(record.key()).isEqualTo(TaktXClient.NAMESPACE_SECURITY_POLICY_RECORD_KEY);
+    assertThat(record.value()).isNull();
+  }
+
+  @Test
+  void buildNamespaceSecurityPolicyTombstoneRecord_rejectsBlankTopic() {
+    assertThatThrownBy(() -> TaktXClient.buildNamespaceSecurityPolicyTombstoneRecord(" "))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("topic must not be blank");
+  }
 }
