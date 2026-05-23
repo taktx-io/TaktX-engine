@@ -1,0 +1,90 @@
+syntax = "proto3";
+
+package io.taktx.proto;
+
+option java_package = "io.taktx.proto";
+option java_multiple_files = true;
+option java_outer_classname = "SecurityObservabilityProto";
+
+enum ParticipantRoleMessage {
+  PARTICIPANT_ROLE_UNSPECIFIED = 0;
+  ENGINE = 1;
+  WORKER = 2;
+  CLIENT = 3;
+  INGESTER = 4;
+  CONSOLE = 5;
+}
+
+enum StatusVerificationLevelMessage {
+  STATUS_VERIFICATION_LEVEL_UNSPECIFIED = 0;
+  UNVERIFIED_STATUS = 1;
+  LOCALLY_VERIFIED_STATUS = 2;
+}
+
+enum ParticipantEffectiveStateMessage {
+  PARTICIPANT_EFFECTIVE_STATE_UNSPECIFIED = 0;
+  READY = 1;
+  NOT_READY = 2;
+  MISMATCH = 3;
+  STALE = 4;
+}
+
+enum SecurityEventSeverityMessage {
+  SECURITY_EVENT_SEVERITY_UNSPECIFIED = 0;
+  INFO = 1;
+  WARNING = 2;
+  ERROR = 3;
+  CRITICAL = 4;
+}
+
+enum SecurityEventTypeMessage {
+  SECURITY_EVENT_TYPE_UNSPECIFIED = 0;
+  POLICY_CHANGE = 1;
+  POLICY_REJECTION = 2;
+  READINESS_MISMATCH = 3;
+  POLICY_DOWNGRADE = 4;
+  TRUST_ANCHOR_PROBLEM = 5;
+  ACTIVATION_TIMEOUT = 6;
+  ACTIVATION_ROLLBACK = 7;
+  CONTROL_PLANE_MUTATION_REJECTED = 8;
+  DATA_PLANE_BLOCKED = 9;
+}
+
+message PolicyMismatchReasonMessage {
+  string code = 1;
+  string message = 2;
+  map<string, string> metadata = 3;
+}
+
+message ParticipantStatusMessage {
+  string participant_id = 1;
+  string participant_instance_id = 2;
+  ParticipantRoleMessage role = 3;
+  string namespace = 4;
+  int64 started_at = 5;
+  int64 last_seen_at = 6;
+  int64 status_expires_at = 7;
+  StatusVerificationLevelMessage status_verification_level = 8;
+  ParticipantEffectiveStateMessage effective_state = 9;
+  bool ready_for_data_plane = 10;
+  optional int64 observed_policy_version = 11;
+  string observed_policy_hash = 12;
+  repeated PolicyMismatchReasonMessage mismatch_reasons = 13;
+}
+
+message SecurityEventMessage {
+  SecurityEventTypeMessage event_type = 1;
+  SecurityEventSeverityMessage severity = 2;
+  int64 occurred_at_ms = 3;
+  string namespace = 4;
+  string participant_id = 5;
+  string participant_instance_id = 6;
+  optional int64 desired_policy_version = 7;
+  string desired_policy_hash = 8;
+  optional int64 active_policy_version = 9;
+  string active_policy_hash = 10;
+  string code = 11;
+  string message = 12;
+  map<string, string> metadata = 13;
+}
+
