@@ -129,4 +129,19 @@ class NamespaceSecurityPolicySupportTest {
     assertThat(validated.getDesiredPolicyHash()).isNotBlank();
     assertThat(validated.getActivePolicyHash()).isEqualTo(validated.getDesiredPolicyHash());
   }
+
+  @Test
+  void requireValid_rejectsPartialBreakGlassMetadata() {
+    NamespaceSecurityPolicyDTO policy =
+        NamespaceSecurityPolicyDTO.builder()
+            .mode(SecurityMode.COMMUNITY_SECURED)
+            .activationState(SecurityActivationState.REQUESTED)
+            .desiredPolicyVersion(10L)
+            .breakGlassActor("ops-admin")
+            .build();
+
+    assertThatThrownBy(() -> NamespaceSecurityPolicySupport.requireValid(policy))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("breakGlassActor and breakGlassReason must be provided together");
+  }
 }

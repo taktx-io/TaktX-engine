@@ -320,6 +320,84 @@ class NamespaceSecurityPolicyActivationServiceTest {
         .containsEntry("policyMismatchParticipants", "console-1");
   }
 
+  @Test
+  void breakGlassDowngradeWithoutActorAndReason_isRejectedFailClosed() {
+    NamespaceSecurityPolicyDTO previousActive =
+        NamespaceSecurityPolicySupport.requireValid(
+            NamespaceSecurityPolicyDTO.builder()
+                .mode(SecurityMode.ANCHORED_SECURED)
+                .activationState(SecurityActivationState.ACTIVE)
+                .desiredPolicyVersion(41L)
+                .trustAnchorRequired(true)
+                .requiredSigning(RequiredSigningDTO.builder().engineOutbound(true).build())
+                .activePolicyVersion(41L)
+                .build());
+    policyStore.update(previousActive);
+
+    NamespaceSecurityPolicyDTO requested =
+        NamespaceSecurityPolicySupport.requireValid(
+            NamespaceSecurityPolicyDTO.builder()
+                .mode(SecurityMode.COMMUNITY_SECURED)
+                .activationState(SecurityActivationState.REQUESTED)
+                .desiredPolicyVersion(42L)
+                .requiredSigning(RequiredSigningDTO.builder().engineOutbound(true).build())
+                .build());
+
+    activationService.onPolicyUpdated(requested);
+
+    assertThat(policyStore.get()).isEqualTo(previousActive);
+    ArgumentCaptor<SecurityEventDTO> captor = ArgumentCaptor.forClass(SecurityEventDTO.class);
+    verify(securityEventPublisher, Mockito.times(2)).publish(captor.capture());
+    assertThat(captor.getAllValues())
+        .extracting(SecurityEventDTO::getEventType)
+        .containsExactly(
+            SecurityEventType.CONTROL_PLANE_MUTATION_REJECTED, SecurityEventType.POLICY_REJECTION);
+    assertThat(captor.getAllValues().getFirst().getCode())
+        .isEqualTo(NamespaceSecurityPolicyActivationService.BREAK_GLASS_DOWNGRADE_REJECTED_CODE);
+  }
+
+  @Test
+  void breakGlassDowngradeWithActorAndReason_isAuditedAndAllowedToActivate() {
+    NamespaceSecurityPolicyDTO previousActive =
+        NamespaceSecurityPolicySupport.requireValid(
+            NamespaceSecurityPolicyDTO.builder()
+                .mode(SecurityMode.ANCHORED_SECURED)
+                .activationState(SecurityActivationState.ACTIVE)
+                .desiredPolicyVersion(41L)
+                .trustAnchorRequired(true)
+                .requiredSigning(RequiredSigningDTO.builder().engineOutbound(true).build())
+                .activePolicyVersion(41L)
+                .build());
+    policyStore.update(previousActive);
+
+    NamespaceSecurityPolicyDTO requested =
+        NamespaceSecurityPolicySupport.requireValid(
+            NamespaceSecurityPolicyDTO.builder()
+                .mode(SecurityMode.COMMUNITY_SECURED)
+                .activationState(SecurityActivationState.REQUESTED)
+                .desiredPolicyVersion(42L)
+                .requiredSigning(RequiredSigningDTO.builder().engineOutbound(true).build())
+                .breakGlassActor("ops-admin")
+                .breakGlassReason("temporary trust anchor outage")
+                .build());
+    addReadyParticipant(ParticipantRole.ENGINE, requested, clock.millis() + 500L);
+    addReadyParticipant(ParticipantRole.INGESTER, requested, clock.millis() + 500L);
+    addReadyParticipant(ParticipantRole.CONSOLE, requested, clock.millis() + 500L);
+
+    activationService.onPolicyUpdated(requested);
+
+    assertThat(policyStore.get()).isNotNull();
+    assertThat(policyStore.get().getActivationState()).isEqualTo(SecurityActivationState.ACTIVE);
+    ArgumentCaptor<SecurityEventDTO> captor = ArgumentCaptor.forClass(SecurityEventDTO.class);
+    verify(securityEventPublisher, Mockito.times(1)).publish(captor.capture());
+    assertThat(captor.getValue().getEventType()).isEqualTo(SecurityEventType.POLICY_DOWNGRADE);
+    assertThat(captor.getValue().getSeverity())
+        .isEqualTo(io.taktx.dto.SecurityEventSeverity.CRITICAL);
+    assertThat(captor.getValue().getMetadata())
+        .containsEntry("breakGlassActor", "ops-admin")
+        .containsEntry("breakGlassReason", "temporary trust anchor outage");
+  }
+
   private void addReadyParticipant(
       ParticipantRole role, NamespaceSecurityPolicyDTO policy, long statusExpiresAt) {
     String instanceId = role.name().toLowerCase() + "-1";
@@ -397,6 +475,7 @@ class NamespaceSecurityPolicyActivationServiceTest {
     }
   }
 }
+
 
 
 

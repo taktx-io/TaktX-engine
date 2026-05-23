@@ -41,6 +41,8 @@ class NamespaceSecurityPolicyProtoMapperTest {
                     .userTaskCompletion(true)
                     .build())
             .trustAnchorRequired(true)
+            .breakGlassActor("ops-admin")
+            .breakGlassReason("manual containment downgrade")
             .policyVersion(42L)
             .policyHash("abc123")
             .build();

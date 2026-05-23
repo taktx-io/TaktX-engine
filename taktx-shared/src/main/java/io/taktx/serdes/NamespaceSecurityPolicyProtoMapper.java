@@ -53,6 +53,12 @@ public final class NamespaceSecurityPolicyProtoMapper {
       builder.setRequiredAuthorization(toProto(dto.getRequiredAuthorization()));
     }
     builder.setTrustAnchorRequired(dto.isTrustAnchorRequired());
+    if (dto.getBreakGlassActor() != null) {
+      builder.setBreakGlassActor(dto.getBreakGlassActor());
+    }
+    if (dto.getBreakGlassReason() != null) {
+      builder.setBreakGlassReason(dto.getBreakGlassReason());
+    }
     if (dto.getPolicyVersion() != null) {
       builder.setPolicyVersion(dto.getPolicyVersion());
     }
@@ -84,6 +90,8 @@ public final class NamespaceSecurityPolicyProtoMapper {
                 ? toDto(message.getRequiredAuthorization())
                 : RequiredAuthorizationDTO.builder().build())
         .trustAnchorRequired(message.getTrustAnchorRequired())
+        .breakGlassActor(emptyToNull(message.getBreakGlassActor()))
+        .breakGlassReason(emptyToNull(message.getBreakGlassReason()))
         .policyVersion(message.hasPolicyVersion() ? message.getPolicyVersion() : null)
         .policyHash(emptyToNull(message.getPolicyHash()))
         .build();

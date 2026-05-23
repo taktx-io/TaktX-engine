@@ -45,5 +45,7 @@ message NamespaceSecurityPolicyMessage {
   bool trust_anchor_required = 9;
   optional int64 policy_version = 10;
   string policy_hash = 11;
+  string break_glass_actor = 12;
+  string break_glass_reason = 13;
 }
 
