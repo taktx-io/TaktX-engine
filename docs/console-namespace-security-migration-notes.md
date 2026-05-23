@@ -3,9 +3,29 @@
 This document captures the migration and compatibility guidance for Console-side adoption of the
 engine-repo namespace-security-policy contract.
 
-> The exact released artifact version is still pending publication. Use this document to prepare the
-> Console integration work; pin the final Maven coordinates only after the engine/client release is
-> published.
+> Target release for Console refresh: `0.8.0-beta`.
+>
+> After the local release is published, pin the Console-side dependency refresh to the exact
+> `0.8.0-beta` artifacts listed below.
+
+## Exact version to consume
+
+For the namespace-security-policy handoff, Console should refresh to the `0.8.0-beta` line.
+
+### Core artifacts
+
+- `io.taktx:taktx-client:0.8.0-beta`
+- `io.taktx:taktx-shared:0.8.0-beta`
+
+### Framework wrappers (only if used by the consuming application)
+
+- `io.taktx:taktx-client-quarkus:0.8.0-beta`
+- `io.taktx:taktx-client-spring-boot-3:0.8.0-beta`
+- `io.taktx:taktx-client-spring-boot-4:0.8.0-beta`
+
+### Engine compatibility target
+
+- TaktX engine release line: `0.8.0-beta`
 
 ## Scope
 
