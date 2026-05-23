@@ -781,7 +781,7 @@ as engine+client work, not engine-only work.
 - [x] Add policy-version handling.
 - [x] Add canonical policy digest handling.
 - [x] Reject invalid partial policy payloads.
-- [ ] Document or encode which policy elements are relevant to each participant role so protected
+- [x] Document or encode which policy elements are relevant to each participant role so protected
       data-plane gating can be applied consistently.
 - [x] Define the client/runtime contract for authoritative control-plane mutation, including the
       security properties expected of writers.
