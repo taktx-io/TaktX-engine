@@ -905,6 +905,8 @@ custom Kafka logic.
 - Required control-plane operations have an official supported client surface.
 - The supported client surface includes both namespace security policy publication and compacted-topic
   tombstone/clear semantics.
+- The supported client surface also includes a migration bridge from legacy global security flags to
+  explicit namespace policy payloads for downstream runtime/ingester adoption.
 - Engine/runtime integrations do not require parallel bespoke publishers for the same control-plane
   semantics.
 

@@ -534,6 +534,8 @@ in assumptions that later have to be unwound.
   deliberately keeping verification level as telemetry rather than a trust shortcut.
 - The shared/client contract now explicitly encodes Platform Service as the sole first-slice
   activation authority for namespace policy lifecycle transitions into `ACTIVE`.
+- The official client seam now also includes a supported bridge from legacy global security config
+  flags to explicit namespace policy payloads for downstream runtime/ingester adoption.
 - The first slice should reject incompatible changes instead of activating degraded or excluded
   participant states.
 - This keeps edge cases down and makes rollout behavior easier to reason about.
