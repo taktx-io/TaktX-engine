@@ -872,11 +872,11 @@ as engine+client work, not engine-only work.
 **Goal:** provide explicit observability for security posture without changing trust semantics.
 
 ### Tasks
-- [ ] Emit participant status updates with observed policy version and mismatch reasons.
+- [x] Emit participant status updates with observed policy version and mismatch reasons.
 - [x] Emit append-only security events for policy changes, rejection, and incidents.
 - [ ] Ensure anchored-mode event signing is supported if the final shared contract requires it.
 - [x] Emit explicit events for convergence failure and post-activation drift.
-- [ ] Emit explicit events when protected data-plane participation is blocked because policy is not
+- [x] Emit explicit events when protected data-plane participation is blocked because policy is not
       yet `ACTIVE` or participant is not `READY`.
 - [ ] Emit explicit events when authoritative control-plane mutation is rejected for security reasons.
 - [x] Emit explicit events for activation timeout, rollback, and break-glass downgrade.
