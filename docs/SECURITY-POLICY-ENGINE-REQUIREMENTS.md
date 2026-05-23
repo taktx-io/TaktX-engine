@@ -825,12 +825,12 @@ as engine+client work, not engine-only work.
 **Goal:** make participant capability satisfaction explicit and observable.
 
 ### Tasks
-- [ ] Compute participant readiness from deployment capabilities + namespace policy.
-- [ ] Emit explicit mismatch reasons when requirements are not met.
-- [ ] Include observed canonical policy identity in readiness reporting.
+- [x] Compute participant readiness from deployment capabilities + namespace policy.
+- [x] Emit explicit mismatch reasons when requirements are not met.
+- [x] Include observed canonical policy identity in readiness reporting.
 - [ ] Keep observed posture separate from trust decisions.
 - [ ] Ensure readiness is the gate for protected data-plane participation under the active policy.
-- [ ] Include participant incarnation / TTL fields in status reporting.
+- [x] Include participant incarnation / TTL fields in status reporting.
 - [ ] Optionally include status verification-level telemetry without treating it as trust.
 
 ### Acceptance criteria
