@@ -386,6 +386,36 @@ public class TaktXClient {
     }
   }
 
+  /** Clears the authoritative namespace security policy by publishing a tombstone under key `policy`. */
+  public void clearNamespaceSecurityPolicy() {
+    clearNamespaceSecurityPolicy(taktPropertiesHelper.getTaktProperties());
+  }
+
+  /** Static convenience overload for clearing the authoritative namespace security policy. */
+  public static void clearNamespaceSecurityPolicy(Properties properties) {
+    String topic =
+        new TaktPropertiesHelper(properties)
+            .getPrefixedTopicName(io.taktx.Topics.SECURITY_POLICY_TOPIC.getTopicName());
+
+    java.util.Properties producerProps =
+        new TaktPropertiesHelper(properties).getKafkaProducerProperties();
+    producerProps.put("max.block.ms", "10000");
+    producerProps.put("delivery.timeout.ms", "10000");
+    producerProps.put("request.timeout.ms", "8000");
+
+    try (org.apache.kafka.clients.producer.KafkaProducer<String, byte[]> producer =
+        new org.apache.kafka.clients.producer.KafkaProducer<>(
+            producerProps,
+            new org.apache.kafka.common.serialization.StringSerializer(),
+            new org.apache.kafka.common.serialization.ByteArraySerializer())) {
+      producer.send(buildNamespaceSecurityPolicyTombstoneRecord(topic));
+      producer.flush();
+      log.info("✅ Namespace security policy tombstone published to security policy topic: topic={}", topic);
+    } catch (Exception e) {
+      throw new IllegalStateException("Failed to clear namespace security policy", e);
+    }
+  }
+
   static org.apache.kafka.clients.producer.ProducerRecord<String, byte[]> buildNamespaceSecurityPolicyRecord(
       String topic, NamespaceSecurityPolicyDTO policy) {
     if (topic == null || topic.isBlank()) {
@@ -396,6 +426,15 @@ public class TaktXClient {
         topic,
         NAMESPACE_SECURITY_POLICY_RECORD_KEY,
         NamespaceSecurityPolicyProtoMapper.toProto(validated).toByteArray());
+  }
+
+  static org.apache.kafka.clients.producer.ProducerRecord<String, byte[]> buildNamespaceSecurityPolicyTombstoneRecord(
+      String topic) {
+    if (topic == null || topic.isBlank()) {
+      throw new IllegalArgumentException("topic must not be blank");
+    }
+    return new org.apache.kafka.clients.producer.ProducerRecord<>(
+        topic, NAMESPACE_SECURITY_POLICY_RECORD_KEY, null);
   }
 
   /**
