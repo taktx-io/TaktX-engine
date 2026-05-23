@@ -847,7 +847,7 @@ as engine+client work, not engine-only work.
 ### Tasks
 - [x] Map signing requirements to actual signature enforcement points.
 - [x] Map authorization requirements to actual JWT / auth enforcement points.
-- [ ] Map trust-anchor requirements to explicit trust-anchor validation.
+- [x] Map trust-anchor requirements to explicit trust-anchor validation.
 - [x] Fail closed when required checks cannot be satisfied.
 - [x] Treat false compatibility claims and post-activation drift as enforcement-relevant non-ready
       conditions, not as reasons to weaken checks.
@@ -864,6 +864,9 @@ available. Runtime authorization/signing gates now also consult the authoritativ
 policy identity: explicit `requiredAuthorization` / `requiredSigning` requirements activate JWT and
 signature enforcement for the corresponding protected runtime paths even when legacy global flags are
 off, while pending non-authoritative requested policies still do not switch enforcement early.
+Authoritative anchored policies now also fail closed directly in runtime authorization/signing paths
+when the platform trust anchor is missing, rather than relying only on readiness telemetry to keep
+protected work blocked.
 
 ### Acceptance criteria
 - Runtime enforcement matches the active policy requirements.
