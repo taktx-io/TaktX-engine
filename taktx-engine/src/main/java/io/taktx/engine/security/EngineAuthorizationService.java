@@ -13,21 +13,26 @@ import io.taktx.dto.AbortTriggerDTO;
 import io.taktx.dto.CommandAuthMethod;
 import io.taktx.dto.CommandTrustMetadataDTO;
 import io.taktx.dto.CommandTrustVerificationResult;
+import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.dto.Constants;
+import io.taktx.dto.EventSignalTriggerDTO;
 import io.taktx.dto.ExternalTaskResponseTriggerDTO;
 import io.taktx.dto.GlobalConfigurationDTO;
 import io.taktx.dto.KeyRole;
 import io.taktx.dto.MessageScheduleDTO;
+import io.taktx.dto.NamespaceSecurityPolicyDTO;
 import io.taktx.dto.ProcessInstanceTriggerDTO;
 import io.taktx.dto.ReplayProtectionMode;
 import io.taktx.dto.ScheduleKeyDTO;
 import io.taktx.dto.SetVariableTriggerDTO;
 import io.taktx.dto.SigningKeyDTO;
 import io.taktx.dto.StartCommandDTO;
+import io.taktx.dto.StartFlowElementTriggerDTO;
 import io.taktx.dto.TokenClaims;
 import io.taktx.dto.TopicMetaDTO;
 import io.taktx.dto.UserTaskResponseTriggerDTO;
 import io.taktx.engine.config.GlobalConfigStore;
+import io.taktx.engine.config.NamespaceSecurityPolicyStore;
 import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.pi.ProcessInstanceTriggerEnvelope;
 import io.taktx.security.AuthorizationTokenException;
@@ -72,6 +77,7 @@ public class EngineAuthorizationService {
 
   private final TaktConfiguration config;
   private final GlobalConfigStore globalConfigStore;
+  private final NamespaceSecurityPolicyStore namespaceSecurityPolicyStore;
   private final AuthorizationTokenValidator validator;
   private final KeyTrustPolicy keyTrustPolicy;
   private final MessageSecurityPolicyRegistry messageSecurityPolicyRegistry;
@@ -81,12 +87,14 @@ public class EngineAuthorizationService {
   public EngineAuthorizationService(
       TaktConfiguration config,
       GlobalConfigStore globalConfigStore,
+      NamespaceSecurityPolicyStore namespaceSecurityPolicyStore,
       PublicKeyProvider publicKeyProvider,
       KeyTrustPolicy keyTrustPolicy,
       MessageSecurityPolicyRegistry messageSecurityPolicyRegistry,
       VerificationCore verificationCore) {
     this.config = config;
     this.globalConfigStore = globalConfigStore;
+    this.namespaceSecurityPolicyStore = namespaceSecurityPolicyStore;
     this.keyTrustPolicy = keyTrustPolicy;
     this.messageSecurityPolicyRegistry = messageSecurityPolicyRegistry;
     this.verificationCore = verificationCore;
@@ -97,6 +105,7 @@ public class EngineAuthorizationService {
   EngineAuthorizationService(
       TaktConfiguration config,
       GlobalConfigStore globalConfigStore,
+      NamespaceSecurityPolicyStore namespaceSecurityPolicyStore,
       PublicKeyProvider publicKeyProvider,
       KafkaStreams kafkaStreams,
       KeyTrustPolicy keyTrustPolicy,
@@ -104,13 +113,50 @@ public class EngineAuthorizationService {
     this(
         config,
         globalConfigStore,
+        namespaceSecurityPolicyStore,
         publicKeyProvider,
         keyTrustPolicy,
         messageSecurityPolicyRegistry,
         new VerificationCore(config, kafkaStreams, keyTrustPolicy));
   }
 
+  /** Test constructor preserving the pre-policy API by using an empty namespace policy store. */
+  EngineAuthorizationService(
+      TaktConfiguration config,
+      GlobalConfigStore globalConfigStore,
+      PublicKeyProvider publicKeyProvider,
+      KafkaStreams kafkaStreams,
+      KeyTrustPolicy keyTrustPolicy,
+      MessageSecurityPolicyRegistry messageSecurityPolicyRegistry) {
+    this(
+        config,
+        globalConfigStore,
+        new NamespaceSecurityPolicyStore(),
+        publicKeyProvider,
+        kafkaStreams,
+        keyTrustPolicy,
+        messageSecurityPolicyRegistry);
+  }
+
   /** Test constructor — no CDI. */
+  EngineAuthorizationService(
+      TaktConfiguration config,
+      GlobalConfigStore globalConfigStore,
+      NamespaceSecurityPolicyStore namespaceSecurityPolicyStore,
+      PublicKeyProvider publicKeyProvider,
+      KafkaStreams kafkaStreams,
+      KeyTrustPolicy keyTrustPolicy) {
+    this(
+        config,
+        globalConfigStore,
+        namespaceSecurityPolicyStore,
+        publicKeyProvider,
+        keyTrustPolicy,
+        new MessageSecurityPolicyRegistry(),
+        new VerificationCore(config, kafkaStreams, keyTrustPolicy));
+  }
+
+  /** Test constructor preserving the pre-policy API by using an empty namespace policy store. */
   EngineAuthorizationService(
       TaktConfiguration config,
       GlobalConfigStore globalConfigStore,
@@ -120,25 +166,36 @@ public class EngineAuthorizationService {
     this(
         config,
         globalConfigStore,
+        new NamespaceSecurityPolicyStore(),
         publicKeyProvider,
-        keyTrustPolicy,
-        new MessageSecurityPolicyRegistry(),
-        new VerificationCore(config, kafkaStreams, keyTrustPolicy));
+        kafkaStreams,
+        keyTrustPolicy);
   }
 
   /** Test constructor — no CDI. Accessible from any package (e.g. integration test classes). */
   public EngineAuthorizationService(
       TaktConfiguration config,
       GlobalConfigStore globalConfigStore,
+      NamespaceSecurityPolicyStore namespaceSecurityPolicyStore,
       PublicKeyProvider publicKeyProvider,
       KafkaStreams kafkaStreams) {
     this(
         config,
         globalConfigStore,
+        namespaceSecurityPolicyStore,
         publicKeyProvider,
         new OpenKeyTrustPolicy(),
         new MessageSecurityPolicyRegistry(),
         new VerificationCore(config, kafkaStreams));
+  }
+
+  /** Test constructor preserving the pre-policy API by using an empty namespace policy store. */
+  public EngineAuthorizationService(
+      TaktConfiguration config,
+      GlobalConfigStore globalConfigStore,
+      PublicKeyProvider publicKeyProvider,
+      KafkaStreams kafkaStreams) {
+    this(config, globalConfigStore, new NamespaceSecurityPolicyStore(), publicKeyProvider, kafkaStreams);
   }
 
   @PostConstruct
@@ -193,6 +250,7 @@ public class EngineAuthorizationService {
     }
     GlobalConfigurationDTO cfg = effectiveConfig();
     MessageSecurityPolicy policy = resolveProcessInstancePolicy(trigger);
+    NamespaceSecurityPolicyDTO authoritativePolicy = authoritativePolicy();
 
     Header authHeader = lastHeader(headers, AUTH_HEADER);
     Header sigHeader = lastHeader(headers, SIG_HEADER);
@@ -202,8 +260,8 @@ public class EngineAuthorizationService {
     // ── Entry commands: AND-logic across both gates
     // ───────────────────────────────────────────────
     if (isEntryCommand) {
-      boolean authActive = isAuthorizationGateActive(cfg, policy);
-      boolean signingActive = cfg.isSigningEnabled();
+      boolean authActive = isAuthorizationGateActive(cfg, policy, authoritativePolicy);
+      boolean signingActive = isSignatureGateActive(cfg, policy, authoritativePolicy);
 
       if (!authActive && !signingActive) {
         return null;
@@ -296,8 +354,8 @@ public class EngineAuthorizationService {
 
     // ── Gate 2: Non-entry command Ed25519 signing
     // ─────────────────────────────────────────────────
-    boolean authActive = isAnyAuthorizationGateActive(cfg);
-    boolean signingActive = cfg.isSigningEnabled();
+    boolean authActive = isAnyAuthorizationGateActive(cfg, authoritativePolicy);
+    boolean signingActive = isSignatureGateActive(cfg, policy, authoritativePolicy);
 
     if (sigHeader != null && sigHeader.value() != null) {
       if (authActive || signingActive) {
@@ -372,14 +430,15 @@ public class EngineAuthorizationService {
   public SigningKeyDTO authorizeScheduleCommand(
       Headers headers, ScheduleKeyDTO scheduleKey, MessageScheduleDTO schedule) {
     GlobalConfigurationDTO cfg = effectiveConfig();
-    if (!isSecurityActive(cfg)) {
-      log.debug("Security gates disabled — skipping signature enforcement for schedule-commands");
-      return null;
-    }
-
     MessageSecurityPolicy policy =
         messageSecurityPolicyRegistry.resolve(
             Topics.SCHEDULE_COMMANDS.getTopicName(), MessageScheduleDTO.class);
+    NamespaceSecurityPolicyDTO authoritativePolicy = authoritativePolicy();
+    if (!isSignatureGateActive(cfg, policy, authoritativePolicy)
+        && !isAnyAuthorizationGateActive(cfg, authoritativePolicy)) {
+      log.debug("Security gates disabled — skipping signature enforcement for schedule-commands");
+      return null;
+    }
 
     VerifiedMessageContext ctx =
         verificationCore.verify(lastHeader(headers, SIG_HEADER), requiredRole(policy));
@@ -418,7 +477,11 @@ public class EngineAuthorizationService {
   }
 
   public boolean isEntryAuthorizationGateActive() {
-    return effectiveConfig().isEngineRequiresAuthorization();
+    return isAuthorizationGateActive(
+        effectiveConfig(),
+        messageSecurityPolicyRegistry.resolve(
+            Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName(), StartCommandDTO.class),
+        authoritativePolicy());
   }
 
   /**
@@ -435,10 +498,19 @@ public class EngineAuthorizationService {
     }
     GlobalConfigurationDTO cfg = effectiveConfig();
     if (trigger instanceof ExternalTaskResponseTriggerDTO) {
-      return cfg.isEngineRequiresExternalTaskAuthorization();
+      return isAuthorizationGateActive(
+          cfg,
+          messageSecurityPolicyRegistry.resolve(
+              Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName(),
+              ExternalTaskResponseTriggerDTO.class),
+          authoritativePolicy());
     }
     if (trigger instanceof UserTaskResponseTriggerDTO) {
-      return cfg.isEngineRequiresUserTaskAuthorization();
+      return isAuthorizationGateActive(
+          cfg,
+          messageSecurityPolicyRegistry.resolve(
+              Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName(), UserTaskResponseTriggerDTO.class),
+          authoritativePolicy());
     }
     return false;
   }
@@ -554,23 +626,91 @@ public class EngineAuthorizationService {
   }
 
   private static boolean isAuthorizationGateActive(
-      GlobalConfigurationDTO cfg, MessageSecurityPolicy policy) {
+      GlobalConfigurationDTO cfg,
+      MessageSecurityPolicy policy,
+      NamespaceSecurityPolicyDTO authoritativePolicy) {
     return switch (policy.authorizationScope()) {
-      case COMMANDS -> cfg.isEngineRequiresAuthorization();
-      case EXTERNAL_TASKS -> cfg.isEngineRequiresExternalTaskAuthorization();
-      case USER_TASKS -> cfg.isEngineRequiresUserTaskAuthorization();
+      case COMMANDS ->
+          cfg.isEngineRequiresAuthorization() || requiresCommandAuthorization(authoritativePolicy);
+      case EXTERNAL_TASKS ->
+          cfg.isEngineRequiresExternalTaskAuthorization()
+              || requiresExternalTaskAuthorization(authoritativePolicy);
+      case USER_TASKS ->
+          cfg.isEngineRequiresUserTaskAuthorization()
+              || requiresUserTaskAuthorization(authoritativePolicy);
       case NONE -> false;
     };
   }
 
-  private static boolean isAnyAuthorizationGateActive(GlobalConfigurationDTO cfg) {
+  private static boolean isAnyAuthorizationGateActive(
+      GlobalConfigurationDTO cfg, NamespaceSecurityPolicyDTO authoritativePolicy) {
     return cfg.isEngineRequiresAuthorization()
+        || cfg.isEngineRequiresExternalTaskAuthorization()
+        || cfg.isEngineRequiresUserTaskAuthorization()
+        || requiresAnyAuthorization(authoritativePolicy);
+  }
+
+  private static boolean isSecurityActive(GlobalConfigurationDTO cfg) {
+    return cfg.isSigningEnabled()
+        || cfg.isEngineRequiresAuthorization()
         || cfg.isEngineRequiresExternalTaskAuthorization()
         || cfg.isEngineRequiresUserTaskAuthorization();
   }
 
-  private static boolean isSecurityActive(GlobalConfigurationDTO cfg) {
-    return cfg.isSigningEnabled() || isAnyAuthorizationGateActive(cfg);
+  private static boolean isSignatureGateActive(
+      GlobalConfigurationDTO cfg,
+      MessageSecurityPolicy policy,
+      NamespaceSecurityPolicyDTO authoritativePolicy) {
+    return cfg.isSigningEnabled() || isPolicyDrivenSignatureRequired(policy, authoritativePolicy);
+  }
+
+  private static boolean isPolicyDrivenSignatureRequired(
+      MessageSecurityPolicy policy, NamespaceSecurityPolicyDTO authoritativePolicy) {
+    if (authoritativePolicy == null || authoritativePolicy.getRequiredSigning() == null) {
+      return false;
+    }
+    Class<?> messageClass = policy.messageClass();
+    if (StartCommandDTO.class.equals(messageClass)
+        || AbortTriggerDTO.class.equals(messageClass)
+        || SetVariableTriggerDTO.class.equals(messageClass)) {
+      return authoritativePolicy.getRequiredSigning().isClientCommands();
+    }
+    if (ExternalTaskResponseTriggerDTO.class.equals(messageClass)
+        || UserTaskResponseTriggerDTO.class.equals(messageClass)) {
+      return authoritativePolicy.getRequiredSigning().isWorkerResponses();
+    }
+    if (ContinueFlowElementTriggerDTO.class.equals(messageClass)
+        || EventSignalTriggerDTO.class.equals(messageClass)
+        || StartFlowElementTriggerDTO.class.equals(messageClass)
+        || MessageScheduleDTO.class.equals(messageClass)) {
+      return authoritativePolicy.getRequiredSigning().isEngineOutbound();
+    }
+    return false;
+  }
+
+  private static boolean requiresCommandAuthorization(NamespaceSecurityPolicyDTO authoritativePolicy) {
+    return authoritativePolicy != null
+        && authoritativePolicy.getRequiredAuthorization() != null
+        && authoritativePolicy.getRequiredAuthorization().isStartCommands();
+  }
+
+  private static boolean requiresExternalTaskAuthorization(
+      NamespaceSecurityPolicyDTO authoritativePolicy) {
+    return authoritativePolicy != null
+        && authoritativePolicy.getRequiredAuthorization() != null
+        && authoritativePolicy.getRequiredAuthorization().isExternalTaskCompletion();
+  }
+
+  private static boolean requiresUserTaskAuthorization(NamespaceSecurityPolicyDTO authoritativePolicy) {
+    return authoritativePolicy != null
+        && authoritativePolicy.getRequiredAuthorization() != null
+        && authoritativePolicy.getRequiredAuthorization().isUserTaskCompletion();
+  }
+
+  private static boolean requiresAnyAuthorization(NamespaceSecurityPolicyDTO authoritativePolicy) {
+    return requiresCommandAuthorization(authoritativePolicy)
+        || requiresExternalTaskAuthorization(authoritativePolicy)
+        || requiresUserTaskAuthorization(authoritativePolicy);
   }
 
   private GlobalConfigurationDTO effectiveConfig() {
@@ -578,6 +718,10 @@ public class EngineAuthorizationService {
       return GlobalConfigurationDTO.builder().build();
     }
     return globalConfigStore.get();
+  }
+
+  private NamespaceSecurityPolicyDTO authoritativePolicy() {
+    return namespaceSecurityPolicyStore != null ? namespaceSecurityPolicyStore.getAuthoritativePolicy() : null;
   }
 
   private static Header lastHeader(Headers headers, String headerName) {

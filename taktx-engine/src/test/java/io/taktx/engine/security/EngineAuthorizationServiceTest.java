@@ -24,10 +24,14 @@ import io.taktx.dto.ExternalTaskResponseTriggerDTO;
 import io.taktx.dto.ExternalTaskResponseType;
 import io.taktx.dto.GlobalConfigurationDTO;
 import io.taktx.dto.KeyRole;
+import io.taktx.dto.NamespaceSecurityPolicyDTO;
 import io.taktx.dto.OneTimeScheduleDTO;
 import io.taktx.dto.ProcessDefinitionKey;
 import io.taktx.dto.ReplayProtectionMode;
+import io.taktx.dto.RequiredAuthorizationDTO;
+import io.taktx.dto.RequiredSigningDTO;
 import io.taktx.dto.SetVariableTriggerDTO;
+import io.taktx.dto.SecurityActivationState;
 import io.taktx.dto.SigningKeyDTO;
 import io.taktx.dto.SigningKeyDTO.KeyStatus;
 import io.taktx.dto.StartCommandDTO;
@@ -38,6 +42,7 @@ import io.taktx.dto.UserTaskResponseTriggerDTO;
 import io.taktx.dto.UserTaskResponseType;
 import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.config.GlobalConfigStore;
+import io.taktx.engine.config.NamespaceSecurityPolicyStore;
 import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.pi.ProcessInstanceTriggerEnvelope;
 import io.taktx.security.AuthorizationTokenException;
@@ -62,6 +67,7 @@ class EngineAuthorizationServiceTest {
 
   private TaktConfiguration config;
   private GlobalConfigStore globalConfigStore;
+  private NamespaceSecurityPolicyStore namespaceSecurityPolicyStore;
   private PublicKeyProvider publicKeyProvider;
   private KafkaStreams kafkaStreams;
   private ReadOnlyKeyValueStore<String, SigningKeyDTO> signingKeysStore;
@@ -75,6 +81,7 @@ class EngineAuthorizationServiceTest {
 
     config = mock(TaktConfiguration.class);
     globalConfigStore = new GlobalConfigStore();
+    namespaceSecurityPolicyStore = new NamespaceSecurityPolicyStore();
     publicKeyProvider = mock(PublicKeyProvider.class);
     kafkaStreams = mock(KafkaStreams.class);
     signingKeysStore = mock(ReadOnlyKeyValueStore.class);
@@ -85,7 +92,8 @@ class EngineAuthorizationServiceTest {
         .thenReturn("default.taktx-signing-keys");
 
     service =
-        new EngineAuthorizationService(config, globalConfigStore, publicKeyProvider, kafkaStreams);
+        new EngineAuthorizationService(
+            config, globalConfigStore, namespaceSecurityPolicyStore, publicKeyProvider, kafkaStreams);
   }
 
   // ── authorization disabled ─────────────────────────────────────────────────
@@ -314,7 +322,12 @@ class EngineAuthorizationServiceTest {
 
     service =
         new EngineAuthorizationService(
-            config, globalConfigStore, publicKeyProvider, kafkaStreams, (_, _) -> false);
+            config,
+            globalConfigStore,
+            namespaceSecurityPolicyStore,
+            publicKeyProvider,
+            kafkaStreams,
+            (_, _) -> false);
 
     String keyId = "untrusted-topic-request-key";
     SigningKeyDTO keyEntry =
@@ -902,6 +915,82 @@ class EngineAuthorizationServiceTest {
     assertThat(service.isTaskCompletionAuthorizationActive(startCommand("proc", -1))).isFalse();
   }
 
+  @Test
+  void authoritativePolicy_startCommandAuthorizationAppliesWhenLegacyConfigDisabled() {
+    namespaceSecurityPolicyStore.update(
+        activeAuthoritativePolicy(
+            RequiredAuthorizationDTO.builder().startCommands(true).build(),
+            RequiredSigningDTO.builder().build()));
+
+    assertThatThrownBy(() -> service.authorize(new RecordHeaders(), envelope(startCommand("proc", -1))))
+        .isInstanceOf(AuthorizationTokenException.class)
+        .hasMessageContaining("Entry command")
+        .hasMessageContaining("tx-auth");
+  }
+
+  @Test
+  void pendingPolicyWithoutAuthoritativeActiveState_doesNotPrematurelyEnableAuthorization() {
+    namespaceSecurityPolicyStore.setCurrentPolicy(
+        NamespaceSecurityPolicyDTO.builder()
+            .mode(io.taktx.dto.SecurityMode.COMMUNITY_SECURED)
+            .activationState(SecurityActivationState.REQUESTED)
+            .desiredPolicyVersion(55L)
+            .requiredAuthorization(RequiredAuthorizationDTO.builder().startCommands(true).build())
+            .build());
+
+    assertThat(service.authorize(new RecordHeaders(), envelope(startCommand("proc", -1)))).isNull();
+  }
+
+  @Test
+  void authoritativePolicy_userTaskAuthorizationReflectsTaskCompletionHelper() {
+    namespaceSecurityPolicyStore.update(
+        activeAuthoritativePolicy(
+            RequiredAuthorizationDTO.builder().userTaskCompletion(true).build(),
+            RequiredSigningDTO.builder().build()));
+
+    assertThat(service.isTaskCompletionAuthorizationActive(userTaskResponseTrigger())).isTrue();
+    assertThat(service.isTaskCompletionAuthorizationActive(externalTaskResponseTrigger())).isFalse();
+  }
+
+  @Test
+  void authoritativePolicy_clientCommandSigningRejectsUnsignedStartCommand() {
+    namespaceSecurityPolicyStore.update(
+        activeAuthoritativePolicy(
+            RequiredAuthorizationDTO.builder().build(),
+            RequiredSigningDTO.builder().clientCommands(true).build()));
+
+    assertThatThrownBy(() -> service.authorize(new RecordHeaders(), envelope(startCommand("proc", -1))))
+        .isInstanceOf(AuthorizationTokenException.class)
+        .hasMessageContaining("tx-sig");
+  }
+
+  @Test
+  void authoritativePolicy_workerResponseSigningRejectsUnsignedUserTaskCompletion() {
+    namespaceSecurityPolicyStore.update(
+        activeAuthoritativePolicy(
+            RequiredAuthorizationDTO.builder().build(),
+            RequiredSigningDTO.builder().workerResponses(true).build()));
+
+    assertThatThrownBy(() -> service.authorize(new RecordHeaders(), envelope(userTaskResponseTrigger())))
+        .isInstanceOf(AuthorizationTokenException.class)
+        .hasMessageContaining("tx-sig");
+  }
+
+  @Test
+  void authoritativePolicy_engineOutboundSigningRejectsUnsignedScheduleCommand() {
+    namespaceSecurityPolicyStore.update(
+        activeAuthoritativePolicy(
+            RequiredAuthorizationDTO.builder().build(),
+            RequiredSigningDTO.builder().engineOutbound(true).build()));
+
+    assertThatThrownBy(
+            () ->
+                service.authorizeScheduleCommand(
+                    new RecordHeaders(), scheduleKey(), oneTimeSchedule(startCommand("proc", -1))))
+        .isInstanceOf(AuthorizationTokenException.class)
+        .hasMessageContaining("tx-sig");
+  }
+
   private GlobalConfigurationDTO authorizationConfig() {
     return config(true, true, true, false, ReplayProtectionMode.COMPAT);
   }
@@ -940,6 +1029,20 @@ class EngineAuthorizationServiceTest {
 
   private GlobalConfigurationDTO externalTaskAuthorizationConfig(boolean signingEnabled) {
     return config(false, true, false, signingEnabled, ReplayProtectionMode.COMPAT);
+  }
+
+  private NamespaceSecurityPolicyDTO activeAuthoritativePolicy(
+      RequiredAuthorizationDTO requiredAuthorization, RequiredSigningDTO requiredSigning) {
+    return NamespaceSecurityPolicyDTO.builder()
+        .mode(io.taktx.dto.SecurityMode.COMMUNITY_SECURED)
+        .activationState(SecurityActivationState.ACTIVE)
+        .desiredPolicyVersion(42L)
+        .desiredPolicyHash("policy-hash-42")
+        .requiredAuthorization(requiredAuthorization)
+        .requiredSigning(requiredSigning)
+        .activePolicyVersion(42L)
+        .activePolicyHash("policy-hash-42")
+        .build();
   }
 
   // ── helpers ────────────────────────────────────────────────────────────────
