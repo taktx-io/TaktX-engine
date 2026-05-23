@@ -131,6 +131,43 @@ class NamespaceSecurityPolicySupportTest {
   }
 
   @Test
+  void requireValid_acceptsAnchoredRequestedPolicyPayload() {
+    NamespaceSecurityPolicyDTO policy =
+        NamespaceSecurityPolicyDTO.builder()
+            .mode(SecurityMode.ANCHORED_SECURED)
+            .activationState(SecurityActivationState.REQUESTED)
+            .desiredPolicyVersion(11L)
+            .trustAnchorRequired(true)
+            .requiredSigning(RequiredSigningDTO.builder().engineOutbound(true).build())
+            .requiredAuthorization(
+                RequiredAuthorizationDTO.builder().startCommands(true).build())
+            .build();
+
+    NamespaceSecurityPolicyDTO validated = NamespaceSecurityPolicySupport.requireValid(policy);
+
+    assertThat(validated.getMode()).isEqualTo(SecurityMode.ANCHORED_SECURED);
+    assertThat(validated.isTrustAnchorRequired()).isTrue();
+    assertThat(validated.getDesiredPolicyVersion()).isEqualTo(11L);
+    assertThat(validated.getDesiredPolicyHash()).isNotBlank();
+    assertThat(validated.getPolicyHash()).isEqualTo(validated.getDesiredPolicyHash());
+  }
+
+  @Test
+  void requireValid_rejectsPartialActiveIdentityState() {
+    NamespaceSecurityPolicyDTO policy =
+        NamespaceSecurityPolicyDTO.builder()
+            .mode(SecurityMode.COMMUNITY_SECURED)
+            .activationState(SecurityActivationState.REQUESTED)
+            .desiredPolicyVersion(10L)
+            .activePolicyVersion(9L)
+            .build();
+
+    assertThatThrownBy(() -> NamespaceSecurityPolicySupport.requireValid(policy))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("activePolicyVersion and activePolicyHash must be provided together");
+  }
+
+  @Test
   void requireValid_rejectsPartialBreakGlassMetadata() {
     NamespaceSecurityPolicyDTO policy =
         NamespaceSecurityPolicyDTO.builder()
