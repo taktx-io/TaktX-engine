@@ -928,9 +928,15 @@ custom Kafka logic.
 - [x] Add the required official `TaktXClient` methods for control-plane publication/consumption used
       by the policy model.
 - [x] Document the expected security properties of those methods.
-- [ ] Update runtime/ingester integrations to use those methods rather than bespoke duplicate
+- [x] Update runtime/ingester integrations to use those methods rather than bespoke duplicate
       publishers where equivalent semantics are needed.
 - [x] Add the official shared DTO/contract support needed for desired-vs-active policy identities.
+
+**Current status note:** the supported Quarkus and Spring runtime integrations now request
+external-task worker topics through the official `TaktXClient.requestExternalTaskTopic(...)`
+surface rather than wiring lower-level topic-request publishers directly, while the core
+annotation-scanning worker integration retains a backward-compatible adapter for existing
+`ExternalTaskTopicRequester` callers.
 
 ### Acceptance criteria
 - Required control-plane operations have an official supported client surface.
