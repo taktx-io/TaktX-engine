@@ -62,7 +62,7 @@ class EngineSecurityReadinessEvaluatorTest {
   }
 
   @Test
-  void validatingPolicy_isNotReadyForProtectedDataPlane() {
+  void validatingPolicy_withoutPreviousActivePolicy_preservesCommunityOpenReadiness() {
     policyStore.update(
         NamespaceSecurityPolicyDTO.builder()
             .mode(SecurityMode.COMMUNITY_SECURED)
@@ -76,12 +76,47 @@ class EngineSecurityReadinessEvaluatorTest {
 
     var status = evaluator.evaluateCurrentStatus();
 
-    assertThat(status.getEffectiveState())
-        .isEqualTo(io.taktx.dto.ParticipantEffectiveState.NOT_READY);
-    assertThat(status.isReadyForDataPlane()).isFalse();
-    assertThat(status.getMismatchReasons())
-        .extracting(io.taktx.dto.PolicyMismatchReasonDTO::getCode)
-        .contains(EngineSecurityReadinessEvaluator.POLICY_NOT_ACTIVE);
+    assertThat(status.getEffectiveState()).isEqualTo(io.taktx.dto.ParticipantEffectiveState.READY);
+    assertThat(status.isReadyForDataPlane()).isTrue();
+    assertThat(status.getObservedPolicyVersion()).isNull();
+    assertThat(status.getObservedPolicyHash()).isNull();
+    assertThat(status.getMismatchReasons()).isEmpty();
+  }
+
+  @Test
+  void validatingPolicy_withPreviousActivePolicy_evaluatesAgainstPreviousActiveIdentity() {
+    NamespaceSecurityPolicyDTO previousActive =
+        NamespaceSecurityPolicyDTO.builder()
+            .mode(SecurityMode.COMMUNITY_SECURED)
+            .activationState(SecurityActivationState.ACTIVE)
+            .desiredPolicyVersion(41L)
+            .requiredSigning(RequiredSigningDTO.builder().engineOutbound(true).build())
+            .activePolicyVersion(41L)
+            .build();
+    policyStore.update(previousActive);
+    policyStore.setCurrentPolicy(
+        NamespaceSecurityPolicyDTO.builder()
+            .mode(SecurityMode.ANCHORED_SECURED)
+            .activationState(SecurityActivationState.VALIDATING)
+            .desiredPolicyVersion(42L)
+            .requiredSigning(RequiredSigningDTO.builder().engineOutbound(true).build())
+            .trustAnchorRequired(true)
+            .activePolicyVersion(41L)
+            .activePolicyHash(policyStore.getActivePolicy().getActivePolicyHash())
+            .build());
+
+    EngineSecurityReadinessEvaluator evaluator =
+        new EngineSecurityReadinessEvaluator(
+            configuration, policyStore, messageSigningService, clock);
+
+    var status = evaluator.evaluateCurrentStatus();
+
+    assertThat(status.getEffectiveState()).isEqualTo(io.taktx.dto.ParticipantEffectiveState.READY);
+    assertThat(status.isReadyForDataPlane()).isTrue();
+    assertThat(status.getObservedPolicyVersion()).isEqualTo(41L);
+    assertThat(status.getObservedPolicyHash())
+        .isEqualTo(policyStore.getActivePolicy().getActivePolicyHash());
+    assertThat(status.getMismatchReasons()).isEmpty();
   }
 
   @Test

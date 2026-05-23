@@ -58,7 +58,8 @@ public class EngineSecurityReadinessEvaluator {
   }
 
   public ParticipantStatusDTO evaluateCurrentStatus() {
-    NamespaceSecurityPolicyDTO policy = namespaceSecurityPolicyStore.get();
+    NamespaceSecurityPolicyDTO currentPolicy = namespaceSecurityPolicyStore.get();
+    NamespaceSecurityPolicyDTO policy = namespaceSecurityPolicyStore.getAuthoritativePolicy();
     long nowMs = clock.millis();
     List<PolicyMismatchReasonDTO> mismatchReasons = new ArrayList<>();
 
@@ -68,19 +69,8 @@ public class EngineSecurityReadinessEvaluator {
     String observedPolicyHash = null;
 
     if (policy != null) {
-      if (policy.getActivationState() == SecurityActivationState.ACTIVE) {
-        observedPolicyVersion = policy.getActivePolicyVersion();
-        observedPolicyHash = policy.getActivePolicyHash();
-      } else {
-        observedPolicyVersion = policy.getDesiredPolicyVersion();
-        observedPolicyHash = policy.getDesiredPolicyHash();
-        effectiveState = ParticipantEffectiveState.NOT_READY;
-        readyForDataPlane = false;
-        mismatchReasons.add(
-            mismatchReason(
-                POLICY_NOT_ACTIVE,
-                "Policy is not ACTIVE yet; protected data-plane participation must remain gated"));
-      }
+      observedPolicyVersion = policy.getActivePolicyVersion();
+      observedPolicyHash = policy.getActivePolicyHash();
 
       if (policy.getMode() == SecurityMode.MISCONFIGURED_SECURITY) {
         effectiveState = ParticipantEffectiveState.MISMATCH;
@@ -113,6 +103,12 @@ public class EngineSecurityReadinessEvaluator {
                 ENGINE_SIGNING_UNAVAILABLE,
                 "Namespace requires engine outbound signing but the engine signing key is not yet available and published"));
       }
+    } else if (currentPolicy != null && currentPolicy.getActivationState() != SecurityActivationState.ACTIVE) {
+      log.debug(
+          "Namespace security policy pending activation; continuing to evaluate readiness under current authoritative behavior: activationState={} desiredPolicyVersion={} desiredPolicyHash={}",
+          currentPolicy.getActivationState(),
+          currentPolicy.getDesiredPolicyVersion(),
+          currentPolicy.getDesiredPolicyHash());
     }
 
     return ParticipantStatusDTO.builder()
