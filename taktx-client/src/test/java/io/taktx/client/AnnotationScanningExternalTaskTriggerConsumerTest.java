@@ -17,7 +17,6 @@ import io.taktx.CleanupPolicy;
 import io.taktx.client.annotation.JobWorker;
 import io.taktx.dto.ExternalTaskTriggerDTO;
 import io.taktx.dto.VariablesDTO;
-import io.taktx.topicmanagement.ExternalTaskTopicRequester;
 import io.taktx.variables.Variables;
 import java.util.List;
 import java.util.Map;
@@ -30,7 +29,7 @@ class AnnotationScanningExternalTaskTriggerConsumerTest {
 
   private ProcessInstanceResponder externalTaskResponder;
   private ExternalTaskInstanceResponder taskInstanceResponder;
-  private ExternalTaskTopicRequester externalTaskTopicRequester;
+  private ExternalTaskTopicRequestGateway externalTaskTopicRequestGateway;
   private ListBindingWorker worker;
   private AnnotationScanningExternalTaskTriggerConsumer consumer;
 
@@ -38,7 +37,7 @@ class AnnotationScanningExternalTaskTriggerConsumerTest {
   void setUp() {
     externalTaskResponder = mock(ProcessInstanceResponder.class);
     taskInstanceResponder = mock(ExternalTaskInstanceResponder.class);
-    externalTaskTopicRequester = mock(ExternalTaskTopicRequester.class);
+    externalTaskTopicRequestGateway = mock(ExternalTaskTopicRequestGateway.class);
     worker = new ListBindingWorker();
 
     when(externalTaskResponder.responderForExternalTaskTrigger(any(ExternalTaskTriggerDTO.class)))
@@ -50,7 +49,7 @@ class AnnotationScanningExternalTaskTriggerConsumerTest {
             new DefaultResultProcessorFactory(),
             externalTaskResponder,
             new SingleWorkerInstanceProvider(worker),
-            externalTaskTopicRequester,
+            externalTaskTopicRequestGateway,
             1,
             CleanupPolicy.DELETE,
             (short) 1);
@@ -71,7 +70,7 @@ class AnnotationScanningExternalTaskTriggerConsumerTest {
 
     assertThat(consumer.getJobIds()).contains(JOB_TYPE);
     assertThat(worker.receivedInvoiceIds()).containsExactly("INV-1", "INV-2", "INV-3");
-    verify(externalTaskTopicRequester)
+    verify(externalTaskTopicRequestGateway)
         .requestExternalTaskTopic(JOB_TYPE, 1, CleanupPolicy.DELETE, (short) 1);
     verify(externalTaskResponder).responderForExternalTaskTrigger(trigger);
     verify(taskInstanceResponder).respondSuccess((Object) any());
