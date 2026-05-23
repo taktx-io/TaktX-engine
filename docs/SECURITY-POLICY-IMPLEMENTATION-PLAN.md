@@ -532,6 +532,8 @@ in assumptions that later have to be unwound.
   protected data-plane gating logic can reason about role-specific policy subsets consistently.
 - Shared participant status support now also encodes exact-active-identity data-plane gating while
   deliberately keeping verification level as telemetry rather than a trust shortcut.
+- The shared/client contract now explicitly encodes Platform Service as the sole first-slice
+  activation authority for namespace policy lifecycle transitions into `ACTIVE`.
 - The first slice should reject incompatible changes instead of activating degraded or excluded
   participant states.
 - This keeps edge cases down and makes rollout behavior easier to reason about.
