@@ -24,6 +24,7 @@ import io.taktx.dto.StartCommandDTO;
 import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.dlq.DlqHeaders;
 import io.taktx.engine.pi.ProcessingStatistics;
+import io.taktx.engine.security.ProtectedDataPlaneParticipationGuard;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.util.Arrays;
@@ -56,12 +57,22 @@ public class MessageEventProcessor
       correlationMessageSubscriptionStore;
   private final Clock clock;
   private final ProcessingStatistics processingStatistics;
+  private final ProtectedDataPlaneParticipationGuard protectedDataPlaneParticipationGuard;
 
   public MessageEventProcessor(
       TaktConfiguration taktConfiguration, Clock clock, ProcessingStatistics processingStatistics) {
+    this(taktConfiguration, clock, processingStatistics, null);
+  }
+
+  public MessageEventProcessor(
+      TaktConfiguration taktConfiguration,
+      Clock clock,
+      ProcessingStatistics processingStatistics,
+      ProtectedDataPlaneParticipationGuard protectedDataPlaneParticipationGuard) {
     this.taktConfiguration = taktConfiguration;
     this.clock = clock;
     this.processingStatistics = processingStatistics;
+    this.protectedDataPlaneParticipationGuard = protectedDataPlaneParticipationGuard;
   }
 
   @Override
@@ -103,10 +114,18 @@ public class MessageEventProcessor
         case CancelCorrelationMessageSubscriptionDTO cancelCorrelatingMessageSubscription ->
             cancelCorrelationMessageSubscription(
                 messageEventRecord.key(), cancelCorrelatingMessageSubscription);
-        case DefinitionMessageEventTriggerDTO messageEvent ->
-            processDefinitionMessageEventTrigger(messageEventRecord.key(), messageEvent);
-        case CorrelationMessageEventTriggerDTO messageEvent ->
-            processCorrelationMessageEventTrigger(messageEventRecord.key(), messageEvent);
+        case DefinitionMessageEventTriggerDTO messageEvent -> {
+          if (shouldBlockProtectedDataPlane(messageEventRecord)) {
+            return;
+          }
+          processDefinitionMessageEventTrigger(messageEventRecord.key(), messageEvent);
+        }
+        case CorrelationMessageEventTriggerDTO messageEvent -> {
+          if (shouldBlockProtectedDataPlane(messageEventRecord)) {
+            return;
+          }
+          processCorrelationMessageEventTrigger(messageEventRecord.key(), messageEvent);
+        }
         default -> {
           log.warn(
               "⚠ Unknown message-event type, routing to DLQ: {}",
@@ -123,6 +142,20 @@ public class MessageEventProcessor
           "⚠ Exception processing message-event record, routing to DLQ: {}", e.getMessage(), e);
       emitMessageEventDlq(messageEventRecord, "PROCESSOR_EXCEPTION", e.getMessage(), "PROCESSOR");
     }
+  }
+
+  private boolean shouldBlockProtectedDataPlane(
+      Record<MessageEventKeyDTO, MessageEventDTO> messageEventRecord) {
+    if (protectedDataPlaneParticipationGuard == null) {
+      return false;
+    }
+    ProtectedDataPlaneParticipationGuard.Decision decision =
+        protectedDataPlaneParticipationGuard.evaluate();
+    if (decision.permitted()) {
+      return false;
+    }
+    emitMessageEventDlq(messageEventRecord, decision.reasonHint(), decision.reasonText(), "PROCESSOR");
+    return true;
   }
 
   private void emitMessageEventDlq(

@@ -381,7 +381,7 @@ public class TopologyProducer {
             taktConfiguration.getPrefixed(Topics.SIGNAL_TOPIC.getTopicName()),
             Consumed.with(Serdes.String(), SIGNAL_SERDE))
         .process(
-            () -> new SignalProcessor(taktConfiguration, clock),
+            () -> new SignalProcessor(taktConfiguration, clock, protectedDataPlaneParticipationGuard()),
             taktConfiguration.getPrefixed(Stores.INSTANCE_SIGNAL_SUBSCRIPTIONS.getStorename()),
             taktConfiguration.getPrefixed(Stores.DEFINITION_SIGNAL_SUBSCRIPTIONS.getStorename()))
         .split()
@@ -767,14 +767,7 @@ public class TopologyProducer {
                     processingStatistics,
                     topicManager,
                     engineAuthorizationService,
-                    new ProtectedDataPlaneParticipationGuard(
-                        namespaceSecurityPolicyStore,
-                        new EngineSecurityReadinessEvaluator(
-                            taktConfiguration,
-                            namespaceSecurityPolicyStore,
-                            messageSigningService,
-                            clock),
-                        clock)),
+                    protectedDataPlaneParticipationGuard()),
             taktConfiguration.getPrefixed(Stores.FLOW_NODE_INSTANCE.getStorename()),
             taktConfiguration.getPrefixed(Stores.PROCESS_INSTANCE.getStorename()),
             taktConfiguration.getPrefixed(Stores.VARIABLES.getStorename()))
@@ -920,6 +913,14 @@ public class TopologyProducer {
             || envelope.trigger() instanceof UserTaskResponseTriggerDTO);
   }
 
+  private ProtectedDataPlaneParticipationGuard protectedDataPlaneParticipationGuard() {
+    return new ProtectedDataPlaneParticipationGuard(
+        namespaceSecurityPolicyStore,
+        new EngineSecurityReadinessEvaluator(
+            taktConfiguration, namespaceSecurityPolicyStore, messageSigningService, clock),
+        clock);
+  }
+
   private void setupMessageStream(StreamsBuilder builder) {
     builder.addStateStore(
         keyValueStoreBuilder(
@@ -936,7 +937,12 @@ public class TopologyProducer {
             taktConfiguration.getPrefixed(Topics.MESSAGE_EVENT_TOPIC.getTopicName()),
             Consumed.with(MESSAGE_EVENT_KEY_SERDE, MESSAGE_EVENT_SERDE))
         .process(
-            () -> new MessageEventProcessor(taktConfiguration, clock, processingStatistics),
+            () ->
+                new MessageEventProcessor(
+                    taktConfiguration,
+                    clock,
+                    processingStatistics,
+                    protectedDataPlaneParticipationGuard()),
             taktConfiguration.getPrefixed(Stores.DEFINITION_MESSAGE_SUBSCRIPTION.getStorename()),
             taktConfiguration.getPrefixed(Stores.CORRELATION_MESSAGE_SUBSCRIPTION.getStorename()))
         .split()
