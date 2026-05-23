@@ -147,6 +147,64 @@ class NamespaceSecurityPolicyProcessorTest {
   }
 
   @Test
+  void invalidActivePolicyWithoutActiveIdentity_doesNotReplacePreviousStoreValue() {
+    NamespaceSecurityPolicyDTO valid =
+        NamespaceSecurityPolicyDTO.builder()
+            .mode(SecurityMode.COMMUNITY_SECURED)
+            .activationState(SecurityActivationState.REQUESTED)
+            .desiredPolicyVersion(7L)
+            .build();
+    policyTopic.pipeInput(
+        NamespaceSecurityPolicyProcessor.POLICY_KEY,
+        NamespaceSecurityPolicyProtoMapper.toProto(valid).toByteArray());
+
+    NamespaceSecurityPolicyDTO previous = namespaceSecurityPolicyStore.get();
+
+    NamespaceSecurityPolicyDTO invalid =
+        NamespaceSecurityPolicyDTO.builder()
+            .mode(SecurityMode.COMMUNITY_SECURED)
+            .activationState(SecurityActivationState.ACTIVE)
+            .desiredPolicyVersion(8L)
+            .desiredPolicyHash("requested-hash")
+            .build();
+
+    policyTopic.pipeInput(
+        NamespaceSecurityPolicyProcessor.POLICY_KEY,
+        NamespaceSecurityPolicyProtoMapper.toProto(invalid).toByteArray());
+
+    assertThat(namespaceSecurityPolicyStore.get()).isEqualTo(previous);
+  }
+
+  @Test
+  void conflictingDesiredAndLegacyAliases_failClosed() {
+    NamespaceSecurityPolicyDTO valid =
+        NamespaceSecurityPolicyDTO.builder()
+            .mode(SecurityMode.COMMUNITY_SECURED)
+            .activationState(SecurityActivationState.REQUESTED)
+            .desiredPolicyVersion(7L)
+            .build();
+    policyTopic.pipeInput(
+        NamespaceSecurityPolicyProcessor.POLICY_KEY,
+        NamespaceSecurityPolicyProtoMapper.toProto(valid).toByteArray());
+
+    NamespaceSecurityPolicyDTO previous = namespaceSecurityPolicyStore.get();
+
+    NamespaceSecurityPolicyDTO invalid =
+        NamespaceSecurityPolicyDTO.builder()
+            .mode(SecurityMode.COMMUNITY_SECURED)
+            .activationState(SecurityActivationState.REQUESTED)
+            .desiredPolicyVersion(9L)
+            .policyVersion(10L)
+            .build();
+
+    policyTopic.pipeInput(
+        NamespaceSecurityPolicyProcessor.POLICY_KEY,
+        NamespaceSecurityPolicyProtoMapper.toProto(invalid).toByteArray());
+
+    assertThat(namespaceSecurityPolicyStore.get()).isEqualTo(previous);
+  }
+
+  @Test
   void nonPolicyKey_isIgnored() {
     policyTopic.pipeInput("other", new byte[] {1, 2, 3});
 
