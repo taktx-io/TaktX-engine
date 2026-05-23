@@ -11,27 +11,40 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import io.taktx.dto.NamespaceSecurityPolicyDTO;
 import io.taktx.dto.ParticipantEffectiveState;
 import io.taktx.dto.ParticipantRole;
 import io.taktx.dto.ParticipantStatusDTO;
+import io.taktx.dto.PolicyMismatchReasonDTO;
+import io.taktx.dto.RequiredSigningDTO;
+import io.taktx.dto.SecurityActivationState;
+import io.taktx.dto.SecurityEventDTO;
+import io.taktx.dto.SecurityEventType;
+import io.taktx.dto.SecurityMode;
 import io.taktx.dto.StatusVerificationLevel;
+import io.taktx.engine.config.NamespaceSecurityPolicyStore;
 import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.serdes.ParticipantStatusProtoMapper;
+import io.taktx.security.NamespaceSecurityPolicySupport;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.TopicPartition;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
 class ParticipantStatusPublisherTest {
 
   private TaktConfiguration configuration;
+  private NamespaceSecurityPolicyStore namespaceSecurityPolicyStore;
   private EngineSecurityReadinessEvaluator readinessEvaluator;
+  private SecurityEventPublisher securityEventPublisher;
   private KafkaProducer<String, byte[]> producer;
 
   @BeforeEach
@@ -40,7 +53,9 @@ class ParticipantStatusPublisherTest {
     configuration = Mockito.mock(TaktConfiguration.class);
     when(configuration.getPrefixed("taktx-participant-status"))
         .thenReturn("tenant.bank.payments.taktx-participant-status");
+    namespaceSecurityPolicyStore = new NamespaceSecurityPolicyStore();
     readinessEvaluator = Mockito.mock(EngineSecurityReadinessEvaluator.class);
+    securityEventPublisher = Mockito.mock(SecurityEventPublisher.class);
     producer = mock(KafkaProducer.class);
     when(producer.send(any()))
         .thenReturn(
@@ -99,7 +114,8 @@ class ParticipantStatusPublisherTest {
     when(readinessEvaluator.evaluateCurrentStatus()).thenReturn(status);
 
     ParticipantStatusPublisher publisher =
-        new ParticipantStatusPublisher(configuration, readinessEvaluator, producer);
+        new ParticipantStatusPublisher(
+            configuration, namespaceSecurityPolicyStore, readinessEvaluator, securityEventPublisher, producer);
 
     ParticipantStatusDTO published = publisher.publishCurrentStatus();
 
@@ -111,10 +127,95 @@ class ParticipantStatusPublisherTest {
   @Test
   void publish_rejectsNullStatus() {
     ParticipantStatusPublisher publisher =
-        new ParticipantStatusPublisher(configuration, readinessEvaluator, producer);
+        new ParticipantStatusPublisher(
+            configuration, namespaceSecurityPolicyStore, readinessEvaluator, securityEventPublisher, producer);
 
     assertThatThrownBy(() -> publisher.publish(null))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("status must not be null");
+  }
+
+  @Test
+  void publishCurrentStatus_emitsDataPlaneBlockedEventForPendingPolicy() {
+    NamespaceSecurityPolicyDTO requested =
+        NamespaceSecurityPolicySupport.requireValid(
+            NamespaceSecurityPolicyDTO.builder()
+                .mode(SecurityMode.COMMUNITY_SECURED)
+                .activationState(SecurityActivationState.VALIDATING)
+                .desiredPolicyVersion(42L)
+                .requiredSigning(RequiredSigningDTO.builder().engineOutbound(true).build())
+                .build());
+    namespaceSecurityPolicyStore.setCurrentPolicy(requested);
+
+    ParticipantStatusDTO status =
+        ParticipantStatusDTO.builder()
+            .participantId("tenant.bank.payments.engine")
+            .participantInstanceId("tenant.bank.payments@engine-host:8080#123")
+            .role(ParticipantRole.ENGINE)
+            .namespace("bank.payments")
+            .startedAt(100L)
+            .lastSeenAt(150L)
+            .statusExpiresAt(200L)
+            .statusVerificationLevel(StatusVerificationLevel.LOCALLY_VERIFIED_STATUS)
+            .effectiveState(ParticipantEffectiveState.READY)
+            .readyForDataPlane(true)
+            .build();
+    when(readinessEvaluator.evaluateCurrentStatus()).thenReturn(status);
+
+    ParticipantStatusPublisher publisher =
+        new ParticipantStatusPublisher(
+            configuration, namespaceSecurityPolicyStore, readinessEvaluator, securityEventPublisher, producer);
+
+    publisher.publishCurrentStatus();
+
+    ArgumentCaptor<SecurityEventDTO> eventCaptor = ArgumentCaptor.forClass(SecurityEventDTO.class);
+    verify(securityEventPublisher).publish(eventCaptor.capture());
+    assertThat(eventCaptor.getValue().getEventType()).isEqualTo(SecurityEventType.DATA_PLANE_BLOCKED);
+    assertThat(eventCaptor.getValue().getCode()).isEqualTo(ParticipantStatusPublisher.POLICY_NOT_ACTIVE_CODE);
+    assertThat(eventCaptor.getValue().getDesiredPolicyVersion()).isEqualTo(42L);
+  }
+
+  @Test
+  void publishCurrentStatus_deduplicatesRepeatedBlockedEventsUntilStateChanges() {
+    ParticipantStatusDTO blocked =
+        ParticipantStatusDTO.builder()
+            .participantId("tenant.bank.payments.engine")
+            .participantInstanceId("tenant.bank.payments@engine-host:8080#123")
+            .role(ParticipantRole.ENGINE)
+            .namespace("bank.payments")
+            .startedAt(100L)
+            .lastSeenAt(150L)
+            .statusExpiresAt(200L)
+            .statusVerificationLevel(StatusVerificationLevel.LOCALLY_VERIFIED_STATUS)
+            .effectiveState(ParticipantEffectiveState.MISMATCH)
+            .readyForDataPlane(false)
+            .observedPolicyVersion(41L)
+            .observedPolicyHash("abc123")
+            .mismatchReasons(
+                java.util.List.of(
+                    PolicyMismatchReasonDTO.builder()
+                        .code("TRUST_ANCHOR_MISSING")
+                        .message("trust anchor missing")
+                        .build()))
+            .build();
+    ParticipantStatusDTO recovered = blocked.toBuilder().effectiveState(ParticipantEffectiveState.READY).readyForDataPlane(true).mismatchReasons(java.util.List.of()).build();
+    when(readinessEvaluator.evaluateCurrentStatus()).thenReturn(blocked, blocked, recovered, blocked);
+
+    ParticipantStatusPublisher publisher =
+        new ParticipantStatusPublisher(
+            configuration, namespaceSecurityPolicyStore, readinessEvaluator, securityEventPublisher, producer);
+
+    publisher.publishCurrentStatus();
+    publisher.publishCurrentStatus();
+    publisher.publishCurrentStatus();
+    publisher.publishCurrentStatus();
+
+    ArgumentCaptor<SecurityEventDTO> eventCaptor = ArgumentCaptor.forClass(SecurityEventDTO.class);
+    verify(securityEventPublisher, Mockito.times(2)).publish(eventCaptor.capture());
+    assertThat(eventCaptor.getAllValues())
+        .extracting(SecurityEventDTO::getEventType)
+        .containsOnly(SecurityEventType.DATA_PLANE_BLOCKED);
+    assertThat(eventCaptor.getAllValues().getFirst().getCode()).isEqualTo("TRUST_ANCHOR_MISSING");
+    verify(producer, Mockito.times(4)).send(any());
   }
 }
