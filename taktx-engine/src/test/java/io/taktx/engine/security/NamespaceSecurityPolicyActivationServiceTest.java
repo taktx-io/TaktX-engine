@@ -86,6 +86,24 @@ class NamespaceSecurityPolicyActivationServiceTest {
   }
 
   @Test
+  void anchoredRequestedPolicy_transitionsToActiveWhenRequiredParticipantsConverge() {
+    NamespaceSecurityPolicyDTO requested = anchoredRequestedPolicy(84L);
+    addReadyParticipant(ParticipantRole.ENGINE, requested, clock.millis() + 500L);
+    addReadyParticipant(ParticipantRole.INGESTER, requested, clock.millis() + 500L);
+    addReadyParticipant(ParticipantRole.CONSOLE, requested, clock.millis() + 500L);
+
+    activationService.onPolicyUpdated(requested);
+
+    assertThat(policyStore.get()).isNotNull();
+    assertThat(policyStore.get().getActivationState()).isEqualTo(SecurityActivationState.ACTIVE);
+    assertThat(policyStore.get().getMode()).isEqualTo(SecurityMode.ANCHORED_SECURED);
+    assertThat(policyStore.get().isTrustAnchorRequired()).isTrue();
+    assertThat(policyStore.get().getActivePolicyVersion()).isEqualTo(84L);
+    assertThat(policyStore.get().getActivePolicyHash()).isEqualTo(requested.getDesiredPolicyHash());
+    verify(securityEventPublisher, never()).publish(any(SecurityEventDTO.class));
+  }
+
+  @Test
   void missingOrExpiredRequiredParticipants_keepPolicyValidatingUntilTimeout() {
     NamespaceSecurityPolicyDTO requested = requestedPolicy(42L);
     participantStatusStore.update(
@@ -174,6 +192,42 @@ class NamespaceSecurityPolicyActivationServiceTest {
         .containsExactly(SecurityEventType.READINESS_MISMATCH, SecurityEventType.POLICY_REJECTION);
     assertThat(captor.getAllValues().getFirst().getMetadata())
         .containsEntry("policyMismatchParticipants", "console-1");
+  }
+
+  @Test
+  void notReadyRequiredParticipant_rejectsPolicyAndIdentifiesBlockingParticipant() {
+    NamespaceSecurityPolicyDTO requested = requestedPolicy(42L);
+    addReadyParticipant(ParticipantRole.ENGINE, requested, clock.millis() + 500L);
+    addReadyParticipant(ParticipantRole.INGESTER, requested, clock.millis() + 500L);
+    participantStatusStore.update(
+        "console-1",
+        ParticipantStatusDTO.builder()
+            .participantId("tenant.bank.payments.console")
+            .participantInstanceId("console-1")
+            .role(ParticipantRole.CONSOLE)
+            .namespace("bank.payments")
+            .startedAt(clock.millis() - 100L)
+            .lastSeenAt(clock.millis())
+            .statusExpiresAt(clock.millis() + 500L)
+            .statusVerificationLevel(StatusVerificationLevel.LOCALLY_VERIFIED_STATUS)
+            .effectiveState(ParticipantEffectiveState.MISMATCH)
+            .readyForDataPlane(false)
+            .observedPolicyVersion(requested.getDesiredPolicyVersion())
+            .observedPolicyHash(requested.getDesiredPolicyHash())
+            .build());
+
+    activationService.onPolicyUpdated(requested);
+
+    assertThat(policyStore.get()).isNull();
+    assertThat(policyStore.getActivePolicy()).isNull();
+    ArgumentCaptor<SecurityEventDTO> captor = ArgumentCaptor.forClass(SecurityEventDTO.class);
+    verify(securityEventPublisher, Mockito.times(2)).publish(captor.capture());
+    assertThat(captor.getAllValues())
+        .extracting(SecurityEventDTO::getEventType)
+        .containsExactly(SecurityEventType.READINESS_MISMATCH, SecurityEventType.POLICY_REJECTION);
+    assertThat(captor.getAllValues().getFirst().getMetadata())
+        .containsEntry("notReadyParticipants", "console-1")
+        .doesNotContainKey("policyMismatchParticipants");
   }
 
   @Test
@@ -426,6 +480,17 @@ class NamespaceSecurityPolicyActivationServiceTest {
             .activationState(SecurityActivationState.REQUESTED)
             .desiredPolicyVersion(version)
             .requiredSigning(RequiredSigningDTO.builder().engineOutbound(true).build())
+            .build());
+  }
+
+  private static NamespaceSecurityPolicyDTO anchoredRequestedPolicy(long version) {
+    return NamespaceSecurityPolicySupport.requireValid(
+        NamespaceSecurityPolicyDTO.builder()
+            .mode(SecurityMode.ANCHORED_SECURED)
+            .activationState(SecurityActivationState.REQUESTED)
+            .desiredPolicyVersion(version)
+            .requiredSigning(RequiredSigningDTO.builder().engineOutbound(true).build())
+            .trustAnchorRequired(true)
             .build());
   }
 

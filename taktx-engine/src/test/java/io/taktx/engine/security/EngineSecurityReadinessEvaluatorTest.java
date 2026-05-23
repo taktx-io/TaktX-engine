@@ -146,6 +146,34 @@ class EngineSecurityReadinessEvaluatorTest {
   }
 
   @Test
+  void anchoredActivePolicy_withTrustAnchorAndSigningAvailable_reportsReady() {
+    when(configuration.getPlatformPublicKey()).thenReturn("platform-public-key");
+
+    policyStore.update(
+        NamespaceSecurityPolicyDTO.builder()
+            .mode(SecurityMode.ANCHORED_SECURED)
+            .activationState(SecurityActivationState.ACTIVE)
+            .desiredPolicyVersion(42L)
+            .requiredSigning(RequiredSigningDTO.builder().engineOutbound(true).build())
+            .trustAnchorRequired(true)
+            .activePolicyVersion(42L)
+            .build());
+
+    EngineSecurityReadinessEvaluator evaluator =
+        new EngineSecurityReadinessEvaluator(
+            configuration, policyStore, messageSigningService, clock);
+
+    var status = evaluator.evaluateCurrentStatus();
+
+    assertThat(status.getEffectiveState()).isEqualTo(io.taktx.dto.ParticipantEffectiveState.READY);
+    assertThat(status.isReadyForDataPlane()).isTrue();
+    assertThat(status.getObservedPolicyVersion()).isEqualTo(42L);
+    assertThat(status.getObservedPolicyHash())
+        .isEqualTo(policyStore.getActivePolicy().getActivePolicyHash());
+    assertThat(status.getMismatchReasons()).isEmpty();
+  }
+
+  @Test
   void activePolicy_requiringEngineOutboundSigning_detectsUnpublishedKey() {
     when(messageSigningService.getKeyId()).thenReturn(null);
     when(messageSigningService.isPublicKeyPublished()).thenReturn(false);
