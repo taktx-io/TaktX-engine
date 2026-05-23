@@ -17,23 +17,33 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import io.taktx.dto.ExternalTaskResponseResultDTO;
 import io.taktx.dto.ExternalTaskResponseTriggerDTO;
 import io.taktx.dto.ExternalTaskResponseType;
+import io.taktx.dto.NamespaceSecurityPolicyDTO;
 import io.taktx.dto.ProcessDefinitionKey;
 import io.taktx.dto.ProcessInstanceDTO;
 import io.taktx.dto.ProcessInstanceDlqEntryDTO;
+import io.taktx.dto.RequiredSigningDTO;
+import io.taktx.dto.SecurityActivationState;
+import io.taktx.dto.SecurityMode;
 import io.taktx.dto.StartCommandDTO;
 import io.taktx.dto.UserTaskResponseResultDTO;
 import io.taktx.dto.UserTaskResponseTriggerDTO;
 import io.taktx.dto.UserTaskResponseType;
 import io.taktx.dto.VariablesDTO;
+import io.taktx.engine.config.NamespaceSecurityPolicyStore;
 import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.pi.processor.IoMappingProcessor;
+import io.taktx.engine.security.EngineSecurityReadinessEvaluator;
 import io.taktx.engine.security.EngineAuthorizationService;
+import io.taktx.engine.security.MessageSigningService;
+import io.taktx.engine.security.ProtectedDataPlaneParticipationGuard;
 import io.taktx.engine.topicmanagement.DynamicTopicManager;
+import io.taktx.security.NamespaceSecurityPolicySupport;
 import io.taktx.security.AuthorizationTokenException;
 import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
@@ -58,6 +68,8 @@ class ProcessInstanceProcessorDlqTest {
   private ProcessorContext<Object, Object> context;
   private EngineAuthorizationService engineAuthorizationService;
   private DefinitionsCache definitionsCache;
+  private TaktConfiguration taktConfiguration;
+  private Clock clock;
   private ProcessInstanceProcessor processor;
 
   @BeforeEach
@@ -67,9 +79,14 @@ class ProcessInstanceProcessorDlqTest {
     ProcessInstanceMapper instanceMapper = mock(ProcessInstanceMapper.class);
     Forwarder forwarder = mock(Forwarder.class);
     IoMappingProcessor ioMappingProcessor = mock(IoMappingProcessor.class);
-    TaktConfiguration taktConfiguration = mock(TaktConfiguration.class);
+    taktConfiguration = mock(TaktConfiguration.class);
+    when(taktConfiguration.getTenantId()).thenReturn("tenant");
+    when(taktConfiguration.getNamespace()).thenReturn("bank.payments");
+    when(taktConfiguration.getHost()).thenReturn("engine-host");
+    when(taktConfiguration.getPort()).thenReturn(8080);
+    when(taktConfiguration.getPlatformPublicKey()).thenReturn(null);
     ScopeProcessor scopeProcessor = mock(ScopeProcessor.class);
-    Clock clock = Clock.fixed(Instant.ofEpochMilli(1_700_000_000_000L), ZoneOffset.UTC);
+    clock = Clock.fixed(Instant.ofEpochMilli(1_700_000_000_000L), ZoneOffset.UTC);
     DtoMapper dtoMapper = mock(DtoMapper.class);
     ProcessingStatistics processingStatistics = mock(ProcessingStatistics.class);
     DynamicTopicManager topicManager = mock(DynamicTopicManager.class);
@@ -244,6 +261,69 @@ class ProcessInstanceProcessorDlqTest {
   }
 
   @Test
+  void process_pendingPolicyWithoutAuthoritativeActivePolicy_emitsDlqEntry() {
+    UUID processInstanceId = UUID.randomUUID();
+    byte[] payload = new byte[] {10, 20, 30};
+    RecordHeaders headers = new RecordHeaders();
+    StartCommandDTO trigger =
+        new StartCommandDTO(
+            processInstanceId,
+            null,
+            null,
+            new ProcessDefinitionKey("proc", -1),
+            VariablesDTO.empty());
+    ProcessInstanceTriggerEnvelope envelope =
+        new ProcessInstanceTriggerEnvelope(payload, trigger, false, null);
+    when(engineAuthorizationService.authorize(headers, envelope)).thenReturn(null);
+
+    ProcessInstanceProcessor guardedProcessor =
+        guardedProcessorWithPolicy(requestedPolicy(42L), null, null, true);
+
+    guardedProcessor.process(new Record<>(processInstanceId, envelope, 42L, headers));
+
+    ArgumentCaptor<Record> recordCaptor = ArgumentCaptor.forClass(Record.class);
+    verify(context).forward(recordCaptor.capture());
+    ProcessInstanceDlqEntryDTO dlqEntry = (ProcessInstanceDlqEntryDTO) recordCaptor.getValue().value();
+    assertThat(new String(dlqEntry.getHeaders().get(REASON_HINT), StandardCharsets.UTF_8))
+        .isEqualTo(ProtectedDataPlaneParticipationGuard.POLICY_NOT_ACTIVE_HINT);
+    assertThat(new String(dlqEntry.getHeaders().get(REASON_TEXT), StandardCharsets.UTF_8))
+        .contains("becomes ACTIVE");
+    verifyNoInteractions(definitionsCache);
+  }
+
+  @Test
+  void process_activePolicyWhenEngineNotReady_emitsDlqEntryWithMismatchHint() {
+    UUID processInstanceId = UUID.randomUUID();
+    byte[] payload = new byte[] {11, 21, 31};
+    RecordHeaders headers = new RecordHeaders();
+    StartCommandDTO trigger =
+        new StartCommandDTO(
+            processInstanceId,
+            null,
+            null,
+            new ProcessDefinitionKey("proc", -1),
+            VariablesDTO.empty());
+    ProcessInstanceTriggerEnvelope envelope =
+        new ProcessInstanceTriggerEnvelope(payload, trigger, false, null);
+    when(engineAuthorizationService.authorize(headers, envelope)).thenReturn(null);
+
+    NamespaceSecurityPolicyDTO activeAnchored = anchoredActivePolicy(42L);
+    ProcessInstanceProcessor guardedProcessor =
+        guardedProcessorWithPolicy(activeAnchored, activeAnchored, null, true);
+
+    guardedProcessor.process(new Record<>(processInstanceId, envelope, 42L, headers));
+
+    ArgumentCaptor<Record> recordCaptor = ArgumentCaptor.forClass(Record.class);
+    verify(context).forward(recordCaptor.capture());
+    ProcessInstanceDlqEntryDTO dlqEntry = (ProcessInstanceDlqEntryDTO) recordCaptor.getValue().value();
+    assertThat(new String(dlqEntry.getHeaders().get(REASON_HINT), StandardCharsets.UTF_8))
+        .isEqualTo("TRUST_ANCHOR_MISSING");
+    assertThat(new String(dlqEntry.getHeaders().get(REASON_TEXT), StandardCharsets.UTF_8))
+        .contains("no platform public key");
+    verifyNoInteractions(definitionsCache);
+  }
+
+  @Test
   void process_taskCompletionWithStrayJwt_authDisabled_ignoresJwtAndDoesNotEmitDlq() {
     UUID processInstanceId = UUID.randomUUID();
     byte[] payload = new byte[] {31, 32, 33};
@@ -268,6 +348,72 @@ class ProcessInstanceProcessorDlqTest {
     verify(engineAuthorizationService).isTaskCompletionAuthorizationActive(trigger);
     verify(engineAuthorizationService, never()).validateJwtClaims(any(), eq(trigger));
     verify(context, never()).forward(any());
+  }
+
+  private ProcessInstanceProcessor guardedProcessorWithPolicy(
+      NamespaceSecurityPolicyDTO currentPolicy,
+      NamespaceSecurityPolicyDTO activePolicy,
+      String platformPublicKey,
+      boolean signingAvailable) {
+    NamespaceSecurityPolicyStore policyStore = new NamespaceSecurityPolicyStore();
+    policyStore.setCurrentPolicy(currentPolicy);
+    policyStore.setActivePolicy(activePolicy);
+    when(taktConfiguration.getPlatformPublicKey()).thenReturn(platformPublicKey);
+
+    MessageSigningService messageSigningService = mock(MessageSigningService.class);
+    when(messageSigningService.getKeyId()).thenReturn(signingAvailable ? "engine-key-1" : null);
+    when(messageSigningService.isPublicKeyPublished()).thenReturn(signingAvailable);
+
+    ProcessInstanceProcessor guardedProcessor =
+        new ProcessInstanceProcessor(
+            definitionsCache,
+            mock(DefinitionMapper.class),
+            mock(ProcessInstanceMapper.class),
+            mock(Forwarder.class),
+            mock(IoMappingProcessor.class),
+            taktConfiguration,
+            mock(ScopeProcessor.class),
+            clock,
+            mock(DtoMapper.class),
+            mock(ProcessingStatistics.class),
+            mock(DynamicTopicManager.class),
+            engineAuthorizationService,
+            new ProtectedDataPlaneParticipationGuard(
+                policyStore,
+                new EngineSecurityReadinessEvaluator(
+                    taktConfiguration, policyStore, messageSigningService, clock),
+                clock));
+    setField(guardedProcessor, "context", context);
+    setField(guardedProcessor, "processInstanceStore", mock(KeyValueStore.class));
+    return guardedProcessor;
+  }
+
+  private static NamespaceSecurityPolicyDTO requestedPolicy(long version) {
+    return NamespaceSecurityPolicySupport.requireValid(
+        NamespaceSecurityPolicyDTO.builder()
+            .mode(SecurityMode.COMMUNITY_SECURED)
+            .activationState(SecurityActivationState.REQUESTED)
+            .desiredPolicyVersion(version)
+            .requiredSigning(RequiredSigningDTO.builder().engineOutbound(true).build())
+            .build());
+  }
+
+  private static NamespaceSecurityPolicyDTO anchoredActivePolicy(long version) {
+    NamespaceSecurityPolicyDTO requested =
+        NamespaceSecurityPolicySupport.requireValid(
+            NamespaceSecurityPolicyDTO.builder()
+                .mode(SecurityMode.ANCHORED_SECURED)
+                .activationState(SecurityActivationState.REQUESTED)
+                .desiredPolicyVersion(version)
+                .requiredSigning(RequiredSigningDTO.builder().engineOutbound(true).build())
+                .trustAnchorRequired(true)
+                .build());
+    return NamespaceSecurityPolicySupport.requireValid(
+        requested.toBuilder()
+            .activationState(SecurityActivationState.ACTIVE)
+            .activePolicyVersion(version)
+            .activePolicyHash(requested.getDesiredPolicyHash())
+            .build());
   }
 
   @Test
