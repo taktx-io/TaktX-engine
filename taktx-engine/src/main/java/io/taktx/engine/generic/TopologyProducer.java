@@ -1029,9 +1029,11 @@ public class TopologyProducer {
                         context.getStateStore(taktConfiguration.getPrefixed("schedules-" + name)),
                     TimeBucket.values(),
                     processingStatistics,
-                    engineAuthorizationService,
                     taktConfiguration.getPrefixed(Topics.SCHEDULE_COMMANDS.getTopicName()),
-                    dlqObservabilityService),
+                    new ScheduleProcessor.SecurityServices(
+                        engineAuthorizationService,
+                        dlqObservabilityService,
+                        protectedDataPlaneParticipationGuard())),
             taktConfiguration.getPrefixed(Stores.SCHEDULES_MINUTE.getStorename()),
             taktConfiguration.getPrefixed(Stores.SCHEDULES_HOURLY.getStorename()),
             taktConfiguration.getPrefixed(Stores.SCHEDULES_DAILY.getStorename()),

@@ -30,6 +30,7 @@ import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.dlq.DlqObservabilityService;
 import io.taktx.engine.pi.ProcessingStatistics;
 import io.taktx.engine.security.EngineAuthorizationService;
+import io.taktx.engine.security.ProtectedDataPlaneParticipationGuard;
 import io.taktx.security.AuthorizationTokenException;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
@@ -58,6 +59,8 @@ class ScheduleProcessorTest {
   private EngineAuthorizationService engineAuthorizationService;
   private ProcessingStatistics processingStatistics;
   private KeyValueStore<ScheduleKeyDTO, MessageScheduleDTO> store;
+  private DlqObservabilityService dlqObservabilityService;
+  private ProtectedDataPlaneParticipationGuard protectedDataPlaneParticipationGuard;
   private ScheduleProcessor scheduleProcessor;
 
   @BeforeEach
@@ -66,9 +69,12 @@ class ScheduleProcessorTest {
     engineAuthorizationService = mock(EngineAuthorizationService.class);
     processingStatistics = mock(ProcessingStatistics.class);
     store = mock(KeyValueStore.class);
+    dlqObservabilityService = mock(DlqObservabilityService.class);
+    protectedDataPlaneParticipationGuard = mock(ProtectedDataPlaneParticipationGuard.class);
     ProcessorContext<Object, SchedulableMessageDTO> context = mock(ProcessorContext.class);
 
-    when(store.get(any())).thenAnswer(invocation -> storeMap.get(invocation.getArgument(0)));
+    when(store.get(any()))
+        .thenAnswer(invocation -> storeMap.get(invocation.getArgument(0, ScheduleKeyDTO.class)));
     doAnswer(
             invocation -> {
               storeMap.put(invocation.getArgument(0), invocation.getArgument(1));
@@ -76,7 +82,8 @@ class ScheduleProcessorTest {
             })
         .when(store)
         .put(any(), any());
-    when(store.delete(any())).thenAnswer(invocation -> storeMap.remove(invocation.getArgument(0)));
+    when(store.delete(any()))
+        .thenAnswer(invocation -> storeMap.remove(invocation.getArgument(0, ScheduleKeyDTO.class)));
     when(store.all()).thenReturn(emptyIterator());
     when(context.schedule(any(), eq(PunctuationType.WALL_CLOCK_TIME), any(Punctuator.class)))
         .thenReturn(mock(Cancellable.class));
@@ -89,10 +96,15 @@ class ScheduleProcessorTest {
             (ignored, _) -> store,
             new TimeBucket[] {TimeBucket.MINUTE},
             processingStatistics,
-            engineAuthorizationService,
             SCHEDULE_TOPIC,
-            mock(DlqObservabilityService.class));
+            new ScheduleProcessor.SecurityServices(
+                engineAuthorizationService,
+                dlqObservabilityService,
+                protectedDataPlaneParticipationGuard));
     scheduleProcessor.init(context);
+
+    when(protectedDataPlaneParticipationGuard.evaluate())
+        .thenReturn(ProtectedDataPlaneParticipationGuard.Decision.permit());
   }
 
   @Test
@@ -101,7 +113,7 @@ class ScheduleProcessorTest {
     MessageScheduleDTO schedule = oneTimeSchedule();
     RecordHeaders headers = signedHeaders("engine-key-1");
     when(engineAuthorizationService.authorizeScheduleCommand(headers, scheduleKey, schedule))
-        .thenReturn(activeKey("engine-key-1", KeyRole.ENGINE));
+        .thenReturn(activeEngineKey("engine-key-1"));
 
     scheduleProcessor.process(new Record<>(scheduleKey, schedule, 999_000L, headers));
 
@@ -121,6 +133,26 @@ class ScheduleProcessorTest {
 
     verify(store, never()).put(any(), any());
     verify(processingStatistics, never()).recordScheduleLatency(any(Long.class), any());
+  }
+
+  @Test
+  void blockedProtectedDataPlaneSchedule_isRejectedWithoutSideEffects() {
+    DefinitionScheduleKeyDTO scheduleKey = scheduleKey();
+    MessageScheduleDTO schedule = oneTimeSchedule();
+    RecordHeaders headers = signedHeaders("engine-key-1");
+    when(engineAuthorizationService.authorizeScheduleCommand(headers, scheduleKey, schedule))
+        .thenReturn(activeEngineKey("engine-key-1"));
+    when(protectedDataPlaneParticipationGuard.evaluate())
+        .thenReturn(
+            ProtectedDataPlaneParticipationGuard.Decision.blocked(
+                ProtectedDataPlaneParticipationGuard.POLICY_NOT_ACTIVE_HINT,
+                "policy still validating"));
+
+    scheduleProcessor.process(new Record<>(scheduleKey, schedule, 999_000L, headers));
+
+    verify(store, never()).put(any(), any());
+    verify(processingStatistics, never()).recordScheduleLatency(any(Long.class), any());
+    verify(dlqObservabilityService).recordExcludedTopicFailure("schedule-commands");
   }
 
   private DefinitionScheduleKeyDTO scheduleKey() {
@@ -146,13 +178,13 @@ class ScheduleProcessorTest {
     return headers;
   }
 
-  private SigningKeyDTO activeKey(String keyId, KeyRole role) {
+  private SigningKeyDTO activeEngineKey(String keyId) {
     return SigningKeyDTO.builder()
         .keyId(keyId)
         .publicKeyBase64("dummy")
         .algorithm("Ed25519")
         .owner("engine")
-        .role(role)
+        .role(KeyRole.ENGINE)
         .build();
   }
 
