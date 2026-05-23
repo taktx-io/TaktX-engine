@@ -828,10 +828,10 @@ as engine+client work, not engine-only work.
 - [x] Compute participant readiness from deployment capabilities + namespace policy.
 - [x] Emit explicit mismatch reasons when requirements are not met.
 - [x] Include observed canonical policy identity in readiness reporting.
-- [ ] Keep observed posture separate from trust decisions.
-- [ ] Ensure readiness is the gate for protected data-plane participation under the active policy.
+- [x] Keep observed posture separate from trust decisions.
+- [x] Ensure readiness is the gate for protected data-plane participation under the active policy.
 - [x] Include participant incarnation / TTL fields in status reporting.
-- [ ] Optionally include status verification-level telemetry without treating it as trust.
+- [x] Optionally include status verification-level telemetry without treating it as trust.
 
 ### Acceptance criteria
 - Participants can report readiness and mismatch reasons against a specific policy version.
