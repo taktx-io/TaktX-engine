@@ -869,7 +869,12 @@ when the platform trust anchor is missing, rather than relying only on readiness
 protected work blocked. The authoritative namespace-security-policy stream itself now also rejects
 unsigned or non-`PLATFORM` signed mutations before they can update or clear the local policy store,
 and official `TaktXClient` policy publish/clear helpers now require an explicit signing identity for
-that trusted writer path.
+that trusted writer path. Control-plane continuity is now explicitly verified while protected work is
+blocked: message/signal subscription-management records remain allowed during pending rollout,
+participant status ingestion still updates lifecycle state and triggers reevaluation, replacement
+policy requests are still accepted while a previous policy is validating, topic-meta ingress remains
+available through its own trusted control-plane path, and blocked-participation observability events
+continue to publish during convergence/recovery.
 
 ### Acceptance criteria
 - Runtime enforcement matches the active policy requirements.
@@ -963,7 +968,7 @@ on unpublished or bespoke patches.
 - [x] ensure post-activation drift yields `NOT READY` posture and incident/event output
 - [x] ensure protected data-plane behavior remains on previous active policy during `REQUESTED` /
       `VALIDATING`
-- [ ] ensure control-plane traffic remains available during convergence/recovery
+- [x] ensure control-plane traffic remains available during convergence/recovery
 - [ ] ensure engine and client participants do not publish/consume/process protected runtime traffic
       unless policy is `ACTIVE` and they are `READY`
 - [x] ensure bare engine remains functional with sensible `COMMUNITY_OPEN` defaults when no external
