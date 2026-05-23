@@ -517,6 +517,9 @@ in assumptions that later have to be unwound.
       validation errors rather than surfacing as ambiguous toggle failures.
 
 ### Notes
+- Engine-side enforcement now requires explicit break-glass actor + reason metadata and emits
+  downgrade / mutation-rejected audit events; authoritative privileged-role verification remains a
+  publisher/control-plane contract follow-up.
 - The first slice should reject incompatible changes instead of activating degraded or excluded
   participant states.
 - This keeps edge cases down and makes rollout behavior easier to reason about.
