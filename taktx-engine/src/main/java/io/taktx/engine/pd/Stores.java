@@ -34,6 +34,7 @@ public enum Stores {
   DEFINITION_SIGNAL_SUBSCRIPTIONS("definition-signal-subscriptions"),
   GLOBAL_CONFIGURATION(Topics.CONFIGURATION_TOPIC.getTopicName()),
   SECURITY_POLICY(Topics.SECURITY_POLICY_TOPIC.getTopicName()),
+  PARTICIPANT_STATUS(Topics.PARTICIPANT_STATUS_TOPIC.getTopicName()),
   SIGNING_KEYS(Topics.SIGNING_KEYS_TOPIC.getTopicName()),
   REPLAY_PROTECTION("replay-protection"),
   PROCESS_INSTANCE_RESPONSE_DEDUP("process-instance-response-dedup"),

@@ -48,6 +48,8 @@ import io.taktx.dto.XmlDmnDefinitionsDTO;
 import io.taktx.engine.config.GlobalConfigStore;
 import io.taktx.engine.config.NamespaceSecurityPolicyProcessor;
 import io.taktx.engine.config.NamespaceSecurityPolicyStore;
+import io.taktx.engine.config.ParticipantStatusProcessor;
+import io.taktx.engine.config.ParticipantStatusStore;
 import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.dlq.DlqForwardingProcessor;
 import io.taktx.engine.dlq.DlqObservabilityService;
@@ -329,6 +331,7 @@ public class TopologyProducer {
   private final LicenseManager licenseManager;
   private final GlobalConfigStore globalConfigStore;
   private final NamespaceSecurityPolicyStore namespaceSecurityPolicyStore;
+  private final ParticipantStatusStore participantStatusStore;
   private final DlqPublisher dlqPublisher;
   private final MessageSigningService messageSigningService;
   private final DlqObservabilityService dlqObservabilityService;
@@ -516,6 +519,17 @@ public class TopologyProducer {
         taktConfiguration.getPrefixed(Topics.SECURITY_POLICY_TOPIC.getTopicName()),
         Consumed.with(Serdes.String(), Serdes.ByteArray()),
         () -> new NamespaceSecurityPolicyProcessor(namespaceSecurityPolicyStore));
+
+    builder.addGlobalStore(
+        keyValueStoreBuilder(
+                org.apache.kafka.streams.state.Stores.inMemoryKeyValueStore(
+                    taktConfiguration.getPrefixed(Stores.PARTICIPANT_STATUS.getStorename())),
+                Serdes.String(),
+                Serdes.ByteArray())
+            .withLoggingDisabled(),
+        taktConfiguration.getPrefixed(Topics.PARTICIPANT_STATUS_TOPIC.getTopicName()),
+        Consumed.with(Serdes.String(), Serdes.ByteArray()),
+        () -> new ParticipantStatusProcessor(participantStatusStore));
 
     builder.globalTable(
         taktConfiguration.getPrefixed(Topics.SIGNING_KEYS_TOPIC.getTopicName()),
