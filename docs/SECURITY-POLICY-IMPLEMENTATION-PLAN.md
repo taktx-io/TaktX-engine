@@ -495,19 +495,19 @@ in assumptions that later have to be unwound.
       model.
 - [ ] **SP-02.3** Add validation rules for each security mode.
 - [ ] **SP-02.4** Reject invalid partial states instead of persisting them.
-- [ ] **SP-02.5** Implement synchronous first-slice activation lifecycle:
+- [x] **SP-02.5** Implement synchronous first-slice activation lifecycle:
   - `REQUESTED`
   - `VALIDATING`
   - `ACTIVE` or rejection
-- [ ] **SP-02.5a** Require all role-relevant participants for the namespace to converge on the same
+- [x] **SP-02.5a** Require all role-relevant participants for the namespace to converge on the same
       canonical policy identity before a stricter policy becomes `ACTIVE`.
-- [ ] **SP-02.5b** Keep the previously active policy in force when convergence/compatibility checks
+- [x] **SP-02.5b** Keep the previously active policy in force when convergence/compatibility checks
       fail.
 - [ ] **SP-02.5c** Keep protected data-plane behavior governed by the previously active policy until
       the new policy becomes `ACTIVE`.
-- [ ] **SP-02.5d** If there is no previous secured policy, continue operating under
+- [x] **SP-02.5d** If there is no previous secured policy, continue operating under
       `COMMUNITY_OPEN` semantics until a stricter policy successfully activates.
-- [ ] **SP-02.5e** Define timeout / rollback behavior for failed or stalled activation.
+- [x] **SP-02.5e** Define timeout / rollback behavior for failed or stalled activation.
 - [ ] **SP-02.5f** Define break-glass downgrade rules for `ANCHORED_SECURED -> COMMUNITY_SECURED`
       or `COMMUNITY_OPEN`, including privileged role, reason, and audit/security event.
 - [ ] **SP-02.6** Increment `policyVersion` only for accepted policy changes.
