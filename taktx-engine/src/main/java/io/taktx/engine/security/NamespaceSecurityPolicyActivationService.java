@@ -15,6 +15,7 @@ import io.taktx.dto.SecurityActivationState;
 import io.taktx.dto.SecurityEventDTO;
 import io.taktx.dto.SecurityEventSeverity;
 import io.taktx.dto.SecurityEventType;
+import io.taktx.dto.SecurityMode;
 import io.taktx.engine.config.NamespaceSecurityPolicyStore;
 import io.taktx.engine.config.ParticipantStatusStore;
 import io.taktx.engine.config.TaktConfiguration;
@@ -40,6 +41,8 @@ public class NamespaceSecurityPolicyActivationService {
   static final String ACTIVATION_TIMEOUT_CODE = "ACTIVATION_TIMEOUT";
   static final String POLICY_REJECTION_CODE = "POLICY_REJECTION";
   static final String READINESS_MISMATCH_CODE = "READINESS_MISMATCH";
+  static final String BREAK_GLASS_DOWNGRADE_CODE = "BREAK_GLASS_DOWNGRADE";
+  static final String BREAK_GLASS_DOWNGRADE_REJECTED_CODE = "BREAK_GLASS_DOWNGRADE_REJECTED";
 
   private static final Set<ParticipantRole> REQUIRED_ACTIVATION_ROLES =
       EnumSet.of(ParticipantRole.ENGINE, ParticipantRole.INGESTER, ParticipantRole.CONSOLE);
@@ -85,6 +88,7 @@ public class NamespaceSecurityPolicyActivationService {
   public synchronized void onPolicyUpdated(NamespaceSecurityPolicyDTO policy) {
     NamespaceSecurityPolicyDTO validated = NamespaceSecurityPolicySupport.requireValid(policy);
     NamespaceSecurityPolicyDTO current = namespaceSecurityPolicyStore.get();
+    NamespaceSecurityPolicyDTO previousActive = namespaceSecurityPolicyStore.getActivePolicy();
 
     if (validated.getActivationState() == SecurityActivationState.ACTIVE) {
       namespaceSecurityPolicyStore.setCurrentPolicy(validated);
@@ -107,7 +111,45 @@ public class NamespaceSecurityPolicyActivationService {
       startedAtMs = namespaceSecurityPolicyStore.getValidationStartedAtMs();
     }
 
-    NamespaceSecurityPolicyDTO previousActive = namespaceSecurityPolicyStore.getActivePolicy();
+    if (isBreakGlassDowngrade(previousActive, validated)) {
+      if (isBlank(validated.getBreakGlassActor()) || isBlank(validated.getBreakGlassReason())) {
+        publish(
+            SecurityEventType.CONTROL_PLANE_MUTATION_REJECTED,
+            SecurityEventSeverity.ERROR,
+            BREAK_GLASS_DOWNGRADE_REJECTED_CODE,
+            "Requested downgrade was rejected because explicit break-glass actor/reason metadata was not provided",
+            withPreservedActiveIdentity(validated, previousActive),
+            Map.of(
+                "previousMode", previousActive.getMode().name(),
+                "requestedMode", String.valueOf(validated.getMode()),
+                "requiresBreakGlass", Boolean.TRUE.toString()));
+        publish(
+            SecurityEventType.POLICY_REJECTION,
+            SecurityEventSeverity.ERROR,
+            POLICY_REJECTION_CODE,
+            "Requested downgrade was rejected because privileged break-glass metadata was missing",
+            withPreservedActiveIdentity(validated, previousActive),
+            Map.of(
+                "previousMode", previousActive.getMode().name(),
+                "requestedMode", String.valueOf(validated.getMode()),
+                "requiresBreakGlass", Boolean.TRUE.toString()));
+        rollbackToPreviousActive();
+        return;
+      }
+
+      publish(
+          SecurityEventType.POLICY_DOWNGRADE,
+          SecurityEventSeverity.CRITICAL,
+          BREAK_GLASS_DOWNGRADE_CODE,
+          "Requested privileged break-glass downgrade observed and allowed to proceed through activation lifecycle",
+          withPreservedActiveIdentity(validated, previousActive),
+          Map.of(
+              "previousMode", previousActive.getMode().name(),
+              "requestedMode", String.valueOf(validated.getMode()),
+              "breakGlassActor", validated.getBreakGlassActor(),
+              "breakGlassReason", validated.getBreakGlassReason()));
+    }
+
     NamespaceSecurityPolicyDTO validatingPolicy =
         withPreservedActiveIdentity(validated, previousActive).toBuilder()
             .activationState(SecurityActivationState.VALIDATING)
@@ -406,6 +448,27 @@ public class NamespaceSecurityPolicyActivationService {
         && Objects.equals(left.getDesiredPolicyHash(), right.getDesiredPolicyHash());
   }
 
+  private static boolean isBreakGlassDowngrade(
+      NamespaceSecurityPolicyDTO previousActive, NamespaceSecurityPolicyDTO requested) {
+    if (previousActive == null || previousActive.getMode() == null || requested == null || requested.getMode() == null) {
+      return false;
+    }
+    return securityStrength(requested.getMode()) < securityStrength(previousActive.getMode());
+  }
+
+  private static int securityStrength(SecurityMode mode) {
+    return switch (mode) {
+      case COMMUNITY_OPEN -> 0;
+      case COMMUNITY_SECURED -> 1;
+      case ANCHORED_SECURED -> 2;
+      case MISCONFIGURED_SECURITY -> -1;
+    };
+  }
+
+  private static boolean isBlank(String value) {
+    return value == null || value.isBlank();
+  }
+
   private String participantId() {
     return configuration.getTenantId() + "." + configuration.getNamespace() + ".engine";
   }
@@ -433,6 +496,7 @@ public class NamespaceSecurityPolicyActivationService {
       List<String> policyMismatchParticipants,
       int observedRequiredParticipantCount) {}
 }
+
 
 
 

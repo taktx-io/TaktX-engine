@@ -53,6 +53,12 @@ public class NamespaceSecurityPolicyDTO {
 
   @Builder.Default private boolean trustAnchorRequired = false;
 
+  /** Explicit actor identifier for privileged break-glass downgrade requests, if any. */
+  private String breakGlassActor;
+
+  /** Explicit operator-supplied reason for privileged break-glass downgrade requests, if any. */
+  private String breakGlassReason;
+
   /**
    * Legacy/simple alias for the requested policy generation.
    *

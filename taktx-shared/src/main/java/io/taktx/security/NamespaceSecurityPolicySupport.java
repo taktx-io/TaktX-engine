@@ -68,6 +68,8 @@ public final class NamespaceSecurityPolicySupport {
     return policy.toBuilder()
         .requiredSigning(requiredSigning)
         .requiredAuthorization(requiredAuthorization)
+        .breakGlassActor(blankToNull(policy.getBreakGlassActor()))
+        .breakGlassReason(blankToNull(policy.getBreakGlassReason()))
         .desiredPolicyVersion(desiredPolicyVersion)
         .desiredPolicyHash(desiredPolicyHash)
         .activePolicyHash(activePolicyHash)
@@ -178,6 +180,12 @@ public final class NamespaceSecurityPolicySupport {
       errors.add("ANCHORED_SECURED requires trustAnchorRequired=true");
     }
 
+    boolean hasBreakGlassActor = !isBlank(normalized.getBreakGlassActor());
+    boolean hasBreakGlassReason = !isBlank(normalized.getBreakGlassReason());
+    if (hasBreakGlassActor != hasBreakGlassReason) {
+      errors.add("breakGlassActor and breakGlassReason must be provided together");
+    }
+
     boolean hasActiveVersion = normalized.getActivePolicyVersion() != null;
     boolean hasActiveHash = !isBlank(normalized.getActivePolicyHash());
     if (hasActiveVersion != hasActiveHash) {
@@ -230,5 +238,9 @@ public final class NamespaceSecurityPolicySupport {
 
   private static boolean isBlank(String value) {
     return value == null || value.isBlank();
+  }
+
+  private static String blankToNull(String value) {
+    return isBlank(value) ? null : value;
   }
 }
