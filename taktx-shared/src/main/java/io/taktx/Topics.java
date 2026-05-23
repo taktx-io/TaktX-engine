@@ -17,6 +17,9 @@ public enum Topics {
   TOPIC_META_REQUESTED_TOPIC("topic-meta-requested", true, CleanupPolicy.COMPACT),
   TOPIC_META_ACTUAL_TOPIC("topic-meta-actual", true, CleanupPolicy.COMPACT),
   CONFIGURATION_TOPIC("taktx-configuration", true, CleanupPolicy.COMPACT),
+  SECURITY_POLICY_TOPIC("taktx-security-policy", true, CleanupPolicy.COMPACT),
+  PARTICIPANT_STATUS_TOPIC("taktx-participant-status", true, CleanupPolicy.COMPACT),
+  SECURITY_EVENTS_TOPIC("taktx-security-events", true, CleanupPolicy.DELETE),
   SIGNING_KEYS_TOPIC("taktx-signing-keys", true, CleanupPolicy.COMPACT),
   XML_BY_PROCESS_DEFINITION_ID("xml-by-process-definition-id", false, CleanupPolicy.COMPACT),
   PROCESS_DEFINITION_ACTIVATION_TOPIC(
