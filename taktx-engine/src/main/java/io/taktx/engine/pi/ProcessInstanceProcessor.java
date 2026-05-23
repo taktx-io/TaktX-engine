@@ -55,6 +55,7 @@ import io.taktx.engine.pi.model.VariableScope;
 import io.taktx.engine.pi.model.WithScope;
 import io.taktx.engine.pi.processor.IoMappingProcessor;
 import io.taktx.engine.security.EngineAuthorizationService;
+import io.taktx.engine.security.ProtectedDataPlaneParticipationGuard;
 import io.taktx.engine.topicmanagement.DynamicTopicManager;
 import io.taktx.proto.VariableValue;
 import io.taktx.security.AuthorizationTokenException;
@@ -72,7 +73,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.common.header.Header;
 import org.apache.kafka.common.header.Headers;
@@ -85,7 +85,6 @@ import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
 import org.apache.kafka.streams.state.ValueAndTimestamp;
 
 @Slf4j
-@RequiredArgsConstructor
 public class ProcessInstanceProcessor
     implements Processor<UUID, ProcessInstanceTriggerEnvelope, Object, Object> {
 
@@ -105,6 +104,7 @@ public class ProcessInstanceProcessor
   private final ProcessingStatistics processingStatistics;
   private final DynamicTopicManager topicManager;
   private final EngineAuthorizationService engineAuthorizationService;
+  private final ProtectedDataPlaneParticipationGuard protectedDataPlaneParticipationGuard;
   private final Map<ProcessDefinitionKey, FlowElements> flowElementsCache = new HashMap<>();
 
   private ReadOnlyKeyValueStore<ProcessDefinitionKey, ValueAndTimestamp<ProcessDefinitionDTO>>
@@ -119,6 +119,64 @@ public class ProcessInstanceProcessor
       processInstanceProcessingContextThreadLocal = new ThreadLocal<>();
   private final ThreadLocal<ProcessDefinitionKey> processDefinitionKeyThreadLocal =
       new ThreadLocal<>();
+
+  public ProcessInstanceProcessor(
+      DefinitionsCache definitionsCache,
+      DefinitionMapper definitionMapper,
+      ProcessInstanceMapper instanceMapper,
+      Forwarder forwarder,
+      IoMappingProcessor ioMappingProcessor,
+      TaktConfiguration taktConfiguration,
+      ScopeProcessor scopeProcessor,
+      Clock clock,
+      DtoMapper dtoMapper,
+      ProcessingStatistics processingStatistics,
+      DynamicTopicManager topicManager,
+      EngineAuthorizationService engineAuthorizationService) {
+    this(
+        definitionsCache,
+        definitionMapper,
+        instanceMapper,
+        forwarder,
+        ioMappingProcessor,
+        taktConfiguration,
+        scopeProcessor,
+        clock,
+        dtoMapper,
+        processingStatistics,
+        topicManager,
+        engineAuthorizationService,
+        null);
+  }
+
+  public ProcessInstanceProcessor(
+      DefinitionsCache definitionsCache,
+      DefinitionMapper definitionMapper,
+      ProcessInstanceMapper instanceMapper,
+      Forwarder forwarder,
+      IoMappingProcessor ioMappingProcessor,
+      TaktConfiguration taktConfiguration,
+      ScopeProcessor scopeProcessor,
+      Clock clock,
+      DtoMapper dtoMapper,
+      ProcessingStatistics processingStatistics,
+      DynamicTopicManager topicManager,
+      EngineAuthorizationService engineAuthorizationService,
+      ProtectedDataPlaneParticipationGuard protectedDataPlaneParticipationGuard) {
+    this.definitionsCache = definitionsCache;
+    this.definitionMapper = definitionMapper;
+    this.instanceMapper = instanceMapper;
+    this.forwarder = forwarder;
+    this.ioMappingProcessor = ioMappingProcessor;
+    this.taktConfiguration = taktConfiguration;
+    this.scopeProcessor = scopeProcessor;
+    this.clock = clock;
+    this.dtoMapper = dtoMapper;
+    this.processingStatistics = processingStatistics;
+    this.topicManager = topicManager;
+    this.engineAuthorizationService = engineAuthorizationService;
+    this.protectedDataPlaneParticipationGuard = protectedDataPlaneParticipationGuard;
+  }
 
   @Override
   public void init(ProcessorContext<Object, Object> context) {
@@ -178,6 +236,21 @@ public class ProcessInstanceProcessor
           e.getMessage(),
           "PROCESSOR");
       return;
+    }
+
+    if (protectedDataPlaneParticipationGuard != null) {
+      ProtectedDataPlaneParticipationGuard.Decision gateDecision =
+          protectedDataPlaneParticipationGuard.evaluate();
+      if (!gateDecision.permitted()) {
+        emitProcessInstanceDlq(
+            triggerRecord.key(),
+            triggerRecord.headers(),
+            triggerEnvelope,
+            gateDecision.reasonHint(),
+            gateDecision.reasonText(),
+            "PROCESSOR");
+        return;
+      }
     }
 
     trigger.setCurrentTrustMetadata(currentTrustMetadata);

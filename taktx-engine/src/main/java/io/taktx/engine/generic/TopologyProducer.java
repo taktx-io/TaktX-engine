@@ -85,7 +85,9 @@ import io.taktx.engine.pi.ScopeProcessor;
 import io.taktx.engine.pi.processor.IoMappingProcessor;
 import io.taktx.engine.security.EngineAuthorizationService;
 import io.taktx.engine.security.MessageSigningService;
+import io.taktx.engine.security.EngineSecurityReadinessEvaluator;
 import io.taktx.engine.security.NamespaceSecurityPolicyActivationService;
+import io.taktx.engine.security.ProtectedDataPlaneParticipationGuard;
 import io.taktx.engine.security.ProcessInstanceResponseDedupProcessor;
 import io.taktx.engine.security.ReplayProtectionProcessor;
 import io.taktx.engine.topicmanagement.DynamicTopicManager;
@@ -764,7 +766,15 @@ public class TopologyProducer {
                     dtoMapper,
                     processingStatistics,
                     topicManager,
-                    engineAuthorizationService),
+                    engineAuthorizationService,
+                    new ProtectedDataPlaneParticipationGuard(
+                        namespaceSecurityPolicyStore,
+                        new EngineSecurityReadinessEvaluator(
+                            taktConfiguration,
+                            namespaceSecurityPolicyStore,
+                            messageSigningService,
+                            clock),
+                        clock)),
             taktConfiguration.getPrefixed(Stores.FLOW_NODE_INSTANCE.getStorename()),
             taktConfiguration.getPrefixed(Stores.PROCESS_INSTANCE.getStorename()),
             taktConfiguration.getPrefixed(Stores.VARIABLES.getStorename()))
