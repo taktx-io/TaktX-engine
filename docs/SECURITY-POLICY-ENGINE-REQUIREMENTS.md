@@ -853,7 +853,7 @@ as engine+client work, not engine-only work.
       conditions, not as reasons to weaken checks.
 - [x] Prevent protected data-plane participation when policy is not `ACTIVE` or participant is not
       `READY` for the exact active identity.
-- [ ] Ensure authoritative control-plane updates are accepted only from trusted/authorized writer
+- [x] Ensure authoritative control-plane updates are accepted only from trusted/authorized writer
       paths and never from arbitrary message injection.
 
 **Current status note:** process-instance, message-event, signal trigger, user-task response, and
@@ -866,7 +866,10 @@ signature enforcement for the corresponding protected runtime paths even when le
 off, while pending non-authoritative requested policies still do not switch enforcement early.
 Authoritative anchored policies now also fail closed directly in runtime authorization/signing paths
 when the platform trust anchor is missing, rather than relying only on readiness telemetry to keep
-protected work blocked.
+protected work blocked. The authoritative namespace-security-policy stream itself now also rejects
+unsigned or non-`PLATFORM` signed mutations before they can update or clear the local policy store,
+and official `TaktXClient` policy publish/clear helpers now require an explicit signing identity for
+that trusted writer path.
 
 ### Acceptance criteria
 - Runtime enforcement matches the active policy requirements.
@@ -965,7 +968,7 @@ on unpublished or bespoke patches.
       unless policy is `ACTIVE` and they are `READY`
 - [x] ensure bare engine remains functional with sensible `COMMUNITY_OPEN` defaults when no external
       control plane is present
-- [ ] ensure authoritative control-plane mutation is rejected when attempted from untrusted writers
+- [x] ensure authoritative control-plane mutation is rejected when attempted from untrusted writers
 - [x] ensure the required control-plane client operations are available via `TaktXClient`
 - [x] ensure stale participant status expires via TTL/incarnation handling
 - [x] ensure activation timeout / rollback behavior is deterministic and fail-closed
