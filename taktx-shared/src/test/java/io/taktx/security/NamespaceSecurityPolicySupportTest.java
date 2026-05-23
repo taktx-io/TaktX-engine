@@ -144,4 +144,49 @@ class NamespaceSecurityPolicySupportTest {
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("breakGlassActor and breakGlassReason must be provided together");
   }
+
+  @Test
+  void parseSecurityMode_acceptsCommonOperatorFormats() {
+    assertThat(NamespaceSecurityPolicySupport.parseSecurityMode("community-secured"))
+        .isEqualTo(SecurityMode.COMMUNITY_SECURED);
+    assertThat(NamespaceSecurityPolicySupport.parseSecurityMode("anchored secured"))
+        .isEqualTo(SecurityMode.ANCHORED_SECURED);
+    assertThat(NamespaceSecurityPolicySupport.parseSecurityMode("MISCONFIGURED_SECURITY"))
+        .isEqualTo(SecurityMode.MISCONFIGURED_SECURITY);
+  }
+
+  @Test
+  void parseRequiredSigning_parsesCommaSeparatedTokens() {
+    RequiredSigningDTO parsed =
+        NamespaceSecurityPolicySupport.parseRequiredSigning(
+            "engine-outbound, client_commands, worker responses");
+
+    assertThat(parsed.isEngineOutbound()).isTrue();
+    assertThat(parsed.isClientCommands()).isTrue();
+    assertThat(parsed.isWorkerResponses()).isTrue();
+  }
+
+  @Test
+  void parseRequiredAuthorization_parsesTokenSet() {
+    RequiredAuthorizationDTO parsed =
+        NamespaceSecurityPolicySupport.parseRequiredAuthorization(
+            java.util.Set.of("start-commands", "external_task_completion"));
+
+    assertThat(parsed.isStartCommands()).isTrue();
+    assertThat(parsed.isExternalTaskCompletion()).isTrue();
+    assertThat(parsed.isUserTaskCompletion()).isFalse();
+  }
+
+  @Test
+  void parseHelpers_rejectUnsupportedTokens() {
+    assertThatThrownBy(() -> NamespaceSecurityPolicySupport.parseSecurityMode("unknown-mode"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Unsupported security mode");
+    assertThatThrownBy(() -> NamespaceSecurityPolicySupport.parseRequiredSigning("bogus"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Unsupported signing requirement");
+    assertThatThrownBy(() -> NamespaceSecurityPolicySupport.parseRequiredAuthorization("bogus"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Unsupported authorization requirement");
+  }
 }

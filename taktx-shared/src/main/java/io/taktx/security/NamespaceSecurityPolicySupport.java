@@ -18,6 +18,9 @@ import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /** Shared normalization, canonicalization, and validation support for namespace security policy. */
 public final class NamespaceSecurityPolicySupport {
@@ -135,6 +138,54 @@ public final class NamespaceSecurityPolicySupport {
     return firstNonBlank(policy.getDesiredPolicyHash(), policy.getPolicyHash());
   }
 
+  /** Parses operator-facing security mode text with common dash/underscore/case variants. */
+  public static SecurityMode parseSecurityMode(String rawValue) {
+    if (isBlank(rawValue)) {
+      return null;
+    }
+    String normalized = rawValue.trim().replace('-', '_').replace(' ', '_').toUpperCase();
+    try {
+      return SecurityMode.valueOf(normalized);
+    } catch (IllegalArgumentException e) {
+      throw new IllegalArgumentException("Unsupported security mode: " + rawValue, e);
+    }
+  }
+
+  /** Parses role-relevant signing requirement names from a comma-separated string. */
+  public static RequiredSigningDTO parseRequiredSigning(String rawValue) {
+    return parseRequiredSigning(splitRequirementTokens(rawValue));
+  }
+
+  /** Parses role-relevant signing requirement names from a token set. */
+  public static RequiredSigningDTO parseRequiredSigning(Set<String> rawTokens) {
+    Set<String> tokens = normalizeRequirementTokens(rawTokens);
+    validateRequirementTokens(tokens, Set.of("ENGINE_OUTBOUND", "CLIENT_COMMANDS", "WORKER_RESPONSES"), "signing requirement");
+    return RequiredSigningDTO.builder()
+        .engineOutbound(tokens.contains("ENGINE_OUTBOUND"))
+        .clientCommands(tokens.contains("CLIENT_COMMANDS"))
+        .workerResponses(tokens.contains("WORKER_RESPONSES"))
+        .build();
+  }
+
+  /** Parses role-relevant authorization requirement names from a comma-separated string. */
+  public static RequiredAuthorizationDTO parseRequiredAuthorization(String rawValue) {
+    return parseRequiredAuthorization(splitRequirementTokens(rawValue));
+  }
+
+  /** Parses role-relevant authorization requirement names from a token set. */
+  public static RequiredAuthorizationDTO parseRequiredAuthorization(Set<String> rawTokens) {
+    Set<String> tokens = normalizeRequirementTokens(rawTokens);
+    validateRequirementTokens(
+        tokens,
+        Set.of("START_COMMANDS", "EXTERNAL_TASK_COMPLETION", "USER_TASK_COMPLETION"),
+        "authorization requirement");
+    return RequiredAuthorizationDTO.builder()
+        .startCommands(tokens.contains("START_COMMANDS"))
+        .externalTaskCompletion(tokens.contains("EXTERNAL_TASK_COMPLETION"))
+        .userTaskCompletion(tokens.contains("USER_TASK_COMPLETION"))
+        .build();
+  }
+
   /** Returns validation errors without throwing. */
   public static List<String> validationErrors(NamespaceSecurityPolicyDTO policy) {
     List<String> errors = new ArrayList<>();
@@ -238,6 +289,37 @@ public final class NamespaceSecurityPolicySupport {
 
   private static boolean isBlank(String value) {
     return value == null || value.isBlank();
+  }
+
+  private static Set<String> splitRequirementTokens(String rawValue) {
+    if (isBlank(rawValue)) {
+      return Set.of();
+    }
+    return Stream.of(rawValue.split(","))
+        .map(String::trim)
+        .filter(token -> !token.isBlank())
+        .collect(Collectors.toUnmodifiableSet());
+  }
+
+  private static Set<String> normalizeRequirementTokens(Set<String> rawTokens) {
+    if (rawTokens == null || rawTokens.isEmpty()) {
+      return Set.of();
+    }
+    return rawTokens.stream()
+        .filter(Objects::nonNull)
+        .map(String::trim)
+        .filter(token -> !token.isBlank())
+        .map(token -> token.replace('-', '_').replace(' ', '_').toUpperCase())
+        .collect(Collectors.toUnmodifiableSet());
+  }
+
+  private static void validateRequirementTokens(
+      Set<String> actual, Set<String> supported, String label) {
+    for (String token : actual) {
+      if (!supported.contains(token)) {
+        throw new IllegalArgumentException("Unsupported " + label + ": " + token);
+      }
+    }
   }
 
   private static String blankToNull(String value) {
