@@ -1071,7 +1071,7 @@ public class TopologyProducer {
     builder.stream(
             taktConfiguration.getPrefixed(Topics.USER_TASK_RESPONSE_TOPIC.getTopicName()),
             Consumed.with(PROCESS_INSTANCE_KEY_SERDE, USER_TASK_RESPONSE_SERDE))
-        .process(() -> new UserTaskResponseProcessor(clock))
+        .process(() -> new UserTaskResponseProcessor(clock, protectedDataPlaneParticipationGuard()))
         .split()
         .branch(
             (_, value) -> value instanceof ProcessInstanceTriggerDTO,

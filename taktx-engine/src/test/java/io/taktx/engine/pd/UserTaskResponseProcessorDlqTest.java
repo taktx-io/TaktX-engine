@@ -15,13 +15,24 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
+import io.taktx.dto.NamespaceSecurityPolicyDTO;
 import io.taktx.dto.ProcessInstanceTriggerDTO;
+import io.taktx.dto.RequiredSigningDTO;
+import io.taktx.dto.SecurityActivationState;
+import io.taktx.dto.SecurityMode;
 import io.taktx.dto.UserTaskResponseDlqEntryDTO;
 import io.taktx.dto.UserTaskResponseResultDTO;
 import io.taktx.dto.UserTaskResponseTriggerDTO;
 import io.taktx.dto.UserTaskResponseType;
 import io.taktx.dto.VariablesDTO;
+import io.taktx.engine.config.NamespaceSecurityPolicyStore;
+import io.taktx.engine.config.TaktConfiguration;
+import io.taktx.engine.security.EngineSecurityReadinessEvaluator;
+import io.taktx.engine.security.MessageSigningService;
+import io.taktx.engine.security.ProtectedDataPlaneParticipationGuard;
+import io.taktx.security.NamespaceSecurityPolicySupport;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Instant;
@@ -39,12 +50,19 @@ import org.mockito.ArgumentCaptor;
 class UserTaskResponseProcessorDlqTest {
 
   private ProcessorContext<Object, Object> context;
+  private TaktConfiguration configuration;
   private UserTaskResponseProcessor processor;
   private final Clock clock = Clock.fixed(Instant.ofEpochMilli(1_700_000_000_000L), ZoneOffset.UTC);
 
   @BeforeEach
   void setUp() {
     context = mock(ProcessorContext.class);
+    configuration = mock(TaktConfiguration.class);
+    when(configuration.getTenantId()).thenReturn("tenant");
+    when(configuration.getNamespace()).thenReturn("bank.payments");
+    when(configuration.getHost()).thenReturn("engine-host");
+    when(configuration.getPort()).thenReturn(8080);
+    when(configuration.getPlatformPublicKey()).thenReturn(null);
     processor = new UserTaskResponseProcessor(clock);
     processor.init(context);
   }
@@ -129,5 +147,79 @@ class UserTaskResponseProcessorDlqTest {
         .isEqualTo("PROCESSOR_EXCEPTION");
     assertThat(new String(dlqEntry.getHeaders().get(REASON_TEXT), StandardCharsets.UTF_8))
         .contains("forward failed");
+  }
+
+  @Test
+  void process_pendingPolicy_emitsDlqWithPolicyNotActiveHint() {
+    UUID processInstanceId = UUID.randomUUID();
+    UserTaskResponseResultDTO result =
+        new UserTaskResponseResultDTO(UserTaskResponseType.COMPLETED, null, null);
+    UserTaskResponseTriggerDTO response =
+        new UserTaskResponseTriggerDTO(
+            processInstanceId, List.of(3L), result, VariablesDTO.empty());
+    UserTaskResponseProcessor guardedProcessor = guardedProcessorWithPolicy(requestedPolicy(42L), null);
+
+    guardedProcessor.process(new Record<>(processInstanceId, response, 400L, new RecordHeaders()));
+
+    ArgumentCaptor<Record> captor = ArgumentCaptor.forClass(Record.class);
+    verify(context).forward(captor.capture());
+    Record forwarded = captor.getValue();
+    assertThat(forwarded.key()).isNull();
+    assertThat(forwarded.value()).isInstanceOf(UserTaskResponseDlqEntryDTO.class);
+    UserTaskResponseDlqEntryDTO dlqEntry = (UserTaskResponseDlqEntryDTO) forwarded.value();
+    assertThat(new String(dlqEntry.getHeaders().get(REASON_HINT), StandardCharsets.UTF_8))
+        .isEqualTo(ProtectedDataPlaneParticipationGuard.POLICY_NOT_ACTIVE_HINT);
+    assertThat(new String(dlqEntry.getHeaders().get(REASON_TEXT), StandardCharsets.UTF_8))
+        .contains("becomes ACTIVE");
+  }
+
+  @Test
+  void process_noExplicitPolicy_stillForwardsNormally() {
+    UUID processInstanceId = UUID.randomUUID();
+    UserTaskResponseResultDTO result =
+        new UserTaskResponseResultDTO(UserTaskResponseType.COMPLETED, null, null);
+    UserTaskResponseTriggerDTO response =
+        new UserTaskResponseTriggerDTO(
+            processInstanceId, List.of(4L), result, VariablesDTO.empty());
+    UserTaskResponseProcessor guardedProcessor = guardedProcessorWithPolicy(null, null);
+
+    guardedProcessor.process(new Record<>(processInstanceId, response, 500L, new RecordHeaders()));
+
+    ArgumentCaptor<Record> captor = ArgumentCaptor.forClass(Record.class);
+    verify(context).forward(captor.capture());
+    Record forwarded = captor.getValue();
+    assertThat(forwarded.key()).isEqualTo(processInstanceId);
+    assertThat(forwarded.value()).isSameAs(response);
+  }
+
+  private UserTaskResponseProcessor guardedProcessorWithPolicy(
+      NamespaceSecurityPolicyDTO currentPolicy, NamespaceSecurityPolicyDTO activePolicy) {
+    NamespaceSecurityPolicyStore policyStore = new NamespaceSecurityPolicyStore();
+    policyStore.setCurrentPolicy(currentPolicy);
+    policyStore.setActivePolicy(activePolicy);
+    MessageSigningService messageSigningService = mock(MessageSigningService.class);
+    when(messageSigningService.getKeyId()).thenReturn("engine-key-1");
+    when(messageSigningService.isPublicKeyPublished()).thenReturn(true);
+
+    UserTaskResponseProcessor guardedProcessor =
+        new UserTaskResponseProcessor(
+            clock,
+            new ProtectedDataPlaneParticipationGuard(
+                policyStore,
+                new EngineSecurityReadinessEvaluator(
+                    configuration, policyStore, messageSigningService, clock),
+                clock));
+    guardedProcessor.init(context);
+    return guardedProcessor;
+  }
+
+  private static NamespaceSecurityPolicyDTO requestedPolicy(long version) {
+    return NamespaceSecurityPolicySupport.requireValid(
+        NamespaceSecurityPolicyDTO.builder()
+            .mode(SecurityMode.COMMUNITY_SECURED)
+            .activationState(SecurityActivationState.REQUESTED)
+            .desiredPolicyVersion(version)
+            .requiredSigning(RequiredSigningDTO.builder().engineOutbound(true).build())
+            .build());
   }
 }
