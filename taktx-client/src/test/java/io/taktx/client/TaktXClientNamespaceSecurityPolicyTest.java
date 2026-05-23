@@ -15,6 +15,7 @@ import io.taktx.dto.RequiredAuthorizationDTO;
 import io.taktx.dto.RequiredSigningDTO;
 import io.taktx.dto.SecurityActivationState;
 import io.taktx.dto.SecurityMode;
+import io.taktx.security.AuthoritativeControlPlaneSecurityProperty;
 import io.taktx.serdes.NamespaceSecurityPolicyProtoMapper;
 import org.junit.jupiter.api.Test;
 
@@ -180,5 +181,31 @@ class TaktXClientNamespaceSecurityPolicyTest {
     assertThatThrownBy(() -> TaktXClient.buildNamespaceSecurityPolicyTombstoneRecord(" "))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("topic must not be blank");
+  }
+
+  @Test
+  void namespaceSecurityPolicyWriterSecurityProperties_exposesAuthoritativeMutationContract() {
+    assertThat(TaktXClient.namespaceSecurityPolicyWriterSecurityProperties())
+        .contains(
+            AuthoritativeControlPlaneSecurityProperty.BROKER_AUTHORIZATION_REQUIRED,
+            AuthoritativeControlPlaneSecurityProperty.TRUSTED_WRITER_PATH_ONLY,
+            AuthoritativeControlPlaneSecurityProperty.FIXED_RECORD_KEY_REQUIRED);
+  }
+
+  @Test
+  void namespaceSecurityPolicyWriterSecurityProperties_forSecuredBreakGlassPolicy_addsExtraRequirements() {
+    NamespaceSecurityPolicyDTO policy =
+        NamespaceSecurityPolicyDTO.builder()
+            .mode(SecurityMode.COMMUNITY_SECURED)
+            .activationState(SecurityActivationState.REQUESTED)
+            .desiredPolicyVersion(42L)
+            .breakGlassActor("ops-admin")
+            .breakGlassReason("containment downgrade")
+            .build();
+
+    assertThat(TaktXClient.namespaceSecurityPolicyWriterSecurityProperties(policy))
+        .contains(
+            AuthoritativeControlPlaneSecurityProperty.INTEGRITY_PROTECTION_REQUIRED_IN_SECURED_MODES,
+            AuthoritativeControlPlaneSecurityProperty.BREAK_GLASS_METADATA_REQUIRED_FOR_DOWNGRADE);
   }
 }

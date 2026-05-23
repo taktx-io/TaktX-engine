@@ -36,6 +36,8 @@ import io.taktx.security.Ed25519Service;
 import io.taktx.security.EnvironmentWorkerSigningIdentitySource;
 import io.taktx.security.FileSigningIdentitySource;
 import io.taktx.security.GeneratedSigningIdentitySource;
+import io.taktx.security.AuthoritativeControlPlaneSecurityProperty;
+import io.taktx.security.NamespaceSecurityPolicyControlPlaneContract;
 import io.taktx.security.NamespaceSecurityPolicySupport;
 import io.taktx.security.RuntimeConfigurationHolder;
 import io.taktx.security.SigningIdentity;
@@ -75,7 +77,8 @@ import org.slf4j.Logger;
  */
 public class TaktXClient {
 
-  public static final String NAMESPACE_SECURITY_POLICY_RECORD_KEY = "policy";
+  public static final String NAMESPACE_SECURITY_POLICY_RECORD_KEY =
+      NamespaceSecurityPolicyControlPlaneContract.POLICY_RECORD_KEY;
 
   private static final Logger log = org.slf4j.LoggerFactory.getLogger(TaktXClient.class);
   private final ProcessDefinitionConsumer processDefinitionConsumer;
@@ -414,6 +417,21 @@ public class TaktXClient {
     } catch (Exception e) {
       throw new IllegalStateException("Failed to clear namespace security policy", e);
     }
+  }
+
+  /** Returns the authoritative control-plane writer security properties for namespace policy mutation. */
+  public static Set<AuthoritativeControlPlaneSecurityProperty>
+      namespaceSecurityPolicyWriterSecurityProperties() {
+    return NamespaceSecurityPolicyControlPlaneContract.requiredWriterSecurityProperties();
+  }
+
+  /**
+   * Returns the authoritative control-plane writer security properties for the supplied namespace
+   * policy mutation.
+   */
+  public static Set<AuthoritativeControlPlaneSecurityProperty>
+      namespaceSecurityPolicyWriterSecurityProperties(NamespaceSecurityPolicyDTO policy) {
+    return NamespaceSecurityPolicyControlPlaneContract.requiredWriterSecurityProperties(policy);
   }
 
   static org.apache.kafka.clients.producer.ProducerRecord<String, byte[]> buildNamespaceSecurityPolicyRecord(
