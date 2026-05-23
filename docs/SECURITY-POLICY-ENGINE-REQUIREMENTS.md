@@ -775,17 +775,17 @@ as engine+client work, not engine-only work.
 **Goal:** add engine support for the explicit namespace security policy contract.
 
 ### Tasks
-- [ ] Add shared parsing/validation support for `SecurityMode`.
-- [ ] Add shared parsing/validation support for required signing requirements.
-- [ ] Add shared parsing/validation support for required authorization requirements.
-- [ ] Add policy-version handling.
-- [ ] Add canonical policy digest handling.
-- [ ] Reject invalid partial policy payloads.
+- [x] Add shared parsing/validation support for `SecurityMode`.
+- [x] Add shared parsing/validation support for required signing requirements.
+- [x] Add shared parsing/validation support for required authorization requirements.
+- [x] Add policy-version handling.
+- [x] Add canonical policy digest handling.
+- [x] Reject invalid partial policy payloads.
 - [ ] Document or encode which policy elements are relevant to each participant role so protected
       data-plane gating can be applied consistently.
 - [x] Define the client/runtime contract for authoritative control-plane mutation, including the
       security properties expected of writers.
-- [ ] Define desired-vs-active identity fields and activation-state semantics.
+- [x] Define desired-vs-active identity fields and activation-state semantics.
 - [ ] Define activation authority handoff/ownership explicitly.
 
 ### Acceptance criteria
