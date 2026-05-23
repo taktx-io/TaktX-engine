@@ -24,6 +24,7 @@ import io.taktx.dto.ExternalTaskTriggerDTO;
 import io.taktx.dto.GlobalConfigurationDTO;
 import io.taktx.dto.KeyRole;
 import io.taktx.dto.MessageEventDTO;
+import io.taktx.dto.NamespaceSecurityPolicyDTO;
 import io.taktx.dto.ParsedDefinitionsDTO;
 import io.taktx.dto.ProcessDefinitionDTO;
 import io.taktx.dto.ProcessDefinitionKey;
@@ -35,6 +36,7 @@ import io.taktx.security.Ed25519Service;
 import io.taktx.security.EnvironmentWorkerSigningIdentitySource;
 import io.taktx.security.FileSigningIdentitySource;
 import io.taktx.security.GeneratedSigningIdentitySource;
+import io.taktx.security.NamespaceSecurityPolicySupport;
 import io.taktx.security.RuntimeConfigurationHolder;
 import io.taktx.security.SigningIdentity;
 import io.taktx.security.SigningIdentitySource;
@@ -555,6 +557,40 @@ public class TaktXClient {
         .configuration(configuration)
         .timestamp(Instant.now())
         .build();
+  }
+
+  /**
+   * Computes the canonical digest for the effective namespace security policy content.
+   *
+   * <p>This intentionally ignores desired-vs-active wrapper identity fields so callers can compare
+   * whether two policies describe the same effective posture.
+   */
+  public static String canonicalNamespaceSecurityPolicyHash(NamespaceSecurityPolicyDTO policy) {
+    return NamespaceSecurityPolicySupport.canonicalHash(policy);
+  }
+
+  /**
+   * Normalizes a namespace security policy before transport or persistence.
+   *
+   * <p>This fills migration aliases, ensures nested requirement DTOs are present, and computes a
+   * canonical requested policy hash when one is absent.
+   */
+  public static NamespaceSecurityPolicyDTO normalizeNamespaceSecurityPolicy(
+      NamespaceSecurityPolicyDTO policy) {
+    return NamespaceSecurityPolicySupport.normalize(policy);
+  }
+
+  /**
+   * Validates and normalizes a namespace security policy.
+   *
+   * <p>Use this helper before authoritative publication once the final control-plane topic and
+   * activation-authority decisions are in place.
+   *
+   * @throws IllegalArgumentException when the policy is structurally invalid
+   */
+  public static NamespaceSecurityPolicyDTO validateNamespaceSecurityPolicy(
+      NamespaceSecurityPolicyDTO policy) {
+    return NamespaceSecurityPolicySupport.requireValid(policy);
   }
 
   private SigningIdentity currentSigningIdentity() {
