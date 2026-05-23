@@ -37,6 +37,8 @@ import io.taktx.security.EnvironmentWorkerSigningIdentitySource;
 import io.taktx.security.FileSigningIdentitySource;
 import io.taktx.security.GeneratedSigningIdentitySource;
 import io.taktx.security.AuthoritativeControlPlaneSecurityProperty;
+import io.taktx.security.NamespaceSecurityPolicyActivationAuthority;
+import io.taktx.security.NamespaceSecurityPolicyActivationAuthorityContract;
 import io.taktx.security.NamespaceSecurityPolicyControlPlaneContract;
 import io.taktx.security.NamespaceSecurityPolicySupport;
 import io.taktx.security.RuntimeConfigurationHolder;
@@ -432,6 +434,12 @@ public class TaktXClient {
   public static Set<AuthoritativeControlPlaneSecurityProperty>
       namespaceSecurityPolicyWriterSecurityProperties(NamespaceSecurityPolicyDTO policy) {
     return NamespaceSecurityPolicyControlPlaneContract.requiredWriterSecurityProperties(policy);
+  }
+
+  /** Returns the sole first-slice activation authority for namespace security policy lifecycle. */
+  public static NamespaceSecurityPolicyActivationAuthority
+      namespaceSecurityPolicyActivationAuthority() {
+    return NamespaceSecurityPolicyActivationAuthorityContract.soleActivationAuthority();
   }
 
   static org.apache.kafka.clients.producer.ProducerRecord<String, byte[]> buildNamespaceSecurityPolicyRecord(
