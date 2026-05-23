@@ -880,6 +880,13 @@ Fail-closed verification coverage now also explicitly exercises missing policy-r
 signature, and trust-anchor conditions at both authorization-service and process-instance ingress
 boundaries so those required checks are proven to reject rather than silently pass.
 
+Client-side protected runtime participation is now also fail-closed against the authoritative
+namespace policy lifecycle: `TaktXClient` watches the compacted security-policy topic, keeps the
+last authoritative active identity available during convergence, blocks protected start/set-variable,
+message/signal publication, task-response publication, and protected task consumption until the
+policy is `ACTIVE` and the client is locally `READY`, and still preserves sensible open defaults
+when no authoritative policy is present.
+
 ### Acceptance criteria
 - Runtime enforcement matches the active policy requirements.
 - Required checks fail closed when missing.
@@ -973,7 +980,7 @@ on unpublished or bespoke patches.
 - [x] ensure protected data-plane behavior remains on previous active policy during `REQUESTED` /
       `VALIDATING`
 - [x] ensure control-plane traffic remains available during convergence/recovery
-- [ ] ensure engine and client participants do not publish/consume/process protected runtime traffic
+- [x] ensure engine and client participants do not publish/consume/process protected runtime traffic
       unless policy is `ACTIVE` and they are `READY`
 - [x] ensure bare engine remains functional with sensible `COMMUNITY_OPEN` defaults when no external
       control plane is present
