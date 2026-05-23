@@ -380,9 +380,9 @@ in assumptions that later have to be unwound.
 - [x] **SP-00.9** Define the required security properties for authoritative control-plane mutation,
       including baseline broker authorization and any additional integrity/authentication
       requirements for secured modes.
-- [ ] **SP-00.10** Confirm which control-plane operations must be supported by `TaktXClient` so the
+- [x] **SP-00.10** Confirm which control-plane operations must be supported by `TaktXClient` so the
       Console/runtime implementation does not need custom Kafka publishers for policy semantics.
-- [ ] **SP-00.11** Confirm the first-slice activation authority and record that choice explicitly.
+- [x] **SP-00.11** Confirm the first-slice activation authority and record that choice explicitly.
 - [ ] **SP-00.12** Define participant incarnation / TTL fields for posture reporting, including at
       least `participantInstanceId`, `startedAt`, `lastSeenAt`, and `statusExpiresAt`.
 - [ ] **SP-00.13** Resolve control-plane topic naming as a hard implementation blocker.
@@ -391,6 +391,12 @@ in assumptions that later have to be unwound.
 - Current verified constraint: Platform Service currently has no Kafka connection.
 - Therefore, a direct “Ops/admin service writes topic” path must be proven, not presumed.
 - The first slice may keep the current HTTP bridge if that is the only verified transport.
+- Confirmed first-slice `TaktXClient` control-plane surface now includes:
+  - authoritative namespace security policy publish helpers
+  - compacted-topic tombstone / clear helpers for namespace policy state
+  - authoritative writer-security contract exposure
+  - explicit first-slice activation-authority exposure
+  - legacy global-security-config -> namespace-policy bridge helpers for migration
 - Topic naming is a hard blocker for implementation; recommended pattern is namespace-local:
   - `<tenant>.<namespace>.taktx-security-policy`
   - `<tenant>.<namespace>.taktx-participant-status`
