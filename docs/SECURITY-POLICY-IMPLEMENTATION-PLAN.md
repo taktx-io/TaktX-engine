@@ -377,7 +377,7 @@ in assumptions that later have to be unwound.
   - control-plane
   - protected data-plane
   so gating rules are explicit and testable.
-- [ ] **SP-00.9** Define the required security properties for authoritative control-plane mutation,
+- [x] **SP-00.9** Define the required security properties for authoritative control-plane mutation,
       including baseline broker authorization and any additional integrity/authentication
       requirements for secured modes.
 - [ ] **SP-00.10** Confirm which control-plane operations must be supported by `TaktXClient` so the
