@@ -42,6 +42,10 @@ class TopicsTest {
 
   @Test
   void specificTopicNames_areAsExpected() {
+    assertThat(Topics.SECURITY_POLICY_TOPIC.getTopicName()).isEqualTo("taktx-security-policy");
+    assertThat(Topics.PARTICIPANT_STATUS_TOPIC.getTopicName())
+        .isEqualTo("taktx-participant-status");
+    assertThat(Topics.SECURITY_EVENTS_TOPIC.getTopicName()).isEqualTo("taktx-security-events");
     assertThat(Topics.DMN_DEFINITIONS_TRIGGER_TOPIC.getTopicName()).isEqualTo("dmn-definitions");
     assertThat(Topics.XML_BY_DMN_DEFINITION_ID.getTopicName())
         .isEqualTo("xml-by-dmn-definition-id");
@@ -63,5 +67,12 @@ class TopicsTest {
             .isEqualTo(CleanupPolicy.DELETE);
       }
     }
+  }
+
+  @Test
+  void securityControlPlaneTopics_haveExpectedCleanupPolicies() {
+    assertThat(Topics.SECURITY_POLICY_TOPIC.getCleanupPolicy()).isEqualTo(CleanupPolicy.COMPACT);
+    assertThat(Topics.PARTICIPANT_STATUS_TOPIC.getCleanupPolicy()).isEqualTo(CleanupPolicy.COMPACT);
+    assertThat(Topics.SECURITY_EVENTS_TOPIC.getCleanupPolicy()).isEqualTo(CleanupPolicy.DELETE);
   }
 }
