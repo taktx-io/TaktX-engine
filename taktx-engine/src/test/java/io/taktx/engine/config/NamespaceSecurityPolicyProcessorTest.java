@@ -14,7 +14,12 @@ import io.taktx.dto.RequiredAuthorizationDTO;
 import io.taktx.dto.RequiredSigningDTO;
 import io.taktx.dto.SecurityActivationState;
 import io.taktx.dto.SecurityMode;
+import io.taktx.engine.security.NamespaceSecurityPolicyActivationService;
+import io.taktx.engine.security.SecurityEventPublisher;
 import io.taktx.serdes.NamespaceSecurityPolicyProtoMapper;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.Properties;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.StreamsBuilder;
@@ -27,6 +32,7 @@ import org.apache.kafka.streams.state.Stores;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 class NamespaceSecurityPolicyProcessorTest {
 
@@ -145,5 +151,64 @@ class NamespaceSecurityPolicyProcessorTest {
     policyTopic.pipeInput("other", new byte[] {1, 2, 3});
 
     assertThat(namespaceSecurityPolicyStore.get()).isNull();
+  }
+
+  @Test
+  void requestedPolicy_entersValidatingWhenLifecycleSupportIsEnabled() {
+    NamespaceSecurityPolicyStore lifecycleStore = new NamespaceSecurityPolicyStore();
+    ParticipantStatusStore participantStatusStore = new ParticipantStatusStore();
+    TaktConfiguration configuration = Mockito.mock(TaktConfiguration.class);
+    Mockito.when(configuration.getSecurityPolicyActivationTimeoutMs()).thenReturn(30_000L);
+    Mockito.when(configuration.getTenantId()).thenReturn("tenant");
+    Mockito.when(configuration.getNamespace()).thenReturn("bank.payments");
+    Mockito.when(configuration.getHost()).thenReturn("engine-host");
+    Mockito.when(configuration.getPort()).thenReturn(8080);
+    NamespaceSecurityPolicyActivationService activationService =
+        new NamespaceSecurityPolicyActivationService(
+            configuration,
+            lifecycleStore,
+            participantStatusStore,
+            Mockito.mock(SecurityEventPublisher.class),
+            Clock.fixed(Instant.ofEpochMilli(1_716_450_000_000L), ZoneOffset.UTC));
+
+    StreamsBuilder builder = new StreamsBuilder();
+    builder.addGlobalStore(
+        Stores.keyValueStoreBuilder(
+                Stores.inMemoryKeyValueStore(STORE_NAME), Serdes.String(), Serdes.ByteArray())
+            .withLoggingDisabled(),
+        POLICY_TOPIC,
+        Consumed.with(Serdes.String(), Serdes.ByteArray()),
+        () -> new NamespaceSecurityPolicyProcessor(lifecycleStore, activationService));
+
+    Properties config = new Properties();
+    config.put(StreamsConfig.APPLICATION_ID_CONFIG, "namespace-security-policy-lifecycle-test");
+    config.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "dummy:9092");
+    config.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
+    config.put(
+        StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.ByteArray().getClass().getName());
+
+    try (TopologyTestDriver lifecycleDriver = new TopologyTestDriver(builder.build(), config)) {
+      TestInputTopic<String, byte[]> lifecycleTopic =
+          lifecycleDriver.createInputTopic(
+              POLICY_TOPIC, Serdes.String().serializer(), Serdes.ByteArray().serializer());
+      NamespaceSecurityPolicyDTO input =
+          NamespaceSecurityPolicyDTO.builder()
+              .mode(SecurityMode.COMMUNITY_SECURED)
+              .activationState(SecurityActivationState.REQUESTED)
+              .desiredPolicyVersion(52L)
+              .requiredSigning(RequiredSigningDTO.builder().engineOutbound(true).build())
+              .requiredAuthorization(
+                  RequiredAuthorizationDTO.builder().startCommands(true).build())
+              .build();
+
+      lifecycleTopic.pipeInput(
+          NamespaceSecurityPolicyProcessor.POLICY_KEY,
+          NamespaceSecurityPolicyProtoMapper.toProto(input).toByteArray());
+
+      assertThat(lifecycleStore.get()).isNotNull();
+      assertThat(lifecycleStore.get().getActivationState())
+          .isEqualTo(SecurityActivationState.VALIDATING);
+      assertThat(lifecycleStore.getValidationStartedAtMs()).isEqualTo(1_716_450_000_000L);
+    }
   }
 }
