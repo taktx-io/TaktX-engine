@@ -14,6 +14,7 @@ import io.taktx.dto.ParticipantRole;
 import io.taktx.dto.ParticipantStatusDTO;
 import io.taktx.dto.PolicyMismatchReasonDTO;
 import io.taktx.dto.StatusVerificationLevel;
+import io.taktx.engine.security.NamespaceSecurityPolicyActivationService;
 import io.taktx.serdes.ParticipantStatusProtoMapper;
 import java.util.List;
 import java.util.Properties;
@@ -28,6 +29,7 @@ import org.apache.kafka.streams.state.Stores;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 class ParticipantStatusProcessorTest {
 
@@ -210,5 +212,61 @@ class ParticipantStatusProcessorTest {
     statusTopic.pipeInput("", new byte[] {1, 2, 3});
 
     assertThat(participantStatusStore.snapshot()).isEmpty();
+  }
+
+  @Test
+  void statusRecord_withLifecycleSupport_updatesStoreAndTriggersActivationReevaluation() {
+    ParticipantStatusStore lifecycleStore = new ParticipantStatusStore();
+    NamespaceSecurityPolicyActivationService activationService =
+        Mockito.mock(NamespaceSecurityPolicyActivationService.class);
+
+    StreamsBuilder builder = new StreamsBuilder();
+    builder.addGlobalStore(
+        Stores.keyValueStoreBuilder(
+                Stores.inMemoryKeyValueStore(STORE_NAME), Serdes.String(), Serdes.ByteArray())
+            .withLoggingDisabled(),
+        STATUS_TOPIC,
+        Consumed.with(Serdes.String(), Serdes.ByteArray()),
+        () -> new ParticipantStatusProcessor(lifecycleStore, activationService));
+
+    Properties config = new Properties();
+    config.put(StreamsConfig.APPLICATION_ID_CONFIG, "participant-status-lifecycle-test");
+    config.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "dummy:9092");
+    config.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
+    config.put(
+        StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.ByteArray().getClass().getName());
+
+    try (TopologyTestDriver lifecycleDriver = new TopologyTestDriver(builder.build(), config)) {
+      TestInputTopic<String, byte[]> lifecycleTopic =
+          lifecycleDriver.createInputTopic(
+              STATUS_TOPIC, Serdes.String().serializer(), Serdes.ByteArray().serializer());
+      ParticipantStatusDTO status =
+          ParticipantStatusDTO.builder()
+              .participantId("tenant.bank.payments.console")
+              .participantInstanceId("console-1")
+              .role(ParticipantRole.CONSOLE)
+              .namespace("bank.payments")
+              .startedAt(1716450000000L)
+              .lastSeenAt(1716450060000L)
+              .statusExpiresAt(1716450120000L)
+              .statusVerificationLevel(StatusVerificationLevel.UNVERIFIED_STATUS)
+              .effectiveState(ParticipantEffectiveState.MISMATCH)
+              .readyForDataPlane(false)
+              .observedPolicyVersion(42L)
+              .observedPolicyHash("abc123")
+              .mismatchReasons(
+                  List.of(
+                      PolicyMismatchReasonDTO.builder()
+                          .code("POLICY_NOT_ACTIVE")
+                          .message("policy still converging")
+                          .build()))
+              .build();
+
+      lifecycleTopic.pipeInput(
+          status.getParticipantInstanceId(), ParticipantStatusProtoMapper.toProto(status).toByteArray());
+
+      assertThat(lifecycleStore.get(status.getParticipantInstanceId())).isEqualTo(status);
+      Mockito.verify(activationService).onParticipantStatusesChanged();
+    }
   }
 }
