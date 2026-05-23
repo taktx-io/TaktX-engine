@@ -339,6 +339,83 @@ class NamespaceSecurityPolicyProcessorTest {
   }
 
   @Test
+  void newRequestedPolicyDuringValidation_replacesDesiredIdentityAndRemainsValidating() {
+    NamespaceSecurityPolicyStore lifecycleStore = new NamespaceSecurityPolicyStore();
+    ParticipantStatusStore participantStatusStore = new ParticipantStatusStore();
+    TaktConfiguration configuration = Mockito.mock(TaktConfiguration.class);
+    Mockito.when(configuration.getSecurityPolicyActivationTimeoutMs()).thenReturn(30_000L);
+    Mockito.when(configuration.getTenantId()).thenReturn("tenant");
+    Mockito.when(configuration.getNamespace()).thenReturn("bank.payments");
+    Mockito.when(configuration.getHost()).thenReturn("engine-host");
+    Mockito.when(configuration.getPort()).thenReturn(8080);
+    NamespaceSecurityPolicyActivationService activationService =
+        new NamespaceSecurityPolicyActivationService(
+            configuration,
+            lifecycleStore,
+            participantStatusStore,
+            Mockito.mock(SecurityEventPublisher.class),
+            Clock.fixed(Instant.ofEpochMilli(1_716_450_000_000L), ZoneOffset.UTC));
+
+    StreamsBuilder builder = new StreamsBuilder();
+    builder.addGlobalStore(
+        Stores.keyValueStoreBuilder(
+                Stores.inMemoryKeyValueStore(STORE_NAME), Serdes.String(), Serdes.ByteArray())
+            .withLoggingDisabled(),
+        POLICY_TOPIC,
+        Consumed.with(Serdes.String(), Serdes.ByteArray()),
+        () -> new NamespaceSecurityPolicyProcessor(lifecycleStore, activationService));
+
+    Properties config = new Properties();
+    config.put(StreamsConfig.APPLICATION_ID_CONFIG, "namespace-security-policy-revalidation-test");
+    config.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "dummy:9092");
+    config.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
+    config.put(
+        StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.ByteArray().getClass().getName());
+
+    try (TopologyTestDriver lifecycleDriver = new TopologyTestDriver(builder.build(), config)) {
+      TestInputTopic<String, byte[]> lifecycleTopic =
+          lifecycleDriver.createInputTopic(
+              POLICY_TOPIC, Serdes.String().serializer(), Serdes.ByteArray().serializer());
+      NamespaceSecurityPolicyDTO firstRequested =
+          NamespaceSecurityPolicyDTO.builder()
+              .mode(SecurityMode.COMMUNITY_SECURED)
+              .activationState(SecurityActivationState.REQUESTED)
+              .desiredPolicyVersion(52L)
+              .requiredSigning(RequiredSigningDTO.builder().engineOutbound(true).build())
+              .requiredAuthorization(
+                  RequiredAuthorizationDTO.builder().startCommands(true).build())
+              .build();
+      NamespaceSecurityPolicyDTO replacementRequested =
+          NamespaceSecurityPolicyDTO.builder()
+              .mode(SecurityMode.COMMUNITY_SECURED)
+              .activationState(SecurityActivationState.REQUESTED)
+              .desiredPolicyVersion(53L)
+              .requiredSigning(RequiredSigningDTO.builder().workerResponses(true).build())
+              .requiredAuthorization(
+                  RequiredAuthorizationDTO.builder().userTaskCompletion(true).build())
+              .build();
+
+      lifecycleTopic.pipeInput(
+          NamespaceSecurityPolicyProcessor.POLICY_KEY,
+          NamespaceSecurityPolicyProtoMapper.toProto(firstRequested).toByteArray());
+      assertThat(lifecycleStore.get()).isNotNull();
+      assertThat(lifecycleStore.get().getActivationState())
+          .isEqualTo(SecurityActivationState.VALIDATING);
+
+      lifecycleTopic.pipeInput(
+          NamespaceSecurityPolicyProcessor.POLICY_KEY,
+          NamespaceSecurityPolicyProtoMapper.toProto(replacementRequested).toByteArray());
+
+      assertThat(lifecycleStore.get()).isNotNull();
+      assertThat(lifecycleStore.get().getActivationState())
+          .isEqualTo(SecurityActivationState.VALIDATING);
+      assertThat(lifecycleStore.get().getDesiredPolicyVersion()).isEqualTo(53L);
+      assertThat(lifecycleStore.get().getRequiredSigning().isWorkerResponses()).isTrue();
+      assertThat(lifecycleStore.get().getRequiredAuthorization().isUserTaskCompletion()).isTrue();
+    }
+  }
+
+  @Test
   void unauthorizedPolicyMutation_doesNotReplacePreviousStoreValueAndEmitsRejectedEvent() {
     NamespaceSecurityPolicyStore lifecycleStore = new NamespaceSecurityPolicyStore();
     ParticipantStatusStore participantStatusStore = new ParticipantStatusStore();
