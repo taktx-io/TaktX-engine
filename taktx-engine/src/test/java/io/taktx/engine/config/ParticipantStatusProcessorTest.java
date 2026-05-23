@@ -174,6 +174,38 @@ class ParticipantStatusProcessorTest {
   }
 
   @Test
+  void currentSnapshot_excludesExpiredStatuses() {
+    ParticipantStatusDTO expired =
+        ParticipantStatusDTO.builder()
+            .participantId("engine-2")
+            .participantInstanceId("engine-2-expired")
+            .role(ParticipantRole.ENGINE)
+            .namespace("bank.payments")
+            .startedAt(1716450000000L)
+            .lastSeenAt(1716450060000L)
+            .statusExpiresAt(1716450060001L)
+            .statusVerificationLevel(StatusVerificationLevel.UNVERIFIED_STATUS)
+            .effectiveState(ParticipantEffectiveState.READY)
+            .readyForDataPlane(true)
+            .observedPolicyVersion(42L)
+            .observedPolicyHash("abc123")
+            .build();
+    ParticipantStatusDTO current =
+        expired.toBuilder()
+            .participantInstanceId("engine-2-current")
+            .statusExpiresAt(1716450120000L)
+            .build();
+
+    statusTopic.pipeInput(
+        expired.getParticipantInstanceId(), ParticipantStatusProtoMapper.toProto(expired).toByteArray());
+    statusTopic.pipeInput(
+        current.getParticipantInstanceId(), ParticipantStatusProtoMapper.toProto(current).toByteArray());
+
+    assertThat(participantStatusStore.currentSnapshot(1716450119999L))
+        .containsOnlyKeys(current.getParticipantInstanceId());
+  }
+
+  @Test
   void blankKey_isIgnored() {
     statusTopic.pipeInput("", new byte[] {1, 2, 3});
 

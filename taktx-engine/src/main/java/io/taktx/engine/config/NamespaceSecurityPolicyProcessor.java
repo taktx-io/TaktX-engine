@@ -8,6 +8,7 @@
 package io.taktx.engine.config;
 
 import io.taktx.dto.NamespaceSecurityPolicyDTO;
+import io.taktx.engine.security.NamespaceSecurityPolicyActivationService;
 import io.taktx.proto.NamespaceSecurityPolicyMessage;
 import io.taktx.security.NamespaceSecurityPolicySupport;
 import io.taktx.serdes.NamespaceSecurityPolicyProtoMapper;
@@ -31,10 +32,18 @@ public class NamespaceSecurityPolicyProcessor implements Processor<String, byte[
   static final String POLICY_KEY = "policy";
 
   private final NamespaceSecurityPolicyStore namespaceSecurityPolicyStore;
+  private final NamespaceSecurityPolicyActivationService activationService;
 
   public NamespaceSecurityPolicyProcessor(
       NamespaceSecurityPolicyStore namespaceSecurityPolicyStore) {
+    this(namespaceSecurityPolicyStore, null);
+  }
+
+  public NamespaceSecurityPolicyProcessor(
+      NamespaceSecurityPolicyStore namespaceSecurityPolicyStore,
+      NamespaceSecurityPolicyActivationService activationService) {
     this.namespaceSecurityPolicyStore = namespaceSecurityPolicyStore;
+    this.activationService = activationService;
   }
 
   @Override
@@ -51,7 +60,11 @@ public class NamespaceSecurityPolicyProcessor implements Processor<String, byte[
     }
 
     if (rec.value() == null) {
-      namespaceSecurityPolicyStore.clear();
+      if (activationService != null) {
+        activationService.onPolicyCleared();
+      } else {
+        namespaceSecurityPolicyStore.clear();
+      }
       log.info("Namespace security policy cleared from tombstone record");
       return;
     }
@@ -61,15 +74,31 @@ public class NamespaceSecurityPolicyProcessor implements Processor<String, byte[
           NamespaceSecurityPolicyProtoMapper.toDto(
               NamespaceSecurityPolicyMessage.parseFrom(rec.value()));
       NamespaceSecurityPolicyDTO validated = NamespaceSecurityPolicySupport.requireValid(policy);
-      namespaceSecurityPolicyStore.update(validated);
+      if (activationService != null) {
+        activationService.onPolicyUpdated(validated);
+      } else {
+        namespaceSecurityPolicyStore.update(validated);
+      }
       log.info(
           "Namespace security policy updated: activationState={} desiredPolicyVersion={} desiredPolicyHash={} activePolicyVersion={} activePolicyHash={} mode={}",
-          validated.getActivationState(),
-          validated.getDesiredPolicyVersion(),
-          validated.getDesiredPolicyHash(),
-          validated.getActivePolicyVersion(),
-          validated.getActivePolicyHash(),
-          validated.getMode());
+          namespaceSecurityPolicyStore.get() != null
+              ? namespaceSecurityPolicyStore.get().getActivationState()
+              : null,
+          namespaceSecurityPolicyStore.get() != null
+              ? namespaceSecurityPolicyStore.get().getDesiredPolicyVersion()
+              : validated.getDesiredPolicyVersion(),
+          namespaceSecurityPolicyStore.get() != null
+              ? namespaceSecurityPolicyStore.get().getDesiredPolicyHash()
+              : validated.getDesiredPolicyHash(),
+          namespaceSecurityPolicyStore.get() != null
+              ? namespaceSecurityPolicyStore.get().getActivePolicyVersion()
+              : validated.getActivePolicyVersion(),
+          namespaceSecurityPolicyStore.get() != null
+              ? namespaceSecurityPolicyStore.get().getActivePolicyHash()
+              : validated.getActivePolicyHash(),
+          namespaceSecurityPolicyStore.get() != null
+              ? namespaceSecurityPolicyStore.get().getMode()
+              : validated.getMode());
     } catch (Exception e) {
       log.warn("Failed to deserialize or validate namespace security policy: {}", e.getMessage());
     }

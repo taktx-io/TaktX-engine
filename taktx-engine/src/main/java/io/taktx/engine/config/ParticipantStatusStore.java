@@ -8,9 +8,11 @@
 package io.taktx.engine.config;
 
 import io.taktx.dto.ParticipantStatusDTO;
+import io.taktx.dto.ParticipantRole;
 import io.taktx.security.ParticipantStatusSupport;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -42,6 +44,14 @@ public class ParticipantStatusStore {
   public Map<String, ParticipantStatusDTO> currentSnapshot(long nowMs) {
     return statuses.entrySet().stream()
         .filter(entry -> !ParticipantStatusSupport.isExpired(entry.getValue(), nowMs))
+        .collect(
+            java.util.stream.Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
+  }
+
+  public Map<String, ParticipantStatusDTO> currentSnapshot(Set<ParticipantRole> roles, long nowMs) {
+    return statuses.entrySet().stream()
+        .filter(entry -> !ParticipantStatusSupport.isExpired(entry.getValue(), nowMs))
+        .filter(entry -> roles == null || roles.isEmpty() || roles.contains(entry.getValue().getRole()))
         .collect(
             java.util.stream.Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
   }

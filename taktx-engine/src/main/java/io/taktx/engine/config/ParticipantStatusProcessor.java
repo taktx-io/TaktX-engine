@@ -8,6 +8,7 @@
 package io.taktx.engine.config;
 
 import io.taktx.dto.ParticipantStatusDTO;
+import io.taktx.engine.security.NamespaceSecurityPolicyActivationService;
 import io.taktx.proto.ParticipantStatusMessage;
 import io.taktx.security.ParticipantStatusSupport;
 import io.taktx.serdes.ParticipantStatusProtoMapper;
@@ -28,9 +29,17 @@ public class ParticipantStatusProcessor implements Processor<String, byte[], Voi
   private static final Logger log = LoggerFactory.getLogger(ParticipantStatusProcessor.class);
 
   private final ParticipantStatusStore participantStatusStore;
+  private final NamespaceSecurityPolicyActivationService activationService;
 
   public ParticipantStatusProcessor(ParticipantStatusStore participantStatusStore) {
+    this(participantStatusStore, null);
+  }
+
+  public ParticipantStatusProcessor(
+      ParticipantStatusStore participantStatusStore,
+      NamespaceSecurityPolicyActivationService activationService) {
     this.participantStatusStore = participantStatusStore;
+    this.activationService = activationService;
   }
 
   @Override
@@ -47,6 +56,9 @@ public class ParticipantStatusProcessor implements Processor<String, byte[], Voi
 
     if (rec.value() == null) {
       participantStatusStore.remove(rec.key());
+      if (activationService != null) {
+        activationService.onParticipantStatusesChanged();
+      }
       log.info("Participant status cleared from tombstone record: key={}", rec.key());
       return;
     }
@@ -56,6 +68,9 @@ public class ParticipantStatusProcessor implements Processor<String, byte[], Voi
           ParticipantStatusProtoMapper.toDto(ParticipantStatusMessage.parseFrom(rec.value()));
       ParticipantStatusDTO validated = ParticipantStatusSupport.requireValid(status);
       participantStatusStore.update(rec.key(), validated);
+      if (activationService != null) {
+        activationService.onParticipantStatusesChanged();
+      }
       log.debug(
           "Participant status updated: key={} participantId={} participantInstanceId={} effectiveState={} readyForDataPlane={} observedPolicyVersion={} observedPolicyHash={}",
           rec.key(),

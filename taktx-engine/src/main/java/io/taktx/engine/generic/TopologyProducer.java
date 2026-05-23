@@ -85,6 +85,7 @@ import io.taktx.engine.pi.ScopeProcessor;
 import io.taktx.engine.pi.processor.IoMappingProcessor;
 import io.taktx.engine.security.EngineAuthorizationService;
 import io.taktx.engine.security.MessageSigningService;
+import io.taktx.engine.security.NamespaceSecurityPolicyActivationService;
 import io.taktx.engine.security.ProcessInstanceResponseDedupProcessor;
 import io.taktx.engine.security.ReplayProtectionProcessor;
 import io.taktx.engine.topicmanagement.DynamicTopicManager;
@@ -332,6 +333,7 @@ public class TopologyProducer {
   private final GlobalConfigStore globalConfigStore;
   private final NamespaceSecurityPolicyStore namespaceSecurityPolicyStore;
   private final ParticipantStatusStore participantStatusStore;
+  private final NamespaceSecurityPolicyActivationService namespaceSecurityPolicyActivationService;
   private final DlqPublisher dlqPublisher;
   private final MessageSigningService messageSigningService;
   private final DlqObservabilityService dlqObservabilityService;
@@ -518,7 +520,9 @@ public class TopologyProducer {
             .withLoggingDisabled(),
         taktConfiguration.getPrefixed(Topics.SECURITY_POLICY_TOPIC.getTopicName()),
         Consumed.with(Serdes.String(), Serdes.ByteArray()),
-        () -> new NamespaceSecurityPolicyProcessor(namespaceSecurityPolicyStore));
+        () ->
+            new NamespaceSecurityPolicyProcessor(
+                namespaceSecurityPolicyStore, namespaceSecurityPolicyActivationService));
 
     builder.addGlobalStore(
         keyValueStoreBuilder(
@@ -529,7 +533,9 @@ public class TopologyProducer {
             .withLoggingDisabled(),
         taktConfiguration.getPrefixed(Topics.PARTICIPANT_STATUS_TOPIC.getTopicName()),
         Consumed.with(Serdes.String(), Serdes.ByteArray()),
-        () -> new ParticipantStatusProcessor(participantStatusStore));
+        () ->
+            new ParticipantStatusProcessor(
+                participantStatusStore, namespaceSecurityPolicyActivationService));
 
     builder.globalTable(
         taktConfiguration.getPrefixed(Topics.SIGNING_KEYS_TOPIC.getTopicName()),

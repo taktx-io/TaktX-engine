@@ -23,20 +23,60 @@ import java.util.concurrent.atomic.AtomicReference;
 @ApplicationScoped
 public class NamespaceSecurityPolicyStore {
 
-  private final AtomicReference<NamespaceSecurityPolicyDTO> policy = new AtomicReference<>(null);
+  private final AtomicReference<NamespaceSecurityPolicyDTO> currentPolicy = new AtomicReference<>(null);
+  private final AtomicReference<NamespaceSecurityPolicyDTO> activePolicy = new AtomicReference<>(null);
+  private final AtomicReference<Long> validationStartedAtMs = new AtomicReference<>(null);
 
   /** Called whenever a policy record is received and validated successfully. */
-  public void update(NamespaceSecurityPolicyDTO dto) {
-    policy.set(dto == null ? null : NamespaceSecurityPolicySupport.requireValid(dto));
+  public synchronized void update(NamespaceSecurityPolicyDTO dto) {
+    NamespaceSecurityPolicyDTO validated =
+        dto == null ? null : NamespaceSecurityPolicySupport.requireValid(dto);
+    currentPolicy.set(validated);
+    if (validated != null
+        && validated.getActivationState() == io.taktx.dto.SecurityActivationState.ACTIVE) {
+      activePolicy.set(validated);
+      validationStartedAtMs.set(null);
+    }
   }
 
   /** Clears the latest explicit policy so callers fall back to legacy/default semantics. */
-  public void clear() {
-    policy.set(null);
+  public synchronized void clear() {
+    currentPolicy.set(null);
+    activePolicy.set(null);
+    validationStartedAtMs.set(null);
   }
 
   /** Returns the latest validated policy record, or {@code null} if no explicit policy exists. */
-  public NamespaceSecurityPolicyDTO get() {
-    return policy.get();
+  public synchronized NamespaceSecurityPolicyDTO get() {
+    return currentPolicy.get();
+  }
+
+  /** Replaces only the current policy view used by runtime readers. */
+  public synchronized void setCurrentPolicy(NamespaceSecurityPolicyDTO dto) {
+    currentPolicy.set(dto == null ? null : NamespaceSecurityPolicySupport.requireValid(dto));
+  }
+
+  /** Returns the last authoritative ACTIVE policy, if any. */
+  public synchronized NamespaceSecurityPolicyDTO getActivePolicy() {
+    return activePolicy.get();
+  }
+
+  /** Persists the last authoritative ACTIVE policy used for rollback / protected data-plane rules. */
+  public synchronized void setActivePolicy(NamespaceSecurityPolicyDTO dto) {
+    activePolicy.set(dto == null ? null : NamespaceSecurityPolicySupport.requireValid(dto));
+  }
+
+  /** Clears only the current policy view while preserving the last ACTIVE policy for rollback. */
+  public synchronized void clearCurrentPolicy() {
+    currentPolicy.set(null);
+    validationStartedAtMs.set(null);
+  }
+
+  public synchronized Long getValidationStartedAtMs() {
+    return validationStartedAtMs.get();
+  }
+
+  public synchronized void setValidationStartedAtMs(Long startedAtMs) {
+    validationStartedAtMs.set(startedAtMs);
   }
 }
