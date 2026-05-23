@@ -16,6 +16,7 @@ import io.taktx.dto.RequiredSigningDTO;
 import io.taktx.dto.SecurityActivationState;
 import io.taktx.dto.SecurityMode;
 import io.taktx.security.AuthoritativeControlPlaneSecurityProperty;
+import io.taktx.security.NamespaceSecurityPolicyActivationAuthority;
 import io.taktx.serdes.NamespaceSecurityPolicyProtoMapper;
 import org.junit.jupiter.api.Test;
 
@@ -207,5 +208,11 @@ class TaktXClientNamespaceSecurityPolicyTest {
         .contains(
             AuthoritativeControlPlaneSecurityProperty.INTEGRITY_PROTECTION_REQUIRED_IN_SECURED_MODES,
             AuthoritativeControlPlaneSecurityProperty.BREAK_GLASS_METADATA_REQUIRED_FOR_DOWNGRADE);
+  }
+
+  @Test
+  void namespaceSecurityPolicyActivationAuthority_exposesPlatformServiceAsSoleAuthority() {
+    assertThat(TaktXClient.namespaceSecurityPolicyActivationAuthority())
+        .isEqualTo(NamespaceSecurityPolicyActivationAuthority.PLATFORM_SERVICE);
   }
 }
