@@ -45,6 +45,7 @@ import io.taktx.security.SigningKeysStore;
 import io.taktx.security.SigningKeysStoreHolder;
 import io.taktx.security.SigningServiceHolder;
 import io.taktx.serdes.ConfigurationProtoMapper;
+import io.taktx.serdes.NamespaceSecurityPolicyProtoMapper;
 import io.taktx.serdes.ProcessInstanceTriggerProtoMapper;
 import io.taktx.serdes.ProtoSigningSerializer;
 import io.taktx.topicmanagement.ExternalTaskTopicRequester;
@@ -73,6 +74,8 @@ import org.slf4j.Logger;
  * triggers.
  */
 public class TaktXClient {
+
+  public static final String NAMESPACE_SECURITY_POLICY_RECORD_KEY = "policy";
 
   private static final Logger log = org.slf4j.LoggerFactory.getLogger(TaktXClient.class);
   private final ProcessDefinitionConsumer processDefinitionConsumer;
@@ -342,6 +345,57 @@ public class TaktXClient {
     } catch (Exception e) {
       throw new IllegalStateException("Failed to publish global configuration", e);
     }
+  }
+
+  /** Publishes an authoritative namespace security policy to the compacted security-policy topic. */
+  public void publishNamespaceSecurityPolicy(NamespaceSecurityPolicyDTO policy) {
+    publishNamespaceSecurityPolicy(taktPropertiesHelper.getTaktProperties(), policy);
+  }
+
+  /**
+   * Static convenience overload for publishing a namespace security policy without a running client
+   * instance.
+   */
+  public static void publishNamespaceSecurityPolicy(
+      Properties properties, NamespaceSecurityPolicyDTO policy) {
+    NamespaceSecurityPolicyDTO validated = validateNamespaceSecurityPolicy(policy);
+    String topic =
+        new TaktPropertiesHelper(properties)
+            .getPrefixedTopicName(io.taktx.Topics.SECURITY_POLICY_TOPIC.getTopicName());
+
+    java.util.Properties producerProps =
+        new TaktPropertiesHelper(properties).getKafkaProducerProperties();
+    producerProps.put("max.block.ms", "10000");
+    producerProps.put("delivery.timeout.ms", "10000");
+    producerProps.put("request.timeout.ms", "8000");
+
+    try (org.apache.kafka.clients.producer.KafkaProducer<String, byte[]> producer =
+        new org.apache.kafka.clients.producer.KafkaProducer<>(
+            producerProps,
+            new org.apache.kafka.common.serialization.StringSerializer(),
+            new org.apache.kafka.common.serialization.ByteArraySerializer())) {
+      producer.send(buildNamespaceSecurityPolicyRecord(topic, validated));
+      producer.flush();
+      log.info(
+          "✅ Namespace security policy published to security policy topic: topic={} desiredPolicyVersion={} activationState={}",
+          topic,
+          validated.getDesiredPolicyVersion(),
+          validated.getActivationState());
+    } catch (Exception e) {
+      throw new IllegalStateException("Failed to publish namespace security policy", e);
+    }
+  }
+
+  static org.apache.kafka.clients.producer.ProducerRecord<String, byte[]> buildNamespaceSecurityPolicyRecord(
+      String topic, NamespaceSecurityPolicyDTO policy) {
+    if (topic == null || topic.isBlank()) {
+      throw new IllegalArgumentException("topic must not be blank");
+    }
+    NamespaceSecurityPolicyDTO validated = validateNamespaceSecurityPolicy(policy);
+    return new org.apache.kafka.clients.producer.ProducerRecord<>(
+        topic,
+        NAMESPACE_SECURITY_POLICY_RECORD_KEY,
+        NamespaceSecurityPolicyProtoMapper.toProto(validated).toByteArray());
   }
 
   /**
