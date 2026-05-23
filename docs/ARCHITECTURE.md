@@ -389,6 +389,24 @@ The canonical namespace policy should include at least:
 are operating against the exact same policy content, and desired-vs-active identity must remain
 separate while a policy is only `REQUESTED` / `VALIDATING`.
 
+For the first slice, `policyHash` is defined as the SHA-256 digest of the canonical requested
+effective policy content only. It excludes activation-state wrappers, timestamps, publisher
+identity, and unrelated metadata.
+
+Canonicalization contract:
+
+- UTF-8 encoding
+- deterministic field order
+- explicit booleans always present
+- omit null/unknown fields
+- lowercase enum serialization
+- stable nested-object ordering
+- SHA-256 digest
+- lowercase hexadecimal output
+
+All participants must use the same canonicalization algorithm implementation or a
+compatibility-certified equivalent.
+
 ### 4.7.3 Canonical policy convergence and activation
 
 For the first slice of the redesigned model:
@@ -396,9 +414,11 @@ For the first slice of the redesigned model:
 - there is exactly one canonical policy identity per namespace
 - required participants must converge on the same canonical policy identity
   (`policyVersion` + `policyHash`) before a stricter policy becomes active
-- only one activation authority may mark the policy `ACTIVE`
+- Platform Service is the sole activation authority for the first slice
 - participant self-report is observability only and does not establish trust
 - runtime checks remain authoritative for actual enforcement
+
+Participants may report readiness but may never independently transition a policy to `ACTIVE`.
 
 For the first slice, required participants for activation should be interpreted narrowly:
 
@@ -415,6 +435,15 @@ The redesigned model must also distinguish between:
   convergence and observability
 - **protected data-plane traffic** — policy-governed BPMN/runtime messages whose handling depends on
   the active security posture
+
+Approved control-plane topics:
+
+- `<tenant>.<namespace>.taktx-security-policy`
+- `<tenant>.<namespace>.taktx-participant-status`
+- `<tenant>.<namespace>.taktx-security-events`
+
+These are control-plane topics only. They are not BPMN/runtime protected data-plane topics and do
+not participate in normal DLQ semantics.
 
 Control-plane traffic must remain available while a policy is `REQUESTED` or `VALIDATING` so the
 system can converge.
@@ -448,6 +477,9 @@ Authoritative control-plane mutation must remain restricted to trusted writer pa
 authorization is the baseline; in secured modes, integrity/authentication of authoritative
 control-plane messages is also required as the shared client/runtime contract matures.
 
+Authoritative policy consumers must ignore policy messages from unauthorized principals even if
+broker ACLs are misconfigured.
+
 ### 4.7.4 TaktXClient control-plane support notes
 
 Where the redesigned namespace-policy model requires official control-plane publication or
@@ -461,20 +493,26 @@ authoritative policy/configuration semantics. Existing supported methods such as
 `publishGlobalConfig()`, `publishLicense()`, and signing-key publication should be treated as the
 precedent for extending the shared client rather than rolling parallel ad-hoc publication paths.
 
-### 4.7.5 Remaining hard blockers before implementation
+### 4.7.5 First-slice implementation rules now fixed
 
-The following items should be treated as explicit early blockers rather than vague later clean-ups:
+The following rules are now fixed for implementation:
 
-- final activation authority choice
-- final namespace-local topic naming
-- canonical policy-hash rules
-- participant incarnation / TTL status semantics
-
-**Recommended namespace-local naming pattern:**
-
-- `<tenant>.<namespace>.taktx-security-policy`
-- `<tenant>.<namespace>.taktx-participant-status`
-- `<tenant>.<namespace>.taktx-security-events`
+- namespace-local control-plane topic naming is approved
+- Platform Service is the sole activation authority
+- canonical hash rules are fixed as described above
+- participant incarnation / TTL semantics are required via `participantInstanceId`, `startedAt`,
+  `lastSeenAt`, and `statusExpiresAt`
+- expired status must not participate in activation readiness decisions
+- mismatch reasons should contain machine code, human-readable message, and optional structured
+  metadata
+- first-slice verification vocabulary is `UNVERIFIED_STATUS`, `LOCALLY_VERIFIED_STATUS`
+- first-slice effective-state vocabulary is `READY`, `NOT_READY`, `MISMATCH`, `STALE`
+- migration posture is parallel coexistence: explicit `ACTIVE` namespace policy overrides legacy
+  config; absent `ACTIVE` policy preserves current/default `COMMUNITY_OPEN`
+- break-glass downgrade requires privileged actor, explicit reason, audit/security event, visible
+  transition state, and high-severity classification
+- a policy stuck in `VALIDATING` beyond the configured timeout must fail activation, emit an event,
+  preserve the previous `ACTIVE` policy, and never partially activate
 
 ---
 

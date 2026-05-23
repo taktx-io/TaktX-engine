@@ -119,17 +119,70 @@ implementation plan.
 | **False compatibility** | A participant reports compatibility with a requested policy version but is actually stale, misconfigured, or enforcing different content/behavior. |
 | **Post-activation drift** | A participant that previously converged on the active policy later diverges from its canonical identity or can no longer satisfy required runtime checks. |
 
-## 1.3 Open design gaps to resolve before implementation
+## 1.3 Architecture decisions now fixed for implementation
 
-The design is implementation-ready in direction, but the following items must be resolved explicitly
-before engine-repo implementation is considered complete:
+The architecture team has now fixed the following decisions for the first slice. Engine-repo
+implementation should treat them as settled requirements rather than open questions.
 
-1. final activation authority selection
-2. final namespace-local topic naming
-3. canonical policy-hash rules
-4. participant verification-level vocabulary for telemetry
-
-These are not reasons to rewrite the design; they are the remaining sharp edges to resolve early.
+1. **Topic naming is namespace-local**
+   - `<tenant>.<namespace>.taktx-security-policy`
+   - `<tenant>.<namespace>.taktx-participant-status`
+   - `<tenant>.<namespace>.taktx-security-events`
+2. **These topics are control-plane topics**, not BPMN/runtime protected data-plane topics.
+3. **Control-plane topics do not participate in normal DLQ semantics.** Configuration/policy/status/
+   event mismatches must be surfaced through validation rejection, readiness degradation, metrics,
+   and security/configuration events instead.
+4. **Platform Service is the sole activation authority** for the first slice.
+5. **Participants may report readiness but may never independently transition a policy to `ACTIVE`.**
+6. **`policyHash` is computed over requested effective policy content only**, excluding activation
+   state, desired/active wrapper identity fields, timestamps, publisher identity, and unrelated
+   metadata.
+7. **Canonicalization contract is fixed**:
+   - UTF-8 encoding
+   - deterministic field order
+   - explicit booleans always present
+   - omit null/unknown fields
+   - lowercase enum serialization
+   - stable nested-object ordering
+   - SHA-256 digest
+   - lowercase hexadecimal output
+8. **All participants must use the same canonicalization algorithm implementation or a
+   compatibility-certified equivalent.**
+9. **Minimal first-slice telemetry vocabulary is fixed**:
+   - verification level: `UNVERIFIED_STATUS`, `LOCALLY_VERIFIED_STATUS`
+   - effective state: `READY`, `NOT_READY`, `MISMATCH`, `STALE`
+   - activation state: `REQUESTED`, `VALIDATING`, `ACTIVE`
+10. **Mismatch reasons should contain machine code, human-readable message, and optional structured
+    metadata.**
+11. **Authoritative mutation security baseline is fixed**:
+    - trusted writer path only
+    - Kafka ACL enforcement required
+    - participant status remains non-authoritative telemetry
+    - security events remain append-only and auditable
+12. **Defense in depth is required**: authoritative policy consumers must ignore policy messages from
+    unauthorized principals even if broker ACLs are misconfigured.
+13. **Migration posture is fixed**:
+    - `GlobalConfigurationDTO` remains operational for legacy behavior
+    - `NamespaceSecurityPolicyDTO` is introduced in parallel
+    - explicit `ACTIVE` namespace policy overrides legacy configuration
+    - absent `ACTIVE` namespace policy preserves current/default `COMMUNITY_OPEN` behavior
+14. **Status expiration semantics are required in the first slice**:
+    - `participantInstanceId`
+    - `startedAt`
+    - `lastSeenAt`
+    - `statusExpiresAt`
+    - expired status must not participate in activation readiness decisions
+15. **Break-glass downgrade semantics are fixed conceptually now**:
+    - privileged actor
+    - explicit reason
+    - security/audit event
+    - visible transition state
+    - high-severity operational event classification
+16. **Activation timeout semantics are required**:
+    - a policy stuck in `VALIDATING` beyond the configured timeout must fail activation
+    - emit a security/configuration event
+    - preserve the previous `ACTIVE` policy
+    - never partially activate
 
 ## 1.2 Handoff posture and ownership
 
@@ -248,6 +301,21 @@ The shared contract should include a canonical policy identity made up of at lea
 
 The policy digest exists to detect `same version, different content` ambiguity.
 
+For the first slice, canonical hashing is defined over the requested effective policy content only.
+It must exclude transition-state wrappers and non-functional metadata such as `activationState`,
+timestamps, publisher identity, and desired/active identity wrapper fields.
+
+Canonicalization rules are:
+
+- UTF-8 encoding
+- deterministic field order
+- explicit booleans always present
+- omit null/unknown fields
+- lowercase enum serialization
+- stable nested-object ordering
+- SHA-256 digest
+- lowercase hexadecimal output
+
 For the first slice, the contract should distinguish between:
 
 - `desiredPolicyVersion`
@@ -277,6 +345,12 @@ state. The shared design must distinguish between:
 For the first slice:
 
 - control-plane traffic must remain consumable while a policy is `REQUESTED` or `VALIDATING`
+- the approved control-plane topics are:
+  - `<tenant>.<namespace>.taktx-security-policy`
+  - `<tenant>.<namespace>.taktx-participant-status`
+  - `<tenant>.<namespace>.taktx-security-events`
+- these topics are control-plane only and are not BPMN/runtime protected data-plane topics
+- these topics do not participate in normal DLQ semantics
 - protected data-plane behavior must continue following the previously active policy until the new
   policy becomes `ACTIVE`
 - if there is no previously active secured policy, the default remains `COMMUNITY_OPEN`
@@ -297,6 +371,8 @@ Required first-slice assumptions/requirements:
 - authoritative control-plane writes must be restricted to explicitly trusted writers
 - broker-side authorization / ACLs remain a baseline requirement for authoritative control-plane
   topics
+- authoritative policy consumers must ignore policy messages from unauthorized principals even if
+  broker ACLs are misconfigured
 - in secured modes, authoritative control-plane messages should also be integrity-protected and,
   where supported by the shared client/runtime contract, verifiable as originating from an authorized
   control-plane publisher
@@ -325,14 +401,12 @@ Policy activation authority must be explicit.
 Only one component may transition a namespace policy from `REQUESTED` / `VALIDATING` to `ACTIVE`.
 Participants may report readiness, but must not individually decide that a policy is active.
 
-For the first slice, the activation authority must be either:
+For the first slice, **Platform Service is the activation authority** and acts as the policy
+controller.
 
-- Platform Service acting as the policy controller, or
-- a dedicated engine/control-plane component
-
-The final choice must be confirmed before implementation. The rest of this document assumes a single
-authoritative controller exists and that participants are subordinate to that authority for
-activation.
+Participants may report readiness, but they may never independently transition a policy to `ACTIVE`.
+The rest of this document assumes Platform Service is authoritative and all participants are
+subordinate to that authority for activation.
 
 ## 5. Namespace security policy requirements
 
@@ -512,7 +586,10 @@ Required payload fields include at least:
   "observedPolicyVersion": 42,
   "observedPolicyHash": "abc123",
   "mismatchReasons": [
-    "Missing platform public key"
+    {
+      "code": "TRUST_ANCHOR_MISSING",
+      "message": "Namespace requires anchored trust but no platform public key is configured"
+    }
   ]
 }
 ```
@@ -521,12 +598,22 @@ Required payload fields include at least:
 - compacted or otherwise latest-state oriented
 - heartbeat + state update capable
 - not used to establish trust
-- mismatch reasons must be explicit and human-readable enough for Ops diagnosis
+- mismatch reasons must include machine code, human-readable message, and may include optional
+  structured metadata
 - readiness must be interpreted as permission to participate in protected data-plane work only for
   the exact active canonical policy identity
 - stale status must naturally expire and stop being treated as current posture after `statusExpiresAt`
+- expired status must not participate in activation readiness decisions
 - status verification level may improve telemetry quality, but even verified/signed status remains
   telemetry rather than trust
+- first-slice verification-level vocabulary is fixed to:
+  - `UNVERIFIED_STATUS`
+  - `LOCALLY_VERIFIED_STATUS`
+- first-slice effective-state vocabulary is fixed to:
+  - `READY`
+  - `NOT_READY`
+  - `MISMATCH`
+  - `STALE`
 
 ### 7.3 Security events stream
 
@@ -539,6 +626,8 @@ The engine-compatible model must support append-only security events for:
 - other security incidents
 
 In anchored mode, signed events are preferred if supported by the final shared contract.
+
+Break-glass downgrade operations should be treated as high-severity operational/security events.
 
 ## 8. Runtime transition requirements
 
@@ -566,6 +655,10 @@ If validation fails, the policy change must be rejected.
 
 If validation fails because not all required participants can satisfy the requested policy, the
 previous active policy must remain authoritative.
+
+If a policy remains in `VALIDATING` beyond the configured activation timeout, activation must fail,
+the previous active policy must remain authoritative, a security/configuration event must be emitted,
+and the system must never partially activate the requested policy.
 
 That includes protected data-plane behavior: participants must continue following the previous active
 policy for policy-governed runtime traffic until the requested policy actually becomes `ACTIVE`.

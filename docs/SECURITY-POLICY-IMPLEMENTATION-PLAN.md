@@ -44,17 +44,53 @@ requirements doc.
 | **False compatibility** | A participant reports compatibility with a policy version but, in reality, is stale, misconfigured, or enforcing different policy content/behavior. |
 | **Post-activation drift** | A participant previously converged on the active policy but later diverged from the active canonical policy identity or can no longer satisfy its required checks. |
 
-## 1.2 Open design gaps to resolve before implementation
+## 1.2 Architecture decisions now fixed for implementation
 
-The design direction is strong, but the following items must be explicit before implementation is
-considered merge-ready:
+The architecture team has fixed the following decisions for the first slice. Console planning and
+integration should treat them as settled inputs.
 
-1. activation authority selection for the first slice
-2. desired-vs-active policy identity fields
-3. required-participant scope for activation
-4. participant incarnation / TTL semantics
-5. final topic naming
-6. canonical policy-hash rules
+1. **Namespace-local topic naming is approved**:
+   - `<tenant>.<namespace>.taktx-security-policy`
+   - `<tenant>.<namespace>.taktx-participant-status`
+   - `<tenant>.<namespace>.taktx-security-events`
+2. **These are control-plane topics**, not BPMN/runtime protected data-plane topics.
+3. **Control-plane topics do not participate in normal DLQ semantics.**
+4. **Platform Service is the sole activation authority** for the first slice.
+5. **Participants may report readiness but may never independently transition a policy to `ACTIVE`.**
+6. **`policyHash` is SHA-256 over canonical requested effective policy content only**, excluding
+   activation-state wrappers and unrelated metadata.
+7. **Canonicalization contract is fixed**:
+   - UTF-8 encoding
+   - deterministic field order
+   - explicit booleans always present
+   - omit null/unknown fields
+   - lowercase enum serialization
+   - stable nested-object ordering
+   - SHA-256 digest
+   - lowercase hexadecimal output
+8. **All participants must use the same canonicalization algorithm implementation or a
+   compatibility-certified equivalent.**
+9. **Minimal first-slice telemetry vocabulary is fixed**:
+   - verification level: `UNVERIFIED_STATUS`, `LOCALLY_VERIFIED_STATUS`
+   - effective state: `READY`, `NOT_READY`, `MISMATCH`, `STALE`
+   - activation state: `REQUESTED`, `VALIDATING`, `ACTIVE`
+10. **Mismatch reasons should carry machine code, human-readable message, and optional structured
+    metadata.**
+11. **Authoritative mutation uses a trusted-writer + ACL baseline**, with defense in depth requiring
+    unauthorized policy messages to be ignored even if broker ACLs are wrong.
+12. **Migration posture is fixed**:
+    - `GlobalConfigurationDTO` remains operational for legacy behavior
+    - `NamespaceSecurityPolicyDTO` is introduced in parallel
+    - explicit `ACTIVE` namespace policy overrides legacy configuration
+    - absent `ACTIVE` namespace policy preserves current/default `COMMUNITY_OPEN` behavior
+13. **Status expiration semantics are required in the first slice** via `participantInstanceId`,
+    `startedAt`, `lastSeenAt`, and `statusExpiresAt`; expired status must not participate in
+    activation readiness decisions.
+14. **Break-glass downgrade rules are fixed conceptually now**: privileged actor, explicit reason,
+    audit/security event, visible transition state, high-severity classification.
+15. **Activation timeout semantics are required**: policies stuck in `VALIDATING` beyond the
+    configured timeout must fail activation, emit an event, preserve the previous `ACTIVE` policy,
+    and never partially activate.
 
 ## 2. Verified current state in this repo
 
@@ -138,6 +174,8 @@ These decisions are already chosen for this plan:
    publishers for the same semantics.
 10. **Activation authority is explicit** — only one component may mark a requested policy `ACTIVE`;
     participants may report readiness but must not individually decide activation.
+11. **Namespace-local control-plane topics are fixed** — policy, participant status, and security
+    events use namespace-local topics and are not DLQ-managed runtime data-plane topics.
 
 ### 3.4 Canonical policy identity and convergence
 
@@ -174,9 +212,8 @@ Policy activation authority must be explicit.
 Only one component may transition a namespace policy from `REQUESTED` / `VALIDATING` to `ACTIVE`.
 Participants may report readiness, but must not individually decide that a policy is active.
 
-For the first Console-oriented slice, the default planning assumption is that Platform Service acts
-as the policy controller unless a dedicated control-plane component is explicitly selected and
-verified before implementation.
+For the first Console-oriented slice, Platform Service is the policy controller and sole activation
+authority.
 
 ### 3.6 Control plane vs protected data plane
 
@@ -187,6 +224,14 @@ The redesigned model must explicitly distinguish between:
 - **protected data-plane traffic** — policy-governed BPMN/runtime message flows such as protected
   commands, responses, and other runtime messages whose handling depends on the active security
   posture
+
+The approved control-plane topics are:
+
+- `<tenant>.<namespace>.taktx-security-policy`
+- `<tenant>.<namespace>.taktx-participant-status`
+- `<tenant>.<namespace>.taktx-security-events`
+
+These topics are control-plane only and do not participate in normal DLQ semantics.
 
 For the first slice:
 
@@ -211,6 +256,8 @@ For the first slice, the plan should assume:
 - authoritative control-plane changes are accepted only from explicitly trusted writer paths
 - Kafka ACLs / broker-side authorization remain a baseline requirement for write access to
   authoritative control-plane topics
+- authoritative policy consumers must ignore policy messages from unauthorized principals even if
+  broker ACLs are misconfigured
 - in secured modes, authoritative control-plane messages should also be integrity-protected and, once
   the engine/client contract supports it, verifiable as coming from an authorized control-plane
   publisher
