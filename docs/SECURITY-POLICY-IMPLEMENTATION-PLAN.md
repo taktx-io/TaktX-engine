@@ -522,6 +522,8 @@ in assumptions that later have to be unwound.
   publisher/control-plane contract follow-up.
 - Invalid/rejected namespace policy mutations now emit explicit engine-side observability events;
   the separate trusted-writer / control-plane authority contract work remains open.
+- Official shared `TaktXClient` publication helpers for namespace security policy records are now
+  available for downstream platform/ingester integrations to adopt.
 - The first slice should reject incompatible changes instead of activating degraded or excluded
   participant states.
 - This keeps edge cases down and makes rollout behavior easier to reason about.
