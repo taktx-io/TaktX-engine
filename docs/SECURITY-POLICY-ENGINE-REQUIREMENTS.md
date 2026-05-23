@@ -849,7 +849,7 @@ as engine+client work, not engine-only work.
 - [ ] Map authorization requirements to actual JWT / auth enforcement points.
 - [ ] Map trust-anchor requirements to explicit trust-anchor validation.
 - [ ] Fail closed when required checks cannot be satisfied.
-- [ ] Treat false compatibility claims and post-activation drift as enforcement-relevant non-ready
+- [x] Treat false compatibility claims and post-activation drift as enforcement-relevant non-ready
       conditions, not as reasons to weaken checks.
 - [ ] Prevent protected data-plane participation when policy is not `ACTIVE` or participant is not
       `READY` for the exact active identity.
