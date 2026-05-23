@@ -26,8 +26,9 @@ The plain Java `taktx-client` library is the core client for interacting with a 
 13. [Publishing signing keys](#publishing-signing-keys)
 14. [Verifying inbound signed records](#verifying-inbound-signed-records)
 15. [Publishing runtime configuration](#publishing-runtime-configuration)
-16. [Trust metadata on instance updates](#trust-metadata-on-instance-updates)
-17. [Configuration reference](#configuration-reference)
+16. [Namespace security policy control-plane helpers](#namespace-security-policy-control-plane-helpers)
+17. [Trust metadata on instance updates](#trust-metadata-on-instance-updates)
+18. [Configuration reference](#configuration-reference)
 
 ---
 
@@ -594,6 +595,48 @@ TaktXClient.publishGlobalConfig(props, GlobalConfigurationDTO.builder()
 ```java
 client.publishLicense(licenseText);  // raw License3j-signed text
 ```
+
+---
+
+## Namespace security policy control-plane helpers
+
+Use the official client helpers when you need to publish or clear authoritative namespace policy
+state instead of building bespoke Kafka publishers around the same compacted-topic contract.
+
+```java
+NamespaceSecurityPolicyDTO policy = TaktXClient.legacyGlobalSecurityConfigToNamespaceSecurityPolicy(
+    GlobalConfigurationDTO.builder()
+        .signingEnabled(true)
+        .engineRequiresAuthorization(true)
+        .build(),
+    7L);
+
+client.publishNamespaceSecurityPolicy(policy);
+
+Set<AuthoritativeControlPlaneSecurityProperty> requiredWriterProperties =
+    TaktXClient.namespaceSecurityPolicyWriterSecurityProperties(policy);
+
+NamespaceSecurityPolicyActivationAuthority activationAuthority =
+    TaktXClient.namespaceSecurityPolicyActivationAuthority();
+
+client.clearNamespaceSecurityPolicy(); // publishes compacted-topic tombstone under key "policy"
+```
+
+### What is included
+
+- `publishNamespaceSecurityPolicy(...)` publishes the authoritative namespace policy record.
+- `clearNamespaceSecurityPolicy(...)` publishes the compacted-topic tombstone used to clear that
+  authoritative policy.
+- `namespaceSecurityPolicyWriterSecurityProperties(...)` exposes the control-plane writer security
+  contract callers must satisfy.
+- `namespaceSecurityPolicyActivationAuthority()` returns the first-slice activation authority:
+  Platform Service.
+- `legacyGlobalSecurityConfigToNamespaceSecurityPolicy(...)` bridges legacy global security flags to
+  the explicit namespace policy DTO so runtime/ingester migrations can reuse the same supported
+  mapping.
+
+These helpers only define the shared contract and topic payloads. They do **not** bypass the
+surrounding platform-side authorization, audit, or activation workflow.
 
 ---
 
