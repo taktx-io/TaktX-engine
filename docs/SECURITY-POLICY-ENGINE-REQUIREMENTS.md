@@ -800,7 +800,7 @@ as engine+client work, not engine-only work.
 **Goal:** consume the authoritative policy stream and activate only validated policy versions.
 
 ### Tasks
-- [ ] Consume the authoritative namespace policy stream.
+- [x] Consume the authoritative namespace policy stream.
 - [x] Implement `REQUESTED -> VALIDATING -> ACTIVE` behavior.
 - [x] Reject incompatible policies instead of activating degraded states.
 - [x] Reject activation when required participants have not converged on the same canonical policy
@@ -932,26 +932,26 @@ on unpublished or bespoke patches.
 **Goal:** prove the engine slice is correct, compatible, and safe to roll out.
 
 ### Required tests
-- [ ] parse valid policy payloads
-- [ ] reject invalid partial states
-- [ ] default to `COMMUNITY_OPEN` when no explicit policy is active
-- [ ] activate `COMMUNITY_SECURED` after successful validation
-- [ ] activate `ANCHORED_SECURED` only when trust-anchor requirements are satisfied
-- [ ] reject incompatible policy activation
-- [ ] reject activation when required participants observe different canonical policy identities
-- [ ] emit explicit mismatch reasons
+- [x] parse valid policy payloads
+- [x] reject invalid partial states
+- [x] default to `COMMUNITY_OPEN` when no explicit policy is active
+- [x] activate `COMMUNITY_SECURED` after successful validation
+- [x] activate `ANCHORED_SECURED` only when trust-anchor requirements are satisfied
+- [x] reject incompatible policy activation
+- [x] reject activation when required participants observe different canonical policy identities
+- [x] emit explicit mismatch reasons
 - [ ] ensure missing required signature fails closed
 - [ ] ensure missing required JWT fails closed
 - [ ] ensure missing required trust anchor fails closed
-- [ ] ensure participant status never changes trust outcomes
-- [ ] ensure false compatibility reports do not weaken runtime enforcement
+- [x] ensure participant status never changes trust outcomes
+- [x] ensure false compatibility reports do not weaken runtime enforcement
 - [x] ensure post-activation drift yields `NOT READY` posture and incident/event output
 - [x] ensure protected data-plane behavior remains on previous active policy during `REQUESTED` /
       `VALIDATING`
 - [ ] ensure control-plane traffic remains available during convergence/recovery
 - [ ] ensure engine and client participants do not publish/consume/process protected runtime traffic
       unless policy is `ACTIVE` and they are `READY`
-- [ ] ensure bare engine remains functional with sensible `COMMUNITY_OPEN` defaults when no external
+- [x] ensure bare engine remains functional with sensible `COMMUNITY_OPEN` defaults when no external
       control plane is present
 - [ ] ensure authoritative control-plane mutation is rejected when attempted from untrusted writers
 - [x] ensure the required control-plane client operations are available via `TaktXClient`
