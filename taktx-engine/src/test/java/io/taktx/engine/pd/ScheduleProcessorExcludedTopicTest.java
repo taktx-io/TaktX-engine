@@ -29,6 +29,7 @@ import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.dlq.DlqObservabilityService;
 import io.taktx.engine.pi.ProcessingStatistics;
 import io.taktx.engine.security.EngineAuthorizationService;
+import io.taktx.engine.security.ProtectedDataPlaneParticipationGuard;
 import io.taktx.security.AuthorizationTokenException;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
@@ -66,6 +67,7 @@ class ScheduleProcessorExcludedTopicTest {
   private KeyValueStore<ScheduleKeyDTO, MessageScheduleDTO> store;
   private ProcessorContext<Object, SchedulableMessageDTO> context;
   private DlqObservabilityService dlqObservabilityService;
+  private ProtectedDataPlaneParticipationGuard protectedDataPlaneParticipationGuard;
   private ScheduleProcessor scheduleProcessor;
 
   @BeforeEach
@@ -75,6 +77,7 @@ class ScheduleProcessorExcludedTopicTest {
     store = mock(KeyValueStore.class);
     context = mock(ProcessorContext.class);
     dlqObservabilityService = mock(DlqObservabilityService.class);
+    protectedDataPlaneParticipationGuard = mock(ProtectedDataPlaneParticipationGuard.class);
 
     when(context.schedule(any(), eq(PunctuationType.WALL_CLOCK_TIME), any(Punctuator.class)))
         .thenReturn(mock(Cancellable.class));
@@ -87,10 +90,15 @@ class ScheduleProcessorExcludedTopicTest {
             (ignored, _) -> store,
             new TimeBucket[] {TimeBucket.MINUTE},
             processingStatistics,
-            engineAuthorizationService,
             SCHEDULE_TOPIC,
-            dlqObservabilityService);
+            new ScheduleProcessor.SecurityServices(
+                engineAuthorizationService,
+                dlqObservabilityService,
+                protectedDataPlaneParticipationGuard));
     scheduleProcessor.init(context);
+
+    when(protectedDataPlaneParticipationGuard.evaluate())
+        .thenReturn(ProtectedDataPlaneParticipationGuard.Decision.permit());
   }
 
   @Test
@@ -101,7 +109,7 @@ class ScheduleProcessorExcludedTopicTest {
 
     // Auth passes but BucketProcessor.process() throws a RuntimeException (engine defect)
     when(engineAuthorizationService.authorizeScheduleCommand(any(), any(), any()))
-        .thenReturn(activeKey("engine-key-1", KeyRole.ENGINE));
+        .thenReturn(activeEngineKey("engine-key-1"));
     doThrow(new RuntimeException("simulated bucket defect")).when(store).get(any());
 
     scheduleProcessor.process(new Record<>(scheduleKey, schedule, 999_000L, headers));
@@ -119,7 +127,7 @@ class ScheduleProcessorExcludedTopicTest {
     RecordHeaders headers = signedHeaders("engine-key-2");
 
     when(engineAuthorizationService.authorizeScheduleCommand(any(), any(), any()))
-        .thenReturn(activeKey("engine-key-2", KeyRole.ENGINE));
+        .thenReturn(activeEngineKey("engine-key-2"));
 
     scheduleProcessor.process(new Record<>(scheduleKey, schedule, 999_000L, headers));
 
@@ -134,6 +142,26 @@ class ScheduleProcessorExcludedTopicTest {
 
     when(engineAuthorizationService.authorizeScheduleCommand(any(), any(), any()))
         .thenThrow(new AuthorizationTokenException("client signer not allowed"));
+
+    scheduleProcessor.process(new Record<>(scheduleKey, schedule, 999_000L, headers));
+
+    verify(dlqObservabilityService).recordExcludedTopicFailure("schedule-commands");
+    verify(context, never()).forward(any());
+  }
+
+  @Test
+  void protectedDataPlaneBlock_incrementsExcludedTopicCounterWithoutForwarding() {
+    DefinitionScheduleKeyDTO scheduleKey = scheduleKey();
+    MessageScheduleDTO schedule = oneTimeSchedule();
+    RecordHeaders headers = signedHeaders("engine-key-3");
+
+    when(engineAuthorizationService.authorizeScheduleCommand(any(), any(), any()))
+        .thenReturn(activeEngineKey("engine-key-3"));
+    when(protectedDataPlaneParticipationGuard.evaluate())
+        .thenReturn(
+            ProtectedDataPlaneParticipationGuard.Decision.blocked(
+                ProtectedDataPlaneParticipationGuard.POLICY_NOT_READY_HINT,
+                "engine not ready"));
 
     scheduleProcessor.process(new Record<>(scheduleKey, schedule, 999_000L, headers));
 
@@ -166,13 +194,13 @@ class ScheduleProcessorExcludedTopicTest {
     return headers;
   }
 
-  private SigningKeyDTO activeKey(String keyId, KeyRole role) {
+  private SigningKeyDTO activeEngineKey(String keyId) {
     return SigningKeyDTO.builder()
         .keyId(keyId)
         .publicKeyBase64("dummy")
         .algorithm("Ed25519")
         .owner("engine")
-        .role(role)
+        .role(KeyRole.ENGINE)
         .build();
   }
 }

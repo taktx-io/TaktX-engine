@@ -16,10 +16,11 @@ import io.taktx.dto.TimeBucket;
 import io.taktx.engine.dlq.DlqObservabilityService;
 import io.taktx.engine.pi.ProcessingStatistics;
 import io.taktx.engine.security.EngineAuthorizationService;
+import io.taktx.engine.security.ProtectedDataPlaneParticipationGuard;
 import io.taktx.engine.security.VerificationCore;
 import io.taktx.security.AuthorizationTokenException;
 import java.time.Clock;
-import java.util.HashMap;
+import java.util.EnumMap;
 import java.util.Map;
 import java.util.function.BiFunction;
 import lombok.extern.slf4j.Slf4j;
@@ -32,6 +33,8 @@ import org.apache.kafka.streams.state.KeyValueStore;
 public class ScheduleProcessor
     implements Processor<ScheduleKeyDTO, MessageScheduleDTO, Object, SchedulableMessageDTO> {
 
+  private static final String SCHEDULE_COMMANDS_TOPIC_GROUP = "schedule-commands";
+
   private final boolean testProfile;
   private final BiFunction<
           ProcessorContext<Object, SchedulableMessageDTO>,
@@ -41,9 +44,8 @@ public class ScheduleProcessor
   private final TimeBucket[] timeBuckets;
   private final Clock clock;
   private final ProcessingStatistics processingStatistics;
-  private final EngineAuthorizationService engineAuthorizationService;
   private final String scheduleTopicName;
-  private final DlqObservabilityService dlqObservabilityService;
+  private final SecurityServices securityServices;
 
   private Map<TimeBucket, BucketProcessor> bucketProcessorMap;
 
@@ -57,22 +59,20 @@ public class ScheduleProcessor
           scheduleStoreProvider,
       TimeBucket[] timeBuckets,
       ProcessingStatistics processingStatistics,
-      EngineAuthorizationService engineAuthorizationService,
       String scheduleTopicName,
-      DlqObservabilityService dlqObservabilityService) {
+      SecurityServices securityServices) {
     this.clock = clock;
     this.testProfile = testProfile;
     this.scheduleStoreProvider = scheduleStoreProvider;
     this.timeBuckets = timeBuckets;
     this.processingStatistics = processingStatistics;
-    this.engineAuthorizationService = engineAuthorizationService;
     this.scheduleTopicName = scheduleTopicName;
-    this.dlqObservabilityService = dlqObservabilityService;
+    this.securityServices = securityServices;
   }
 
   @Override
   public void init(ProcessorContext<Object, SchedulableMessageDTO> context) {
-    this.bucketProcessorMap = new HashMap<>();
+    this.bucketProcessorMap = new EnumMap<>(TimeBucket.class);
 
     long now = clock.millis();
 
@@ -93,7 +93,7 @@ public class ScheduleProcessor
 
     try {
       SigningKeyDTO trustedSigner =
-          engineAuthorizationService.authorizeScheduleCommand(
+          securityServices.engineAuthorizationService().authorizeScheduleCommand(
               scheduleRecord.headers(), scheduleKey, value);
       if (trustedSigner != null) {
         log.info(
@@ -118,7 +118,11 @@ public class ScheduleProcessor
           extractSignerKeyId(scheduleRecord),
           e.getMessage(),
           scheduleMessageType(value));
-      dlqObservabilityService.recordExcludedTopicFailure("schedule-commands");
+      securityServices.dlqObservabilityService().recordExcludedTopicFailure(SCHEDULE_COMMANDS_TOPIC_GROUP);
+      return;
+    }
+
+    if (shouldBlockProtectedDataPlane(scheduleKey, value)) {
       return;
     }
 
@@ -147,9 +151,35 @@ public class ScheduleProcessor
           e.getMessage(),
           e);
       // DLQ-018A: increment counter so dashboards can track excluded-topic failures.
-      dlqObservabilityService.recordExcludedTopicFailure("schedule-commands");
+      securityServices.dlqObservabilityService().recordExcludedTopicFailure(SCHEDULE_COMMANDS_TOPIC_GROUP);
     }
   }
+
+  private boolean shouldBlockProtectedDataPlane(
+      ScheduleKeyDTO scheduleKey, MessageScheduleDTO schedule) {
+    if (securityServices.protectedDataPlaneParticipationGuard() == null) {
+      return false;
+    }
+    ProtectedDataPlaneParticipationGuard.Decision decision =
+        securityServices.protectedDataPlaneParticipationGuard().evaluate();
+    if (decision.permitted()) {
+      return false;
+    }
+    log.warn(
+        "Rejected schedule command topic='{}' scheduleKey='{}' outcome='rejected' reasonHint='{}' reason='{}' messageType='{}'",
+        scheduleTopicName,
+        scheduleKey,
+        decision.reasonHint(),
+        decision.reasonText(),
+        scheduleMessageType(schedule));
+    securityServices.dlqObservabilityService().recordExcludedTopicFailure(SCHEDULE_COMMANDS_TOPIC_GROUP);
+    return true;
+  }
+
+  public record SecurityServices(
+      EngineAuthorizationService engineAuthorizationService,
+      DlqObservabilityService dlqObservabilityService,
+      ProtectedDataPlaneParticipationGuard protectedDataPlaneParticipationGuard) {}
 
   private static String extractSignerKeyId(
       Record<ScheduleKeyDTO, MessageScheduleDTO> scheduleRecord) {
