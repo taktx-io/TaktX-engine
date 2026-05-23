@@ -525,6 +525,9 @@ in assumptions that later have to be unwound.
 - Official shared `TaktXClient` publication helpers for namespace security policy publish +
   clear/tombstone operations are now available for downstream platform/ingester integrations to
   adopt.
+- The shared namespace security policy model now includes parsing helpers for security mode and
+  requirement tokens, canonical digest handling, policy-version normalization, and explicit
+  desired-vs-active identity validation.
 - The first slice should reject incompatible changes instead of activating degraded or excluded
   participant states.
 - This keeps edge cases down and makes rollout behavior easier to reason about.
