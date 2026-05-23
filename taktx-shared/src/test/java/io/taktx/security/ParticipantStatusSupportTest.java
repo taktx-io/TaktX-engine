@@ -129,4 +129,74 @@ class ParticipantStatusSupportTest {
     assertThat(ParticipantStatusSupport.isExpired(status, 199L)).isFalse();
     assertThat(ParticipantStatusSupport.isExpired(status, 200L)).isTrue();
   }
+
+  @Test
+  void allowsProtectedDataPlaneParticipation_requiresReadyNonExpiredExactActiveIdentity() {
+    ParticipantStatusDTO status =
+        ParticipantStatusDTO.builder()
+            .participantId("engine-1")
+            .participantInstanceId("engine-1-pod")
+            .role(ParticipantRole.ENGINE)
+            .namespace("bank.payments")
+            .startedAt(100L)
+            .lastSeenAt(150L)
+            .statusExpiresAt(200L)
+            .statusVerificationLevel(StatusVerificationLevel.LOCALLY_VERIFIED_STATUS)
+            .effectiveState(ParticipantEffectiveState.READY)
+            .readyForDataPlane(true)
+            .observedPolicyVersion(42L)
+            .observedPolicyHash("abc123")
+            .build();
+
+    assertThat(
+            ParticipantStatusSupport.allowsProtectedDataPlaneParticipation(
+                status, 42L, "abc123", 199L))
+        .isTrue();
+    assertThat(
+            ParticipantStatusSupport.allowsProtectedDataPlaneParticipation(
+                status, 43L, "abc123", 199L))
+        .isFalse();
+    assertThat(
+            ParticipantStatusSupport.allowsProtectedDataPlaneParticipation(
+                status, 42L, "different", 199L))
+        .isFalse();
+    assertThat(
+            ParticipantStatusSupport.allowsProtectedDataPlaneParticipation(
+                status, 42L, "abc123", 200L))
+        .isFalse();
+  }
+
+  @Test
+  void allowsProtectedDataPlaneParticipation_doesNotUseVerificationLevelAsTrustShortcut() {
+    ParticipantStatusDTO unverifiedReady =
+        ParticipantStatusDTO.builder()
+            .participantId("engine-1")
+            .participantInstanceId("engine-1-pod")
+            .role(ParticipantRole.ENGINE)
+            .namespace("bank.payments")
+            .startedAt(100L)
+            .lastSeenAt(150L)
+            .statusExpiresAt(200L)
+            .statusVerificationLevel(StatusVerificationLevel.UNVERIFIED_STATUS)
+            .effectiveState(ParticipantEffectiveState.READY)
+            .readyForDataPlane(true)
+            .observedPolicyVersion(42L)
+            .observedPolicyHash("abc123")
+            .build();
+    ParticipantStatusDTO verifiedNotReady =
+        unverifiedReady.toBuilder()
+            .statusVerificationLevel(StatusVerificationLevel.LOCALLY_VERIFIED_STATUS)
+            .effectiveState(ParticipantEffectiveState.NOT_READY)
+            .readyForDataPlane(false)
+            .build();
+
+    assertThat(
+            ParticipantStatusSupport.allowsProtectedDataPlaneParticipation(
+                unverifiedReady, 42L, "abc123", 199L))
+        .isTrue();
+    assertThat(
+            ParticipantStatusSupport.allowsProtectedDataPlaneParticipation(
+                verifiedNotReady, 42L, "abc123", 199L))
+        .isFalse();
+  }
 }

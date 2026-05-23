@@ -123,6 +123,30 @@ public final class ParticipantStatusSupport {
     return status == null || status.getStatusExpiresAt() <= nowMs;
   }
 
+  /**
+   * Returns whether a participant may take part in protected data-plane behavior for the supplied
+   * active policy identity.
+   *
+   * <p>This deliberately treats participant status as posture/telemetry rather than trust. The
+   * decision is based on non-expired status, `READY` posture, the participant's explicit
+   * `readyForDataPlane` flag, and an exact match to the active policy identity. Verification level is
+   * intentionally not used as a trust shortcut.
+   */
+  public static boolean allowsProtectedDataPlaneParticipation(
+      ParticipantStatusDTO status, Long activePolicyVersion, String activePolicyHash, long nowMs) {
+    if (isExpired(status, nowMs)) {
+      return false;
+    }
+    if (activePolicyVersion == null || isBlank(activePolicyHash)) {
+      return false;
+    }
+    ParticipantStatusDTO normalized = normalize(status);
+    return normalized.getEffectiveState() == ParticipantEffectiveState.READY
+        && normalized.isReadyForDataPlane()
+        && java.util.Objects.equals(activePolicyVersion, normalized.getObservedPolicyVersion())
+        && java.util.Objects.equals(activePolicyHash, normalized.getObservedPolicyHash());
+  }
+
   private static boolean isBlank(String value) {
     return value == null || value.isBlank();
   }
