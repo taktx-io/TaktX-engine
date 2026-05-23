@@ -324,6 +324,79 @@ class ProcessInstanceProcessorDlqTest {
   }
 
   @Test
+  void process_authoritativePolicyMissingRequiredJwt_emitsDlqEntry() {
+    UUID processInstanceId = UUID.randomUUID();
+    byte[] payload = new byte[] {12, 22, 32};
+    RecordHeaders headers = new RecordHeaders();
+    StartCommandDTO trigger =
+        new StartCommandDTO(
+            processInstanceId,
+            null,
+            null,
+            new ProcessDefinitionKey("proc", -1),
+            VariablesDTO.empty());
+    ProcessInstanceTriggerEnvelope envelope =
+        new ProcessInstanceTriggerEnvelope(payload, trigger, false, null);
+    when(engineAuthorizationService.authorize(headers, envelope))
+        .thenThrow(new AuthorizationTokenException("Entry command StartCommandDTO requires tx-auth (JWT)"));
+
+    processor.process(new Record<>(processInstanceId, envelope, 43L, headers));
+
+    assertAuthorizationFailureDlq(processInstanceId, payload, "tx-auth");
+  }
+
+  @Test
+  void process_authoritativePolicyMissingRequiredSignature_emitsDlqEntry() {
+    UUID processInstanceId = UUID.randomUUID();
+    byte[] payload = new byte[] {13, 23, 33};
+    RecordHeaders headers = new RecordHeaders();
+    StartCommandDTO trigger =
+        new StartCommandDTO(
+            processInstanceId,
+            null,
+            null,
+            new ProcessDefinitionKey("proc", -1),
+            VariablesDTO.empty());
+    ProcessInstanceTriggerEnvelope envelope =
+        new ProcessInstanceTriggerEnvelope(payload, trigger, false, null);
+    when(engineAuthorizationService.authorize(headers, envelope))
+        .thenThrow(
+            new AuthorizationTokenException(
+                "Entry command StartCommandDTO requires tx-sig (signingEnabled=true)"));
+
+    processor.process(new Record<>(processInstanceId, envelope, 44L, headers));
+
+    assertAuthorizationFailureDlq(processInstanceId, payload, "tx-sig");
+  }
+
+  @Test
+  void process_authoritativeAnchoredPolicyMissingTrustAnchor_emitsDlqEntry() {
+    UUID processInstanceId = UUID.randomUUID();
+    byte[] payload = new byte[] {14, 24, 34};
+    RecordHeaders headers = new RecordHeaders();
+    StartCommandDTO trigger =
+        new StartCommandDTO(
+            processInstanceId,
+            null,
+            null,
+            new ProcessDefinitionKey("proc", -1),
+            VariablesDTO.empty());
+    ProcessInstanceTriggerEnvelope envelope =
+        new ProcessInstanceTriggerEnvelope(payload, trigger, false, null);
+    when(engineAuthorizationService.authorize(headers, envelope))
+        .thenThrow(
+            new AuthorizationTokenException(
+                "Namespace security policy requires anchored trust but no platform public key is configured"));
+
+    ProcessInstanceProcessor guardedProcessor =
+        guardedProcessorWithPolicy(anchoredActivePolicy(42L), anchoredActivePolicy(42L), null, true);
+
+    guardedProcessor.process(new Record<>(processInstanceId, envelope, 45L, headers));
+
+    assertAuthorizationFailureDlq(processInstanceId, payload, "platform public key");
+  }
+
+  @Test
   void process_taskCompletionWithStrayJwt_authDisabled_ignoresJwtAndDoesNotEmitDlq() {
     UUID processInstanceId = UUID.randomUUID();
     byte[] payload = new byte[] {31, 32, 33};
@@ -414,6 +487,22 @@ class ProcessInstanceProcessorDlqTest {
             .activePolicyVersion(version)
             .activePolicyHash(requested.getDesiredPolicyHash())
             .build());
+  }
+
+  private void assertAuthorizationFailureDlq(
+      UUID processInstanceId, byte[] payload, String reasonTextFragment) {
+    ArgumentCaptor<Record> recordCaptor = ArgumentCaptor.forClass(Record.class);
+    verify(context).forward(recordCaptor.capture());
+    ProcessInstanceDlqEntryDTO dlqEntry = (ProcessInstanceDlqEntryDTO) recordCaptor.getValue().value();
+
+    assertThat(dlqEntry.getProcessInstanceId()).isEqualTo(processInstanceId);
+    assertThat(dlqEntry.getData()).containsExactly(payload);
+    assertThat(new String(dlqEntry.getHeaders().get(REASON_HINT), StandardCharsets.UTF_8))
+        .isEqualTo("AUTHORIZATION_FAILED");
+    assertThat(new String(dlqEntry.getHeaders().get(CAPTURE_STAGE), StandardCharsets.UTF_8))
+        .isEqualTo("PROCESSOR");
+    assertThat(new String(dlqEntry.getHeaders().get(REASON_TEXT), StandardCharsets.UTF_8))
+        .contains(reasonTextFragment);
   }
 
   @Test
