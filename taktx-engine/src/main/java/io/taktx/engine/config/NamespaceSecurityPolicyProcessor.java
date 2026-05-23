@@ -100,6 +100,9 @@ public class NamespaceSecurityPolicyProcessor implements Processor<String, byte[
               ? namespaceSecurityPolicyStore.get().getMode()
               : validated.getMode());
     } catch (Exception e) {
+      if (activationService != null) {
+        activationService.onRejectedPolicyMutation(e.getMessage(), rec.key());
+      }
       log.warn("Failed to deserialize or validate namespace security policy: {}", e.getMessage());
     }
   }
