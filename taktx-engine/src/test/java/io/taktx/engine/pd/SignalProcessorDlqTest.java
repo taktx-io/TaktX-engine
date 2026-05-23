@@ -12,15 +12,28 @@ import static io.taktx.engine.dlq.DlqHeaders.REASON_HINT;
 import static io.taktx.engine.dlq.DlqHeaders.REASON_TEXT;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import io.taktx.dto.NamespaceSecurityPolicyDTO;
+import io.taktx.dto.NewDefinitionSignalSubscriptionDTO;
+import io.taktx.dto.ProcessDefinitionKey;
+import io.taktx.dto.RequiredSigningDTO;
+import io.taktx.dto.SecurityActivationState;
+import io.taktx.dto.SecurityMode;
 import io.taktx.dto.SignalDTO;
 import io.taktx.dto.SignalDlqEntryDTO;
+import io.taktx.engine.config.NamespaceSecurityPolicyStore;
 import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.generic.SignalDefinitionSubscriptionKeyDTO;
 import io.taktx.engine.generic.SignalInstanceSubscriptionKeyDTO;
+import io.taktx.engine.security.EngineSecurityReadinessEvaluator;
+import io.taktx.engine.security.MessageSigningService;
+import io.taktx.engine.security.ProtectedDataPlaneParticipationGuard;
+import io.taktx.security.NamespaceSecurityPolicySupport;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Instant;
@@ -38,19 +51,26 @@ import org.mockito.ArgumentCaptor;
 class SignalProcessorDlqTest {
 
   private ProcessorContext<Object, Object> context;
+  private TaktConfiguration taktConfiguration;
+  private Clock clock;
   private SignalProcessor processor;
   private KeyValueStore<SignalInstanceSubscriptionKeyDTO, String> instanceStore;
   private KeyValueStore<SignalDefinitionSubscriptionKeyDTO, String> definitionStore;
 
   @BeforeEach
   void setUp() {
-    TaktConfiguration taktConfiguration = mock(TaktConfiguration.class);
+    taktConfiguration = mock(TaktConfiguration.class);
+    when(taktConfiguration.getTenantId()).thenReturn("tenant");
+    when(taktConfiguration.getNamespace()).thenReturn("bank.payments");
+    when(taktConfiguration.getHost()).thenReturn("engine-host");
+    when(taktConfiguration.getPort()).thenReturn(8080);
+    when(taktConfiguration.getPlatformPublicKey()).thenReturn(null);
     when(taktConfiguration.getPrefixed(Stores.INSTANCE_SIGNAL_SUBSCRIPTIONS.getStorename()))
         .thenReturn(Stores.INSTANCE_SIGNAL_SUBSCRIPTIONS.getStorename());
     when(taktConfiguration.getPrefixed(Stores.DEFINITION_SIGNAL_SUBSCRIPTIONS.getStorename()))
         .thenReturn(Stores.DEFINITION_SIGNAL_SUBSCRIPTIONS.getStorename());
 
-    Clock clock = Clock.fixed(Instant.ofEpochMilli(1_700_000_000_000L), ZoneOffset.UTC);
+    clock = Clock.fixed(Instant.ofEpochMilli(1_700_000_000_000L), ZoneOffset.UTC);
     processor = new SignalProcessor(taktConfiguration, clock);
 
     context = mock(ProcessorContext.class);
@@ -117,5 +137,66 @@ class SignalProcessorDlqTest {
         .isEqualTo("PROCESSOR_EXCEPTION");
     assertThat(new String(dlqEntry.getHeaders().get(REASON_TEXT), StandardCharsets.UTF_8))
         .contains("store unavailable");
+  }
+
+  @Test
+  void process_signalTriggerUnderPendingPolicy_emitsDlqWithPolicyNotActiveHint() {
+    SignalProcessor guardedProcessor = guardedProcessorWithPolicy(requestedPolicy(42L), null);
+    SignalDTO signal = new SignalDTO("order-placed");
+
+    guardedProcessor.process(new Record<>("order-placed", signal, 300L, new RecordHeaders()));
+
+    ArgumentCaptor<Record> captor = ArgumentCaptor.forClass(Record.class);
+    verify(context).forward(captor.capture());
+    SignalDlqEntryDTO dlqEntry = (SignalDlqEntryDTO) captor.getValue().value();
+    assertThat(new String(dlqEntry.getHeaders().get(REASON_HINT), StandardCharsets.UTF_8))
+        .isEqualTo(ProtectedDataPlaneParticipationGuard.POLICY_NOT_ACTIVE_HINT);
+    assertThat(new String(dlqEntry.getHeaders().get(REASON_TEXT), StandardCharsets.UTF_8))
+        .contains("becomes ACTIVE");
+  }
+
+  @Test
+  void process_subscriptionMutationUnderPendingPolicy_remainsAllowed() {
+    SignalProcessor guardedProcessor = guardedProcessorWithPolicy(requestedPolicy(42L), null);
+    NewDefinitionSignalSubscriptionDTO subscription =
+        new NewDefinitionSignalSubscriptionDTO(new ProcessDefinitionKey("proc", 1), "start", "order-placed");
+
+    guardedProcessor.process(
+        new Record<>("order-placed", subscription, 300L, new RecordHeaders()));
+
+    verify(definitionStore).put(any(), eq("order-placed"));
+    verify(context, never()).forward(any());
+  }
+
+  private SignalProcessor guardedProcessorWithPolicy(
+      NamespaceSecurityPolicyDTO currentPolicy, NamespaceSecurityPolicyDTO activePolicy) {
+    NamespaceSecurityPolicyStore policyStore = new NamespaceSecurityPolicyStore();
+    policyStore.setCurrentPolicy(currentPolicy);
+    policyStore.setActivePolicy(activePolicy);
+    MessageSigningService messageSigningService = mock(MessageSigningService.class);
+    when(messageSigningService.getKeyId()).thenReturn("engine-key-1");
+    when(messageSigningService.isPublicKeyPublished()).thenReturn(true);
+
+    SignalProcessor guardedProcessor =
+        new SignalProcessor(
+            taktConfiguration,
+            clock,
+            new ProtectedDataPlaneParticipationGuard(
+                policyStore,
+                new EngineSecurityReadinessEvaluator(
+                    taktConfiguration, policyStore, messageSigningService, clock),
+                clock));
+    guardedProcessor.init(context);
+    return guardedProcessor;
+  }
+
+  private static NamespaceSecurityPolicyDTO requestedPolicy(long version) {
+    return NamespaceSecurityPolicySupport.requireValid(
+        NamespaceSecurityPolicyDTO.builder()
+            .mode(SecurityMode.COMMUNITY_SECURED)
+            .activationState(SecurityActivationState.REQUESTED)
+            .desiredPolicyVersion(version)
+            .requiredSigning(RequiredSigningDTO.builder().engineOutbound(true).build())
+            .build());
   }
 }

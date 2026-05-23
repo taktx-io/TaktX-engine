@@ -26,6 +26,7 @@ import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.dlq.DlqHeaders;
 import io.taktx.engine.generic.SignalDefinitionSubscriptionKeyDTO;
 import io.taktx.engine.generic.SignalInstanceSubscriptionKeyDTO;
+import io.taktx.engine.security.ProtectedDataPlaneParticipationGuard;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -53,6 +54,7 @@ public class SignalProcessor implements Processor<String, SignalDTO, Object, Obj
 
   private final TaktConfiguration taktConfiguration;
   private final Clock clock;
+  private final ProtectedDataPlaneParticipationGuard protectedDataPlaneParticipationGuard;
   private KeyValueStore<SignalInstanceSubscriptionKeyDTO, String> instanceSignalSubscriptionStore;
   private KeyValueStore<SignalDefinitionSubscriptionKeyDTO, String>
       definitionSignalSubscriptionStore;
@@ -69,8 +71,16 @@ public class SignalProcessor implements Processor<String, SignalDTO, Object, Obj
           });
 
   public SignalProcessor(TaktConfiguration taktConfiguration, Clock clock) {
+    this(taktConfiguration, clock, null);
+  }
+
+  public SignalProcessor(
+      TaktConfiguration taktConfiguration,
+      Clock clock,
+      ProtectedDataPlaneParticipationGuard protectedDataPlaneParticipationGuard) {
     this.taktConfiguration = taktConfiguration;
     this.clock = clock;
+    this.protectedDataPlaneParticipationGuard = protectedDataPlaneParticipationGuard;
   }
 
   @Override
@@ -131,12 +141,28 @@ public class SignalProcessor implements Processor<String, SignalDTO, Object, Obj
       }
       // Handle this one last as all others are subclasses
       else if (singalRecord.value() instanceof SignalDTO signalDTO) {
+        if (shouldBlockProtectedDataPlane(singalRecord)) {
+          return;
+        }
         handleTriggerSignal(signalDTO);
       }
     } catch (Exception e) {
       log.error("⚠ Exception processing signals record, routing to DLQ: {}", e.getMessage(), e);
       emitSignalDlq(singalRecord, "PROCESSOR_EXCEPTION", e.getMessage(), "PROCESSOR");
     }
+  }
+
+  private boolean shouldBlockProtectedDataPlane(Record<String, SignalDTO> signalRecord) {
+    if (protectedDataPlaneParticipationGuard == null) {
+      return false;
+    }
+    ProtectedDataPlaneParticipationGuard.Decision decision =
+        protectedDataPlaneParticipationGuard.evaluate();
+    if (decision.permitted()) {
+      return false;
+    }
+    emitSignalDlq(signalRecord, decision.reasonHint(), decision.reasonText(), "PROCESSOR");
+    return true;
   }
 
   private void emitSignalDlq(

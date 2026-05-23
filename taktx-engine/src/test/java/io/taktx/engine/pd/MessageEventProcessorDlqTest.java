@@ -11,16 +11,31 @@ import static io.taktx.engine.dlq.DlqHeaders.CAPTURE_STAGE;
 import static io.taktx.engine.dlq.DlqHeaders.REASON_HINT;
 import static io.taktx.engine.dlq.DlqHeaders.REASON_TEXT;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import io.taktx.dto.DefinitionMessageEventTriggerDTO;
+import io.taktx.dto.DefinitionMessageSubscriptionDTO;
 import io.taktx.dto.CorrelationMessageEventTriggerDTO;
 import io.taktx.dto.MessageEventDlqEntryDTO;
 import io.taktx.dto.MessageEventKeyDTO;
+import io.taktx.dto.NamespaceSecurityPolicyDTO;
+import io.taktx.dto.ProcessDefinitionKey;
+import io.taktx.dto.RequiredSigningDTO;
+import io.taktx.dto.SecurityActivationState;
+import io.taktx.dto.SecurityMode;
 import io.taktx.dto.VariablesDTO;
+import io.taktx.engine.config.NamespaceSecurityPolicyStore;
 import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.pi.ProcessingStatistics;
+import io.taktx.engine.security.EngineSecurityReadinessEvaluator;
+import io.taktx.engine.security.MessageSigningService;
+import io.taktx.engine.security.ProtectedDataPlaneParticipationGuard;
+import io.taktx.security.NamespaceSecurityPolicySupport;
 import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
@@ -38,24 +53,34 @@ import org.mockito.ArgumentCaptor;
 class MessageEventProcessorDlqTest {
 
   private ProcessorContext<Object, Object> context;
+  private TaktConfiguration taktConfiguration;
+  private Clock clock;
+  private ProcessingStatistics processingStatistics;
   private MessageEventProcessor processor;
+  private KeyValueStore definitionStore;
+  private KeyValueStore correlationStore;
 
   @BeforeEach
   void setUp() {
-    TaktConfiguration taktConfiguration = mock(TaktConfiguration.class);
+    taktConfiguration = mock(TaktConfiguration.class);
+    when(taktConfiguration.getTenantId()).thenReturn("tenant");
+    when(taktConfiguration.getNamespace()).thenReturn("bank.payments");
+    when(taktConfiguration.getHost()).thenReturn("engine-host");
+    when(taktConfiguration.getPort()).thenReturn(8080);
+    when(taktConfiguration.getPlatformPublicKey()).thenReturn(null);
     when(taktConfiguration.getPrefixed(Stores.DEFINITION_MESSAGE_SUBSCRIPTION.getStorename()))
         .thenReturn(Stores.DEFINITION_MESSAGE_SUBSCRIPTION.getStorename());
     when(taktConfiguration.getPrefixed(Stores.CORRELATION_MESSAGE_SUBSCRIPTION.getStorename()))
         .thenReturn(Stores.CORRELATION_MESSAGE_SUBSCRIPTION.getStorename());
 
-    Clock clock = Clock.fixed(Instant.ofEpochMilli(1_700_000_000_000L), ZoneOffset.UTC);
-    ProcessingStatistics processingStatistics = mock(ProcessingStatistics.class);
+    clock = Clock.fixed(Instant.ofEpochMilli(1_700_000_000_000L), ZoneOffset.UTC);
+    processingStatistics = mock(ProcessingStatistics.class);
 
     processor = new MessageEventProcessor(taktConfiguration, clock, processingStatistics);
 
     context = mock(ProcessorContext.class);
-    KeyValueStore definitionStore = mock(KeyValueStore.class);
-    KeyValueStore correlationStore = mock(KeyValueStore.class);
+    definitionStore = mock(KeyValueStore.class);
+    correlationStore = mock(KeyValueStore.class);
     when(context.getStateStore(Stores.DEFINITION_MESSAGE_SUBSCRIPTION.getStorename()))
         .thenReturn(definitionStore);
     when(context.getStateStore(Stores.CORRELATION_MESSAGE_SUBSCRIPTION.getStorename()))
@@ -138,5 +163,69 @@ class MessageEventProcessorDlqTest {
         .isEqualTo("PROCESSOR");
     assertThat(new String(dlqEntry.getHeaders().get(REASON_TEXT), StandardCharsets.UTF_8))
         .contains("simulated store failure");
+  }
+
+  @Test
+  void process_messageTriggerUnderPendingPolicy_emitsDlqWithPolicyNotActiveHint() {
+    MessageEventProcessor guardedProcessor = guardedProcessorWithPolicy(requestedPolicy(42L), null);
+    MessageEventKeyDTO key = new MessageEventKeyDTO("pay");
+    DefinitionMessageEventTriggerDTO trigger =
+        new DefinitionMessageEventTriggerDTO("pay", VariablesDTO.empty());
+
+    guardedProcessor.process(new Record<>(key, trigger, 300L, new RecordHeaders()));
+
+    ArgumentCaptor<Record> captor = ArgumentCaptor.forClass(Record.class);
+    verify(context).forward(captor.capture());
+    MessageEventDlqEntryDTO dlqEntry = (MessageEventDlqEntryDTO) captor.getValue().value();
+    assertThat(new String(dlqEntry.getHeaders().get(REASON_HINT), StandardCharsets.UTF_8))
+        .isEqualTo(ProtectedDataPlaneParticipationGuard.POLICY_NOT_ACTIVE_HINT);
+    assertThat(new String(dlqEntry.getHeaders().get(REASON_TEXT), StandardCharsets.UTF_8))
+        .contains("becomes ACTIVE");
+  }
+
+  @Test
+  void process_subscriptionMutationUnderPendingPolicy_remainsAllowed() {
+    MessageEventProcessor guardedProcessor = guardedProcessorWithPolicy(requestedPolicy(42L), null);
+    MessageEventKeyDTO key = new MessageEventKeyDTO("pay");
+    DefinitionMessageSubscriptionDTO subscription =
+        new DefinitionMessageSubscriptionDTO(new ProcessDefinitionKey("proc", 1), "start", "pay");
+
+    guardedProcessor.process(new Record<>(key, subscription, 300L, new RecordHeaders()));
+
+    verify(definitionStore).put(eq(key), any());
+    verify(context, never()).forward(any());
+  }
+
+  private MessageEventProcessor guardedProcessorWithPolicy(
+      NamespaceSecurityPolicyDTO currentPolicy, NamespaceSecurityPolicyDTO activePolicy) {
+    NamespaceSecurityPolicyStore policyStore = new NamespaceSecurityPolicyStore();
+    policyStore.setCurrentPolicy(currentPolicy);
+    policyStore.setActivePolicy(activePolicy);
+    MessageSigningService messageSigningService = mock(MessageSigningService.class);
+    when(messageSigningService.getKeyId()).thenReturn("engine-key-1");
+    when(messageSigningService.isPublicKeyPublished()).thenReturn(true);
+
+    MessageEventProcessor guardedProcessor =
+        new MessageEventProcessor(
+            taktConfiguration,
+            clock,
+            processingStatistics,
+            new ProtectedDataPlaneParticipationGuard(
+                policyStore,
+                new EngineSecurityReadinessEvaluator(
+                    taktConfiguration, policyStore, messageSigningService, clock),
+                clock));
+    guardedProcessor.init(context);
+    return guardedProcessor;
+  }
+
+  private static NamespaceSecurityPolicyDTO requestedPolicy(long version) {
+    return NamespaceSecurityPolicySupport.requireValid(
+        NamespaceSecurityPolicyDTO.builder()
+            .mode(SecurityMode.COMMUNITY_SECURED)
+            .activationState(SecurityActivationState.REQUESTED)
+            .desiredPolicyVersion(version)
+            .requiredSigning(RequiredSigningDTO.builder().engineOutbound(true).build())
+            .build());
   }
 }
