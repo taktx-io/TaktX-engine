@@ -43,6 +43,7 @@ public class NamespaceSecurityPolicyActivationService {
   static final String READINESS_MISMATCH_CODE = "READINESS_MISMATCH";
   static final String BREAK_GLASS_DOWNGRADE_CODE = "BREAK_GLASS_DOWNGRADE";
   static final String BREAK_GLASS_DOWNGRADE_REJECTED_CODE = "BREAK_GLASS_DOWNGRADE_REJECTED";
+  public static final String INVALID_POLICY_MUTATION_CODE = "INVALID_POLICY_MUTATION";
 
   private static final Set<ParticipantRole> REQUIRED_ACTIVATION_ROLES =
       EnumSet.of(ParticipantRole.ENGINE, ParticipantRole.INGESTER, ParticipantRole.CONSOLE);
@@ -166,6 +167,29 @@ public class NamespaceSecurityPolicyActivationService {
 
   public synchronized void onParticipantStatusesChanged() {
     reevaluate();
+  }
+
+  public synchronized void onRejectedPolicyMutation(String reason, String recordKey) {
+    if (securityEventPublisher == null) {
+      return;
+    }
+    securityEventPublisher.publish(
+        SecurityEventDTO.builder()
+            .eventType(SecurityEventType.CONTROL_PLANE_MUTATION_REJECTED)
+            .severity(SecurityEventSeverity.ERROR)
+            .occurredAtMs(clock.millis())
+            .namespace(configuration.getNamespace())
+            .participantId(participantId())
+            .participantInstanceId(participantInstanceId())
+            .activePolicyVersion(activePolicyVersion(namespaceSecurityPolicyStore.getActivePolicy()))
+            .activePolicyHash(activePolicyHash(namespaceSecurityPolicyStore.getActivePolicy()))
+            .code(INVALID_POLICY_MUTATION_CODE)
+            .message(reason)
+            .metadata(
+                Map.of(
+                    "recordKey", recordKey == null ? "<null>" : recordKey,
+                    "reason", reason == null ? "unknown" : reason))
+            .build());
   }
 
   public synchronized void reevaluate() {
@@ -496,6 +520,8 @@ public class NamespaceSecurityPolicyActivationService {
       List<String> policyMismatchParticipants,
       int observedRequiredParticipantCount) {}
 }
+
+
 
 
 

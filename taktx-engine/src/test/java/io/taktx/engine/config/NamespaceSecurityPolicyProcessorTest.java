@@ -13,6 +13,8 @@ import io.taktx.dto.NamespaceSecurityPolicyDTO;
 import io.taktx.dto.RequiredAuthorizationDTO;
 import io.taktx.dto.RequiredSigningDTO;
 import io.taktx.dto.SecurityActivationState;
+import io.taktx.dto.SecurityEventDTO;
+import io.taktx.dto.SecurityEventType;
 import io.taktx.dto.SecurityMode;
 import io.taktx.engine.security.NamespaceSecurityPolicyActivationService;
 import io.taktx.engine.security.SecurityEventPublisher;
@@ -32,6 +34,7 @@ import org.apache.kafka.streams.state.Stores;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
 class NamespaceSecurityPolicyProcessorTest {
@@ -267,6 +270,67 @@ class NamespaceSecurityPolicyProcessorTest {
       assertThat(lifecycleStore.get().getActivationState())
           .isEqualTo(SecurityActivationState.VALIDATING);
       assertThat(lifecycleStore.getValidationStartedAtMs()).isEqualTo(1_716_450_000_000L);
+    }
+  }
+
+  @Test
+  void invalidPolicy_emitsControlPlaneMutationRejectedEventWhenLifecycleSupportIsEnabled() {
+    NamespaceSecurityPolicyStore lifecycleStore = new NamespaceSecurityPolicyStore();
+    ParticipantStatusStore participantStatusStore = new ParticipantStatusStore();
+    TaktConfiguration configuration = Mockito.mock(TaktConfiguration.class);
+    SecurityEventPublisher securityEventPublisher = Mockito.mock(SecurityEventPublisher.class);
+    Mockito.when(configuration.getSecurityPolicyActivationTimeoutMs()).thenReturn(30_000L);
+    Mockito.when(configuration.getTenantId()).thenReturn("tenant");
+    Mockito.when(configuration.getNamespace()).thenReturn("bank.payments");
+    Mockito.when(configuration.getHost()).thenReturn("engine-host");
+    Mockito.when(configuration.getPort()).thenReturn(8080);
+    NamespaceSecurityPolicyActivationService activationService =
+        new NamespaceSecurityPolicyActivationService(
+            configuration,
+            lifecycleStore,
+            participantStatusStore,
+            securityEventPublisher,
+            Clock.fixed(Instant.ofEpochMilli(1_716_450_000_000L), ZoneOffset.UTC));
+
+    StreamsBuilder builder = new StreamsBuilder();
+    builder.addGlobalStore(
+        Stores.keyValueStoreBuilder(
+                Stores.inMemoryKeyValueStore(STORE_NAME), Serdes.String(), Serdes.ByteArray())
+            .withLoggingDisabled(),
+        POLICY_TOPIC,
+        Consumed.with(Serdes.String(), Serdes.ByteArray()),
+        () -> new NamespaceSecurityPolicyProcessor(lifecycleStore, activationService));
+
+    Properties config = new Properties();
+    config.put(StreamsConfig.APPLICATION_ID_CONFIG, "namespace-security-policy-rejection-test");
+    config.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "dummy:9092");
+    config.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
+    config.put(
+        StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.ByteArray().getClass().getName());
+
+    try (TopologyTestDriver lifecycleDriver = new TopologyTestDriver(builder.build(), config)) {
+      TestInputTopic<String, byte[]> lifecycleTopic =
+          lifecycleDriver.createInputTopic(
+              POLICY_TOPIC, Serdes.String().serializer(), Serdes.ByteArray().serializer());
+      NamespaceSecurityPolicyDTO invalid =
+          NamespaceSecurityPolicyDTO.builder()
+              .mode(SecurityMode.ANCHORED_SECURED)
+              .activationState(SecurityActivationState.REQUESTED)
+              .desiredPolicyVersion(52L)
+              .build();
+
+      lifecycleTopic.pipeInput(
+          NamespaceSecurityPolicyProcessor.POLICY_KEY,
+          NamespaceSecurityPolicyProtoMapper.toProto(invalid).toByteArray());
+
+      assertThat(lifecycleStore.get()).isNull();
+      ArgumentCaptor<SecurityEventDTO> captor = ArgumentCaptor.forClass(SecurityEventDTO.class);
+      Mockito.verify(securityEventPublisher).publish(captor.capture());
+      assertThat(captor.getValue().getEventType())
+          .isEqualTo(SecurityEventType.CONTROL_PLANE_MUTATION_REJECTED);
+      assertThat(captor.getValue().getCode())
+          .isEqualTo(NamespaceSecurityPolicyActivationService.INVALID_POLICY_MUTATION_CODE);
+      assertThat(captor.getValue().getMetadata()).containsEntry("recordKey", "policy");
     }
   }
 }
