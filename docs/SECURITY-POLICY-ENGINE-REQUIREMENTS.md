@@ -845,10 +845,10 @@ as engine+client work, not engine-only work.
 **Goal:** ensure runtime enforcement follows the explicit policy model.
 
 ### Tasks
-- [ ] Map signing requirements to actual signature enforcement points.
-- [ ] Map authorization requirements to actual JWT / auth enforcement points.
+- [x] Map signing requirements to actual signature enforcement points.
+- [x] Map authorization requirements to actual JWT / auth enforcement points.
 - [ ] Map trust-anchor requirements to explicit trust-anchor validation.
-- [ ] Fail closed when required checks cannot be satisfied.
+- [x] Fail closed when required checks cannot be satisfied.
 - [x] Treat false compatibility claims and post-activation drift as enforcement-relevant non-ready
       conditions, not as reasons to weaken checks.
 - [x] Prevent protected data-plane participation when policy is not `ACTIVE` or participant is not
@@ -860,7 +860,10 @@ as engine+client work, not engine-only work.
 schedule-command ingress now fail-close when a requested policy is not yet authoritative or when the
 local engine is not `READY` for the authoritative active policy identity. Message/signal
 subscription-management records continue to flow during convergence so the control plane remains
-available.
+available. Runtime authorization/signing gates now also consult the authoritative active namespace
+policy identity: explicit `requiredAuthorization` / `requiredSigning` requirements activate JWT and
+signature enforcement for the corresponding protected runtime paths even when legacy global flags are
+off, while pending non-authoritative requested policies still do not switch enforcement early.
 
 ### Acceptance criteria
 - Runtime enforcement matches the active policy requirements.
