@@ -15,6 +15,7 @@ import io.taktx.dto.RequiredAuthorizationDTO;
 import io.taktx.dto.RequiredSigningDTO;
 import io.taktx.dto.SecurityActivationState;
 import io.taktx.dto.SecurityMode;
+import io.taktx.serdes.NamespaceSecurityPolicyProtoMapper;
 import org.junit.jupiter.api.Test;
 
 class TaktXClientNamespaceSecurityPolicyTest {
@@ -109,5 +110,57 @@ class TaktXClientNamespaceSecurityPolicyTest {
 
     assertThat(validated.getDesiredPolicyHash()).isNotBlank();
     assertThat(validated.getActivePolicyHash()).isEqualTo(validated.getDesiredPolicyHash());
+  }
+
+  @Test
+  void validateNamespaceSecurityPolicy_rejectsPartialBreakGlassMetadata() {
+    NamespaceSecurityPolicyDTO policy =
+        NamespaceSecurityPolicyDTO.builder()
+            .mode(SecurityMode.COMMUNITY_SECURED)
+            .activationState(SecurityActivationState.REQUESTED)
+            .desiredPolicyVersion(42L)
+            .breakGlassActor("ops-admin")
+            .build();
+
+    assertThatThrownBy(() -> TaktXClient.validateNamespaceSecurityPolicy(policy))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("breakGlassActor and breakGlassReason must be provided together");
+  }
+
+  @Test
+  void buildNamespaceSecurityPolicyRecord_usesPolicyKeyAndSerializesValidatedPolicy() throws Exception {
+    NamespaceSecurityPolicyDTO input =
+        NamespaceSecurityPolicyDTO.builder()
+            .mode(SecurityMode.COMMUNITY_SECURED)
+            .activationState(SecurityActivationState.REQUESTED)
+            .desiredPolicyVersion(42L)
+            .requiredSigning(RequiredSigningDTO.builder().engineOutbound(true).build())
+            .build();
+
+    var record =
+        TaktXClient.buildNamespaceSecurityPolicyRecord(
+            "tenant.bank.payments.taktx-security-policy", input);
+
+    assertThat(record.topic()).isEqualTo("tenant.bank.payments.taktx-security-policy");
+    assertThat(record.key()).isEqualTo(TaktXClient.NAMESPACE_SECURITY_POLICY_RECORD_KEY);
+    NamespaceSecurityPolicyDTO serialized =
+        NamespaceSecurityPolicyProtoMapper.toDto(
+            io.taktx.proto.NamespaceSecurityPolicyMessage.parseFrom(record.value()));
+    assertThat(serialized.getDesiredPolicyVersion()).isEqualTo(42L);
+    assertThat(serialized.getDesiredPolicyHash()).isNotBlank();
+  }
+
+  @Test
+  void buildNamespaceSecurityPolicyRecord_rejectsBlankTopic() {
+    NamespaceSecurityPolicyDTO input =
+        NamespaceSecurityPolicyDTO.builder()
+            .mode(SecurityMode.COMMUNITY_SECURED)
+            .activationState(SecurityActivationState.REQUESTED)
+            .desiredPolicyVersion(42L)
+            .build();
+
+    assertThatThrownBy(() -> TaktXClient.buildNamespaceSecurityPolicyRecord(" ", input))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("topic must not be blank");
   }
 }
