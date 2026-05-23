@@ -991,6 +991,39 @@ class EngineAuthorizationServiceTest {
         .hasMessageContaining("tx-sig");
   }
 
+  @Test
+  void authoritativeAnchoredPolicy_blocksStartCommandWhenTrustAnchorMissing() {
+    namespaceSecurityPolicyStore.update(
+        activeAuthoritativePolicy(
+            RequiredAuthorizationDTO.builder().startCommands(true).build(),
+            RequiredSigningDTO.builder().clientCommands(true).build(),
+            true));
+
+    String jwt = buildJwt("START", "proc", -1, UUID.randomUUID().toString(), futureExpiry());
+
+    assertThatThrownBy(() -> service.authorize(headersWithAuth(jwt), envelope(startCommand("proc", -1))))
+        .isInstanceOf(AuthorizationTokenException.class)
+        .hasMessageContaining("platform public key");
+  }
+
+  @Test
+  void authoritativeAnchoredPolicy_blocksScheduleCommandWhenTrustAnchorMissing() {
+    namespaceSecurityPolicyStore.update(
+        activeAuthoritativePolicy(
+            RequiredAuthorizationDTO.builder().build(),
+            RequiredSigningDTO.builder().engineOutbound(true).build(),
+            true));
+
+    assertThatThrownBy(
+            () ->
+                service.authorizeScheduleCommand(
+                    headersWithSignature("engine-schedule-key"),
+                    scheduleKey(),
+                    oneTimeSchedule(startCommand("proc", -1))))
+        .isInstanceOf(AuthorizationTokenException.class)
+        .hasMessageContaining("platform public key");
+  }
+
   private GlobalConfigurationDTO authorizationConfig() {
     return config(true, true, true, false, ReplayProtectionMode.COMPAT);
   }
@@ -1033,6 +1066,13 @@ class EngineAuthorizationServiceTest {
 
   private NamespaceSecurityPolicyDTO activeAuthoritativePolicy(
       RequiredAuthorizationDTO requiredAuthorization, RequiredSigningDTO requiredSigning) {
+    return activeAuthoritativePolicy(requiredAuthorization, requiredSigning, false);
+  }
+
+  private NamespaceSecurityPolicyDTO activeAuthoritativePolicy(
+      RequiredAuthorizationDTO requiredAuthorization,
+      RequiredSigningDTO requiredSigning,
+      boolean trustAnchorRequired) {
     return NamespaceSecurityPolicyDTO.builder()
         .mode(io.taktx.dto.SecurityMode.COMMUNITY_SECURED)
         .activationState(SecurityActivationState.ACTIVE)
@@ -1040,6 +1080,7 @@ class EngineAuthorizationServiceTest {
         .desiredPolicyHash("policy-hash-42")
         .requiredAuthorization(requiredAuthorization)
         .requiredSigning(requiredSigning)
+        .trustAnchorRequired(trustAnchorRequired)
         .activePolicyVersion(42L)
         .activePolicyHash("policy-hash-42")
         .build();
