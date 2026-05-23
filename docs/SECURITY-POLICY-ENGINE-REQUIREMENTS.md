@@ -878,7 +878,7 @@ as engine+client work, not engine-only work.
 - [x] Emit explicit events for convergence failure and post-activation drift.
 - [x] Emit explicit events when protected data-plane participation is blocked because policy is not
       yet `ACTIVE` or participant is not `READY`.
-- [ ] Emit explicit events when authoritative control-plane mutation is rejected for security reasons.
+- [x] Emit explicit events when authoritative control-plane mutation is rejected for security reasons.
 - [x] Emit explicit events for activation timeout, rollback, and break-glass downgrade.
 
 ### Acceptance criteria
@@ -957,6 +957,9 @@ on unpublished or bespoke patches.
 - [x] ensure downgrade transitions are observable / auditable
 
 ### Acceptance criteria
+
+- Rejected/invalid policy mutation attempts emit explicit engine-side observability events even before
+  full untrusted-writer authentication/authorization enforcement is completed.
 
 - Engine-side downgrade handling requires explicit break-glass actor/reason metadata and emits audit
   events; full privileged-role verification remains part of the authoritative control-plane contract.
