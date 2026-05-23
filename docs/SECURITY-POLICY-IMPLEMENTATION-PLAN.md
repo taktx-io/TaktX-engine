@@ -720,9 +720,9 @@ or pre-policy namespaces.
       enforcement.
 - [ ] **SP-06.4b** Add tests proving post-activation drift yields `NOT READY` posture and incident
       reporting.
-- [ ] **SP-06.4c** Add tests proving requested-but-not-active secured policy does not prematurely
+- [x] **SP-06.4c** Add tests proving requested-but-not-active secured policy does not prematurely
       change protected data-plane behavior.
-- [ ] **SP-06.4d** Add tests proving stale participant status / expired heartbeat does not count as
+- [x] **SP-06.4d** Add tests proving stale participant status / expired heartbeat does not count as
       current readiness.
 - [ ] **SP-06.4e** Add tests proving break-glass downgrade requires privileged role, reason, and
       audit event.
