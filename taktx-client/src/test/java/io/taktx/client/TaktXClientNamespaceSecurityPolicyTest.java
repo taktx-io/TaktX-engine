@@ -10,6 +10,7 @@ package io.taktx.client;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import io.taktx.dto.Constants;
 import io.taktx.dto.GlobalConfigurationDTO;
 import io.taktx.dto.NamespaceSecurityPolicyDTO;
 import io.taktx.dto.RequiredAuthorizationDTO;
@@ -17,8 +18,12 @@ import io.taktx.dto.RequiredSigningDTO;
 import io.taktx.dto.SecurityActivationState;
 import io.taktx.dto.SecurityMode;
 import io.taktx.security.AuthoritativeControlPlaneSecurityProperty;
+import io.taktx.security.Ed25519Service;
 import io.taktx.security.NamespaceSecurityPolicyActivationAuthority;
+import io.taktx.security.SigningIdentity;
+import io.taktx.security.SigningKeyGenerator;
 import io.taktx.serdes.NamespaceSecurityPolicyProtoMapper;
+import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.Test;
 
 class TaktXClientNamespaceSecurityPolicyTest {
@@ -140,15 +145,15 @@ class TaktXClientNamespaceSecurityPolicyTest {
             .requiredSigning(RequiredSigningDTO.builder().engineOutbound(true).build())
             .build();
 
-    var record =
+    var producerRecord =
         TaktXClient.buildNamespaceSecurityPolicyRecord(
             "tenant.bank.payments.taktx-security-policy", input);
 
-    assertThat(record.topic()).isEqualTo("tenant.bank.payments.taktx-security-policy");
-    assertThat(record.key()).isEqualTo(TaktXClient.NAMESPACE_SECURITY_POLICY_RECORD_KEY);
+    assertThat(producerRecord.topic()).isEqualTo("tenant.bank.payments.taktx-security-policy");
+    assertThat(producerRecord.key()).isEqualTo(TaktXClient.NAMESPACE_SECURITY_POLICY_RECORD_KEY);
     NamespaceSecurityPolicyDTO serialized =
         NamespaceSecurityPolicyProtoMapper.toDto(
-            io.taktx.proto.NamespaceSecurityPolicyMessage.parseFrom(record.value()));
+            io.taktx.proto.NamespaceSecurityPolicyMessage.parseFrom(producerRecord.value()));
     assertThat(serialized.getDesiredPolicyVersion()).isEqualTo(42L);
     assertThat(serialized.getDesiredPolicyHash()).isNotBlank();
   }
@@ -169,13 +174,13 @@ class TaktXClientNamespaceSecurityPolicyTest {
 
   @Test
   void buildNamespaceSecurityPolicyTombstoneRecord_usesPolicyKeyAndNullValue() {
-    var record =
+    var producerRecord =
         TaktXClient.buildNamespaceSecurityPolicyTombstoneRecord(
             "tenant.bank.payments.taktx-security-policy");
 
-    assertThat(record.topic()).isEqualTo("tenant.bank.payments.taktx-security-policy");
-    assertThat(record.key()).isEqualTo(TaktXClient.NAMESPACE_SECURITY_POLICY_RECORD_KEY);
-    assertThat(record.value()).isNull();
+    assertThat(producerRecord.topic()).isEqualTo("tenant.bank.payments.taktx-security-policy");
+    assertThat(producerRecord.key()).isEqualTo(TaktXClient.NAMESPACE_SECURITY_POLICY_RECORD_KEY);
+    assertThat(producerRecord.value()).isNull();
   }
 
   @Test
@@ -183,6 +188,61 @@ class TaktXClientNamespaceSecurityPolicyTest {
     assertThatThrownBy(() -> TaktXClient.buildNamespaceSecurityPolicyTombstoneRecord(" "))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("topic must not be blank");
+  }
+
+  @Test
+  void buildNamespaceSecurityPolicyRecord_withSigningIdentity_attachesVerifiableSignatureHeader() {
+    java.security.KeyPair keyPair = SigningKeyGenerator.generate();
+    String privateKeyBase64 = SigningKeyGenerator.encodePrivateKey(keyPair.getPrivate());
+    String publicKeyBase64 = SigningKeyGenerator.encodePublicKey(keyPair.getPublic());
+    SigningIdentity signingIdentity =
+        SigningIdentity.ed25519("platform-policy-key", privateKeyBase64, publicKeyBase64);
+
+    NamespaceSecurityPolicyDTO input =
+        NamespaceSecurityPolicyDTO.builder()
+            .mode(SecurityMode.COMMUNITY_SECURED)
+            .activationState(SecurityActivationState.REQUESTED)
+            .desiredPolicyVersion(42L)
+            .requiredSigning(RequiredSigningDTO.builder().engineOutbound(true).build())
+            .build();
+
+    var producerRecord =
+        TaktXClient.buildNamespaceSecurityPolicyRecord(
+            "tenant.bank.payments.taktx-security-policy", input, signingIdentity);
+
+    assertThat(producerRecord.headers().lastHeader(Constants.HEADER_ENGINE_SIGNATURE)).isNotNull();
+    String headerValue =
+        new String(
+            producerRecord.headers().lastHeader(Constants.HEADER_ENGINE_SIGNATURE).value(),
+            StandardCharsets.UTF_8);
+    assertThat(headerValue).startsWith("platform-policy-key.");
+    String base64Signature = headerValue.substring(headerValue.indexOf('.') + 1);
+    assertThat(
+            Ed25519Service.verify(
+                producerRecord.value(),
+                java.util.Base64.getDecoder().decode(base64Signature),
+                publicKeyBase64))
+        .isTrue();
+  }
+
+  @Test
+  void publishNamespaceSecurityPolicy_requiresExplicitTrustedWriterIdentity() {
+    NamespaceSecurityPolicyDTO input =
+        NamespaceSecurityPolicyDTO.builder()
+            .mode(SecurityMode.COMMUNITY_OPEN)
+            .activationState(SecurityActivationState.REQUESTED)
+            .desiredPolicyVersion(42L)
+            .build();
+
+    java.util.Properties properties = new java.util.Properties();
+    properties.setProperty("bootstrap.servers", "localhost:9092");
+    properties.setProperty("taktx.engine.tenant-id", "tenant");
+    properties.setProperty("taktx.engine.namespace", "bank.payments");
+
+    assertThatThrownBy(() -> TaktXClient.publishNamespaceSecurityPolicy(properties, input))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("explicit signing identity")
+        .hasMessageContaining("authoritative writer");
   }
 
   @Test

@@ -37,6 +37,7 @@ import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.pi.ProcessInstanceTriggerEnvelope;
 import io.taktx.security.AuthorizationTokenException;
 import io.taktx.security.AuthorizationTokenValidator;
+import io.taktx.security.Ed25519Service;
 import io.taktx.security.EngineSigningKeysHolder;
 import io.taktx.security.KeyTrustPolicy;
 import io.taktx.security.OpenKeyTrustPolicy;
@@ -45,6 +46,7 @@ import jakarta.annotation.PreDestroy;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.common.header.Header;
 import org.apache.kafka.common.header.Headers;
@@ -453,6 +455,81 @@ public class EngineAuthorizationService {
         ctx.role(),
         scheduleMessageType(schedule));
     return ctx.key();
+  }
+
+  /**
+   * Authorizes an authoritative namespace-security-policy mutation.
+   *
+   * <p>Unlike protected runtime topics, authoritative control-plane mutation must never fall back to
+   * legacy opt-in runtime flags. A valid {@code tx-sig} from a trusted {@code PLATFORM} signer is
+   * always required, and the signature is verified directly against the raw payload bytes (or an
+   * empty payload for tombstones).
+   */
+  public SigningKeyDTO authorizeNamespaceSecurityPolicyMutation(Headers headers, byte[] payload) {
+    Header sigHeader = lastHeader(headers, SIG_HEADER);
+    if (sigHeader == null || sigHeader.value() == null) {
+      throw new AuthorizationTokenException(
+          "Missing required "
+              + SIG_HEADER
+              + " header on authoritative namespace security policy mutation");
+    }
+
+    String headerValue = new String(sigHeader.value(), StandardCharsets.UTF_8);
+    int dot = headerValue.indexOf('.');
+    if (dot < 0) {
+      throw new AuthorizationTokenException(
+          "Malformed "
+              + SIG_HEADER
+              + " header (expected '<keyId>.<base64sig>') on authoritative namespace security policy mutation");
+    }
+
+    String keyId = headerValue.substring(0, dot);
+    String base64Sig = headerValue.substring(dot + 1);
+    SigningKeyDTO key = verificationCore.resolveKey(keyId);
+    if (key == null) {
+      throw new AuthorizationTokenException(
+          "Unknown Ed25519 keyId '"
+              + keyId
+              + "' — rejecting authoritative namespace security policy mutation");
+    }
+    if (key.getStatus() == SigningKeyDTO.KeyStatus.REVOKED) {
+      throw new AuthorizationTokenException(
+          "Revoked Ed25519 keyId '"
+              + keyId
+              + "' — rejecting authoritative namespace security policy mutation");
+    }
+    if (!keyTrustPolicy.isTrustedForRole(key, KeyRole.PLATFORM)) {
+      throw new AuthorizationTokenException(
+          "Signing keyId '"
+              + keyId
+              + "' (role="
+              + key.effectiveRole()
+              + ") is not trusted for required role "
+              + KeyRole.PLATFORM);
+    }
+
+    try {
+      byte[] signatureBytes = Base64.getDecoder().decode(base64Sig);
+      byte[] payloadToVerify = payload != null ? payload : new byte[0];
+      if (!Ed25519Service.verify(payloadToVerify, signatureBytes, key.getPublicKeyBase64())) {
+        throw new AuthorizationTokenException(
+            "Ed25519 signature verification failed for authoritative namespace security policy mutation keyId="
+                + keyId);
+      }
+    } catch (IllegalArgumentException e) {
+      throw new AuthorizationTokenException(
+          "Malformed base64 signature for authoritative namespace security policy mutation keyId="
+              + keyId
+              + ": "
+              + e.getMessage());
+    }
+
+    log.info(
+        "✅ Authorised namespace-security-policy mutation keyId={} owner={} role={}",
+        keyId,
+        key.getOwner(),
+        key.effectiveRole());
+    return key;
   }
 
   // ── JWT path ────────────────────────────────────────────────────────────────

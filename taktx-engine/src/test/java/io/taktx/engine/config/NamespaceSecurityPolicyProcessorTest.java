@@ -16,13 +16,16 @@ import io.taktx.dto.SecurityActivationState;
 import io.taktx.dto.SecurityEventDTO;
 import io.taktx.dto.SecurityEventType;
 import io.taktx.dto.SecurityMode;
+import io.taktx.engine.security.EngineAuthorizationService;
 import io.taktx.engine.security.NamespaceSecurityPolicyActivationService;
 import io.taktx.engine.security.SecurityEventPublisher;
 import io.taktx.serdes.NamespaceSecurityPolicyProtoMapper;
+import io.taktx.security.AuthorizationTokenException;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.Properties;
+import org.apache.kafka.common.header.internals.RecordHeaders;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
@@ -30,6 +33,7 @@ import org.apache.kafka.streams.TestInputTopic;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.TopologyTestDriver;
 import org.apache.kafka.streams.kstream.Consumed;
+import org.apache.kafka.streams.test.TestRecord;
 import org.apache.kafka.streams.state.Stores;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -331,6 +335,130 @@ class NamespaceSecurityPolicyProcessorTest {
       assertThat(captor.getValue().getCode())
           .isEqualTo(NamespaceSecurityPolicyActivationService.INVALID_POLICY_MUTATION_CODE);
       assertThat(captor.getValue().getMetadata()).containsEntry("recordKey", "policy");
+    }
+  }
+
+  @Test
+  void unauthorizedPolicyMutation_doesNotReplacePreviousStoreValueAndEmitsRejectedEvent() {
+    NamespaceSecurityPolicyStore lifecycleStore = new NamespaceSecurityPolicyStore();
+    ParticipantStatusStore participantStatusStore = new ParticipantStatusStore();
+    TaktConfiguration configuration = Mockito.mock(TaktConfiguration.class);
+    SecurityEventPublisher securityEventPublisher = Mockito.mock(SecurityEventPublisher.class);
+    EngineAuthorizationService authorizationService = Mockito.mock(EngineAuthorizationService.class);
+    Mockito.when(configuration.getSecurityPolicyActivationTimeoutMs()).thenReturn(30_000L);
+    Mockito.when(configuration.getTenantId()).thenReturn("tenant");
+    Mockito.when(configuration.getNamespace()).thenReturn("bank.payments");
+    Mockito.when(configuration.getHost()).thenReturn("engine-host");
+    Mockito.when(configuration.getPort()).thenReturn(8080);
+    NamespaceSecurityPolicyActivationService activationService =
+        new NamespaceSecurityPolicyActivationService(
+            configuration,
+            lifecycleStore,
+            participantStatusStore,
+            securityEventPublisher,
+            Clock.fixed(Instant.ofEpochMilli(1_716_450_000_000L), ZoneOffset.UTC));
+
+    lifecycleStore.update(
+        NamespaceSecurityPolicyDTO.builder()
+            .mode(SecurityMode.COMMUNITY_OPEN)
+            .activationState(SecurityActivationState.ACTIVE)
+            .desiredPolicyVersion(7L)
+            .activePolicyVersion(7L)
+            .build());
+
+    StreamsBuilder builder = new StreamsBuilder();
+    builder.addGlobalStore(
+        Stores.keyValueStoreBuilder(
+                Stores.inMemoryKeyValueStore(STORE_NAME), Serdes.String(), Serdes.ByteArray())
+            .withLoggingDisabled(),
+        POLICY_TOPIC,
+        Consumed.with(Serdes.String(), Serdes.ByteArray()),
+        () -> new NamespaceSecurityPolicyProcessor(lifecycleStore, activationService, authorizationService));
+
+    Properties config = new Properties();
+    config.put(StreamsConfig.APPLICATION_ID_CONFIG, "namespace-security-policy-authz-rejection-test");
+    config.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "dummy:9092");
+    config.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
+    config.put(
+        StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.ByteArray().getClass().getName());
+
+    try (TopologyTestDriver lifecycleDriver = new TopologyTestDriver(builder.build(), config)) {
+      TestInputTopic<String, byte[]> lifecycleTopic =
+          lifecycleDriver.createInputTopic(
+              POLICY_TOPIC, Serdes.String().serializer(), Serdes.ByteArray().serializer());
+      NamespaceSecurityPolicyDTO requested =
+          NamespaceSecurityPolicyDTO.builder()
+              .mode(SecurityMode.COMMUNITY_SECURED)
+              .activationState(SecurityActivationState.REQUESTED)
+              .desiredPolicyVersion(52L)
+              .requiredSigning(RequiredSigningDTO.builder().engineOutbound(true).build())
+              .build();
+      byte[] payload = NamespaceSecurityPolicyProtoMapper.toProto(requested).toByteArray();
+
+      Mockito.doThrow(
+              new AuthorizationTokenException("Signing keyId 'console-key' is not trusted for required role PLATFORM"))
+          .when(authorizationService)
+          .authorizeNamespaceSecurityPolicyMutation(Mockito.any(), Mockito.eq(payload));
+
+      lifecycleTopic.pipeInput(
+          new TestRecord<>(
+              NamespaceSecurityPolicyProcessor.POLICY_KEY,
+              payload,
+              new RecordHeaders(),
+              Instant.ofEpochMilli(1_716_450_000_100L)));
+
+      assertThat(lifecycleStore.get().getDesiredPolicyVersion()).isEqualTo(7L);
+      ArgumentCaptor<SecurityEventDTO> captor = ArgumentCaptor.forClass(SecurityEventDTO.class);
+      Mockito.verify(securityEventPublisher).publish(captor.capture());
+      assertThat(captor.getValue().getEventType())
+          .isEqualTo(SecurityEventType.CONTROL_PLANE_MUTATION_REJECTED);
+      assertThat(captor.getValue().getMetadata()).containsEntry("recordKey", "policy");
+    }
+  }
+
+  @Test
+  void authorizedTombstone_clearsStoreWhenMutationAuthorizerAllowsIt() {
+    NamespaceSecurityPolicyStore lifecycleStore = new NamespaceSecurityPolicyStore();
+    EngineAuthorizationService authorizationService = Mockito.mock(EngineAuthorizationService.class);
+    lifecycleStore.update(
+        NamespaceSecurityPolicyDTO.builder()
+            .mode(SecurityMode.COMMUNITY_OPEN)
+            .activationState(SecurityActivationState.ACTIVE)
+            .desiredPolicyVersion(7L)
+            .activePolicyVersion(7L)
+            .build());
+
+    StreamsBuilder builder = new StreamsBuilder();
+    builder.addGlobalStore(
+        Stores.keyValueStoreBuilder(
+                Stores.inMemoryKeyValueStore(STORE_NAME), Serdes.String(), Serdes.ByteArray())
+            .withLoggingDisabled(),
+        POLICY_TOPIC,
+        Consumed.with(Serdes.String(), Serdes.ByteArray()),
+        () -> new NamespaceSecurityPolicyProcessor(lifecycleStore, null, authorizationService));
+
+    Properties config = new Properties();
+    config.put(StreamsConfig.APPLICATION_ID_CONFIG, "namespace-security-policy-authz-clear-test");
+    config.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "dummy:9092");
+    config.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
+    config.put(
+        StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.ByteArray().getClass().getName());
+
+    try (TopologyTestDriver lifecycleDriver = new TopologyTestDriver(builder.build(), config)) {
+      TestInputTopic<String, byte[]> lifecycleTopic =
+          lifecycleDriver.createInputTopic(
+              POLICY_TOPIC, Serdes.String().serializer(), Serdes.ByteArray().serializer());
+
+      lifecycleTopic.pipeInput(
+          new TestRecord<>(
+              NamespaceSecurityPolicyProcessor.POLICY_KEY,
+              null,
+              new RecordHeaders(),
+              Instant.ofEpochMilli(1_716_450_000_200L)));
+
+      assertThat(lifecycleStore.get()).isNull();
+      Mockito.verify(authorizationService)
+          .authorizeNamespaceSecurityPolicyMutation(Mockito.any(), Mockito.isNull());
     }
   }
 }

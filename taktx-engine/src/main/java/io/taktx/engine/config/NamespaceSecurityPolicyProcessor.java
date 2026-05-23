@@ -9,7 +9,9 @@ package io.taktx.engine.config;
 
 import io.taktx.dto.NamespaceSecurityPolicyDTO;
 import io.taktx.engine.security.NamespaceSecurityPolicyActivationService;
+import io.taktx.engine.security.EngineAuthorizationService;
 import io.taktx.proto.NamespaceSecurityPolicyMessage;
+import io.taktx.security.AuthorizationTokenException;
 import io.taktx.security.NamespaceSecurityPolicySupport;
 import io.taktx.serdes.NamespaceSecurityPolicyProtoMapper;
 import org.apache.kafka.streams.processor.api.Processor;
@@ -33,17 +35,26 @@ public class NamespaceSecurityPolicyProcessor implements Processor<String, byte[
 
   private final NamespaceSecurityPolicyStore namespaceSecurityPolicyStore;
   private final NamespaceSecurityPolicyActivationService activationService;
+  private final EngineAuthorizationService engineAuthorizationService;
 
   public NamespaceSecurityPolicyProcessor(
       NamespaceSecurityPolicyStore namespaceSecurityPolicyStore) {
-    this(namespaceSecurityPolicyStore, null);
+    this(namespaceSecurityPolicyStore, null, null);
   }
 
   public NamespaceSecurityPolicyProcessor(
       NamespaceSecurityPolicyStore namespaceSecurityPolicyStore,
       NamespaceSecurityPolicyActivationService activationService) {
+    this(namespaceSecurityPolicyStore, activationService, null);
+  }
+
+  public NamespaceSecurityPolicyProcessor(
+      NamespaceSecurityPolicyStore namespaceSecurityPolicyStore,
+      NamespaceSecurityPolicyActivationService activationService,
+      EngineAuthorizationService engineAuthorizationService) {
     this.namespaceSecurityPolicyStore = namespaceSecurityPolicyStore;
     this.activationService = activationService;
+    this.engineAuthorizationService = engineAuthorizationService;
   }
 
   @Override
@@ -59,17 +70,21 @@ public class NamespaceSecurityPolicyProcessor implements Processor<String, byte[
       return;
     }
 
-    if (rec.value() == null) {
-      if (activationService != null) {
-        activationService.onPolicyCleared();
-      } else {
-        namespaceSecurityPolicyStore.clear();
-      }
-      log.info("Namespace security policy cleared from tombstone record");
-      return;
-    }
-
     try {
+      if (engineAuthorizationService != null) {
+        engineAuthorizationService.authorizeNamespaceSecurityPolicyMutation(rec.headers(), rec.value());
+      }
+
+      if (rec.value() == null) {
+        if (activationService != null) {
+          activationService.onPolicyCleared();
+        } else {
+          namespaceSecurityPolicyStore.clear();
+        }
+        log.info("Namespace security policy cleared from tombstone record");
+        return;
+      }
+
       NamespaceSecurityPolicyDTO policy =
           NamespaceSecurityPolicyProtoMapper.toDto(
               NamespaceSecurityPolicyMessage.parseFrom(rec.value()));
@@ -99,6 +114,11 @@ public class NamespaceSecurityPolicyProcessor implements Processor<String, byte[
           namespaceSecurityPolicyStore.get() != null
               ? namespaceSecurityPolicyStore.get().getMode()
               : validated.getMode());
+    } catch (AuthorizationTokenException e) {
+      if (activationService != null) {
+        activationService.onRejectedPolicyMutation(e.getMessage(), rec.key());
+      }
+      log.warn("Rejected unauthorized namespace security policy mutation: {}", e.getMessage());
     } catch (Exception e) {
       if (activationService != null) {
         activationService.onRejectedPolicyMutation(e.getMessage(), rec.key());
