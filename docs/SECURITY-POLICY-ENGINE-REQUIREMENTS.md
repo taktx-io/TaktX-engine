@@ -851,17 +851,16 @@ as engine+client work, not engine-only work.
 - [ ] Fail closed when required checks cannot be satisfied.
 - [x] Treat false compatibility claims and post-activation drift as enforcement-relevant non-ready
       conditions, not as reasons to weaken checks.
-- [ ] Prevent protected data-plane participation when policy is not `ACTIVE` or participant is not
+- [x] Prevent protected data-plane participation when policy is not `ACTIVE` or participant is not
       `READY` for the exact active identity.
 - [ ] Ensure authoritative control-plane updates are accepted only from trusted/authorized writer
       paths and never from arbitrary message injection.
 
-**Current status note:** process-instance, message-event, signal trigger, and user-task response
-ingress now fail-close when a requested policy is not yet authoritative or when the local engine is
-not `READY` for the authoritative active policy identity. Message/signal
+**Current status note:** process-instance, message-event, signal trigger, user-task response, and
+schedule-command ingress now fail-close when a requested policy is not yet authoritative or when the
+local engine is not `READY` for the authoritative active policy identity. Message/signal
 subscription-management records continue to flow during convergence so the control plane remains
-available. Equivalent protected data-plane gating still needs to be applied to the remaining runtime
-channels before the broader task can be closed.
+available.
 
 ### Acceptance criteria
 - Runtime enforcement matches the active policy requirements.
