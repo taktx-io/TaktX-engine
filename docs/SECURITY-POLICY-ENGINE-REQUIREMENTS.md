@@ -941,7 +941,7 @@ on unpublished or bespoke patches.
 - [ ] ensure missing required trust anchor fails closed
 - [ ] ensure participant status never changes trust outcomes
 - [ ] ensure false compatibility reports do not weaken runtime enforcement
-- [ ] ensure post-activation drift yields `NOT READY` posture and incident/event output
+- [x] ensure post-activation drift yields `NOT READY` posture and incident/event output
 - [x] ensure protected data-plane behavior remains on previous active policy during `REQUESTED` /
       `VALIDATING`
 - [ ] ensure control-plane traffic remains available during convergence/recovery

@@ -718,7 +718,7 @@ or pre-policy namespaces.
 - [ ] **SP-06.4** Add tests proving status messages and incidents do not influence trust decisions.
 - [ ] **SP-06.4a** Add tests proving false participant compatibility claims do not weaken runtime
       enforcement.
-- [ ] **SP-06.4b** Add tests proving post-activation drift yields `NOT READY` posture and incident
+- [x] **SP-06.4b** Add tests proving post-activation drift yields `NOT READY` posture and incident
       reporting.
 - [x] **SP-06.4c** Add tests proving requested-but-not-active secured policy does not prematurely
       change protected data-plane behavior.
