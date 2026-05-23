@@ -972,7 +972,7 @@ on unpublished or bespoke patches.
 - [x] ensure the required control-plane client operations are available via `TaktXClient`
 - [x] ensure stale participant status expires via TTL/incarnation handling
 - [x] ensure activation timeout / rollback behavior is deterministic and fail-closed
-- [ ] ensure break-glass downgrade requires privileged role + reason + audit event
+- [x] ensure break-glass downgrade requires privileged role + reason + audit event
 - [x] ensure downgrade transitions are observable / auditable
 
 ### Acceptance criteria
