@@ -46,6 +46,9 @@ import io.taktx.engine.config.NamespaceSecurityPolicyStore;
 import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.pi.ProcessInstanceTriggerEnvelope;
 import io.taktx.security.AuthorizationTokenException;
+import io.taktx.security.Ed25519Service;
+import io.taktx.security.SigningKeyGenerator;
+import io.taktx.serdes.NamespaceSecurityPolicyProtoMapper;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyPairGenerator;
 import java.time.Instant;
@@ -420,6 +423,92 @@ class EngineAuthorizationServiceTest {
                     oneTimeSchedule(startCommand("proc", -1))))
         .isInstanceOf(AuthorizationTokenException.class)
         .hasMessageContaining("not trusted for required role ENGINE");
+  }
+
+  @Test
+  void namespaceSecurityPolicyMutation_platformKeyAccepted() {
+    java.security.KeyPair ed25519KeyPair = SigningKeyGenerator.generate();
+    String privateKeyBase64 = SigningKeyGenerator.encodePrivateKey(ed25519KeyPair.getPrivate());
+    String publicKeyBase64 = SigningKeyGenerator.encodePublicKey(ed25519KeyPair.getPublic());
+    String keyId = "platform-policy-key";
+    SigningKeyDTO keyEntry =
+        SigningKeyDTO.builder()
+            .keyId(keyId)
+            .publicKeyBase64(publicKeyBase64)
+            .algorithm("Ed25519")
+            .status(KeyStatus.ACTIVE)
+            .owner("platform-service")
+            .role(KeyRole.PLATFORM)
+            .build();
+    when(signingKeysStore.get(keyId)).thenReturn(keyEntry);
+
+    byte[] payload =
+        NamespaceSecurityPolicyProtoMapper.toProto(
+                NamespaceSecurityPolicyDTO.builder()
+                    .mode(io.taktx.dto.SecurityMode.COMMUNITY_SECURED)
+                    .activationState(SecurityActivationState.REQUESTED)
+                    .desiredPolicyVersion(42L)
+                    .requiredSigning(RequiredSigningDTO.builder().engineOutbound(true).build())
+                    .build())
+            .toByteArray();
+
+    SigningKeyDTO result =
+        service.authorizeNamespaceSecurityPolicyMutation(
+            headersWithSignedPayload(keyId, privateKeyBase64, payload), payload);
+
+    assertThat(result).isEqualTo(keyEntry);
+  }
+
+  @Test
+  void namespaceSecurityPolicyMutation_missingSignatureRejected() {
+    byte[] payload =
+        NamespaceSecurityPolicyProtoMapper.toProto(
+                NamespaceSecurityPolicyDTO.builder()
+                    .mode(io.taktx.dto.SecurityMode.COMMUNITY_OPEN)
+                    .activationState(SecurityActivationState.REQUESTED)
+                    .desiredPolicyVersion(1L)
+                    .build())
+            .toByteArray();
+
+    assertThatThrownBy(
+            () -> service.authorizeNamespaceSecurityPolicyMutation(new RecordHeaders(), payload))
+        .isInstanceOf(AuthorizationTokenException.class)
+        .hasMessageContaining("namespace security policy mutation")
+        .hasMessageContaining("tx-sig");
+  }
+
+  @Test
+  void namespaceSecurityPolicyMutation_clientKeyRejected() {
+    java.security.KeyPair ed25519KeyPair = SigningKeyGenerator.generate();
+    String privateKeyBase64 = SigningKeyGenerator.encodePrivateKey(ed25519KeyPair.getPrivate());
+    String publicKeyBase64 = SigningKeyGenerator.encodePublicKey(ed25519KeyPair.getPublic());
+    String keyId = "client-policy-key";
+    SigningKeyDTO keyEntry =
+        SigningKeyDTO.builder()
+            .keyId(keyId)
+            .publicKeyBase64(publicKeyBase64)
+            .algorithm("Ed25519")
+            .status(KeyStatus.ACTIVE)
+            .owner("console")
+            .role(KeyRole.CLIENT)
+            .build();
+    when(signingKeysStore.get(keyId)).thenReturn(keyEntry);
+
+    byte[] payload =
+        NamespaceSecurityPolicyProtoMapper.toProto(
+                NamespaceSecurityPolicyDTO.builder()
+                    .mode(io.taktx.dto.SecurityMode.COMMUNITY_OPEN)
+                    .activationState(SecurityActivationState.REQUESTED)
+                    .desiredPolicyVersion(9L)
+                    .build())
+            .toByteArray();
+
+    assertThatThrownBy(
+            () ->
+                service.authorizeNamespaceSecurityPolicyMutation(
+                    headersWithSignedPayload(keyId, privateKeyBase64, payload), payload))
+        .isInstanceOf(AuthorizationTokenException.class)
+        .hasMessageContaining("required role PLATFORM");
   }
 
   // ── missing header ─────────────────────────────────────────────────────────
@@ -1128,6 +1217,14 @@ class EngineAuthorizationServiceTest {
   private Headers headersWithSignature(String keyId) {
     RecordHeaders headers = new RecordHeaders();
     headers.add("tx-sig", (keyId + ".AABB").getBytes(StandardCharsets.UTF_8));
+    return headers;
+  }
+
+  private Headers headersWithSignedPayload(String keyId, String privateKeyBase64, byte[] payload) {
+    RecordHeaders headers = new RecordHeaders();
+    byte[] signatureBytes = Ed25519Service.sign(payload != null ? payload : new byte[0], privateKeyBase64);
+    headers.add("tx-sig", (keyId + "." + java.util.Base64.getEncoder().encodeToString(signatureBytes))
+        .getBytes(StandardCharsets.UTF_8));
     return headers;
   }
 

@@ -524,7 +524,9 @@ public class TopologyProducer {
         Consumed.with(Serdes.String(), Serdes.ByteArray()),
         () ->
             new NamespaceSecurityPolicyProcessor(
-                namespaceSecurityPolicyStore, namespaceSecurityPolicyActivationService));
+                namespaceSecurityPolicyStore,
+                namespaceSecurityPolicyActivationService,
+                engineAuthorizationService));
 
     builder.addGlobalStore(
         keyValueStoreBuilder(

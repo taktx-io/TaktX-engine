@@ -16,6 +16,7 @@ import io.taktx.client.dlq.DlqReplayCommandProducer;
 import io.taktx.client.dlq.DlqReplayResultConsumer;
 import io.taktx.dto.ConfigurationEventDTO;
 import io.taktx.dto.ConfigurationEventDTO.ConfigurationEventType;
+import io.taktx.dto.Constants;
 import io.taktx.dto.DlqEnvelope;
 import io.taktx.dto.DlqReplayCommand;
 import io.taktx.dto.DlqReplayResult;
@@ -57,6 +58,7 @@ import io.taktx.util.TaktPropertiesHelper;
 import jakarta.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -69,6 +71,7 @@ import java.util.concurrent.Executors;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.slf4j.Logger;
 
 /**
@@ -364,6 +367,9 @@ public class TaktXClient {
   public static void publishNamespaceSecurityPolicy(
       Properties properties, NamespaceSecurityPolicyDTO policy) {
     NamespaceSecurityPolicyDTO validated = validateNamespaceSecurityPolicy(policy);
+    SigningIdentity signingIdentity =
+        requireAuthoritativeControlPlaneSigningIdentity(
+            properties, "publish authoritative namespace security policy");
     String topic =
         new TaktPropertiesHelper(properties)
             .getPrefixedTopicName(io.taktx.Topics.SECURITY_POLICY_TOPIC.getTopicName());
@@ -379,13 +385,14 @@ public class TaktXClient {
             producerProps,
             new org.apache.kafka.common.serialization.StringSerializer(),
             new org.apache.kafka.common.serialization.ByteArraySerializer())) {
-      producer.send(buildNamespaceSecurityPolicyRecord(topic, validated));
+      producer.send(buildNamespaceSecurityPolicyRecord(topic, validated, signingIdentity));
       producer.flush();
       log.info(
-          "✅ Namespace security policy published to security policy topic: topic={} desiredPolicyVersion={} activationState={}",
+          "✅ Namespace security policy published to security policy topic: topic={} desiredPolicyVersion={} activationState={} signerKeyId={}",
           topic,
           validated.getDesiredPolicyVersion(),
-          validated.getActivationState());
+          validated.getActivationState(),
+          signingIdentity.getKeyId());
     } catch (Exception e) {
       throw new IllegalStateException("Failed to publish namespace security policy", e);
     }
@@ -398,6 +405,9 @@ public class TaktXClient {
 
   /** Static convenience overload for clearing the authoritative namespace security policy. */
   public static void clearNamespaceSecurityPolicy(Properties properties) {
+    SigningIdentity signingIdentity =
+        requireAuthoritativeControlPlaneSigningIdentity(
+            properties, "clear authoritative namespace security policy");
     String topic =
         new TaktPropertiesHelper(properties)
             .getPrefixedTopicName(io.taktx.Topics.SECURITY_POLICY_TOPIC.getTopicName());
@@ -413,9 +423,12 @@ public class TaktXClient {
             producerProps,
             new org.apache.kafka.common.serialization.StringSerializer(),
             new org.apache.kafka.common.serialization.ByteArraySerializer())) {
-      producer.send(buildNamespaceSecurityPolicyTombstoneRecord(topic));
+      producer.send(buildNamespaceSecurityPolicyTombstoneRecord(topic, signingIdentity));
       producer.flush();
-      log.info("✅ Namespace security policy tombstone published to security policy topic: topic={}", topic);
+      log.info(
+          "✅ Namespace security policy tombstone published to security policy topic: topic={} signerKeyId={}",
+          topic,
+          signingIdentity.getKeyId());
     } catch (Exception e) {
       throw new IllegalStateException("Failed to clear namespace security policy", e);
     }
@@ -444,23 +457,105 @@ public class TaktXClient {
 
   static org.apache.kafka.clients.producer.ProducerRecord<String, byte[]> buildNamespaceSecurityPolicyRecord(
       String topic, NamespaceSecurityPolicyDTO policy) {
+    return buildNamespaceSecurityPolicyRecord(topic, policy, null);
+  }
+
+  static ProducerRecord<String, byte[]> buildNamespaceSecurityPolicyRecord(
+      String topic, NamespaceSecurityPolicyDTO policy, SigningIdentity signingIdentity) {
     if (topic == null || topic.isBlank()) {
       throw new IllegalArgumentException("topic must not be blank");
     }
     NamespaceSecurityPolicyDTO validated = validateNamespaceSecurityPolicy(policy);
-    return new org.apache.kafka.clients.producer.ProducerRecord<>(
+    return buildSignedNamespaceSecurityPolicyRecord(
         topic,
-        NAMESPACE_SECURITY_POLICY_RECORD_KEY,
-        NamespaceSecurityPolicyProtoMapper.toProto(validated).toByteArray());
+        NamespaceSecurityPolicyProtoMapper.toProto(validated).toByteArray(),
+        signingIdentity);
   }
 
   static org.apache.kafka.clients.producer.ProducerRecord<String, byte[]> buildNamespaceSecurityPolicyTombstoneRecord(
       String topic) {
+    return buildNamespaceSecurityPolicyTombstoneRecord(topic, null);
+  }
+
+  static ProducerRecord<String, byte[]> buildNamespaceSecurityPolicyTombstoneRecord(
+      String topic, SigningIdentity signingIdentity) {
     if (topic == null || topic.isBlank()) {
       throw new IllegalArgumentException("topic must not be blank");
     }
-    return new org.apache.kafka.clients.producer.ProducerRecord<>(
-        topic, NAMESPACE_SECURITY_POLICY_RECORD_KEY, null);
+    return buildSignedNamespaceSecurityPolicyRecord(topic, null, signingIdentity);
+  }
+
+  private static ProducerRecord<String, byte[]> buildSignedNamespaceSecurityPolicyRecord(
+      String topic, byte[] value, SigningIdentity signingIdentity) {
+    ProducerRecord<String, byte[]> record =
+        new ProducerRecord<>(topic, NAMESPACE_SECURITY_POLICY_RECORD_KEY, value);
+    if (signingIdentity != null) {
+      signAuthoritativeControlPlaneRecord(record, signingIdentity);
+    }
+    return record;
+  }
+
+  private static void signAuthoritativeControlPlaneRecord(
+      ProducerRecord<String, byte[]> record, SigningIdentity signingIdentity) {
+    byte[] payload = record.value() != null ? record.value() : new byte[0];
+    try {
+      byte[] signatureBytes = Ed25519Service.sign(payload, signingIdentity.getPrivateKeyBase64());
+      record.headers().remove(Constants.HEADER_ENGINE_SIGNATURE);
+      record
+          .headers()
+          .add(
+              Constants.HEADER_ENGINE_SIGNATURE,
+              signingIdentity.toHeaderValue(signatureBytes).getBytes(StandardCharsets.UTF_8));
+    } catch (Exception e) {
+      throw new IllegalStateException(
+          "Failed to sign authoritative namespace security policy record with keyId="
+              + signingIdentity.getKeyId(),
+          e);
+    }
+  }
+
+  private static SigningIdentity requireAuthoritativeControlPlaneSigningIdentity(
+      Properties properties, String operationDescription) {
+    SigningIdentity signingIdentity = resolveAuthoritativeControlPlaneSigningIdentity(properties);
+    if (signingIdentity == null) {
+      throw new IllegalStateException(
+          "Cannot "
+              + operationDescription
+              + " without an explicit signing identity. Configure taktx.signing.private-key +"
+              + " taktx.signing.key-id (or taktx.signing.file.* equivalents) for the trusted"
+              + " authoritative writer.");
+    }
+    return signingIdentity;
+  }
+
+  private static SigningIdentity resolveAuthoritativeControlPlaneSigningIdentity(Properties properties) {
+    String sourceType =
+        TaktXClientBuilder.firstNonBlank(
+            properties.getProperty("taktx.signing.identity-source"),
+            System.getProperty("taktx.signing.identity-source"),
+            System.getenv("TAKTX_SIGNING_IDENTITY_SOURCE"));
+    if (sourceType == null || sourceType.isBlank()) {
+      SigningIdentity environmentIdentity =
+          new EnvironmentWorkerSigningIdentitySource(
+                  properties, properties.getProperty("taktx.signing.key-id"))
+              .currentIdentity();
+      if (environmentIdentity != null) {
+        return environmentIdentity;
+      }
+      return new FileSigningIdentitySource(properties).currentIdentity();
+    }
+    if ("env".equalsIgnoreCase(sourceType) || "environment".equalsIgnoreCase(sourceType)) {
+      return new EnvironmentWorkerSigningIdentitySource(
+              properties, properties.getProperty("taktx.signing.key-id"))
+          .currentIdentity();
+    }
+    if ("file".equalsIgnoreCase(sourceType)) {
+      return new FileSigningIdentitySource(properties).currentIdentity();
+    }
+    throw new IllegalArgumentException(
+        "Unsupported taktx.signing.identity-source='"
+            + sourceType
+            + "' for authoritative namespace security policy publication. Supported values: env, file");
   }
 
   /**
