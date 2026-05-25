@@ -10,6 +10,9 @@ package io.taktx.client.spring;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
+import io.taktx.dto.ParticipantCapability;
+import io.taktx.dto.ParticipantKind;
+import io.taktx.dto.SecurityParticipantDescriptor;
 import io.taktx.client.ParameterResolverFactory;
 import io.taktx.client.ResultProcessorFactory;
 import io.taktx.client.TaktXClient;
@@ -29,6 +32,7 @@ class TaktXClientAutoConfigurationTest {
     Properties properties = new Properties();
     properties.setProperty("taktx.engine.namespace", "test");
     properties.setProperty("taktx.engine.tenant-id", "acme");
+    properties.setProperty("spring.application.name", "orders-service");
     properties.setProperty("kafka.bootstrap.servers", "localhost:9092");
     properties.setProperty("taktx.client.enabled", "false"); // Disable for tests
 
@@ -82,5 +86,18 @@ class TaktXClientAutoConfigurationTest {
 
     Object resultFactory = ReflectionTestUtils.getField(configuration, "resultProcessorFactory");
     assertThat(resultFactory).isNotNull();
+  }
+
+  @Test
+  void resolveParticipantDescriptor_usesSpringApplicationNameAndWorkerCapabilities() {
+    SecurityParticipantDescriptor descriptor = configuration.resolveParticipantDescriptor();
+
+    assertThat(descriptor.participantId()).isEqualTo("acme.test.orders-service");
+    assertThat(descriptor.kind()).isEqualTo(ParticipantKind.CLIENT);
+    assertThat(descriptor.componentType()).isEqualTo("orders-service");
+    assertThat(descriptor.capabilities())
+        .containsExactly(
+            ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT,
+            ParticipantCapability.SECURITY_OBSERVER);
   }
 }

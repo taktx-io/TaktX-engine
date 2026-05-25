@@ -16,7 +16,11 @@ import io.taktx.client.ParameterResolverFactory;
 import io.taktx.client.ResultProcessorFactory;
 import io.taktx.client.TaktXClient;
 import io.taktx.client.WorkerBeanInstanceProvider;
+import io.taktx.dto.ParticipantCapability;
+import io.taktx.dto.ParticipantKind;
+import io.taktx.dto.SecurityParticipantDescriptor;
 import jakarta.enterprise.event.Event;
+import java.util.Properties;
 import java.util.Optional;
 import org.eclipse.microprofile.config.Config;
 import org.junit.jupiter.api.BeforeEach;
@@ -110,6 +114,27 @@ class TaktXClientProviderTest {
   void testConstructor_storesAllDependencies() {
     // Then - verify all dependencies are stored (implicitly by not throwing NPE)
     assertThat(provider).isNotNull();
+  }
+
+  @Test
+  void resolveParticipantDescriptor_usesApplicationNameAndWorkerCapabilities() {
+    when(config.getOptionalValue("quarkus.application.name", String.class))
+        .thenReturn(Optional.of("orders-console"));
+
+    Properties properties = new Properties();
+    properties.setProperty("bootstrap.servers", "localhost:9092");
+    properties.setProperty("taktx.engine.tenant-id", "tenant");
+    properties.setProperty("taktx.engine.namespace", "payments");
+
+    SecurityParticipantDescriptor descriptor = provider.resolveParticipantDescriptor(properties);
+
+    assertThat(descriptor.participantId()).isEqualTo("tenant.payments.orders-console");
+    assertThat(descriptor.kind()).isEqualTo(ParticipantKind.CLIENT);
+    assertThat(descriptor.componentType()).isEqualTo("orders-console");
+    assertThat(descriptor.capabilities())
+        .containsExactly(
+            ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT,
+            ParticipantCapability.SECURITY_OBSERVER);
   }
 
   // Helper methods to set private fields

@@ -238,6 +238,70 @@ public class TaktXClient {
   }
 
   /**
+   * Builds the default explicit participant descriptor for a client application using the supplied
+   * properties and any embedded application-name hints.
+   */
+  public static SecurityParticipantDescriptor defaultClientParticipantDescriptor(
+      Properties properties) {
+    return defaultClientParticipantDescriptor(properties, null);
+  }
+
+  /**
+   * Builds the default explicit participant descriptor for a client application using the supplied
+   * properties and preferred component label.
+   */
+  public static SecurityParticipantDescriptor defaultClientParticipantDescriptor(
+      Properties properties, @Nullable String preferredComponentType) {
+    if (properties == null) {
+      throw new IllegalArgumentException("properties must not be null");
+    }
+    TaktPropertiesHelper helper = new TaktPropertiesHelper(properties);
+    String componentType =
+        TaktXClientBuilder.firstNonBlank(
+            properties.getProperty("taktx.client.component-type"),
+            preferredComponentType,
+            properties.getProperty("quarkus.application.name"),
+            properties.getProperty("spring.application.name"),
+            properties.getProperty("application.name"),
+            "generic-client");
+    String normalizedComponentType = componentType != null ? componentType.trim() : "generic-client";
+    Set<ParticipantCapability> capabilities = new LinkedHashSet<>();
+    capabilities.add(ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT);
+    capabilities.add(ParticipantCapability.SECURITY_OBSERVER);
+
+    TaktXClientBuilder builder = new TaktXClientBuilder();
+    if (builder.resolveAuthoritativeControlPlaneSigningIdentityIfAvailable(properties) != null) {
+      capabilities.add(ParticipantCapability.AUTHORITATIVE_POLICY_PUBLISHER);
+    }
+
+    SecurityParticipantDescriptor descriptor =
+        SecurityParticipantDescriptorSupport.requireValid(
+            new SecurityParticipantDescriptor(
+                TaktXClientBuilder.firstNonBlank(
+                    properties.getProperty("taktx.client.participant-id"),
+                    properties.getProperty("taktx.participant.id"),
+                    helper.getTenantId()
+                        + "."
+                        + helper.getNamespace()
+                        + "."
+                        + normalizeParticipantIdSegment(normalizedComponentType)),
+                ParticipantKind.CLIENT,
+                capabilities,
+                normalizedComponentType));
+    return builder.validateClientParticipantDescriptor(properties, descriptor);
+  }
+
+  private static String normalizeParticipantIdSegment(String value) {
+    if (value == null || value.isBlank()) {
+      return "client";
+    }
+    String normalized = value.trim().toLowerCase(java.util.Locale.ROOT).replaceAll("[^a-z0-9._-]", "-");
+    normalized = normalized.replaceAll("-+", "-");
+    normalized = normalized.replaceAll("^[._-]+", "").replaceAll("[._-]+$", "");
+    return normalized.isBlank() ? "client" : normalized;
+  }
+
+  /**
    * Starts the TaktXClient, which subscribes to process definition records and process definition
    * updates.
    */
