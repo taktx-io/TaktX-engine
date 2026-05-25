@@ -979,7 +979,8 @@ class SecurityIntegrationTest {
             UUID.randomUUID().toString(),
             "user-1",
             Date.from(Instant.now().plusSeconds(300)));
-    engine.getTaktClient().startProcess(SERVICE_TASK_PROCESS_ID, -1, VariablesDTO.empty(), jwt);
+    UUID instanceId =
+        engine.getTaktClient().startProcess(SERVICE_TASK_PROCESS_ID, -1, VariablesDTO.empty(), jwt);
 
     engine.waitForNewProcessInstance();
 
@@ -990,14 +991,22 @@ class SecurityIntegrationTest {
               boolean hasSigned =
                   rawExternalTaskTriggers.stream()
                       .anyMatch(
-                          r -> r.headers().lastHeader(Constants.HEADER_ENGINE_SIGNATURE) != null);
+                          r ->
+                              r.value() != null
+                                  && instanceId.equals(r.value().getProcessInstanceId())
+                                  && r.headers().lastHeader(Constants.HEADER_ENGINE_SIGNATURE)
+                                      != null);
               assertThat(hasSigned).as("External-task trigger record must carry tx-sig").isTrue();
             });
 
     // Also verify the signature is cryptographically valid
     ConsumerRecord<String, ExternalTaskTriggerDTO> signed =
         rawExternalTaskTriggers.stream()
-            .filter(r -> r.headers().lastHeader(Constants.HEADER_ENGINE_SIGNATURE) != null)
+            .filter(
+                r ->
+                    r.value() != null
+                        && instanceId.equals(r.value().getProcessInstanceId())
+                        && r.headers().lastHeader(Constants.HEADER_ENGINE_SIGNATURE) != null)
             .findFirst()
             .orElseThrow();
 

@@ -7,36 +7,30 @@
  */
 package io.taktx.engine.pi.integration;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
 import io.jsonwebtoken.JwtBuilder;
 import io.jsonwebtoken.Jwts;
-import io.quarkus.test.common.QuarkusTestResource;
-import io.quarkus.test.junit.QuarkusTest;
-import io.quarkus.test.junit.TestProfile;
 import io.taktx.client.ExternalTaskTriggerConsumer;
 import io.taktx.client.InstanceUpdateRecord;
 import io.taktx.client.ObservedPolicySnapshot;
-import io.taktx.client.SecurityPostureSnapshot;
 import io.taktx.client.TaktXClient;
 import io.taktx.dto.ExecutionState;
 import io.taktx.dto.ExternalTaskTriggerDTO;
 import io.taktx.dto.KeyRole;
 import io.taktx.dto.NamespaceSecurityPolicyDTO;
 import io.taktx.dto.ParticipantCapability;
+import io.taktx.dto.ParticipantEffectiveState;
 import io.taktx.dto.ParticipantKind;
 import io.taktx.dto.ParticipantStatusDTO;
 import io.taktx.dto.ProcessInstanceUpdateDTO;
 import io.taktx.dto.RequiredAuthorizationDTO;
 import io.taktx.dto.RequiredSigningDTO;
 import io.taktx.dto.SecurityActivationState;
-import io.taktx.dto.SecurityEventDTO;
-import io.taktx.dto.SecurityEventType;
 import io.taktx.dto.SecurityMode;
 import io.taktx.dto.SecurityParticipantDescriptor;
-import io.taktx.dto.VariablesDTO;
+import io.taktx.engine.generic.ClockProducer;
+import io.taktx.engine.generic.MutableClock;
 import io.taktx.security.SigningKeyGenerator;
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
@@ -50,35 +44,29 @@ import java.util.Properties;
 import java.util.Queue;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Tag;
-import org.junit.jupiter.api.Test;
 
-@QuarkusTest
-@TestProfile(SecurityTestProfile.class)
-@QuarkusTestResource(value = SecurityTestConfigResource.class, restrictToAnnotatedClass = true)
-@Tag("security-integration")
-class PublicClientDogfoodIntegrationTest {
+abstract class PublicClientDogfoodIntegrationTestSupport {
 
-  private static final String TENANT = "test-tenant";
-  private static final String DEFAULT_NAMESPACE = "default";
-  private static final String ISOLATED_NAMESPACE = "dogfood-isolated";
-  private static final String ISSUER = "taktx-dogfood";
-  private static final String POLICY_WRITER_KEY_ID = "dogfood-policy-writer";
-  private static final String ROGUE_WRITER_KEY_ID = "dogfood-rogue-writer";
-  private static final String OPEN_PROCESS_ID = "task-single";
-  private static final String SERVICE_PROCESS_ID = "service-task-single";
-  private static final String SERVICE_TASK_TYPE = "service-task";
+  protected static final String TENANT = "test-tenant";
+  protected static final String DEFAULT_NAMESPACE = "default";
+  protected static final String ISOLATED_NAMESPACE = "dogfood-isolated";
+  protected static final String ISSUER = "taktx-dogfood";
+  protected static final String POLICY_WRITER_KEY_ID = "dogfood-policy-writer";
+  protected static final String ROGUE_WRITER_KEY_ID = "dogfood-rogue-writer";
+  protected static final String RUNTIME_SIGNER_KEY_ID = "dogfood-runtime-signer";
+  protected static final String OPEN_PROCESS_ID = "task-single";
+  protected static final String SERVICE_PROCESS_ID = "service-task-single";
+  protected static final String SERVICE_TASK_TYPE = "service-task";
   private static final AtomicLong POLICY_VERSIONS = new AtomicLong(10_000L);
 
-  private static final String TASK_SINGLE_BPMN =
+  protected static final String TASK_SINGLE_BPMN =
       """
       <?xml version="1.0" encoding="UTF-8"?>
       <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_0pw0wdt" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.19.0" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.4.0">
@@ -122,7 +110,7 @@ class PublicClientDogfoodIntegrationTest {
       </bpmn:definitions>
       """;
 
-  private static final String SERVICE_TASK_BPMN =
+  protected static final String SERVICE_TASK_BPMN =
       """
       <?xml version="1.0" encoding="UTF-8"?>
       <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_0pw0wdt" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.38.1" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.4.0">
@@ -183,16 +171,18 @@ class PublicClientDogfoodIntegrationTest {
       </bpmn:definitions>
       """;
 
-  private static String bootstrapServers;
+  protected static String bootstrapServers;
   private static String policyWriterPrivateKeyBase64;
   private static String policyWriterPublicKeyBase64;
   private static String rogueWriterPrivateKeyBase64;
   private static String rogueWriterPublicKeyBase64;
+  private static String runtimeSignerPrivateKeyBase64;
+  private static String runtimeSignerPublicKeyBase64;
 
   private final List<TaktXClient> startedClients = new CopyOnWriteArrayList<>();
 
   @BeforeAll
-  static void publishTrustedControlPlaneKeys() {
+  protected static void publishTrustedControlPlaneKeys() {
     bootstrapServers =
         ConfigProvider.getConfig().getValue("kafka.bootstrap.servers", String.class);
 
@@ -204,6 +194,11 @@ class PublicClientDogfoodIntegrationTest {
     KeyPair rogueWriterKeys = SigningKeyGenerator.generate();
     rogueWriterPrivateKeyBase64 = SigningKeyGenerator.encodePrivateKey(rogueWriterKeys.getPrivate());
     rogueWriterPublicKeyBase64 = SigningKeyGenerator.encodePublicKey(rogueWriterKeys.getPublic());
+
+    KeyPair runtimeSignerKeys = SigningKeyGenerator.generate();
+    runtimeSignerPrivateKeyBase64 =
+        SigningKeyGenerator.encodePrivateKey(runtimeSignerKeys.getPrivate());
+    runtimeSignerPublicKeyBase64 = SigningKeyGenerator.encodePublicKey(runtimeSignerKeys.getPublic());
 
     Properties defaultNamespaceProperties = baseProperties(DEFAULT_NAMESPACE);
     TaktXClient.publishSigningKey(
@@ -227,12 +222,19 @@ class PublicClientDogfoodIntegrationTest {
         "dogfood-random-client",
         "Ed25519",
         KeyRole.CLIENT);
+    TaktXClient.publishSigningKey(
+        defaultNamespaceProperties,
+        RUNTIME_SIGNER_KEY_ID,
+        runtimeSignerPublicKeyBase64,
+        "dogfood-runtime-signer",
+        "Ed25519",
+        KeyRole.CLIENT);
 
     TaktXClient.clearNamespaceSecurityPolicy(platformWriterProperties(DEFAULT_NAMESPACE));
   }
 
   @AfterEach
-  void tearDownClientsAndPolicy() {
+  protected void tearDownClientsAndPolicy() {
     List<TaktXClient> clients = new ArrayList<>(startedClients);
     startedClients.clear();
     for (TaktXClient client : clients.reversed()) {
@@ -245,233 +247,8 @@ class PublicClientDogfoodIntegrationTest {
     TaktXClient.clearNamespaceSecurityPolicy(platformWriterProperties(DEFAULT_NAMESPACE));
   }
 
-  @Test
-  void communityOpenNamespace_allowsPublicClientRuntimeWithoutSecurityBootstrap() throws Exception {
-    TaktXClient client =
-        startClient(
-            baseProperties(DEFAULT_NAMESPACE),
-            participantDescriptor(
-                "dogfood-open-client",
-                Set.of(
-                    ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT,
-                    ParticipantCapability.SECURITY_OBSERVER),
-                "dogfood-open-client"));
-
-    awaitNoPolicy(client);
-
-    Queue<InstanceUpdateRecord> updates = new ConcurrentLinkedQueue<>();
-    client
-        .runtime()
-        .registerInstanceUpdateConsumer(
-            "dogfood-open-updates-" + UUID.randomUUID(), updates::addAll);
-
-    deployProcessAndAwaitAvailability(client, TASK_SINGLE_BPMN, OPEN_PROCESS_ID);
-
-    UUID instanceId = client.runtime().startProcess(OPEN_PROCESS_ID, VariablesDTO.empty());
-    awaitProcessCompleted(updates, instanceId);
-
-    ObservedPolicySnapshot observedPolicy = client.observability().getObservedPolicySnapshot();
-    SecurityPostureSnapshot posture = client.observability().getPostureSnapshot();
-    assertThat(observedPolicy).isEqualTo(ObservedPolicySnapshot.empty());
-    assertThat(posture.hasEffectivePolicy()).isFalse();
-  }
-
-  @Test
-  void securedNamespace_rejectsRoguePolicyMutation_blocksUnauthorizedStart_and_allowsAuthorizedRuntimeAndSignedWorkerCompletion()
-      throws Exception {
-    long securedPolicyVersion = nextPolicyVersion();
-
-    TaktXClient observer =
-        startClient(
-            baseProperties(DEFAULT_NAMESPACE),
-            participantDescriptor(
-                "dogfood-observer",
-                Set.of(ParticipantCapability.SECURITY_OBSERVER),
-                "dogfood-observer"));
-    TaktXClient publisher =
-        startClient(
-            platformWriterProperties(DEFAULT_NAMESPACE),
-            participantDescriptor(
-                "dogfood-console",
-                Set.of(
-                    ParticipantCapability.AUTHORITATIVE_POLICY_PUBLISHER,
-                    ParticipantCapability.SECURITY_OBSERVER),
-                "console"));
-    TaktXClient runtimeClient =
-        startClient(
-            baseProperties(DEFAULT_NAMESPACE),
-            participantDescriptor(
-                "dogfood-runtime",
-                Set.of(
-                    ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT,
-                    ParticipantCapability.SECURITY_OBSERVER),
-                "orders-console"));
-    TaktXClient workerClient =
-        startClient(
-            baseProperties(DEFAULT_NAMESPACE),
-            participantDescriptor(
-                "dogfood-worker",
-                Set.of(
-                    ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT,
-                    ParticipantCapability.SECURITY_OBSERVER),
-                "worker-service"));
-
-    awaitNoPolicy(observer);
-
-    Queue<InstanceUpdateRecord> updates = new ConcurrentLinkedQueue<>();
-    runtimeClient
-        .runtime()
-        .registerInstanceUpdateConsumer(
-            "dogfood-secured-updates-" + UUID.randomUUID(), updates::addAll);
-    deployProcessAndAwaitAvailability(runtimeClient, SERVICE_TASK_BPMN, SERVICE_PROCESS_ID);
-
-    Queue<ExternalTaskTriggerDTO> triggers = new ConcurrentLinkedQueue<>();
-    String externalTaskTopic = workerClient.workers().requestExternalTaskTopic(SERVICE_TASK_TYPE);
-    awaitTopicExists(externalTaskTopic);
-    workerClient
-        .workers()
-        .registerExternalTaskConsumer(
-            new ExternalTaskTriggerConsumer() {
-              @Override
-              public Set<String> getJobIds() {
-                return Set.of(SERVICE_TASK_TYPE);
-              }
-
-              @Override
-              public void acceptBatch(List<ExternalTaskTriggerDTO> batch) {
-                triggers.addAll(batch);
-              }
-            },
-            "dogfood-worker-" + UUID.randomUUID());
-
-    TaktXClient.publishNamespaceSecurityPolicy(
-        rogueWriterProperties(DEFAULT_NAMESPACE), requestedSecuredPolicy(securedPolicyVersion - 1));
-
-    SecurityEventDTO rejectionEvent =
-        observer
-            .observability()
-            .awaitSecurityEvent(
-                event ->
-                    event.getEventType() == SecurityEventType.CONTROL_PLANE_MUTATION_REJECTED
-                        && event.getMessage() != null
-                        && event.getMessage().contains(ROGUE_WRITER_KEY_ID)
-                        && event.getMessage().contains("required role PLATFORM"),
-                Duration.ofSeconds(30));
-    assertThat(rejectionEvent.getMessage()).contains("required role PLATFORM");
-    awaitNoPolicy(observer);
-
-    ObservedPolicySnapshot observedPolicy =
-        publishPolicyAndAwaitObserved(
-            publisher, observer, activeSecuredPolicy(securedPolicyVersion), Duration.ofSeconds(30));
-    runtimeClient
-        .observability()
-        .awaitObservedPolicy(
-            snapshot ->
-                snapshot.hasAuthoritativePolicy()
-                    && Long.valueOf(securedPolicyVersion).equals(snapshot.effectivePolicyVersion()),
-            Duration.ofSeconds(30));
-    workerClient
-        .observability()
-        .awaitObservedPolicy(
-            snapshot ->
-                snapshot.hasAuthoritativePolicy()
-                    && Long.valueOf(securedPolicyVersion).equals(snapshot.effectivePolicyVersion()),
-            Duration.ofSeconds(30));
-
-    SecurityPostureSnapshot posture =
-        observer
-            .observability()
-            .awaitPostureSnapshot(
-                snapshot ->
-                    snapshot.hasEffectivePolicy()
-                        && snapshot.recentSecurityEvents().stream()
-                            .anyMatch(
-                                event ->
-                                    event.getEventType()
-                                            == SecurityEventType.CONTROL_PLANE_MUTATION_REJECTED
-                                        && event.getMessage() != null
-                                        && event.getMessage().contains(ROGUE_WRITER_KEY_ID)),
-                Duration.ofSeconds(30));
-
-    assertThat(observedPolicy.effectiveMode()).isEqualTo(SecurityMode.COMMUNITY_SECURED);
-    assertThat(posture.recentSecurityEvents())
-        .extracting(SecurityEventDTO::getEventType)
-        .contains(SecurityEventType.CONTROL_PLANE_MUTATION_REJECTED);
-
-    assertThatThrownBy(() -> runtimeClient.runtime().startProcess(SERVICE_PROCESS_ID, VariablesDTO.empty()))
-        .isInstanceOf(IllegalStateException.class)
-        .hasMessageContaining("JWT authorization for start commands");
-
-    UUID instanceId =
-        runtimeClient
-            .runtime()
-            .startProcess(
-                SERVICE_PROCESS_ID,
-                -1,
-                VariablesDTO.empty(),
-                jwt("START", SERVICE_PROCESS_ID, -1));
-
-    ExternalTaskTriggerDTO trigger = awaitExternalTaskTrigger(triggers, instanceId);
-    workerClient
-        .runtime()
-        .completeExternalTask(
-            trigger.getProcessInstanceId(), trigger.getElementInstanceIdPath(), VariablesDTO.empty());
-
-    awaitProcessCompleted(updates, instanceId);
-  }
-
-  @Test
-  void securityObservability_isNamespaceScoped() {
-    long securedPolicyVersion = nextPolicyVersion();
-
-    TaktXClient defaultObserver =
-        startClient(
-            baseProperties(DEFAULT_NAMESPACE),
-            participantDescriptor(
-                "dogfood-default-observer",
-                Set.of(ParticipantCapability.SECURITY_OBSERVER),
-                "dogfood-default-observer"));
-    TaktXClient isolatedObserver =
-        startClient(
-            baseProperties(ISOLATED_NAMESPACE),
-            participantDescriptor(
-                "dogfood-isolated-observer",
-                Set.of(ParticipantCapability.SECURITY_OBSERVER),
-                "dogfood-isolated-observer"));
-    TaktXClient publisher =
-        startClient(
-            platformWriterProperties(DEFAULT_NAMESPACE),
-            participantDescriptor(
-                "dogfood-default-console",
-                Set.of(
-                    ParticipantCapability.AUTHORITATIVE_POLICY_PUBLISHER,
-                    ParticipantCapability.SECURITY_OBSERVER),
-                "console"));
-
-    awaitNoPolicy(defaultObserver);
-    assertThat(isolatedObserver.observability().getObservedPolicySnapshot())
-        .isEqualTo(ObservedPolicySnapshot.empty());
-
-    publishPolicyAndAwaitObserved(
-        publisher,
-        defaultObserver,
-        activeSecuredPolicy(securedPolicyVersion),
-        Duration.ofSeconds(30));
-
-    await()
-        .during(Duration.ofSeconds(2))
-        .atMost(Duration.ofSeconds(5))
-        .untilAsserted(
-            () -> {
-              assertThat(isolatedObserver.observability().getObservedPolicySnapshot())
-                  .isEqualTo(ObservedPolicySnapshot.empty());
-              assertThat(isolatedObserver.observability().getPostureSnapshot().hasEffectivePolicy())
-                  .isFalse();
-              assertThat(isolatedObserver.observability().getRecentSecurityEvents()).isEmpty();
-            });
-  }
-
-  private TaktXClient startClient(Properties properties, SecurityParticipantDescriptor descriptor) {
+  protected final TaktXClient startClient(
+      Properties properties, SecurityParticipantDescriptor descriptor) {
     TaktXClient client =
         TaktXClient.newClientBuilder()
             .withProperties(properties)
@@ -482,7 +259,68 @@ class PublicClientDogfoodIntegrationTest {
     return client;
   }
 
-  private static void deployProcessAndAwaitAvailability(
+  protected final TaktXClient startClientWithoutSigningIdentity(
+      Properties properties, SecurityParticipantDescriptor descriptor) {
+    TaktXClient client =
+        TaktXClient.newClientBuilder()
+            .withProperties(properties)
+            .withParticipantDescriptor(descriptor)
+            .withSigningIdentitySource(() -> null)
+            .build();
+    client.start();
+    startedClients.add(client);
+    return client;
+  }
+
+  protected static ExternalTaskTriggerConsumer collectingExternalTaskConsumer(
+      Queue<ExternalTaskTriggerDTO> triggers) {
+    return new ExternalTaskTriggerConsumer() {
+      @Override
+      public Set<String> getJobIds() {
+        return Set.of(SERVICE_TASK_TYPE);
+      }
+
+      @Override
+      public void acceptBatch(List<ExternalTaskTriggerDTO> batch) {
+        triggers.addAll(batch);
+      }
+    };
+  }
+
+  protected static boolean isAnchoredEngineMismatchStatus(ParticipantStatusDTO status) {
+    return status.getParticipantKind() == ParticipantKind.ENGINE
+        && status.getEffectiveState() == ParticipantEffectiveState.MISMATCH
+        && !status.isReadyForDataPlane()
+        && status.getMismatchReasons().stream()
+            .anyMatch(reason -> "TRUST_ANCHOR_MISSING".equals(reason.getCode()));
+  }
+
+  protected static void withEngineClockAlignedNearWallClock(ThrowingRunnable runnable)
+      throws Exception {
+    MutableClock fixedClock = requireFixedMutableClock();
+    Instant originalInstant = fixedClock.instant();
+    Instant targetInstant = Instant.now().plusSeconds(5);
+    fixedClock.set(targetInstant);
+    try {
+      runnable.run();
+    } finally {
+      fixedClock.set(originalInstant);
+    }
+  }
+
+  private static MutableClock requireFixedMutableClock() {
+    if (!(ClockProducer.FIXED_CLOCK instanceof MutableClock fixedClock)) {
+      throw new IllegalStateException("Security test harness is not using a mutable fixed clock");
+    }
+    return fixedClock;
+  }
+
+  @FunctionalInterface
+  protected interface ThrowingRunnable {
+    void run() throws Exception;
+  }
+
+  protected static void deployProcessAndAwaitAvailability(
       TaktXClient client, String bpmnXml, String processDefinitionId) throws Exception {
     var parsedDefinitions =
         client
@@ -501,13 +339,23 @@ class PublicClientDogfoodIntegrationTest {
                     .isPresent());
   }
 
-  private static void awaitNoPolicy(TaktXClient client) {
+  protected static void awaitNoPolicy(TaktXClient client) {
     client
         .observability()
         .awaitObservedPolicy(snapshot -> !snapshot.hasAuthoritativePolicy(), Duration.ofSeconds(30));
   }
 
-  private static ObservedPolicySnapshot publishPolicyAndAwaitObserved(
+  protected static void awaitObservedPolicyVersion(TaktXClient client, long policyVersion) {
+    client
+        .observability()
+        .awaitObservedPolicy(
+            snapshot ->
+                snapshot.hasAuthoritativePolicy()
+                    && Long.valueOf(policyVersion).equals(snapshot.effectivePolicyVersion()),
+            Duration.ofSeconds(30));
+  }
+
+  protected static ObservedPolicySnapshot publishPolicyAndAwaitObserved(
       TaktXClient publisher,
       TaktXClient observer,
       NamespaceSecurityPolicyDTO policy,
@@ -522,8 +370,7 @@ class PublicClientDogfoodIntegrationTest {
               publisher.security().publishNamespaceSecurityPolicy(policy);
               ObservedPolicySnapshot snapshot = observer.observability().getObservedPolicySnapshot();
               if (snapshot.hasAuthoritativePolicy()
-                  && Long.valueOf(policy.getDesiredPolicyVersion())
-                      .equals(snapshot.effectivePolicyVersion())) {
+                  && policy.getDesiredPolicyVersion().equals(snapshot.effectivePolicyVersion())) {
                 observedPolicy.set(snapshot);
                 return true;
               }
@@ -532,7 +379,7 @@ class PublicClientDogfoodIntegrationTest {
     return observedPolicy.get();
   }
 
-  private static ExternalTaskTriggerDTO awaitExternalTaskTrigger(
+  protected static ExternalTaskTriggerDTO awaitExternalTaskTrigger(
       Queue<ExternalTaskTriggerDTO> triggers, UUID processInstanceId) {
     await()
         .atMost(Duration.ofSeconds(30))
@@ -547,14 +394,35 @@ class PublicClientDogfoodIntegrationTest {
         .orElseThrow();
   }
 
-  private static void awaitProcessCompleted(Queue<InstanceUpdateRecord> updates, UUID processInstanceId) {
+  protected static ExecutionState latestProcessState(
+      Queue<InstanceUpdateRecord> updates, UUID processInstanceId) {
     await()
         .atMost(Duration.ofSeconds(30))
         .pollInterval(Duration.ofMillis(100))
         .until(
             () ->
                 updates.stream()
-                    .filter(record -> processInstanceId.equals(record.getProcessInstanceId()))
+                    .anyMatch(updateRecord -> processInstanceId.equals(updateRecord.getProcessInstanceId())));
+    return updates.stream()
+        .filter(updateRecord -> processInstanceId.equals(updateRecord.getProcessInstanceId()))
+        .map(InstanceUpdateRecord::getUpdate)
+        .filter(ProcessInstanceUpdateDTO.class::isInstance)
+        .map(ProcessInstanceUpdateDTO.class::cast)
+        .filter(update -> update.getScope() != null)
+        .map(update -> update.getScope().getState())
+        .reduce((previousState, state) -> state)
+        .orElseThrow();
+  }
+
+  protected static void awaitProcessCompleted(
+      Queue<InstanceUpdateRecord> updates, UUID processInstanceId) {
+    await()
+        .atMost(Duration.ofSeconds(30))
+        .pollInterval(Duration.ofMillis(100))
+        .until(
+            () ->
+                updates.stream()
+                    .filter(updateRecord -> processInstanceId.equals(updateRecord.getProcessInstanceId()))
                     .map(InstanceUpdateRecord::getUpdate)
                     .filter(ProcessInstanceUpdateDTO.class::isInstance)
                     .map(ProcessInstanceUpdateDTO.class::cast)
@@ -564,7 +432,7 @@ class PublicClientDogfoodIntegrationTest {
                                 && update.getScope().getState() == ExecutionState.COMPLETED));
   }
 
-  private static void awaitTopicExists(String topicName) {
+  protected static void awaitTopicExists(String topicName) {
     await()
         .atMost(Duration.ofSeconds(30))
         .pollInterval(Duration.ofMillis(200))
@@ -578,7 +446,7 @@ class PublicClientDogfoodIntegrationTest {
             });
   }
 
-  private static NamespaceSecurityPolicyDTO requestedSecuredPolicy(long version) {
+  protected static NamespaceSecurityPolicyDTO requestedSecuredPolicy(long version) {
     return NamespaceSecurityPolicyDTO.builder()
         .mode(SecurityMode.COMMUNITY_SECURED)
         .activationState(SecurityActivationState.REQUESTED)
@@ -593,7 +461,51 @@ class PublicClientDogfoodIntegrationTest {
         .build();
   }
 
-  private static NamespaceSecurityPolicyDTO activeSecuredPolicy(long version) {
+  protected static NamespaceSecurityPolicyDTO activeCommunityOpenPolicy(long version) {
+    NamespaceSecurityPolicyDTO requestedPolicy =
+        NamespaceSecurityPolicyDTO.builder()
+            .mode(SecurityMode.COMMUNITY_OPEN)
+            .activationState(SecurityActivationState.REQUESTED)
+            .desiredPolicyVersion(version)
+            .build();
+    return requestedPolicy.toBuilder()
+        .activationState(SecurityActivationState.ACTIVE)
+        .activePolicyVersion(version)
+        .activePolicyHash(requestedPolicy.getDesiredPolicyHash())
+        .build();
+  }
+
+  protected static NamespaceSecurityPolicyDTO activeSigningRequiredPolicy(long version) {
+    NamespaceSecurityPolicyDTO requestedPolicy =
+        NamespaceSecurityPolicyDTO.builder()
+            .mode(SecurityMode.COMMUNITY_SECURED)
+            .activationState(SecurityActivationState.REQUESTED)
+            .desiredPolicyVersion(version)
+            .requiredSigning(RequiredSigningDTO.builder().clientCommands(true).build())
+            .build();
+    return requestedPolicy.toBuilder()
+        .activationState(SecurityActivationState.ACTIVE)
+        .activePolicyVersion(version)
+        .activePolicyHash(requestedPolicy.getDesiredPolicyHash())
+        .build();
+  }
+
+  protected static NamespaceSecurityPolicyDTO activeAnchoredPolicy(long version) {
+    NamespaceSecurityPolicyDTO requestedPolicy =
+        NamespaceSecurityPolicyDTO.builder()
+            .mode(SecurityMode.ANCHORED_SECURED)
+            .activationState(SecurityActivationState.REQUESTED)
+            .desiredPolicyVersion(version)
+            .trustAnchorRequired(true)
+            .build();
+    return requestedPolicy.toBuilder()
+        .activationState(SecurityActivationState.ACTIVE)
+        .activePolicyVersion(version)
+        .activePolicyHash(requestedPolicy.getDesiredPolicyHash())
+        .build();
+  }
+
+  protected static NamespaceSecurityPolicyDTO activeSecuredPolicy(long version) {
     NamespaceSecurityPolicyDTO requestedPolicy = requestedSecuredPolicy(version);
     return requestedPolicy.toBuilder()
         .activationState(SecurityActivationState.ACTIVE)
@@ -602,17 +514,17 @@ class PublicClientDogfoodIntegrationTest {
         .build();
   }
 
-  private static long nextPolicyVersion() {
+  protected static long nextPolicyVersion() {
     return POLICY_VERSIONS.incrementAndGet();
   }
 
-  private static SecurityParticipantDescriptor participantDescriptor(
+  protected static SecurityParticipantDescriptor participantDescriptor(
       String participantId, Set<ParticipantCapability> capabilities, String componentType) {
     return new SecurityParticipantDescriptor(
         participantId, ParticipantKind.CLIENT, capabilities, componentType);
   }
 
-  private static String jwt(String action, String processDefinitionId, int version) {
+  protected static String jwt(String action, String processDefinitionId, int version) {
     JwtBuilder builder =
         Jwts.builder()
             .header()
@@ -633,7 +545,7 @@ class PublicClientDogfoodIntegrationTest {
     return builder.signWith(SecurityTestConfigResource.rsaPrivateKey).compact();
   }
 
-  private static Properties baseProperties(String namespace) {
+  protected static Properties baseProperties(String namespace) {
     Properties properties = new Properties();
     properties.setProperty("bootstrap.servers", bootstrapServers);
     properties.setProperty("taktx.engine.tenant-id", TENANT);
@@ -641,7 +553,7 @@ class PublicClientDogfoodIntegrationTest {
     return properties;
   }
 
-  private static Properties platformWriterProperties(String namespace) {
+  protected static Properties platformWriterProperties(String namespace) {
     Properties properties = baseProperties(namespace);
     properties.setProperty("taktx.signing.key-id", POLICY_WRITER_KEY_ID);
     properties.setProperty("taktx.signing.private-key", policyWriterPrivateKeyBase64);
@@ -649,15 +561,21 @@ class PublicClientDogfoodIntegrationTest {
     return properties;
   }
 
-  private static Properties rogueWriterProperties(String namespace) {
+  protected static Properties rogueWriterProperties(String namespace) {
     Properties properties = baseProperties(namespace);
     properties.setProperty("taktx.signing.key-id", ROGUE_WRITER_KEY_ID);
     properties.setProperty("taktx.signing.private-key", rogueWriterPrivateKeyBase64);
     properties.setProperty("taktx.signing.public-key", rogueWriterPublicKeyBase64);
     return properties;
   }
+
+  protected static Properties signedRuntimeProperties(String namespace) {
+    Properties properties = baseProperties(namespace);
+    properties.setProperty("taktx.signing.key-id", RUNTIME_SIGNER_KEY_ID);
+    properties.setProperty("taktx.signing.private-key", runtimeSignerPrivateKeyBase64);
+    properties.setProperty("taktx.signing.public-key", runtimeSignerPublicKeyBase64);
+    return properties;
+  }
 }
-
-
 
 

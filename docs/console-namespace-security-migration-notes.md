@@ -3,6 +3,9 @@
 This document captures the migration and compatibility guidance for Console-side adoption of the
 engine-repo namespace-security-policy contract.
 
+For the current confidence and validation strategy behind upcoming Console security-control-plane
+features, also see `docs/security-control-plane-integration-test-plan.md`.
+
 > Target release for Console refresh: `0.8.0-beta`.
 >
 > After the local release is published, pin the Console-side dependency refresh to the exact
@@ -122,6 +125,16 @@ population is compatible with the target policy requirements:
 - anchored namespaces have the platform trust anchor distributed to required participants
 - consumers/operators understand that desired policy and active policy can temporarily diverge during
   validation and rollback
+
+## Validation planning reference
+
+For the broader integration-test strategy that is meant to give enough confidence for upcoming
+Console security-control-plane features, use:
+
+- `docs/security-control-plane-integration-test-plan.md`
+
+That plan distinguishes the already-green focused public-client dogfood coverage from the remaining
+single-engine and deferred multi-engine follow-up scenarios.
 
 ## Remaining release-gate item
 

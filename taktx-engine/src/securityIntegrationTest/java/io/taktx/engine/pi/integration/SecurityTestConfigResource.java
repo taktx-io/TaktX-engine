@@ -9,9 +9,12 @@ package io.taktx.engine.pi.integration;
 
 import io.quarkus.arc.Arc;
 import io.quarkus.test.common.QuarkusTestResourceLifecycleManager;
+import io.taktx.engine.generic.ClockProducer;
+import io.taktx.engine.generic.MutableClock;
 import io.taktx.engine.license.LicenseManager;
 import io.taktx.engine.pi.testengine.SingletonBpmnTestEngine;
 import io.taktx.engine.security.MessageSigningService;
+import java.time.Instant;
 import java.security.KeyPairGenerator;
 import java.util.Base64;
 import java.util.Map;
@@ -56,6 +59,7 @@ public class SecurityTestConfigResource implements QuarkusTestResourceLifecycleM
     // the first default-profile test after the security suite creates a fresh instance bound to
     // the new broker address.
     SingletonBpmnTestEngine.closeIfRunning();
+    resetFixedTestClock();
 
     try {
       // ── RSA key-pair for command authorization ────────────────────────────
@@ -105,5 +109,11 @@ public class SecurityTestConfigResource implements QuarkusTestResourceLifecycleM
   public void stop() {
     enginePublicKeyBase64 = null;
     engineKeyId = null;
+  }
+
+  private static void resetFixedTestClock() {
+    if (ClockProducer.FIXED_CLOCK instanceof MutableClock fixedClock) {
+      fixedClock.set(Instant.parse(ClockProducer.INITIAL_TIME));
+    }
   }
 }

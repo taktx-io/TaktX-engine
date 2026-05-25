@@ -1024,6 +1024,10 @@ remaining release-gate item is publishing the actual engine/client artifacts.
 - Negative cases fail clearly and predictably.
 - The engine slice is safe to pair with the Console-side rollout plan.
 
+**Current planning note:** the focused public-client-only dogfood slice is already implemented on the
+branch, and the next broader Console-confidence integration expansion is tracked in
+`docs/security-control-plane-integration-test-plan.md`.
+
 ## 13. Engine-repo release gate for Console adoption
 
 The Console repo should treat this document as satisfied only when the engine repo has delivered a
