@@ -18,4 +18,3 @@ public record ParticipantPostureMismatch(
     @Nullable ParticipantKind participantKind,
     @Nullable String componentType,
     PolicyMismatchReasonDTO mismatchReason) {}
-

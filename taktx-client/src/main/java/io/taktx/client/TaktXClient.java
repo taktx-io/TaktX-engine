@@ -26,10 +26,10 @@ import io.taktx.dto.GlobalConfigurationDTO;
 import io.taktx.dto.KeyRole;
 import io.taktx.dto.MessageEventDTO;
 import io.taktx.dto.NamespaceSecurityPolicyDTO;
+import io.taktx.dto.ParsedDefinitionsDTO;
 import io.taktx.dto.ParticipantCapability;
 import io.taktx.dto.ParticipantKind;
 import io.taktx.dto.ParticipantStatusDTO;
-import io.taktx.dto.ParsedDefinitionsDTO;
 import io.taktx.dto.ProcessDefinitionDTO;
 import io.taktx.dto.ProcessDefinitionKey;
 import io.taktx.dto.ProcessInstanceTriggerDTO;
@@ -154,8 +154,8 @@ public class TaktXClient {
   private WorkersClient workersClient;
   private DlqClient dlqClient;
   private SecurityObservabilityClient securityObservabilityClient;
-  private final CopyOnWriteArrayList<NamespaceSecurityPolicyConsumer> namespaceSecurityPolicyConsumers =
-      new CopyOnWriteArrayList<>();
+  private final CopyOnWriteArrayList<NamespaceSecurityPolicyConsumer>
+      namespaceSecurityPolicyConsumers = new CopyOnWriteArrayList<>();
   private final CopyOnWriteArrayList<ParticipantStatusConsumer> participantStatusConsumers =
       new CopyOnWriteArrayList<>();
   private final CopyOnWriteArrayList<SecurityEventConsumer> securityEventConsumers =
@@ -264,7 +264,8 @@ public class TaktXClient {
             properties.getProperty("spring.application.name"),
             properties.getProperty("application.name"),
             "generic-client");
-    String normalizedComponentType = componentType != null ? componentType.trim() : "generic-client";
+    String normalizedComponentType =
+        componentType != null ? componentType.trim() : "generic-client";
     Set<ParticipantCapability> capabilities = new LinkedHashSet<>();
     capabilities.add(ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT);
     capabilities.add(ParticipantCapability.SECURITY_OBSERVER);
@@ -295,7 +296,8 @@ public class TaktXClient {
     if (value == null || value.isBlank()) {
       return "client";
     }
-    String normalized = value.trim().toLowerCase(java.util.Locale.ROOT).replaceAll("[^a-z0-9._-]", "-");
+    String normalized =
+        value.trim().toLowerCase(java.util.Locale.ROOT).replaceAll("[^a-z0-9._-]", "-");
     normalized = normalized.replaceAll("-+", "-");
     normalized = normalized.replaceAll("^[._-]+", "").replaceAll("[._-]+$", "");
     return normalized.isBlank() ? "client" : normalized;
@@ -466,7 +468,8 @@ public class TaktXClient {
     }
     String bootstrapServers = taktPropertiesHelper.getBootstrapServers();
     if (bootstrapServers == null || bootstrapServers.isBlank()) {
-      log.debug("No bootstrap.servers configured — skipping SecurityEventTopicStore initialisation");
+      log.debug(
+          "No bootstrap.servers configured — skipping SecurityEventTopicStore initialisation");
       return;
     }
     String topic =

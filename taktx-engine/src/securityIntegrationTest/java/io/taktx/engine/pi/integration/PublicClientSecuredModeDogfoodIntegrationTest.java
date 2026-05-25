@@ -27,11 +27,11 @@ import io.taktx.dto.SecurityEventType;
 import io.taktx.dto.SecurityMode;
 import io.taktx.dto.VariablesDTO;
 import java.time.Duration;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.Queue;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
@@ -43,8 +43,9 @@ class PublicClientSecuredModeDogfoodIntegrationTest
     extends PublicClientDogfoodIntegrationTestSupport {
 
   @Test
-  void securedNamespace_rejectsRoguePolicyMutation_blocksUnauthorizedStart_and_allowsAuthorizedRuntimeAndSignedWorkerCompletion()
-      throws Exception {
+  void
+      securedNamespace_rejectsRoguePolicyMutation_blocksUnauthorizedStart_and_allowsAuthorizedRuntimeAndSignedWorkerCompletion()
+          throws Exception {
     long securedPolicyVersion = nextPolicyVersion();
     String namespace = newTestNamespace("dogfood-secured-runtime");
 
@@ -166,16 +167,15 @@ class PublicClientSecuredModeDogfoodIntegrationTest
         runtimeClient
             .runtime()
             .startProcess(
-                SERVICE_PROCESS_ID,
-                -1,
-                VariablesDTO.empty(),
-                jwt("START", SERVICE_PROCESS_ID, -1));
+                SERVICE_PROCESS_ID, -1, VariablesDTO.empty(), jwt("START", SERVICE_PROCESS_ID, -1));
 
     ExternalTaskTriggerDTO trigger = awaitExternalTaskTrigger(triggers, instanceId);
     workerClient
         .runtime()
         .completeExternalTask(
-            trigger.getProcessInstanceId(), trigger.getElementInstanceIdPath(), VariablesDTO.empty());
+            trigger.getProcessInstanceId(),
+            trigger.getElementInstanceIdPath(),
+            VariablesDTO.empty());
 
     awaitProcessCompleted(updates, instanceId);
   }
@@ -228,7 +228,8 @@ class PublicClientSecuredModeDogfoodIntegrationTest
         Duration.ofSeconds(30));
     awaitObservedPolicyVersion(signedRuntimeClient, securedPolicyVersion);
 
-    UUID instanceId = signedRuntimeClient.runtime().startProcess(OPEN_PROCESS_ID, VariablesDTO.empty());
+    UUID instanceId =
+        signedRuntimeClient.runtime().startProcess(OPEN_PROCESS_ID, VariablesDTO.empty());
 
     awaitProcessCompleted(updates, instanceId);
   }
@@ -285,7 +286,8 @@ class PublicClientSecuredModeDogfoodIntegrationTest
     deployProcessAndAwaitAvailability(runtimeClient, SERVICE_TASK_BPMN, SERVICE_PROCESS_ID);
 
     Queue<ExternalTaskTriggerDTO> triggers = new ConcurrentLinkedQueue<>();
-    String externalTaskTopic = unsignedWorkerClient.workers().requestExternalTaskTopic(SERVICE_TASK_TYPE);
+    String externalTaskTopic =
+        unsignedWorkerClient.workers().requestExternalTaskTopic(SERVICE_TASK_TYPE);
     awaitTopicExists(externalTaskTopic);
     unsignedWorkerClient
         .workers()
@@ -306,7 +308,8 @@ class PublicClientSecuredModeDogfoodIntegrationTest
                 snapshot ->
                     snapshot.hasEffectivePolicy()
                         && snapshot.effectiveMode() == SecurityMode.COMMUNITY_SECURED
-                        && Long.valueOf(securedPolicyVersion).equals(snapshot.effectivePolicyVersion()),
+                        && Long.valueOf(securedPolicyVersion)
+                            .equals(snapshot.effectivePolicyVersion()),
                 Duration.ofSeconds(30));
 
     assertThat(observedPolicy.effectiveMode()).isEqualTo(SecurityMode.COMMUNITY_SECURED);
@@ -316,10 +319,7 @@ class PublicClientSecuredModeDogfoodIntegrationTest
         runtimeClient
             .runtime()
             .startProcess(
-                SERVICE_PROCESS_ID,
-                -1,
-                VariablesDTO.empty(),
-                jwt("START", SERVICE_PROCESS_ID, -1));
+                SERVICE_PROCESS_ID, -1, VariablesDTO.empty(), jwt("START", SERVICE_PROCESS_ID, -1));
 
     SecurityEventDTO readinessMismatchEvent =
         observer
@@ -328,7 +328,8 @@ class PublicClientSecuredModeDogfoodIntegrationTest
                 event ->
                     event.getEventType() == SecurityEventType.READINESS_MISMATCH
                         && "READINESS_MISMATCH".equals(event.getCode())
-                        && Long.valueOf(securedPolicyVersion).equals(event.getDesiredPolicyVersion()),
+                        && Long.valueOf(securedPolicyVersion)
+                            .equals(event.getDesiredPolicyVersion()),
                 Duration.ofSeconds(30));
 
     SecurityPostureSnapshot blockedWorkerPosture =
@@ -366,9 +367,8 @@ class PublicClientSecuredModeDogfoodIntegrationTest
         .during(Duration.ofSeconds(2))
         .atMost(Duration.ofSeconds(5))
         .untilAsserted(
-            () -> assertThat(latestProcessState(updates, instanceId)).isEqualTo(ExecutionState.ACTIVE));
+            () ->
+                assertThat(latestProcessState(updates, instanceId))
+                    .isEqualTo(ExecutionState.ACTIVE));
   }
 }
-
-
-

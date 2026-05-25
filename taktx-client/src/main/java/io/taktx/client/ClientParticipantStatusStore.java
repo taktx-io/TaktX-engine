@@ -14,10 +14,13 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-/** In-memory view of the latest participant-status records observed from the public status topic. */
+/**
+ * In-memory view of the latest participant-status records observed from the public status topic.
+ */
 final class ClientParticipantStatusStore {
 
-  private final ConcurrentHashMap<String, ParticipantStatusDTO> statuses = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<String, ParticipantStatusDTO> statuses =
+      new ConcurrentHashMap<>();
 
   void update(String recordKey, ParticipantStatusDTO status) {
     if (recordKey == null || recordKey.isBlank()) {
@@ -55,4 +58,3 @@ final class ClientParticipantStatusStore {
     return Collections.unmodifiableMap(snapshot);
   }
 }
-

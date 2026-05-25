@@ -45,8 +45,8 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.kafka.clients.admin.AdminClient;
@@ -187,8 +187,7 @@ abstract class PublicClientDogfoodIntegrationTestSupport {
 
   @BeforeAll
   protected static void publishTrustedControlPlaneKeys() {
-    bootstrapServers =
-        ConfigProvider.getConfig().getValue("kafka.bootstrap.servers", String.class);
+    bootstrapServers = ConfigProvider.getConfig().getValue("kafka.bootstrap.servers", String.class);
 
     KeyPair policyWriterKeys = SigningKeyGenerator.generate();
     policyWriterPrivateKeyBase64 =
@@ -196,13 +195,15 @@ abstract class PublicClientDogfoodIntegrationTestSupport {
     policyWriterPublicKeyBase64 = SigningKeyGenerator.encodePublicKey(policyWriterKeys.getPublic());
 
     KeyPair rogueWriterKeys = SigningKeyGenerator.generate();
-    rogueWriterPrivateKeyBase64 = SigningKeyGenerator.encodePrivateKey(rogueWriterKeys.getPrivate());
+    rogueWriterPrivateKeyBase64 =
+        SigningKeyGenerator.encodePrivateKey(rogueWriterKeys.getPrivate());
     rogueWriterPublicKeyBase64 = SigningKeyGenerator.encodePublicKey(rogueWriterKeys.getPublic());
 
     KeyPair runtimeSignerKeys = SigningKeyGenerator.generate();
     runtimeSignerPrivateKeyBase64 =
         SigningKeyGenerator.encodePrivateKey(runtimeSignerKeys.getPrivate());
-    runtimeSignerPublicKeyBase64 = SigningKeyGenerator.encodePublicKey(runtimeSignerKeys.getPublic());
+    runtimeSignerPublicKeyBase64 =
+        SigningKeyGenerator.encodePublicKey(runtimeSignerKeys.getPublic());
 
     bootstrapNamespaceIfNeeded(DEFAULT_NAMESPACE);
     bootstrapNamespaceIfNeeded(ISOLATED_NAMESPACE);
@@ -296,7 +297,8 @@ abstract class PublicClientDogfoodIntegrationTestSupport {
       try {
         clearNamespaceSecurityPolicy(namespace);
       } catch (Exception ignored) {
-        // Best-effort cleanup — unique namespaces limit cross-test leakage even if policy clear races.
+        // Best-effort cleanup — unique namespaces limit cross-test leakage even if policy clear
+        // races.
       }
     }
     namespacesUsedByCurrentTest.clear();
@@ -412,18 +414,18 @@ abstract class PublicClientDogfoodIntegrationTestSupport {
         .until(
             () ->
                 definitionObserved.get()
-                    ||
-                client
-                    .runtime()
-                    .getProcessDefinitionByHash(
-                        processDefinitionId, parsedDefinitions.getDefinitionsKey().getHash())
-                    .isPresent());
+                    || client
+                        .runtime()
+                        .getProcessDefinitionByHash(
+                            processDefinitionId, parsedDefinitions.getDefinitionsKey().getHash())
+                        .isPresent());
   }
 
   protected static void awaitNoPolicy(TaktXClient client) {
     client
         .observability()
-        .awaitObservedPolicy(snapshot -> !snapshot.hasAuthoritativePolicy(), Duration.ofSeconds(30));
+        .awaitObservedPolicy(
+            snapshot -> !snapshot.hasAuthoritativePolicy(), Duration.ofSeconds(30));
   }
 
   protected static void awaitObservedPolicyVersion(TaktXClient client, long policyVersion) {
@@ -449,7 +451,8 @@ abstract class PublicClientDogfoodIntegrationTestSupport {
         .until(
             () -> {
               publisher.security().publishNamespaceSecurityPolicy(policy);
-              ObservedPolicySnapshot snapshot = observer.observability().getObservedPolicySnapshot();
+              ObservedPolicySnapshot snapshot =
+                  observer.observability().getObservedPolicySnapshot();
               if (snapshot.hasAuthoritativePolicy()
                   && policy.getDesiredPolicyVersion().equals(snapshot.effectivePolicyVersion())) {
                 observedPolicy.set(snapshot);
@@ -483,7 +486,9 @@ abstract class PublicClientDogfoodIntegrationTestSupport {
         .until(
             () ->
                 updates.stream()
-                    .anyMatch(updateRecord -> processInstanceId.equals(updateRecord.getProcessInstanceId())));
+                    .anyMatch(
+                        updateRecord ->
+                            processInstanceId.equals(updateRecord.getProcessInstanceId())));
     return updates.stream()
         .filter(updateRecord -> processInstanceId.equals(updateRecord.getProcessInstanceId()))
         .map(InstanceUpdateRecord::getUpdate)
@@ -503,7 +508,9 @@ abstract class PublicClientDogfoodIntegrationTestSupport {
         .until(
             () ->
                 updates.stream()
-                    .filter(updateRecord -> processInstanceId.equals(updateRecord.getProcessInstanceId()))
+                    .filter(
+                        updateRecord ->
+                            processInstanceId.equals(updateRecord.getProcessInstanceId()))
                     .map(InstanceUpdateRecord::getUpdate)
                     .filter(ProcessInstanceUpdateDTO.class::isInstance)
                     .map(ProcessInstanceUpdateDTO.class::cast)
@@ -658,5 +665,3 @@ abstract class PublicClientDogfoodIntegrationTestSupport {
     return properties;
   }
 }
-
-

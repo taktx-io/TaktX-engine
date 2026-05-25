@@ -112,8 +112,10 @@ public class TaktXClientAutoConfiguration {
                 instanceProvider, partitions, CleanupPolicy.COMPACT, replicationFactor);
 
     if (!externalTaskTriggerConsumer.getJobIds().isEmpty()) {
-      taktClient.workers().registerExternalTaskConsumer(
-          externalTaskTriggerConsumer, "taktx-client-external-task-trigger-consumer");
+      taktClient
+          .workers()
+          .registerExternalTaskConsumer(
+              externalTaskTriggerConsumer, "taktx-client-external-task-trigger-consumer");
     }
 
     if (instanceUpdateEnabled
@@ -121,14 +123,16 @@ public class TaktXClientAutoConfiguration {
         && !groupIdInstanceUpdate.isEmpty()) {
       InstanceUpdateStartStrategy strategy =
           InstanceUpdateStartStrategy.valueOf(instanceUpdateStartStrategy.toUpperCase());
-      taktClient.runtime().registerInstanceUpdateConsumer(
-          groupIdInstanceUpdate,
-          instanceUpdateRecords -> {
-            for (var instanceUpdateRecord : instanceUpdateRecords) {
-              eventChecker.publishInstanceUpdateRecord(instanceUpdateRecord);
-            }
-          },
-          strategy);
+      taktClient
+          .runtime()
+          .registerInstanceUpdateConsumer(
+              groupIdInstanceUpdate,
+              instanceUpdateRecords -> {
+                for (var instanceUpdateRecord : instanceUpdateRecords) {
+                  eventChecker.publishInstanceUpdateRecord(instanceUpdateRecord);
+                }
+              },
+              strategy);
     }
   }
 

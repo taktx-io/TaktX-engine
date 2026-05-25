@@ -135,21 +135,25 @@ public class TaktXClientProvider {
                     instanceProvider, partitions, CleanupPolicy.COMPACT, replicationFactor);
 
         if (!externalTaskTriggerConsumer.getJobIds().isEmpty()) {
-          taktClient.workers().registerExternalTaskConsumer(
-              externalTaskTriggerConsumer, "taktx-client-external-task-trigger-consumer");
+          taktClient
+              .workers()
+              .registerExternalTaskConsumer(
+                  externalTaskTriggerConsumer, "taktx-client-external-task-trigger-consumer");
         }
 
         if (observerChecker.hasInstanceUpdateRecordObservers()) {
           InstanceUpdateStartStrategy strategy =
               InstanceUpdateStartStrategy.valueOf(instanceUpdateStartStrategy.toUpperCase());
-          taktClient.runtime().registerInstanceUpdateConsumer(
-              groupIdInstanceUpdate,
-              instanceUpdateRecords -> {
-                for (InstanceUpdateRecord instanceUpdateRecord : instanceUpdateRecords) {
-                  events.fire(instanceUpdateRecord);
-                }
-              },
-              strategy);
+          taktClient
+              .runtime()
+              .registerInstanceUpdateConsumer(
+                  groupIdInstanceUpdate,
+                  instanceUpdateRecords -> {
+                    for (InstanceUpdateRecord instanceUpdateRecord : instanceUpdateRecords) {
+                      events.fire(instanceUpdateRecord);
+                    }
+                  },
+                  strategy);
         }
       }
     }

@@ -70,4 +70,3 @@ class SecurityParticipantDescriptorSupportTest {
         .hasMessageContaining("capabilities must not contain null values");
   }
 }
-

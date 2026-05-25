@@ -126,7 +126,8 @@ public final class RuntimeClient {
       List<Long> elementInstanceIdPath,
       VariablesDTO variables,
       @Nullable String authorizationToken) {
-    client.completeUserTask(processInstanceId, elementInstanceIdPath, variables, authorizationToken);
+    client.completeUserTask(
+        processInstanceId, elementInstanceIdPath, variables, authorizationToken);
   }
 
   public void errorUserTask(
@@ -251,7 +252,8 @@ public final class RuntimeClient {
     client.abortElementInstance(activeProcessInstanceId, elementInstanceIdPath, authorizationToken);
   }
 
-  public String getProcessDefinitionXml(ProcessDefinitionKey processDefinitionKey) throws IOException {
+  public String getProcessDefinitionXml(ProcessDefinitionKey processDefinitionKey)
+      throws IOException {
     return client.getProcessDefinitionXml(processDefinitionKey);
   }
 
@@ -267,4 +269,3 @@ public final class RuntimeClient {
     return client.getDmnDecisionIndex();
   }
 }
-

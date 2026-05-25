@@ -42,11 +42,12 @@ public final class WorkersClient {
     client.deployTaktDeploymentAnnotatedClasses();
   }
 
-  public AnnotationScanningExternalTaskTriggerConsumer annotationScanningExternalTaskTriggerConsumer(
-      WorkerBeanInstanceProvider instanceProvider,
-      int partitions,
-      CleanupPolicy cleanupPolicy,
-      short replicationFactor) {
+  public AnnotationScanningExternalTaskTriggerConsumer
+      annotationScanningExternalTaskTriggerConsumer(
+          WorkerBeanInstanceProvider instanceProvider,
+          int partitions,
+          CleanupPolicy cleanupPolicy,
+          short replicationFactor) {
     return new AnnotationScanningExternalTaskTriggerConsumer(
         client.getParameterResolverFactory(),
         client.getResultProcessorFactory(),
@@ -62,4 +63,3 @@ public final class WorkersClient {
     client.stopExternalTaskConsumer();
   }
 }
-

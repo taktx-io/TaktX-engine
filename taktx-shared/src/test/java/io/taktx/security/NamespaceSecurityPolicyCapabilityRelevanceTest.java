@@ -197,5 +197,3 @@ class NamespaceSecurityPolicyCapabilityRelevanceTest {
     assertThat(relevant.getRequiredAuthorization().isUserTaskCompletion()).isTrue();
   }
 }
-
-

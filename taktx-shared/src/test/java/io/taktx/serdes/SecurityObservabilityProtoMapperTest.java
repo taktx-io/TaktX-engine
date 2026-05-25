@@ -34,8 +34,7 @@ class SecurityObservabilityProtoMapperTest {
             .participantKind(ParticipantKind.ENGINE)
             .componentType("engine")
             .capabilities(
-                Set.of(
-                    ParticipantCapability.ENFORCER, ParticipantCapability.SECURITY_OBSERVER))
+                Set.of(ParticipantCapability.ENFORCER, ParticipantCapability.SECURITY_OBSERVER))
             .namespace("bank.payments")
             .startedAt(1716450000000L)
             .lastSeenAt(1716450060000L)

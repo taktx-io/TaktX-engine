@@ -18,8 +18,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Console-grade namespace security posture snapshot assembled from public policy, participant-status,
- * and security-event topics only.
+ * Console-grade namespace security posture snapshot assembled from public policy,
+ * participant-status, and security-event topics only.
  */
 public record SecurityPostureSnapshot(
     ObservedPolicySnapshot observedPolicy,
@@ -32,9 +32,13 @@ public record SecurityPostureSnapshot(
 
   public SecurityPostureSnapshot {
     observedPolicy = observedPolicy != null ? observedPolicy : ObservedPolicySnapshot.empty();
-    participantStatuses = participantStatuses == null ? Map.of() : Map.copyOf(new LinkedHashMap<>(participantStatuses));
+    participantStatuses =
+        participantStatuses == null
+            ? Map.of()
+            : Map.copyOf(new LinkedHashMap<>(participantStatuses));
     mismatchReasons = mismatchReasons == null ? List.of() : List.copyOf(mismatchReasons);
-    recentSecurityEvents = recentSecurityEvents == null ? List.of() : List.copyOf(recentSecurityEvents);
+    recentSecurityEvents =
+        recentSecurityEvents == null ? List.of() : List.copyOf(recentSecurityEvents);
   }
 
   public static SecurityPostureSnapshot empty() {
@@ -48,7 +52,9 @@ public record SecurityPostureSnapshot(
     ObservedPolicySnapshot effectiveObservedPolicy =
         observedPolicy != null ? observedPolicy : ObservedPolicySnapshot.empty();
     Map<String, ParticipantStatusDTO> effectiveParticipantStatuses =
-        participantStatuses == null ? Map.of() : Map.copyOf(new LinkedHashMap<>(participantStatuses));
+        participantStatuses == null
+            ? Map.of()
+            : Map.copyOf(new LinkedHashMap<>(participantStatuses));
     List<SecurityEventDTO> effectiveRecentSecurityEvents =
         recentSecurityEvents == null ? List.of() : List.copyOf(recentSecurityEvents);
     return new SecurityPostureSnapshot(
@@ -87,7 +93,8 @@ public record SecurityPostureSnapshot(
 
   public List<ParticipantStatusDTO> participantsWithMismatches() {
     return participantStatuses.values().stream()
-        .filter(status -> status.getMismatchReasons() != null && !status.getMismatchReasons().isEmpty())
+        .filter(
+            status -> status.getMismatchReasons() != null && !status.getMismatchReasons().isEmpty())
         .toList();
   }
 
@@ -99,17 +106,18 @@ public record SecurityPostureSnapshot(
           if (status == null || status.getMismatchReasons() == null) {
             return;
           }
-          status.getMismatchReasons().forEach(
-              mismatchReason ->
-                  mismatches.add(
-                      new ParticipantPostureMismatch(
-                          participantInstanceId,
-                          status.getParticipantId(),
-                          status.getParticipantKind(),
-                          status.getComponentType(),
-                          mismatchReason)));
+          status
+              .getMismatchReasons()
+              .forEach(
+                  mismatchReason ->
+                      mismatches.add(
+                          new ParticipantPostureMismatch(
+                              participantInstanceId,
+                              status.getParticipantId(),
+                              status.getParticipantKind(),
+                              status.getComponentType(),
+                              mismatchReason)));
         });
     return List.copyOf(mismatches);
   }
 }
-
