@@ -102,6 +102,70 @@ class NamespaceSecurityPolicyCapabilityRelevanceTest {
   }
 
   @Test
+  void relevantPolicyForCapabilities_filtersProtectedDataPlaneFieldsForPublisherOnlyClient() {
+    NamespaceSecurityPolicyDTO policy =
+        NamespaceSecurityPolicyDTO.builder()
+            .mode(SecurityMode.ANCHORED_SECURED)
+            .activationState(SecurityActivationState.REQUESTED)
+            .desiredPolicyVersion(42L)
+            .requiredSigning(
+                RequiredSigningDTO.builder()
+                    .engineOutbound(true)
+                    .clientCommands(true)
+                    .workerResponses(true)
+                    .build())
+            .requiredAuthorization(
+                RequiredAuthorizationDTO.builder()
+                    .startCommands(true)
+                    .externalTaskCompletion(true)
+                    .userTaskCompletion(true)
+                    .build())
+            .trustAnchorRequired(true)
+            .build();
+
+    NamespaceSecurityPolicyDTO relevant =
+        NamespaceSecurityPolicyCapabilityRelevance.relevantPolicyForCapabilities(
+            Set.of(ParticipantCapability.AUTHORITATIVE_POLICY_PUBLISHER), policy);
+
+    assertThat(relevant.getMode()).isEqualTo(SecurityMode.ANCHORED_SECURED);
+    assertThat(relevant.isTrustAnchorRequired()).isTrue();
+    assertThat(relevant.getRequiredSigning().isAnyRequired()).isFalse();
+    assertThat(relevant.getRequiredAuthorization().isAnyRequired()).isFalse();
+  }
+
+  @Test
+  void relevantPolicyForCapabilities_filtersProtectedDataPlaneFieldsForObserverOnlyClient() {
+    NamespaceSecurityPolicyDTO policy =
+        NamespaceSecurityPolicyDTO.builder()
+            .mode(SecurityMode.COMMUNITY_SECURED)
+            .activationState(SecurityActivationState.REQUESTED)
+            .desiredPolicyVersion(42L)
+            .requiredSigning(
+                RequiredSigningDTO.builder()
+                    .engineOutbound(true)
+                    .clientCommands(true)
+                    .workerResponses(true)
+                    .build())
+            .requiredAuthorization(
+                RequiredAuthorizationDTO.builder()
+                    .startCommands(true)
+                    .externalTaskCompletion(true)
+                    .userTaskCompletion(true)
+                    .build())
+            .trustAnchorRequired(true)
+            .build();
+
+    NamespaceSecurityPolicyDTO relevant =
+        NamespaceSecurityPolicyCapabilityRelevance.relevantPolicyForCapabilities(
+            Set.of(ParticipantCapability.SECURITY_OBSERVER), policy);
+
+    assertThat(relevant.getMode()).isEqualTo(SecurityMode.COMMUNITY_SECURED);
+    assertThat(relevant.isTrustAnchorRequired()).isTrue();
+    assertThat(relevant.getRequiredSigning().isAnyRequired()).isFalse();
+    assertThat(relevant.getRequiredAuthorization().isAnyRequired()).isFalse();
+  }
+
+  @Test
   void relevantPolicyForCapabilities_supportsMixedProfilesWithoutMultipleRoles() {
     NamespaceSecurityPolicyDTO policy =
         NamespaceSecurityPolicyDTO.builder()
