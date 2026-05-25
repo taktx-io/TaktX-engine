@@ -46,17 +46,18 @@ class PublicClientSecuredModeDogfoodIntegrationTest
   void securedNamespace_rejectsRoguePolicyMutation_blocksUnauthorizedStart_and_allowsAuthorizedRuntimeAndSignedWorkerCompletion()
       throws Exception {
     long securedPolicyVersion = nextPolicyVersion();
+    String namespace = newTestNamespace("dogfood-secured-runtime");
 
     TaktXClient observer =
         startClient(
-            baseProperties(DEFAULT_NAMESPACE),
+            baseProperties(namespace),
             participantDescriptor(
                 "dogfood-observer",
                 Set.of(ParticipantCapability.SECURITY_OBSERVER),
                 "dogfood-observer"));
     TaktXClient publisher =
         startClient(
-            platformWriterProperties(DEFAULT_NAMESPACE),
+            platformWriterProperties(namespace),
             participantDescriptor(
                 "dogfood-console",
                 Set.of(
@@ -65,7 +66,7 @@ class PublicClientSecuredModeDogfoodIntegrationTest
                 "console"));
     TaktXClient runtimeClient =
         startClient(
-            baseProperties(DEFAULT_NAMESPACE),
+            baseProperties(namespace),
             participantDescriptor(
                 "dogfood-runtime",
                 Set.of(
@@ -74,7 +75,7 @@ class PublicClientSecuredModeDogfoodIntegrationTest
                 "orders-console"));
     TaktXClient workerClient =
         startClient(
-            baseProperties(DEFAULT_NAMESPACE),
+            baseProperties(namespace),
             participantDescriptor(
                 "dogfood-worker",
                 Set.of(
@@ -107,7 +108,7 @@ class PublicClientSecuredModeDogfoodIntegrationTest
         .until(
             () -> {
               TaktXClient.publishNamespaceSecurityPolicy(
-                  rogueWriterProperties(DEFAULT_NAMESPACE),
+                  rogueWriterProperties(namespace),
                   requestedSecuredPolicy(securedPolicyVersion - 1));
               SecurityEventDTO matchingEvent =
                   observer.observability().getRecentSecurityEvents().stream()
@@ -182,17 +183,18 @@ class PublicClientSecuredModeDogfoodIntegrationTest
   @Test
   void signingRequiredStart_acceptsSignedClientWithoutJwt() throws Exception {
     long securedPolicyVersion = nextPolicyVersion();
+    String namespace = newTestNamespace("dogfood-signing-required");
 
     TaktXClient observer =
         startClient(
-            baseProperties(DEFAULT_NAMESPACE),
+            baseProperties(namespace),
             participantDescriptor(
                 "dogfood-signing-observer",
                 Set.of(ParticipantCapability.SECURITY_OBSERVER),
                 "dogfood-signing-observer"));
     TaktXClient publisher =
         startClient(
-            platformWriterProperties(DEFAULT_NAMESPACE),
+            platformWriterProperties(namespace),
             participantDescriptor(
                 "dogfood-signing-console",
                 Set.of(
@@ -201,7 +203,7 @@ class PublicClientSecuredModeDogfoodIntegrationTest
                 "console"));
     TaktXClient signedRuntimeClient =
         startClient(
-            signedRuntimeProperties(DEFAULT_NAMESPACE),
+            signedRuntimeProperties(namespace),
             participantDescriptor(
                 "dogfood-signed-runtime",
                 Set.of(
@@ -235,18 +237,19 @@ class PublicClientSecuredModeDogfoodIntegrationTest
   void securedWorker_withoutSigningIdentity_cannotConsumeProtectedWork_andLeavesProcessIncomplete()
       throws Exception {
     long securedPolicyVersion = nextPolicyVersion();
+    String namespace = newTestNamespace("dogfood-secured-worker-negative");
     String unsignedWorkerParticipantId = "dogfood-unsigned-worker";
 
     TaktXClient observer =
         startClient(
-            baseProperties(DEFAULT_NAMESPACE),
+            baseProperties(namespace),
             participantDescriptor(
                 "dogfood-worker-negative-observer",
                 Set.of(ParticipantCapability.SECURITY_OBSERVER),
                 "dogfood-worker-negative-observer"));
     TaktXClient publisher =
         startClient(
-            platformWriterProperties(DEFAULT_NAMESPACE),
+            platformWriterProperties(namespace),
             participantDescriptor(
                 "dogfood-worker-negative-console",
                 Set.of(
@@ -255,7 +258,7 @@ class PublicClientSecuredModeDogfoodIntegrationTest
                 "console"));
     TaktXClient runtimeClient =
         startClient(
-            baseProperties(DEFAULT_NAMESPACE),
+            baseProperties(namespace),
             participantDescriptor(
                 "dogfood-worker-negative-runtime",
                 Set.of(
@@ -264,7 +267,7 @@ class PublicClientSecuredModeDogfoodIntegrationTest
                 "orders-console"));
     TaktXClient unsignedWorkerClient =
         startClientWithoutSigningIdentity(
-            baseProperties(DEFAULT_NAMESPACE),
+            baseProperties(namespace),
             participantDescriptor(
                 unsignedWorkerParticipantId,
                 Set.of(
@@ -317,6 +320,39 @@ class PublicClientSecuredModeDogfoodIntegrationTest
                 -1,
                 VariablesDTO.empty(),
                 jwt("START", SERVICE_PROCESS_ID, -1));
+
+    SecurityEventDTO readinessMismatchEvent =
+        observer
+            .observability()
+            .awaitSecurityEvent(
+                event ->
+                    event.getEventType() == SecurityEventType.READINESS_MISMATCH
+                        && "READINESS_MISMATCH".equals(event.getCode())
+                        && Long.valueOf(securedPolicyVersion).equals(event.getDesiredPolicyVersion()),
+                Duration.ofSeconds(30));
+
+    SecurityPostureSnapshot blockedWorkerPosture =
+        observer
+            .observability()
+            .awaitPostureSnapshot(
+                snapshot ->
+                    snapshot.hasRecentSecurityEvents()
+                        && snapshot.recentSecurityEvents().stream()
+                            .anyMatch(
+                                event ->
+                                    event.getEventType() == SecurityEventType.READINESS_MISMATCH
+                                        && "READINESS_MISMATCH".equals(event.getCode())
+                                        && Long.valueOf(securedPolicyVersion)
+                                            .equals(event.getDesiredPolicyVersion())),
+                Duration.ofSeconds(30));
+
+    assertThat(readinessMismatchEvent.getCode()).isEqualTo("READINESS_MISMATCH");
+    assertThat(blockedWorkerPosture.recentSecurityEvents())
+        .anyMatch(
+            event ->
+                event.getEventType() == SecurityEventType.READINESS_MISMATCH
+                    && "READINESS_MISMATCH".equals(event.getCode())
+                    && Long.valueOf(securedPolicyVersion).equals(event.getDesiredPolicyVersion()));
 
     await()
         .during(Duration.ofSeconds(2))
