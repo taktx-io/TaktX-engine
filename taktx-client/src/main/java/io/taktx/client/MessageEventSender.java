@@ -41,7 +41,8 @@ public class MessageEventSender {
             new MessageEventSerializer());
   }
 
-  void setProtectedDataPlaneGuard(@jakarta.annotation.Nullable ProtectedClientDataPlaneGuard protectedDataPlaneGuard) {
+  void setProtectedDataPlaneGuard(
+      @jakarta.annotation.Nullable ProtectedClientDataPlaneGuard protectedDataPlaneGuard) {
     this.protectedDataPlaneGuard =
         protectedDataPlaneGuard != null
             ? protectedDataPlaneGuard

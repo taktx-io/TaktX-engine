@@ -5,11 +5,10 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
-package io.taktx.security;
+package io.taktx.dto;
 
-/** Explicit activation-authority identities for namespace security policy lifecycle ownership. */
-public enum NamespaceSecurityPolicyActivationAuthority {
-  PLATFORM_SERVICE,
-  PARTICIPANT_RUNTIME,
-  UNKNOWN
+/** High-level participant identity category for security posture reporting. */
+public enum ParticipantKind {
+  ENGINE,
+  CLIENT
 }

@@ -11,7 +11,9 @@ import io.taktx.dto.SecurityActivationState;
 import java.util.EnumSet;
 import java.util.Set;
 
-/** Shared first-slice activation authority contract for namespace security policy lifecycle changes. */
+/**
+ * Shared first-slice activation authority contract for namespace security policy lifecycle changes.
+ */
 public final class NamespaceSecurityPolicyActivationAuthorityContract {
 
   private NamespaceSecurityPolicyActivationAuthorityContract() {}
@@ -21,7 +23,9 @@ public final class NamespaceSecurityPolicyActivationAuthorityContract {
     return NamespaceSecurityPolicyActivationAuthority.PLATFORM_SERVICE;
   }
 
-  /** Returns participants that may report readiness but are not allowed to authoritatively activate. */
+  /**
+   * Returns participants that may report readiness but are not allowed to authoritatively activate.
+   */
   public static Set<NamespaceSecurityPolicyActivationAuthority> nonAuthoritativeParticipants() {
     return Set.copyOf(
         EnumSet.of(
@@ -32,8 +36,9 @@ public final class NamespaceSecurityPolicyActivationAuthorityContract {
   /**
    * Returns whether the supplied authority may perform the requested activation-state transition.
    *
-   * <p>In the first slice, only {@code PLATFORM_SERVICE} may transition a policy into {@code ACTIVE}.
-   * Non-authoritative participants may report posture but must not individually decide activation.
+   * <p>In the first slice, only {@code PLATFORM_SERVICE} may transition a policy into {@code
+   * ACTIVE}. Non-authoritative participants may report posture but must not individually decide
+   * activation.
    */
   public static boolean mayTransitionActivationState(
       NamespaceSecurityPolicyActivationAuthority authority,
@@ -48,4 +53,3 @@ public final class NamespaceSecurityPolicyActivationAuthorityContract {
     return authority == soleActivationAuthority() && from != SecurityActivationState.ACTIVE;
   }
 }
-

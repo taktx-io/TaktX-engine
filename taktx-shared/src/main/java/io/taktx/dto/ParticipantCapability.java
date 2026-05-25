@@ -7,11 +7,11 @@
  */
 package io.taktx.dto;
 
-/** Participant role used in namespace security policy telemetry. */
-public enum ParticipantRole {
-  ENGINE,
-  WORKER,
-  CLIENT,
-  INGESTER,
-  CONSOLE
+/** Declared participant capabilities used for policy relevance and posture interpretation. */
+public enum ParticipantCapability {
+  ENFORCER,
+  AUTHORITATIVE_POLICY_PUBLISHER,
+  PROTECTED_RUNTIME_PARTICIPANT,
+  SECURITY_OBSERVER
 }
+

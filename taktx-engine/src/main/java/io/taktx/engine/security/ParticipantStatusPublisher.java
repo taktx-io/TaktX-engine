@@ -127,13 +127,16 @@ public class ParticipantStatusPublisher {
     NamespaceSecurityPolicyDTO currentPolicy =
         namespaceSecurityPolicyStore != null ? namespaceSecurityPolicyStore.get() : null;
     NamespaceSecurityPolicyDTO authoritativePolicy =
-        namespaceSecurityPolicyStore != null ? namespaceSecurityPolicyStore.getAuthoritativePolicy() : null;
+        namespaceSecurityPolicyStore != null
+            ? namespaceSecurityPolicyStore.getAuthoritativePolicy()
+            : null;
 
     String code = null;
     String message = null;
     Map<String, String> metadata = new LinkedHashMap<>();
 
-    if (currentPolicy != null && currentPolicy.getActivationState() != SecurityActivationState.ACTIVE) {
+    if (currentPolicy != null
+        && currentPolicy.getActivationState() != SecurityActivationState.ACTIVE) {
       code = POLICY_NOT_ACTIVE_CODE;
       message =
           "Protected data-plane participation for the requested policy remains blocked until the policy becomes ACTIVE";
@@ -152,7 +155,12 @@ public class ParticipantStatusPublisher {
       metadata.put("effectiveState", String.valueOf(status.getEffectiveState()));
       metadata.put(
           "mismatchCodes",
-          status.getMismatchReasons().stream().map(reason -> reason.getCode()).filter(Objects::nonNull).distinct().reduce((left, right) -> left + "," + right).orElse(""));
+          status.getMismatchReasons().stream()
+              .map(reason -> reason.getCode())
+              .filter(Objects::nonNull)
+              .distinct()
+              .reduce((left, right) -> left + "," + right)
+              .orElse(""));
     }
 
     if (code == null || securityEventPublisher == null || status == null) {
@@ -199,9 +207,13 @@ public class ParticipantStatusPublisher {
             .participantId(status.getParticipantId())
             .participantInstanceId(status.getParticipantInstanceId())
             .desiredPolicyVersion(
-                currentPolicy != null ? currentPolicy.getDesiredPolicyVersion() : status.getObservedPolicyVersion())
+                currentPolicy != null
+                    ? currentPolicy.getDesiredPolicyVersion()
+                    : status.getObservedPolicyVersion())
             .desiredPolicyHash(
-                currentPolicy != null ? currentPolicy.getDesiredPolicyHash() : status.getObservedPolicyHash())
+                currentPolicy != null
+                    ? currentPolicy.getDesiredPolicyHash()
+                    : status.getObservedPolicyHash())
             .activePolicyVersion(
                 authoritativePolicy != null
                     ? authoritativePolicy.getActivePolicyVersion()

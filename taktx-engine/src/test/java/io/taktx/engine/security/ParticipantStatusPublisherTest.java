@@ -11,13 +11,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.taktx.dto.NamespaceSecurityPolicyDTO;
+import io.taktx.dto.ParticipantCapability;
 import io.taktx.dto.ParticipantEffectiveState;
-import io.taktx.dto.ParticipantRole;
+import io.taktx.dto.ParticipantKind;
 import io.taktx.dto.ParticipantStatusDTO;
 import io.taktx.dto.PolicyMismatchReasonDTO;
 import io.taktx.dto.RequiredSigningDTO;
@@ -28,8 +28,9 @@ import io.taktx.dto.SecurityMode;
 import io.taktx.dto.StatusVerificationLevel;
 import io.taktx.engine.config.NamespaceSecurityPolicyStore;
 import io.taktx.engine.config.TaktConfiguration;
-import io.taktx.serdes.ParticipantStatusProtoMapper;
 import io.taktx.security.NamespaceSecurityPolicySupport;
+import io.taktx.serdes.ParticipantStatusProtoMapper;
+import java.util.Set;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
@@ -40,6 +41,9 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
 class ParticipantStatusPublisherTest {
+
+  private static final Set<ParticipantCapability> ENGINE_CAPABILITIES =
+      Set.of(ParticipantCapability.ENFORCER, ParticipantCapability.SECURITY_OBSERVER);
 
   private TaktConfiguration configuration;
   private NamespaceSecurityPolicyStore namespaceSecurityPolicyStore;
@@ -71,19 +75,7 @@ class ParticipantStatusPublisherTest {
 
   @Test
   void toRecord_usesParticipantInstanceIdAsKey() throws Exception {
-    ParticipantStatusDTO status =
-        ParticipantStatusDTO.builder()
-            .participantId("tenant.bank.payments.engine")
-            .participantInstanceId("tenant.bank.payments@engine-host:8080#123")
-            .role(ParticipantRole.ENGINE)
-            .namespace("bank.payments")
-            .startedAt(100L)
-            .lastSeenAt(150L)
-            .statusExpiresAt(200L)
-            .statusVerificationLevel(StatusVerificationLevel.LOCALLY_VERIFIED_STATUS)
-            .effectiveState(ParticipantEffectiveState.READY)
-            .readyForDataPlane(true)
-            .build();
+    ParticipantStatusDTO status = readyEngineStatus();
 
     ProducerRecord<String, byte[]> producerRecord =
         ParticipantStatusPublisher.toRecord(
@@ -98,24 +90,16 @@ class ParticipantStatusPublisherTest {
 
   @Test
   void publishCurrentStatus_evaluatesAndPublishesStatus() {
-    ParticipantStatusDTO status =
-        ParticipantStatusDTO.builder()
-            .participantId("tenant.bank.payments.engine")
-            .participantInstanceId("tenant.bank.payments@engine-host:8080#123")
-            .role(ParticipantRole.ENGINE)
-            .namespace("bank.payments")
-            .startedAt(100L)
-            .lastSeenAt(150L)
-            .statusExpiresAt(200L)
-            .statusVerificationLevel(StatusVerificationLevel.LOCALLY_VERIFIED_STATUS)
-            .effectiveState(ParticipantEffectiveState.READY)
-            .readyForDataPlane(true)
-            .build();
+    ParticipantStatusDTO status = readyEngineStatus();
     when(readinessEvaluator.evaluateCurrentStatus()).thenReturn(status);
 
     ParticipantStatusPublisher publisher =
         new ParticipantStatusPublisher(
-            configuration, namespaceSecurityPolicyStore, readinessEvaluator, securityEventPublisher, producer);
+            configuration,
+            namespaceSecurityPolicyStore,
+            readinessEvaluator,
+            securityEventPublisher,
+            producer);
 
     ParticipantStatusDTO published = publisher.publishCurrentStatus();
 
@@ -128,7 +112,11 @@ class ParticipantStatusPublisherTest {
   void publish_rejectsNullStatus() {
     ParticipantStatusPublisher publisher =
         new ParticipantStatusPublisher(
-            configuration, namespaceSecurityPolicyStore, readinessEvaluator, securityEventPublisher, producer);
+            configuration,
+            namespaceSecurityPolicyStore,
+            readinessEvaluator,
+            securityEventPublisher,
+            producer);
 
     assertThatThrownBy(() -> publisher.publish(null))
         .isInstanceOf(IllegalArgumentException.class)
@@ -147,46 +135,32 @@ class ParticipantStatusPublisherTest {
                 .build());
     namespaceSecurityPolicyStore.setCurrentPolicy(requested);
 
-    ParticipantStatusDTO status =
-        ParticipantStatusDTO.builder()
-            .participantId("tenant.bank.payments.engine")
-            .participantInstanceId("tenant.bank.payments@engine-host:8080#123")
-            .role(ParticipantRole.ENGINE)
-            .namespace("bank.payments")
-            .startedAt(100L)
-            .lastSeenAt(150L)
-            .statusExpiresAt(200L)
-            .statusVerificationLevel(StatusVerificationLevel.LOCALLY_VERIFIED_STATUS)
-            .effectiveState(ParticipantEffectiveState.READY)
-            .readyForDataPlane(true)
-            .build();
+    ParticipantStatusDTO status = readyEngineStatus();
     when(readinessEvaluator.evaluateCurrentStatus()).thenReturn(status);
 
     ParticipantStatusPublisher publisher =
         new ParticipantStatusPublisher(
-            configuration, namespaceSecurityPolicyStore, readinessEvaluator, securityEventPublisher, producer);
+            configuration,
+            namespaceSecurityPolicyStore,
+            readinessEvaluator,
+            securityEventPublisher,
+            producer);
 
     publisher.publishCurrentStatus();
 
     ArgumentCaptor<SecurityEventDTO> eventCaptor = ArgumentCaptor.forClass(SecurityEventDTO.class);
     verify(securityEventPublisher).publish(eventCaptor.capture());
-    assertThat(eventCaptor.getValue().getEventType()).isEqualTo(SecurityEventType.DATA_PLANE_BLOCKED);
-    assertThat(eventCaptor.getValue().getCode()).isEqualTo(ParticipantStatusPublisher.POLICY_NOT_ACTIVE_CODE);
+    assertThat(eventCaptor.getValue().getEventType())
+        .isEqualTo(SecurityEventType.DATA_PLANE_BLOCKED);
+    assertThat(eventCaptor.getValue().getCode())
+        .isEqualTo(ParticipantStatusPublisher.POLICY_NOT_ACTIVE_CODE);
     assertThat(eventCaptor.getValue().getDesiredPolicyVersion()).isEqualTo(42L);
   }
 
   @Test
   void publishCurrentStatus_deduplicatesRepeatedBlockedEventsUntilStateChanges() {
     ParticipantStatusDTO blocked =
-        ParticipantStatusDTO.builder()
-            .participantId("tenant.bank.payments.engine")
-            .participantInstanceId("tenant.bank.payments@engine-host:8080#123")
-            .role(ParticipantRole.ENGINE)
-            .namespace("bank.payments")
-            .startedAt(100L)
-            .lastSeenAt(150L)
-            .statusExpiresAt(200L)
-            .statusVerificationLevel(StatusVerificationLevel.LOCALLY_VERIFIED_STATUS)
+        readyEngineStatus().toBuilder()
             .effectiveState(ParticipantEffectiveState.MISMATCH)
             .readyForDataPlane(false)
             .observedPolicyVersion(41L)
@@ -198,12 +172,22 @@ class ParticipantStatusPublisherTest {
                         .message("trust anchor missing")
                         .build()))
             .build();
-    ParticipantStatusDTO recovered = blocked.toBuilder().effectiveState(ParticipantEffectiveState.READY).readyForDataPlane(true).mismatchReasons(java.util.List.of()).build();
-    when(readinessEvaluator.evaluateCurrentStatus()).thenReturn(blocked, blocked, recovered, blocked);
+    ParticipantStatusDTO recovered =
+        blocked.toBuilder()
+            .effectiveState(ParticipantEffectiveState.READY)
+            .readyForDataPlane(true)
+            .mismatchReasons(java.util.List.of())
+            .build();
+    when(readinessEvaluator.evaluateCurrentStatus())
+        .thenReturn(blocked, blocked, recovered, blocked);
 
     ParticipantStatusPublisher publisher =
         new ParticipantStatusPublisher(
-            configuration, namespaceSecurityPolicyStore, readinessEvaluator, securityEventPublisher, producer);
+            configuration,
+            namespaceSecurityPolicyStore,
+            readinessEvaluator,
+            securityEventPublisher,
+            producer);
 
     publisher.publishCurrentStatus();
     publisher.publishCurrentStatus();
@@ -217,5 +201,22 @@ class ParticipantStatusPublisherTest {
         .containsOnly(SecurityEventType.DATA_PLANE_BLOCKED);
     assertThat(eventCaptor.getAllValues().getFirst().getCode()).isEqualTo("TRUST_ANCHOR_MISSING");
     verify(producer, Mockito.times(4)).send(any());
+  }
+
+  private static ParticipantStatusDTO readyEngineStatus() {
+    return ParticipantStatusDTO.builder()
+        .participantId("tenant.bank.payments.engine")
+        .participantInstanceId("tenant.bank.payments@engine-host:8080#123")
+        .participantKind(ParticipantKind.ENGINE)
+        .componentType("engine")
+        .capabilities(ENGINE_CAPABILITIES)
+        .namespace("bank.payments")
+        .startedAt(100L)
+        .lastSeenAt(150L)
+        .statusExpiresAt(200L)
+        .statusVerificationLevel(StatusVerificationLevel.LOCALLY_VERIFIED_STATUS)
+        .effectiveState(ParticipantEffectiveState.READY)
+        .readyForDataPlane(true)
+        .build();
   }
 }

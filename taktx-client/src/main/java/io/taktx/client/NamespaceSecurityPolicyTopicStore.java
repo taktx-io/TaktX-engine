@@ -33,7 +33,8 @@ import org.slf4j.LoggerFactory;
 /** Watches the compacted namespace-security-policy topic for the client runtime. */
 final class NamespaceSecurityPolicyTopicStore implements AutoCloseable {
 
-  private static final Logger log = LoggerFactory.getLogger(NamespaceSecurityPolicyTopicStore.class);
+  private static final Logger log =
+      LoggerFactory.getLogger(NamespaceSecurityPolicyTopicStore.class);
 
   private final KafkaConsumer<String, byte[]> consumer;
   private final String topic;
@@ -213,4 +214,3 @@ final class NamespaceSecurityPolicyTopicStore implements AutoCloseable {
     }
   }
 }
-

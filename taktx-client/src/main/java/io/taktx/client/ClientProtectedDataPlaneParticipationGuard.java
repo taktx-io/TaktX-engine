@@ -8,8 +8,9 @@
 package io.taktx.client;
 
 import io.taktx.dto.NamespaceSecurityPolicyDTO;
+import io.taktx.dto.ParticipantCapability;
 import io.taktx.dto.ParticipantEffectiveState;
-import io.taktx.dto.ParticipantRole;
+import io.taktx.dto.ParticipantKind;
 import io.taktx.dto.ParticipantStatusDTO;
 import io.taktx.dto.PolicyMismatchReasonDTO;
 import io.taktx.dto.RequiredAuthorizationDTO;
@@ -43,8 +44,11 @@ final class ClientProtectedDataPlaneParticipationGuard {
       "START_COMMAND_AUTHORIZATION_UNAVAILABLE";
   static final String EXTERNAL_TASK_AUTHORIZATION_UNAVAILABLE =
       "EXTERNAL_TASK_AUTHORIZATION_UNAVAILABLE";
-  static final String USER_TASK_AUTHORIZATION_UNAVAILABLE =
-      "USER_TASK_AUTHORIZATION_UNAVAILABLE";
+  static final String USER_TASK_AUTHORIZATION_UNAVAILABLE = "USER_TASK_AUTHORIZATION_UNAVAILABLE";
+  private static final java.util.Set<ParticipantCapability> GENERIC_CLIENT_CAPABILITIES =
+      java.util.Set.of(
+          ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT,
+          ParticipantCapability.SECURITY_OBSERVER);
 
   private final TaktPropertiesHelper taktPropertiesHelper;
   private final Supplier<ClientNamespaceSecurityPolicyStore> policyStoreSupplier;
@@ -83,7 +87,8 @@ final class ClientProtectedDataPlaneParticipationGuard {
     NamespaceSecurityPolicyDTO currentPolicy = policyStore.get();
     NamespaceSecurityPolicyDTO authoritativePolicy = policyStore.getAuthoritativePolicy();
     if (authoritativePolicy == null) {
-      if (currentPolicy != null && currentPolicy.getActivationState() != SecurityActivationState.ACTIVE) {
+      if (currentPolicy != null
+          && currentPolicy.getActivationState() != SecurityActivationState.ACTIVE) {
         return Decision.blocked(
             POLICY_NOT_ACTIVE_HINT,
             "Protected data-plane participation is blocked until the requested namespace"
@@ -152,7 +157,9 @@ final class ClientProtectedDataPlaneParticipationGuard {
     }
 
     RequiredSigningDTO requiredSigning =
-        policy.getRequiredSigning() != null ? policy.getRequiredSigning() : RequiredSigningDTO.builder().build();
+        policy.getRequiredSigning() != null
+            ? policy.getRequiredSigning()
+            : RequiredSigningDTO.builder().build();
     RequiredAuthorizationDTO requiredAuthorization =
         policy.getRequiredAuthorization() != null
             ? policy.getRequiredAuthorization()
@@ -204,7 +211,8 @@ final class ClientProtectedDataPlaneParticipationGuard {
                   "Namespace requires signed worker responses but no publishable worker signing"
                       + " identity is ready"));
         }
-        if (requiredAuthorization.isExternalTaskCompletion() && !taskCompletionAuthorizationAvailable) {
+        if (requiredAuthorization.isExternalTaskCompletion()
+            && !taskCompletionAuthorizationAvailable) {
           effectiveState = ParticipantEffectiveState.MISMATCH;
           readyForDataPlane = false;
           mismatchReasons.add(
@@ -243,7 +251,9 @@ final class ClientProtectedDataPlaneParticipationGuard {
     return ParticipantStatusDTO.builder()
         .participantId(participantId())
         .participantInstanceId(participantInstanceId())
-        .role(ParticipantRole.CLIENT)
+        .participantKind(ParticipantKind.CLIENT)
+        .componentType("generic-client")
+        .capabilities(GENERIC_CLIENT_CAPABILITIES)
         .namespace(taktPropertiesHelper.getNamespace())
         .startedAt(startedAtMs)
         .lastSeenAt(nowMs)
@@ -268,7 +278,10 @@ final class ClientProtectedDataPlaneParticipationGuard {
   }
 
   private String participantId() {
-    return taktPropertiesHelper.getTenantId() + "." + taktPropertiesHelper.getNamespace() + ".client";
+    return taktPropertiesHelper.getTenantId()
+        + "."
+        + taktPropertiesHelper.getNamespace()
+        + ".client";
   }
 
   private String participantInstanceId() {
@@ -294,5 +307,3 @@ final class ClientProtectedDataPlaneParticipationGuard {
     }
   }
 }
-
-

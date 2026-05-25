@@ -8,8 +8,8 @@
 package io.taktx.engine.config;
 
 import io.taktx.dto.NamespaceSecurityPolicyDTO;
-import io.taktx.engine.security.NamespaceSecurityPolicyActivationService;
 import io.taktx.engine.security.EngineAuthorizationService;
+import io.taktx.engine.security.NamespaceSecurityPolicyActivationService;
 import io.taktx.proto.NamespaceSecurityPolicyMessage;
 import io.taktx.security.AuthorizationTokenException;
 import io.taktx.security.NamespaceSecurityPolicySupport;
@@ -72,7 +72,8 @@ public class NamespaceSecurityPolicyProcessor implements Processor<String, byte[
 
     try {
       if (engineAuthorizationService != null) {
-        engineAuthorizationService.authorizeNamespaceSecurityPolicyMutation(rec.headers(), rec.value());
+        engineAuthorizationService.authorizeNamespaceSecurityPolicyMutation(
+            rec.headers(), rec.value());
       }
 
       if (rec.value() == null) {

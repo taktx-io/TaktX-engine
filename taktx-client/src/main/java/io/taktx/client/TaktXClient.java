@@ -33,11 +33,11 @@ import io.taktx.dto.ProcessInstanceTriggerDTO;
 import io.taktx.dto.SignalDTO;
 import io.taktx.dto.UserTaskTriggerDTO;
 import io.taktx.dto.VariablesDTO;
+import io.taktx.security.AuthoritativeControlPlaneSecurityProperty;
 import io.taktx.security.Ed25519Service;
 import io.taktx.security.EnvironmentWorkerSigningIdentitySource;
 import io.taktx.security.FileSigningIdentitySource;
 import io.taktx.security.GeneratedSigningIdentitySource;
-import io.taktx.security.AuthoritativeControlPlaneSecurityProperty;
 import io.taktx.security.NamespaceSecurityPolicyActivationAuthority;
 import io.taktx.security.NamespaceSecurityPolicyActivationAuthorityContract;
 import io.taktx.security.NamespaceSecurityPolicyControlPlaneContract;
@@ -191,11 +191,13 @@ public class TaktXClient {
     this.signalSender.setProtectedDataPlaneGuard(guard);
     this.processInstanceResponder.setProtectedDataPlaneGuard(guard);
     this.externalTaskTriggerTopicConsumer.setBeforeDispatchHook(
-        () -> ensureProtectedDataPlaneOperationAllowed(
-            ProtectedClientDataPlaneOperation.EXTERNAL_TASK_CONSUME, null));
+        () ->
+            ensureProtectedDataPlaneOperationAllowed(
+                ProtectedClientDataPlaneOperation.EXTERNAL_TASK_CONSUME, null));
     this.userTaskTriggerTopicConsumer.setBeforeDispatchHook(
-        () -> ensureProtectedDataPlaneOperationAllowed(
-            ProtectedClientDataPlaneOperation.USER_TASK_CONSUME, null));
+        () ->
+            ensureProtectedDataPlaneOperationAllowed(
+                ProtectedClientDataPlaneOperation.USER_TASK_CONSUME, null));
   }
 
   /**
@@ -430,7 +432,9 @@ public class TaktXClient {
     }
   }
 
-  /** Publishes an authoritative namespace security policy to the compacted security-policy topic. */
+  /**
+   * Publishes an authoritative namespace security policy to the compacted security-policy topic.
+   */
   public void publishNamespaceSecurityPolicy(NamespaceSecurityPolicyDTO policy) {
     publishNamespaceSecurityPolicy(taktPropertiesHelper.getTaktProperties(), policy);
   }
@@ -473,7 +477,10 @@ public class TaktXClient {
     }
   }
 
-  /** Clears the authoritative namespace security policy by publishing a tombstone under key `policy`. */
+  /**
+   * Clears the authoritative namespace security policy by publishing a tombstone under key
+   * `policy`.
+   */
   public void clearNamespaceSecurityPolicy() {
     clearNamespaceSecurityPolicy(taktPropertiesHelper.getTaktProperties());
   }
@@ -509,7 +516,10 @@ public class TaktXClient {
     }
   }
 
-  /** Returns the authoritative control-plane writer security properties for namespace policy mutation. */
+  /**
+   * Returns the authoritative control-plane writer security properties for namespace policy
+   * mutation.
+   */
   public static Set<AuthoritativeControlPlaneSecurityProperty>
       namespaceSecurityPolicyWriterSecurityProperties() {
     return NamespaceSecurityPolicyControlPlaneContract.requiredWriterSecurityProperties();
@@ -530,8 +540,8 @@ public class TaktXClient {
     return NamespaceSecurityPolicyActivationAuthorityContract.soleActivationAuthority();
   }
 
-  static org.apache.kafka.clients.producer.ProducerRecord<String, byte[]> buildNamespaceSecurityPolicyRecord(
-      String topic, NamespaceSecurityPolicyDTO policy) {
+  static org.apache.kafka.clients.producer.ProducerRecord<String, byte[]>
+      buildNamespaceSecurityPolicyRecord(String topic, NamespaceSecurityPolicyDTO policy) {
     return buildNamespaceSecurityPolicyRecord(topic, policy, null);
   }
 
@@ -547,8 +557,8 @@ public class TaktXClient {
         signingIdentity);
   }
 
-  static org.apache.kafka.clients.producer.ProducerRecord<String, byte[]> buildNamespaceSecurityPolicyTombstoneRecord(
-      String topic) {
+  static org.apache.kafka.clients.producer.ProducerRecord<String, byte[]>
+      buildNamespaceSecurityPolicyTombstoneRecord(String topic) {
     return buildNamespaceSecurityPolicyTombstoneRecord(topic, null);
   }
 
@@ -603,7 +613,8 @@ public class TaktXClient {
     return signingIdentity;
   }
 
-  private static SigningIdentity resolveAuthoritativeControlPlaneSigningIdentity(Properties properties) {
+  private static SigningIdentity resolveAuthoritativeControlPlaneSigningIdentity(
+      Properties properties) {
     String sourceType =
         TaktXClientBuilder.firstNonBlank(
             properties.getProperty("taktx.signing.identity-source"),
@@ -1099,8 +1110,7 @@ public class TaktXClient {
   }
 
   private void ensureProtectedDataPlaneOperationAllowed(
-      ProtectedClientDataPlaneOperation operation,
-      @Nullable String explicitAuthorizationToken) {
+      ProtectedClientDataPlaneOperation operation, @Nullable String explicitAuthorizationToken) {
     protectedDataPlaneParticipationGuard.check(operation, explicitAuthorizationToken);
   }
 
@@ -1157,11 +1167,14 @@ public class TaktXClient {
   }
 
   private @Nullable NamespaceSecurityPolicyDTO authoritativeNamespaceSecurityPolicy() {
-    return namespaceSecurityPolicyStore != null ? namespaceSecurityPolicyStore.getAuthoritativePolicy() : null;
+    return namespaceSecurityPolicyStore != null
+        ? namespaceSecurityPolicyStore.getAuthoritativePolicy()
+        : null;
   }
 
   private @Nullable String resolvePlatformPublicKey() {
-    String configured = taktPropertiesHelper.getTaktProperties().getProperty("taktx.platform.public-key");
+    String configured =
+        taktPropertiesHelper.getTaktProperties().getProperty("taktx.platform.public-key");
     if (configured != null && !configured.isBlank()) {
       return configured;
     }

@@ -403,7 +403,7 @@ public class ExternalTaskTriggerTopicConsumer {
                 CompletableFuture.supplyAsync(
                     () -> {
                       try {
-                            beforeDispatchHook.run();
+                        beforeDispatchHook.run();
                         consumer.acceptBatch(List.of(dto));
                         return true;
                       } catch (Exception e) {

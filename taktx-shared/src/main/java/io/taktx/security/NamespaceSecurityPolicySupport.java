@@ -159,7 +159,10 @@ public final class NamespaceSecurityPolicySupport {
   /** Parses role-relevant signing requirement names from a token set. */
   public static RequiredSigningDTO parseRequiredSigning(Set<String> rawTokens) {
     Set<String> tokens = normalizeRequirementTokens(rawTokens);
-    validateRequirementTokens(tokens, Set.of("ENGINE_OUTBOUND", "CLIENT_COMMANDS", "WORKER_RESPONSES"), "signing requirement");
+    validateRequirementTokens(
+        tokens,
+        Set.of("ENGINE_OUTBOUND", "CLIENT_COMMANDS", "WORKER_RESPONSES"),
+        "signing requirement");
     return RequiredSigningDTO.builder()
         .engineOutbound(tokens.contains("ENGINE_OUTBOUND"))
         .clientCommands(tokens.contains("CLIENT_COMMANDS"))

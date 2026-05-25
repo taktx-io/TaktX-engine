@@ -18,10 +18,10 @@ import java.time.Clock;
 /**
  * Decides whether the local engine may participate in protected data-plane processing.
  *
- * <p>Control-plane traffic remains available while policy is pending or participants are converging,
- * but protected runtime work must fail closed unless there is either no explicit authoritative
- * policy (default community-open) or the engine is READY for the exact authoritative active policy
- * identity.
+ * <p>Control-plane traffic remains available while policy is pending or participants are
+ * converging, but protected runtime work must fail closed unless there is either no explicit
+ * authoritative policy (default community-open) or the engine is READY for the exact authoritative
+ * active policy identity.
  */
 public class ProtectedDataPlaneParticipationGuard {
 
@@ -43,10 +43,12 @@ public class ProtectedDataPlaneParticipationGuard {
 
   public Decision evaluate() {
     NamespaceSecurityPolicyDTO currentPolicy = namespaceSecurityPolicyStore.get();
-    NamespaceSecurityPolicyDTO authoritativePolicy = namespaceSecurityPolicyStore.getAuthoritativePolicy();
+    NamespaceSecurityPolicyDTO authoritativePolicy =
+        namespaceSecurityPolicyStore.getAuthoritativePolicy();
 
     if (authoritativePolicy == null) {
-      if (currentPolicy != null && currentPolicy.getActivationState() != SecurityActivationState.ACTIVE) {
+      if (currentPolicy != null
+          && currentPolicy.getActivationState() != SecurityActivationState.ACTIVE) {
         return Decision.blocked(
             POLICY_NOT_ACTIVE_HINT,
             "Protected data-plane participation is blocked until the requested namespace security policy becomes ACTIVE");
@@ -68,10 +70,14 @@ public class ProtectedDataPlaneParticipationGuard {
             ? null
             : status.getMismatchReasons().getFirst();
     return Decision.blocked(
-        firstMismatch != null && firstMismatch.getCode() != null && !firstMismatch.getCode().isBlank()
+        firstMismatch != null
+                && firstMismatch.getCode() != null
+                && !firstMismatch.getCode().isBlank()
             ? firstMismatch.getCode()
             : POLICY_NOT_READY_HINT,
-        firstMismatch != null && firstMismatch.getMessage() != null && !firstMismatch.getMessage().isBlank()
+        firstMismatch != null
+                && firstMismatch.getMessage() != null
+                && !firstMismatch.getMessage().isBlank()
             ? firstMismatch.getMessage()
             : "Protected data-plane participation is blocked because the engine is not READY for the authoritative namespace security policy");
   }
@@ -87,6 +93,3 @@ public class ProtectedDataPlaneParticipationGuard {
     }
   }
 }
-
-
-

@@ -8,6 +8,7 @@
 package io.taktx.dto;
 
 import java.util.List;
+import java.util.Set;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
@@ -27,7 +28,9 @@ import lombok.ToString;
 public class ParticipantStatusDTO {
   private String participantId;
   private String participantInstanceId;
-  private ParticipantRole role;
+  private ParticipantKind participantKind;
+  private String componentType;
+  @Builder.Default private Set<ParticipantCapability> capabilities = Set.of();
   private String namespace;
   private long startedAt;
   private long lastSeenAt;

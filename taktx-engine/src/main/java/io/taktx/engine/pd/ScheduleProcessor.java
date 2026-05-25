@@ -93,8 +93,9 @@ public class ScheduleProcessor
 
     try {
       SigningKeyDTO trustedSigner =
-          securityServices.engineAuthorizationService().authorizeScheduleCommand(
-              scheduleRecord.headers(), scheduleKey, value);
+          securityServices
+              .engineAuthorizationService()
+              .authorizeScheduleCommand(scheduleRecord.headers(), scheduleKey, value);
       if (trustedSigner != null) {
         log.info(
             "Accepted schedule command topic='{}' scheduleKey='{}' signerKeyId='{}' signerRole='{}' outcome='accepted' messageType='{}'",
@@ -118,7 +119,9 @@ public class ScheduleProcessor
           extractSignerKeyId(scheduleRecord),
           e.getMessage(),
           scheduleMessageType(value));
-      securityServices.dlqObservabilityService().recordExcludedTopicFailure(SCHEDULE_COMMANDS_TOPIC_GROUP);
+      securityServices
+          .dlqObservabilityService()
+          .recordExcludedTopicFailure(SCHEDULE_COMMANDS_TOPIC_GROUP);
       return;
     }
 
@@ -151,7 +154,9 @@ public class ScheduleProcessor
           e.getMessage(),
           e);
       // DLQ-018A: increment counter so dashboards can track excluded-topic failures.
-      securityServices.dlqObservabilityService().recordExcludedTopicFailure(SCHEDULE_COMMANDS_TOPIC_GROUP);
+      securityServices
+          .dlqObservabilityService()
+          .recordExcludedTopicFailure(SCHEDULE_COMMANDS_TOPIC_GROUP);
     }
   }
 
@@ -172,7 +177,9 @@ public class ScheduleProcessor
         decision.reasonHint(),
         decision.reasonText(),
         scheduleMessageType(schedule));
-    securityServices.dlqObservabilityService().recordExcludedTopicFailure(SCHEDULE_COMMANDS_TOPIC_GROUP);
+    securityServices
+        .dlqObservabilityService()
+        .recordExcludedTopicFailure(SCHEDULE_COMMANDS_TOPIC_GROUP);
     return true;
   }
 

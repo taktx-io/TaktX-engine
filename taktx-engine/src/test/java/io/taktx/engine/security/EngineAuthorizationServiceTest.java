@@ -30,8 +30,8 @@ import io.taktx.dto.ProcessDefinitionKey;
 import io.taktx.dto.ReplayProtectionMode;
 import io.taktx.dto.RequiredAuthorizationDTO;
 import io.taktx.dto.RequiredSigningDTO;
-import io.taktx.dto.SetVariableTriggerDTO;
 import io.taktx.dto.SecurityActivationState;
+import io.taktx.dto.SetVariableTriggerDTO;
 import io.taktx.dto.SigningKeyDTO;
 import io.taktx.dto.SigningKeyDTO.KeyStatus;
 import io.taktx.dto.StartCommandDTO;
@@ -96,7 +96,11 @@ class EngineAuthorizationServiceTest {
 
     service =
         new EngineAuthorizationService(
-            config, globalConfigStore, namespaceSecurityPolicyStore, publicKeyProvider, kafkaStreams);
+            config,
+            globalConfigStore,
+            namespaceSecurityPolicyStore,
+            publicKeyProvider,
+            kafkaStreams);
   }
 
   // ── authorization disabled ─────────────────────────────────────────────────
@@ -1047,7 +1051,8 @@ class EngineAuthorizationServiceTest {
             RequiredAuthorizationDTO.builder().startCommands(true).build(),
             RequiredSigningDTO.builder().build()));
 
-    assertThatThrownBy(() -> service.authorize(new RecordHeaders(), envelope(startCommand("proc", -1))))
+    assertThatThrownBy(
+            () -> service.authorize(new RecordHeaders(), envelope(startCommand("proc", -1))))
         .isInstanceOf(AuthorizationTokenException.class)
         .hasMessageContaining("Entry command")
         .hasMessageContaining("tx-auth");
@@ -1074,7 +1079,8 @@ class EngineAuthorizationServiceTest {
             RequiredSigningDTO.builder().build()));
 
     assertThat(service.isTaskCompletionAuthorizationActive(userTaskResponseTrigger())).isTrue();
-    assertThat(service.isTaskCompletionAuthorizationActive(externalTaskResponseTrigger())).isFalse();
+    assertThat(service.isTaskCompletionAuthorizationActive(externalTaskResponseTrigger()))
+        .isFalse();
   }
 
   @Test
@@ -1084,7 +1090,8 @@ class EngineAuthorizationServiceTest {
             RequiredAuthorizationDTO.builder().build(),
             RequiredSigningDTO.builder().clientCommands(true).build()));
 
-    assertThatThrownBy(() -> service.authorize(new RecordHeaders(), envelope(startCommand("proc", -1))))
+    assertThatThrownBy(
+            () -> service.authorize(new RecordHeaders(), envelope(startCommand("proc", -1))))
         .isInstanceOf(AuthorizationTokenException.class)
         .hasMessageContaining("tx-sig");
   }
@@ -1096,7 +1103,8 @@ class EngineAuthorizationServiceTest {
             RequiredAuthorizationDTO.builder().build(),
             RequiredSigningDTO.builder().workerResponses(true).build()));
 
-    assertThatThrownBy(() -> service.authorize(new RecordHeaders(), envelope(userTaskResponseTrigger())))
+    assertThatThrownBy(
+            () -> service.authorize(new RecordHeaders(), envelope(userTaskResponseTrigger())))
         .isInstanceOf(AuthorizationTokenException.class)
         .hasMessageContaining("tx-sig");
   }
@@ -1126,7 +1134,8 @@ class EngineAuthorizationServiceTest {
 
     String jwt = buildJwt("START", "proc", -1, UUID.randomUUID().toString(), futureExpiry());
 
-    assertThatThrownBy(() -> service.authorize(headersWithAuth(jwt), envelope(startCommand("proc", -1))))
+    assertThatThrownBy(
+            () -> service.authorize(headersWithAuth(jwt), envelope(startCommand("proc", -1))))
         .isInstanceOf(AuthorizationTokenException.class)
         .hasMessageContaining("platform public key");
   }
@@ -1258,9 +1267,12 @@ class EngineAuthorizationServiceTest {
 
   private Headers headersWithSignedPayload(String keyId, String privateKeyBase64, byte[] payload) {
     RecordHeaders headers = new RecordHeaders();
-    byte[] signatureBytes = Ed25519Service.sign(payload != null ? payload : new byte[0], privateKeyBase64);
-    headers.add("tx-sig", (keyId + "." + java.util.Base64.getEncoder().encodeToString(signatureBytes))
-        .getBytes(StandardCharsets.UTF_8));
+    byte[] signatureBytes =
+        Ed25519Service.sign(payload != null ? payload : new byte[0], privateKeyBase64);
+    headers.add(
+        "tx-sig",
+        (keyId + "." + java.util.Base64.getEncoder().encodeToString(signatureBytes))
+            .getBytes(StandardCharsets.UTF_8));
     return headers;
   }
 

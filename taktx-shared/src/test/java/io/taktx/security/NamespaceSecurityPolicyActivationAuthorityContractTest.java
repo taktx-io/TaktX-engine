@@ -50,11 +50,9 @@ class NamespaceSecurityPolicyActivationAuthorityContractTest {
                 SecurityActivationState.REQUESTED,
                 SecurityActivationState.VALIDATING))
         .isTrue();
-    assertThat(
-            NamespaceSecurityPolicyActivationAuthorityContract.nonAuthoritativeParticipants())
+    assertThat(NamespaceSecurityPolicyActivationAuthorityContract.nonAuthoritativeParticipants())
         .contains(
             NamespaceSecurityPolicyActivationAuthority.PARTICIPANT_RUNTIME,
             NamespaceSecurityPolicyActivationAuthority.UNKNOWN);
   }
 }
-

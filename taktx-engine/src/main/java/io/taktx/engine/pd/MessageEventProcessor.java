@@ -154,7 +154,8 @@ public class MessageEventProcessor
     if (decision.permitted()) {
       return false;
     }
-    emitMessageEventDlq(messageEventRecord, decision.reasonHint(), decision.reasonText(), "PROCESSOR");
+    emitMessageEventDlq(
+        messageEventRecord, decision.reasonHint(), decision.reasonText(), "PROCESSOR");
     return true;
   }
 
