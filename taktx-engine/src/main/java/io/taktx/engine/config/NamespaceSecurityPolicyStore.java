@@ -23,8 +23,10 @@ import java.util.concurrent.atomic.AtomicReference;
 @ApplicationScoped
 public class NamespaceSecurityPolicyStore {
 
-  private final AtomicReference<NamespaceSecurityPolicyDTO> currentPolicy = new AtomicReference<>(null);
-  private final AtomicReference<NamespaceSecurityPolicyDTO> activePolicy = new AtomicReference<>(null);
+  private final AtomicReference<NamespaceSecurityPolicyDTO> currentPolicy =
+      new AtomicReference<>(null);
+  private final AtomicReference<NamespaceSecurityPolicyDTO> activePolicy =
+      new AtomicReference<>(null);
   private final AtomicReference<Long> validationStartedAtMs = new AtomicReference<>(null);
 
   /** Called whenever a policy record is received and validated successfully. */
@@ -76,7 +78,9 @@ public class NamespaceSecurityPolicyStore {
     return activePolicy.get();
   }
 
-  /** Persists the last authoritative ACTIVE policy used for rollback / protected data-plane rules. */
+  /**
+   * Persists the last authoritative ACTIVE policy used for rollback / protected data-plane rules.
+   */
   public synchronized void setActivePolicy(NamespaceSecurityPolicyDTO dto) {
     activePolicy.set(dto == null ? null : NamespaceSecurityPolicySupport.requireValid(dto));
   }

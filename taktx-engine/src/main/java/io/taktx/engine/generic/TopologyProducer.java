@@ -84,11 +84,11 @@ import io.taktx.engine.pi.ProcessingStatistics;
 import io.taktx.engine.pi.ScopeProcessor;
 import io.taktx.engine.pi.processor.IoMappingProcessor;
 import io.taktx.engine.security.EngineAuthorizationService;
-import io.taktx.engine.security.MessageSigningService;
 import io.taktx.engine.security.EngineSecurityReadinessEvaluator;
+import io.taktx.engine.security.MessageSigningService;
 import io.taktx.engine.security.NamespaceSecurityPolicyActivationService;
-import io.taktx.engine.security.ProtectedDataPlaneParticipationGuard;
 import io.taktx.engine.security.ProcessInstanceResponseDedupProcessor;
+import io.taktx.engine.security.ProtectedDataPlaneParticipationGuard;
 import io.taktx.engine.security.ReplayProtectionProcessor;
 import io.taktx.engine.topicmanagement.DynamicTopicManager;
 import io.taktx.engine.topicmanagement.RequestedTopicValidator;
@@ -381,7 +381,9 @@ public class TopologyProducer {
             taktConfiguration.getPrefixed(Topics.SIGNAL_TOPIC.getTopicName()),
             Consumed.with(Serdes.String(), SIGNAL_SERDE))
         .process(
-            () -> new SignalProcessor(taktConfiguration, clock, protectedDataPlaneParticipationGuard()),
+            () ->
+                new SignalProcessor(
+                    taktConfiguration, clock, protectedDataPlaneParticipationGuard()),
             taktConfiguration.getPrefixed(Stores.INSTANCE_SIGNAL_SUBSCRIPTIONS.getStorename()),
             taktConfiguration.getPrefixed(Stores.DEFINITION_SIGNAL_SUBSCRIPTIONS.getStorename()))
         .split()

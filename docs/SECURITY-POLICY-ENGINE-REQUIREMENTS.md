@@ -2,7 +2,7 @@
 
 **Status:** Proposed handoff requirements/design for the engine repo  
 **Date:** 2026-05-23  
-**Companion docs:** `docs/SECURITY-POLICY-IMPLEMENTATION-PLAN.md`, `docs/ARCHITECTURE.md`
+**Companion docs:** `docs/SECURITY-POLICY-IMPLEMENTATION-PLAN.md`, `docs/security-client-dogfood-refactor-plan.md`, `docs/ARCHITECTURE.md`
 
 ## 1. Purpose
 
@@ -22,6 +22,9 @@ The intended delivery order is:
 
 This document should therefore be usable 1-to-1 as the upstream requirements/design doc for the
 engine repo.
+
+The concrete implementation tracker for the planned breaking client redesign and the unit/integration
+test enablement work lives in `docs/security-client-dogfood-refactor-plan.md`.
 
 The goal is not to make the default deployment heavier.
 

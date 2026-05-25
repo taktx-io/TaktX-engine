@@ -40,7 +40,8 @@ public class SignalSender {
             new SignalSerializer());
   }
 
-  void setProtectedDataPlaneGuard(@jakarta.annotation.Nullable ProtectedClientDataPlaneGuard protectedDataPlaneGuard) {
+  void setProtectedDataPlaneGuard(
+      @jakarta.annotation.Nullable ProtectedClientDataPlaneGuard protectedDataPlaneGuard) {
     this.protectedDataPlaneGuard =
         protectedDataPlaneGuard != null
             ? protectedDataPlaneGuard

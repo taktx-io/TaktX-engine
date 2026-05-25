@@ -9,8 +9,9 @@ package io.taktx.serdes;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import io.taktx.dto.ParticipantCapability;
 import io.taktx.dto.ParticipantEffectiveState;
-import io.taktx.dto.ParticipantRole;
+import io.taktx.dto.ParticipantKind;
 import io.taktx.dto.ParticipantStatusDTO;
 import io.taktx.dto.PolicyMismatchReasonDTO;
 import io.taktx.dto.SecurityEventDTO;
@@ -19,6 +20,7 @@ import io.taktx.dto.SecurityEventType;
 import io.taktx.dto.StatusVerificationLevel;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 class SecurityObservabilityProtoMapperTest {
@@ -29,7 +31,11 @@ class SecurityObservabilityProtoMapperTest {
         ParticipantStatusDTO.builder()
             .participantId("engine-2")
             .participantInstanceId("engine-2-pod-7f8c4d")
-            .role(ParticipantRole.ENGINE)
+            .participantKind(ParticipantKind.ENGINE)
+            .componentType("engine")
+            .capabilities(
+                Set.of(
+                    ParticipantCapability.ENFORCER, ParticipantCapability.SECURITY_OBSERVER))
             .namespace("bank.payments")
             .startedAt(1716450000000L)
             .lastSeenAt(1716450060000L)

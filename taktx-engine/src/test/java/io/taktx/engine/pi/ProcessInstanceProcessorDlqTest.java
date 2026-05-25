@@ -38,13 +38,13 @@ import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.config.NamespaceSecurityPolicyStore;
 import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.pi.processor.IoMappingProcessor;
-import io.taktx.engine.security.EngineSecurityReadinessEvaluator;
 import io.taktx.engine.security.EngineAuthorizationService;
+import io.taktx.engine.security.EngineSecurityReadinessEvaluator;
 import io.taktx.engine.security.MessageSigningService;
 import io.taktx.engine.security.ProtectedDataPlaneParticipationGuard;
 import io.taktx.engine.topicmanagement.DynamicTopicManager;
-import io.taktx.security.NamespaceSecurityPolicySupport;
 import io.taktx.security.AuthorizationTokenException;
+import io.taktx.security.NamespaceSecurityPolicySupport;
 import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
@@ -283,7 +283,8 @@ class ProcessInstanceProcessorDlqTest {
 
     ArgumentCaptor<Record> recordCaptor = ArgumentCaptor.forClass(Record.class);
     verify(context).forward(recordCaptor.capture());
-    ProcessInstanceDlqEntryDTO dlqEntry = (ProcessInstanceDlqEntryDTO) recordCaptor.getValue().value();
+    ProcessInstanceDlqEntryDTO dlqEntry =
+        (ProcessInstanceDlqEntryDTO) recordCaptor.getValue().value();
     assertThat(new String(dlqEntry.getHeaders().get(REASON_HINT), StandardCharsets.UTF_8))
         .isEqualTo(ProtectedDataPlaneParticipationGuard.POLICY_NOT_ACTIVE_HINT);
     assertThat(new String(dlqEntry.getHeaders().get(REASON_TEXT), StandardCharsets.UTF_8))
@@ -315,7 +316,8 @@ class ProcessInstanceProcessorDlqTest {
 
     ArgumentCaptor<Record> recordCaptor = ArgumentCaptor.forClass(Record.class);
     verify(context).forward(recordCaptor.capture());
-    ProcessInstanceDlqEntryDTO dlqEntry = (ProcessInstanceDlqEntryDTO) recordCaptor.getValue().value();
+    ProcessInstanceDlqEntryDTO dlqEntry =
+        (ProcessInstanceDlqEntryDTO) recordCaptor.getValue().value();
     assertThat(new String(dlqEntry.getHeaders().get(REASON_HINT), StandardCharsets.UTF_8))
         .isEqualTo("TRUST_ANCHOR_MISSING");
     assertThat(new String(dlqEntry.getHeaders().get(REASON_TEXT), StandardCharsets.UTF_8))
@@ -338,7 +340,9 @@ class ProcessInstanceProcessorDlqTest {
     ProcessInstanceTriggerEnvelope envelope =
         new ProcessInstanceTriggerEnvelope(payload, trigger, false, null);
     when(engineAuthorizationService.authorize(headers, envelope))
-        .thenThrow(new AuthorizationTokenException("Entry command StartCommandDTO requires tx-auth (JWT)"));
+        .thenThrow(
+            new AuthorizationTokenException(
+                "Entry command StartCommandDTO requires tx-auth (JWT)"));
 
     processor.process(new Record<>(processInstanceId, envelope, 43L, headers));
 
@@ -389,7 +393,8 @@ class ProcessInstanceProcessorDlqTest {
                 "Namespace security policy requires anchored trust but no platform public key is configured"));
 
     ProcessInstanceProcessor guardedProcessor =
-        guardedProcessorWithPolicy(anchoredActivePolicy(42L), anchoredActivePolicy(42L), null, true);
+        guardedProcessorWithPolicy(
+            anchoredActivePolicy(42L), anchoredActivePolicy(42L), null, true);
 
     guardedProcessor.process(new Record<>(processInstanceId, envelope, 45L, headers));
 
@@ -493,7 +498,8 @@ class ProcessInstanceProcessorDlqTest {
       UUID processInstanceId, byte[] payload, String reasonTextFragment) {
     ArgumentCaptor<Record> recordCaptor = ArgumentCaptor.forClass(Record.class);
     verify(context).forward(recordCaptor.capture());
-    ProcessInstanceDlqEntryDTO dlqEntry = (ProcessInstanceDlqEntryDTO) recordCaptor.getValue().value();
+    ProcessInstanceDlqEntryDTO dlqEntry =
+        (ProcessInstanceDlqEntryDTO) recordCaptor.getValue().value();
 
     assertThat(dlqEntry.getProcessInstanceId()).isEqualTo(processInstanceId);
     assertThat(dlqEntry.getData()).containsExactly(payload);

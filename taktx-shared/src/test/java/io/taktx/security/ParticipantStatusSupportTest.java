@@ -10,12 +10,15 @@ package io.taktx.security;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import io.taktx.dto.ParticipantCapability;
 import io.taktx.dto.ParticipantEffectiveState;
-import io.taktx.dto.ParticipantRole;
+import io.taktx.dto.ParticipantKind;
 import io.taktx.dto.ParticipantStatusDTO;
 import io.taktx.dto.PolicyMismatchReasonDTO;
 import io.taktx.dto.StatusVerificationLevel;
+import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 class ParticipantStatusSupportTest {
@@ -27,7 +30,9 @@ class ParticipantStatusSupportTest {
             ParticipantStatusDTO.builder()
                 .participantId("engine-1")
                 .participantInstanceId("engine-1-pod")
-                .role(ParticipantRole.ENGINE)
+                .participantKind(ParticipantKind.ENGINE)
+                .componentType("engine")
+                .capabilities(Set.of(ParticipantCapability.ENFORCER))
                 .namespace("bank.payments")
                 .startedAt(100L)
                 .lastSeenAt(150L)
@@ -48,13 +53,40 @@ class ParticipantStatusSupportTest {
   }
 
   @Test
+  void normalize_replacesNullCapabilitySetsWithEmptySetsAndBlankOptionalComponentType() {
+    ParticipantStatusDTO normalized =
+        ParticipantStatusSupport.normalize(
+            ParticipantStatusDTO.builder()
+                .participantId("engine-1")
+                .participantInstanceId("engine-1-pod")
+                .participantKind(ParticipantKind.ENGINE)
+                .componentType("   ")
+                .capabilities(null)
+                .namespace("bank.payments")
+                .startedAt(100L)
+                .lastSeenAt(150L)
+                .statusExpiresAt(200L)
+                .statusVerificationLevel(StatusVerificationLevel.UNVERIFIED_STATUS)
+                .effectiveState(ParticipantEffectiveState.READY)
+                .build());
+
+    assertThat(normalized.getCapabilities()).isEmpty();
+    assertThat(normalized.getComponentType()).isNull();
+  }
+
+  @Test
   void requireValid_acceptsWellFormedReadyStatus() {
     ParticipantStatusDTO validated =
         ParticipantStatusSupport.requireValid(
             ParticipantStatusDTO.builder()
                 .participantId("engine-1")
                 .participantInstanceId("engine-1-pod")
-                .role(ParticipantRole.ENGINE)
+                .participantKind(ParticipantKind.ENGINE)
+                .componentType("engine")
+                .capabilities(
+                    Set.of(
+                        ParticipantCapability.ENFORCER,
+                        ParticipantCapability.SECURITY_OBSERVER))
                 .namespace("bank.payments")
                 .startedAt(100L)
                 .lastSeenAt(150L)
@@ -75,7 +107,9 @@ class ParticipantStatusSupportTest {
     ParticipantStatusDTO status =
         ParticipantStatusDTO.builder()
             .participantId("engine-1")
-            .role(ParticipantRole.ENGINE)
+            .participantKind(ParticipantKind.ENGINE)
+            .componentType("engine")
+            .capabilities(Set.of(ParticipantCapability.ENFORCER))
             .namespace("bank.payments")
             .startedAt(100L)
             .lastSeenAt(50L)
@@ -91,12 +125,36 @@ class ParticipantStatusSupportTest {
   }
 
   @Test
+  void requireValid_rejectsMissingKindAndEmptyCapabilities() {
+    ParticipantStatusDTO status =
+        ParticipantStatusDTO.builder()
+            .participantId("participant-1")
+            .participantInstanceId("participant-1#1")
+            .componentType(" ")
+            .capabilities(Set.of())
+            .namespace("bank.payments")
+            .startedAt(100L)
+            .lastSeenAt(100L)
+            .statusExpiresAt(200L)
+            .statusVerificationLevel(StatusVerificationLevel.UNVERIFIED_STATUS)
+            .effectiveState(ParticipantEffectiveState.NOT_READY)
+            .build();
+
+    assertThatThrownBy(() -> ParticipantStatusSupport.requireValid(status))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("participantKind must not be null")
+        .hasMessageContaining("capabilities must not be empty");
+  }
+
+  @Test
   void requireValid_rejectsReadyFlagWithoutReadyState() {
     ParticipantStatusDTO status =
         ParticipantStatusDTO.builder()
             .participantId("engine-1")
             .participantInstanceId("engine-1-pod")
-            .role(ParticipantRole.ENGINE)
+            .participantKind(ParticipantKind.ENGINE)
+            .componentType("engine")
+            .capabilities(Set.of(ParticipantCapability.ENFORCER))
             .namespace("bank.payments")
             .startedAt(100L)
             .lastSeenAt(150L)
@@ -112,12 +170,61 @@ class ParticipantStatusSupportTest {
   }
 
   @Test
+  void requireValid_rejectsCapabilitySetsContainingNulls() {
+    Set<ParticipantCapability> capabilities = new LinkedHashSet<>();
+    capabilities.add(ParticipantCapability.ENFORCER);
+    capabilities.add(null);
+
+    ParticipantStatusDTO status =
+        ParticipantStatusDTO.builder()
+            .participantId("engine-1")
+            .participantInstanceId("engine-1-pod")
+            .participantKind(ParticipantKind.ENGINE)
+            .componentType("engine")
+            .capabilities(capabilities)
+            .namespace("bank.payments")
+            .startedAt(100L)
+            .lastSeenAt(150L)
+            .statusExpiresAt(200L)
+            .statusVerificationLevel(StatusVerificationLevel.UNVERIFIED_STATUS)
+            .effectiveState(ParticipantEffectiveState.NOT_READY)
+            .build();
+
+    assertThatThrownBy(() -> ParticipantStatusSupport.requireValid(status))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("capabilities must not contain null values");
+  }
+
+  @Test
+  void requireValid_acceptsBlankOptionalComponentType() {
+    ParticipantStatusDTO validated =
+        ParticipantStatusSupport.requireValid(
+            ParticipantStatusDTO.builder()
+                .participantId("client-1")
+                .participantInstanceId("client-1#1")
+                .participantKind(ParticipantKind.CLIENT)
+                .componentType("   ")
+                .capabilities(Set.of(ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT))
+                .namespace("bank.payments")
+                .startedAt(100L)
+                .lastSeenAt(150L)
+                .statusExpiresAt(200L)
+                .statusVerificationLevel(StatusVerificationLevel.UNVERIFIED_STATUS)
+                .effectiveState(ParticipantEffectiveState.NOT_READY)
+                .build());
+
+    assertThat(validated.getComponentType()).isNull();
+  }
+
+  @Test
   void isExpired_returnsTrueWhenStatusExpiryHasPassed() {
     ParticipantStatusDTO status =
         ParticipantStatusDTO.builder()
             .participantId("engine-1")
             .participantInstanceId("engine-1-pod")
-            .role(ParticipantRole.ENGINE)
+            .participantKind(ParticipantKind.ENGINE)
+            .componentType("engine")
+            .capabilities(Set.of(ParticipantCapability.ENFORCER))
             .namespace("bank.payments")
             .startedAt(100L)
             .lastSeenAt(150L)
@@ -134,9 +241,11 @@ class ParticipantStatusSupportTest {
   void allowsProtectedDataPlaneParticipation_requiresReadyNonExpiredExactActiveIdentity() {
     ParticipantStatusDTO status =
         ParticipantStatusDTO.builder()
-            .participantId("engine-1")
-            .participantInstanceId("engine-1-pod")
-            .role(ParticipantRole.ENGINE)
+            .participantId("client-1")
+            .participantInstanceId("client-1#1")
+            .participantKind(ParticipantKind.CLIENT)
+            .componentType("generic-client")
+            .capabilities(Set.of(ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT))
             .namespace("bank.payments")
             .startedAt(100L)
             .lastSeenAt(150L)
@@ -170,9 +279,11 @@ class ParticipantStatusSupportTest {
   void allowsProtectedDataPlaneParticipation_doesNotUseVerificationLevelAsTrustShortcut() {
     ParticipantStatusDTO unverifiedReady =
         ParticipantStatusDTO.builder()
-            .participantId("engine-1")
-            .participantInstanceId("engine-1-pod")
-            .role(ParticipantRole.ENGINE)
+            .participantId("client-1")
+            .participantInstanceId("client-1#1")
+            .participantKind(ParticipantKind.CLIENT)
+            .componentType("generic-client")
+            .capabilities(Set.of(ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT))
             .namespace("bank.payments")
             .startedAt(100L)
             .lastSeenAt(150L)

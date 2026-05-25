@@ -36,7 +36,9 @@ class NamespaceSecurityPolicyControlPlaneContractTest {
             .build();
 
     assertThat(NamespaceSecurityPolicyControlPlaneContract.requiredWriterSecurityProperties(policy))
-        .contains(AuthoritativeControlPlaneSecurityProperty.INTEGRITY_PROTECTION_REQUIRED_IN_SECURED_MODES);
+        .contains(
+            AuthoritativeControlPlaneSecurityProperty
+                .INTEGRITY_PROTECTION_REQUIRED_IN_SECURED_MODES);
   }
 
   @Test
@@ -51,7 +53,7 @@ class NamespaceSecurityPolicyControlPlaneContractTest {
             .build();
 
     assertThat(NamespaceSecurityPolicyControlPlaneContract.requiredWriterSecurityProperties(policy))
-        .contains(AuthoritativeControlPlaneSecurityProperty.BREAK_GLASS_METADATA_REQUIRED_FOR_DOWNGRADE);
+        .contains(
+            AuthoritativeControlPlaneSecurityProperty.BREAK_GLASS_METADATA_REQUIRED_FOR_DOWNGRADE);
   }
 }
-

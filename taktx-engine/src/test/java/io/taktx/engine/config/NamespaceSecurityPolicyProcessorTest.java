@@ -19,8 +19,8 @@ import io.taktx.dto.SecurityMode;
 import io.taktx.engine.security.EngineAuthorizationService;
 import io.taktx.engine.security.NamespaceSecurityPolicyActivationService;
 import io.taktx.engine.security.SecurityEventPublisher;
-import io.taktx.serdes.NamespaceSecurityPolicyProtoMapper;
 import io.taktx.security.AuthorizationTokenException;
+import io.taktx.serdes.NamespaceSecurityPolicyProtoMapper;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -33,8 +33,8 @@ import org.apache.kafka.streams.TestInputTopic;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.TopologyTestDriver;
 import org.apache.kafka.streams.kstream.Consumed;
-import org.apache.kafka.streams.test.TestRecord;
 import org.apache.kafka.streams.state.Stores;
+import org.apache.kafka.streams.test.TestRecord;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -262,8 +262,7 @@ class NamespaceSecurityPolicyProcessorTest {
               .activationState(SecurityActivationState.REQUESTED)
               .desiredPolicyVersion(52L)
               .requiredSigning(RequiredSigningDTO.builder().engineOutbound(true).build())
-              .requiredAuthorization(
-                  RequiredAuthorizationDTO.builder().startCommands(true).build())
+              .requiredAuthorization(RequiredAuthorizationDTO.builder().startCommands(true).build())
               .build();
 
       lifecycleTopic.pipeInput(
@@ -382,8 +381,7 @@ class NamespaceSecurityPolicyProcessorTest {
               .activationState(SecurityActivationState.REQUESTED)
               .desiredPolicyVersion(52L)
               .requiredSigning(RequiredSigningDTO.builder().engineOutbound(true).build())
-              .requiredAuthorization(
-                  RequiredAuthorizationDTO.builder().startCommands(true).build())
+              .requiredAuthorization(RequiredAuthorizationDTO.builder().startCommands(true).build())
               .build();
       NamespaceSecurityPolicyDTO replacementRequested =
           NamespaceSecurityPolicyDTO.builder()
@@ -421,7 +419,8 @@ class NamespaceSecurityPolicyProcessorTest {
     ParticipantStatusStore participantStatusStore = new ParticipantStatusStore();
     TaktConfiguration configuration = Mockito.mock(TaktConfiguration.class);
     SecurityEventPublisher securityEventPublisher = Mockito.mock(SecurityEventPublisher.class);
-    EngineAuthorizationService authorizationService = Mockito.mock(EngineAuthorizationService.class);
+    EngineAuthorizationService authorizationService =
+        Mockito.mock(EngineAuthorizationService.class);
     Mockito.when(configuration.getSecurityPolicyActivationTimeoutMs()).thenReturn(30_000L);
     Mockito.when(configuration.getTenantId()).thenReturn("tenant");
     Mockito.when(configuration.getNamespace()).thenReturn("bank.payments");
@@ -450,10 +449,13 @@ class NamespaceSecurityPolicyProcessorTest {
             .withLoggingDisabled(),
         POLICY_TOPIC,
         Consumed.with(Serdes.String(), Serdes.ByteArray()),
-        () -> new NamespaceSecurityPolicyProcessor(lifecycleStore, activationService, authorizationService));
+        () ->
+            new NamespaceSecurityPolicyProcessor(
+                lifecycleStore, activationService, authorizationService));
 
     Properties config = new Properties();
-    config.put(StreamsConfig.APPLICATION_ID_CONFIG, "namespace-security-policy-authz-rejection-test");
+    config.put(
+        StreamsConfig.APPLICATION_ID_CONFIG, "namespace-security-policy-authz-rejection-test");
     config.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "dummy:9092");
     config.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
     config.put(
@@ -473,7 +475,8 @@ class NamespaceSecurityPolicyProcessorTest {
       byte[] payload = NamespaceSecurityPolicyProtoMapper.toProto(requested).toByteArray();
 
       Mockito.doThrow(
-              new AuthorizationTokenException("Signing keyId 'console-key' is not trusted for required role PLATFORM"))
+              new AuthorizationTokenException(
+                  "Signing keyId 'console-key' is not trusted for required role PLATFORM"))
           .when(authorizationService)
           .authorizeNamespaceSecurityPolicyMutation(Mockito.any(), Mockito.eq(payload));
 
@@ -496,7 +499,8 @@ class NamespaceSecurityPolicyProcessorTest {
   @Test
   void authorizedTombstone_clearsStoreWhenMutationAuthorizerAllowsIt() {
     NamespaceSecurityPolicyStore lifecycleStore = new NamespaceSecurityPolicyStore();
-    EngineAuthorizationService authorizationService = Mockito.mock(EngineAuthorizationService.class);
+    EngineAuthorizationService authorizationService =
+        Mockito.mock(EngineAuthorizationService.class);
     lifecycleStore.update(
         NamespaceSecurityPolicyDTO.builder()
             .mode(SecurityMode.COMMUNITY_OPEN)

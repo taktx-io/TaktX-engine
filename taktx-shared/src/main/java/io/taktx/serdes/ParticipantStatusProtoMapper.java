@@ -7,16 +7,19 @@
  */
 package io.taktx.serdes;
 
+import io.taktx.dto.ParticipantCapability;
 import io.taktx.dto.ParticipantEffectiveState;
-import io.taktx.dto.ParticipantRole;
+import io.taktx.dto.ParticipantKind;
 import io.taktx.dto.ParticipantStatusDTO;
 import io.taktx.dto.PolicyMismatchReasonDTO;
 import io.taktx.dto.StatusVerificationLevel;
+import io.taktx.proto.ParticipantCapabilityMessage;
 import io.taktx.proto.ParticipantEffectiveStateMessage;
-import io.taktx.proto.ParticipantRoleMessage;
+import io.taktx.proto.ParticipantKindMessage;
 import io.taktx.proto.ParticipantStatusMessage;
 import io.taktx.proto.PolicyMismatchReasonMessage;
 import io.taktx.proto.StatusVerificationLevelMessage;
+import java.util.LinkedHashSet;
 import java.util.Map;
 
 /** Shared DTO ↔ protobuf mapper for participant status records. */
@@ -35,8 +38,15 @@ public final class ParticipantStatusProtoMapper {
     if (dto.getParticipantInstanceId() != null) {
       builder.setParticipantInstanceId(dto.getParticipantInstanceId());
     }
-    if (dto.getRole() != null) {
-      builder.setRole(toProto(dto.getRole()));
+    if (dto.getParticipantKind() != null) {
+      builder.setParticipantKind(toProto(dto.getParticipantKind()));
+    }
+    if (dto.getComponentType() != null) {
+      builder.setComponentType(dto.getComponentType());
+    }
+    if (dto.getCapabilities() != null) {
+      builder.addAllCapabilities(
+          dto.getCapabilities().stream().map(ParticipantStatusProtoMapper::toProto).toList());
     }
     if (dto.getNamespace() != null) {
       builder.setNamespace(dto.getNamespace());
@@ -71,7 +81,13 @@ public final class ParticipantStatusProtoMapper {
     return ParticipantStatusDTO.builder()
         .participantId(emptyToNull(message.getParticipantId()))
         .participantInstanceId(emptyToNull(message.getParticipantInstanceId()))
-        .role(toDto(message.getRole()))
+        .participantKind(toDto(message.getParticipantKind()))
+        .componentType(emptyToNull(message.getComponentType()))
+        .capabilities(
+            message.getCapabilitiesList().stream()
+                .map(ParticipantStatusProtoMapper::toDto)
+                .filter(java.util.Objects::nonNull)
+                .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new)))
         .namespace(emptyToNull(message.getNamespace()))
         .startedAt(message.getStartedAt())
         .lastSeenAt(message.getLastSeenAt())
@@ -115,26 +131,42 @@ public final class ParticipantStatusProtoMapper {
         .build();
   }
 
-  private static ParticipantRoleMessage toProto(ParticipantRole role) {
-    return switch (role) {
-      case ENGINE -> ParticipantRoleMessage.ENGINE;
-      case WORKER -> ParticipantRoleMessage.WORKER;
-      case CLIENT -> ParticipantRoleMessage.CLIENT;
-      case INGESTER -> ParticipantRoleMessage.INGESTER;
-      case CONSOLE -> ParticipantRoleMessage.CONSOLE;
+  private static ParticipantKindMessage toProto(ParticipantKind kind) {
+    return switch (kind) {
+      case ENGINE -> ParticipantKindMessage.ENGINE;
+      case CLIENT -> ParticipantKindMessage.CLIENT;
     };
   }
 
-  private static ParticipantRole toDto(ParticipantRoleMessage role) {
-    return switch (role) {
-      case ENGINE -> ParticipantRole.ENGINE;
-      case WORKER -> ParticipantRole.WORKER;
-      case CLIENT -> ParticipantRole.CLIENT;
-      case INGESTER -> ParticipantRole.INGESTER;
-      case CONSOLE -> ParticipantRole.CONSOLE;
-      case PARTICIPANT_ROLE_UNSPECIFIED, UNRECOGNIZED -> null;
+  private static ParticipantKind toDto(ParticipantKindMessage kind) {
+    return switch (kind) {
+      case ENGINE -> ParticipantKind.ENGINE;
+      case CLIENT -> ParticipantKind.CLIENT;
+      case PARTICIPANT_KIND_UNSPECIFIED, UNRECOGNIZED -> null;
     };
   }
+
+  private static ParticipantCapabilityMessage toProto(ParticipantCapability capability) {
+    return switch (capability) {
+      case ENFORCER -> ParticipantCapabilityMessage.ENFORCER;
+      case AUTHORITATIVE_POLICY_PUBLISHER ->
+          ParticipantCapabilityMessage.AUTHORITATIVE_POLICY_PUBLISHER;
+      case PROTECTED_RUNTIME_PARTICIPANT ->
+          ParticipantCapabilityMessage.PROTECTED_RUNTIME_PARTICIPANT;
+      case SECURITY_OBSERVER -> ParticipantCapabilityMessage.SECURITY_OBSERVER;
+    };
+  }
+
+  private static ParticipantCapability toDto(ParticipantCapabilityMessage capability) {
+    return switch (capability) {
+      case ENFORCER -> ParticipantCapability.ENFORCER;
+      case AUTHORITATIVE_POLICY_PUBLISHER -> ParticipantCapability.AUTHORITATIVE_POLICY_PUBLISHER;
+      case PROTECTED_RUNTIME_PARTICIPANT -> ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT;
+      case SECURITY_OBSERVER -> ParticipantCapability.SECURITY_OBSERVER;
+      case PARTICIPANT_CAPABILITY_UNSPECIFIED, UNRECOGNIZED -> null;
+    };
+  }
+
 
   private static StatusVerificationLevelMessage toProto(StatusVerificationLevel level) {
     return switch (level) {

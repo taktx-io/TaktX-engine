@@ -6,13 +6,18 @@ option java_package = "io.taktx.proto";
 option java_multiple_files = true;
 option java_outer_classname = "SecurityObservabilityProto";
 
-enum ParticipantRoleMessage {
-  PARTICIPANT_ROLE_UNSPECIFIED = 0;
+enum ParticipantKindMessage {
+  PARTICIPANT_KIND_UNSPECIFIED = 0;
   ENGINE = 1;
-  WORKER = 2;
-  CLIENT = 3;
-  INGESTER = 4;
-  CONSOLE = 5;
+  CLIENT = 2;
+}
+
+enum ParticipantCapabilityMessage {
+  PARTICIPANT_CAPABILITY_UNSPECIFIED = 0;
+  ENFORCER = 1;
+  AUTHORITATIVE_POLICY_PUBLISHER = 2;
+  PROTECTED_RUNTIME_PARTICIPANT = 3;
+  SECURITY_OBSERVER = 4;
 }
 
 enum StatusVerificationLevelMessage {
@@ -59,7 +64,7 @@ message PolicyMismatchReasonMessage {
 message ParticipantStatusMessage {
   string participant_id = 1;
   string participant_instance_id = 2;
-  ParticipantRoleMessage role = 3;
+  ParticipantKindMessage participant_kind = 3;
   string namespace = 4;
   int64 started_at = 5;
   int64 last_seen_at = 6;
@@ -70,6 +75,8 @@ message ParticipantStatusMessage {
   optional int64 observed_policy_version = 11;
   string observed_policy_hash = 12;
   repeated PolicyMismatchReasonMessage mismatch_reasons = 13;
+  string component_type = 14;
+  repeated ParticipantCapabilityMessage capabilities = 15;
 }
 
 message SecurityEventMessage {

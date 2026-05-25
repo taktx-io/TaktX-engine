@@ -157,7 +157,8 @@ class UserTaskResponseProcessorDlqTest {
     UserTaskResponseTriggerDTO response =
         new UserTaskResponseTriggerDTO(
             processInstanceId, List.of(3L), result, VariablesDTO.empty());
-    UserTaskResponseProcessor guardedProcessor = guardedProcessorWithPolicy(requestedPolicy(42L), null);
+    UserTaskResponseProcessor guardedProcessor =
+        guardedProcessorWithPolicy(requestedPolicy(42L), null);
 
     guardedProcessor.process(new Record<>(processInstanceId, response, 400L, new RecordHeaders()));
 

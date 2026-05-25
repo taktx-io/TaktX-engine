@@ -9,15 +9,16 @@ package io.taktx.client;
 
 import jakarta.annotation.Nullable;
 
-/** Hook for fail-closed protected data-plane participation checks in client publishers/consumers. */
+/**
+ * Hook for fail-closed protected data-plane participation checks in client publishers/consumers.
+ */
 @FunctionalInterface
 interface ProtectedClientDataPlaneGuard {
 
-  void check(ProtectedClientDataPlaneOperation operation, @Nullable String explicitAuthorizationToken);
+  void check(
+      ProtectedClientDataPlaneOperation operation, @Nullable String explicitAuthorizationToken);
 
   static ProtectedClientDataPlaneGuard noop() {
     return (operation, explicitAuthorizationToken) -> {};
   }
 }
-
-

@@ -18,4 +18,3 @@ public interface ExternalTaskTopicRequestGateway {
   String requestExternalTaskTopic(
       String externalTaskId, int partitions, CleanupPolicy cleanupPolicy, short replicationFactor);
 }
-

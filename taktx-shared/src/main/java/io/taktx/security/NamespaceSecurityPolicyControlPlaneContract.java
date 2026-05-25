@@ -19,7 +19,9 @@ public final class NamespaceSecurityPolicyControlPlaneContract {
 
   private NamespaceSecurityPolicyControlPlaneContract() {}
 
-  /** Returns the fixed compacted-topic record key for the authoritative namespace security policy. */
+  /**
+   * Returns the fixed compacted-topic record key for the authoritative namespace security policy.
+   */
   public static String policyRecordKey() {
     return POLICY_RECORD_KEY;
   }
@@ -60,4 +62,3 @@ public final class NamespaceSecurityPolicyControlPlaneContract {
     return value == null || value.isBlank();
   }
 }
-

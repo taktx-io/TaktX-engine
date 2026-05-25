@@ -136,7 +136,8 @@ class TaktXClientNamespaceSecurityPolicyTest {
   }
 
   @Test
-  void buildNamespaceSecurityPolicyRecord_usesPolicyKeyAndSerializesValidatedPolicy() throws Exception {
+  void buildNamespaceSecurityPolicyRecord_usesPolicyKeyAndSerializesValidatedPolicy()
+      throws Exception {
     NamespaceSecurityPolicyDTO input =
         NamespaceSecurityPolicyDTO.builder()
             .mode(SecurityMode.COMMUNITY_SECURED)
@@ -255,7 +256,8 @@ class TaktXClientNamespaceSecurityPolicyTest {
   }
 
   @Test
-  void namespaceSecurityPolicyWriterSecurityProperties_forSecuredBreakGlassPolicy_addsExtraRequirements() {
+  void
+      namespaceSecurityPolicyWriterSecurityProperties_forSecuredBreakGlassPolicy_addsExtraRequirements() {
     NamespaceSecurityPolicyDTO policy =
         NamespaceSecurityPolicyDTO.builder()
             .mode(SecurityMode.COMMUNITY_SECURED)
@@ -267,7 +269,8 @@ class TaktXClientNamespaceSecurityPolicyTest {
 
     assertThat(TaktXClient.namespaceSecurityPolicyWriterSecurityProperties(policy))
         .contains(
-            AuthoritativeControlPlaneSecurityProperty.INTEGRITY_PROTECTION_REQUIRED_IN_SECURED_MODES,
+            AuthoritativeControlPlaneSecurityProperty
+                .INTEGRITY_PROTECTION_REQUIRED_IN_SECURED_MODES,
             AuthoritativeControlPlaneSecurityProperty.BREAK_GLASS_METADATA_REQUIRED_FOR_DOWNGRADE);
   }
 

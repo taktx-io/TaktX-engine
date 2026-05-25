@@ -139,8 +139,7 @@ class NamespaceSecurityPolicySupportTest {
             .desiredPolicyVersion(11L)
             .trustAnchorRequired(true)
             .requiredSigning(RequiredSigningDTO.builder().engineOutbound(true).build())
-            .requiredAuthorization(
-                RequiredAuthorizationDTO.builder().startCommands(true).build())
+            .requiredAuthorization(RequiredAuthorizationDTO.builder().startCommands(true).build())
             .build();
 
     NamespaceSecurityPolicyDTO validated = NamespaceSecurityPolicySupport.requireValid(policy);

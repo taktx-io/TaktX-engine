@@ -46,13 +46,7 @@ class ClientProtectedDataPlaneParticipationGuardTest {
 
     ClientProtectedDataPlaneParticipationGuard guard =
         new ClientProtectedDataPlaneParticipationGuard(
-            propertiesHelper,
-            () -> store,
-            () -> null,
-            () -> false,
-            () -> false,
-            () -> null,
-            clock);
+            propertiesHelper, () -> store, () -> null, () -> false, () -> false, () -> null, clock);
 
     ClientProtectedDataPlaneParticipationGuard.Decision decision =
         guard.evaluate(ProtectedClientDataPlaneOperation.START_COMMAND, null);
@@ -70,13 +64,7 @@ class ClientProtectedDataPlaneParticipationGuardTest {
 
     ClientProtectedDataPlaneParticipationGuard guard =
         new ClientProtectedDataPlaneParticipationGuard(
-            propertiesHelper,
-            () -> store,
-            () -> null,
-            () -> false,
-            () -> false,
-            () -> null,
-            clock);
+            propertiesHelper, () -> store, () -> null, () -> false, () -> false, () -> null, clock);
 
     ClientProtectedDataPlaneParticipationGuard.Decision decision =
         guard.evaluate(ProtectedClientDataPlaneOperation.START_COMMAND, "jwt-explicit");
@@ -119,21 +107,14 @@ class ClientProtectedDataPlaneParticipationGuardTest {
 
     ClientProtectedDataPlaneParticipationGuard guard =
         new ClientProtectedDataPlaneParticipationGuard(
-            propertiesHelper,
-            () -> store,
-            () -> null,
-            () -> false,
-            () -> false,
-            () -> null,
-            clock);
+            propertiesHelper, () -> store, () -> null, () -> false, () -> false, () -> null, clock);
 
     ClientProtectedDataPlaneParticipationGuard.Decision decision =
         guard.evaluate(ProtectedClientDataPlaneOperation.CLIENT_COMMAND, null);
 
     assertThat(decision.permitted()).isFalse();
     assertThat(decision.reasonHint())
-        .isEqualTo(
-            ClientProtectedDataPlaneParticipationGuard.CLIENT_COMMAND_SIGNING_UNAVAILABLE);
+        .isEqualTo(ClientProtectedDataPlaneParticipationGuard.CLIENT_COMMAND_SIGNING_UNAVAILABLE);
   }
 
   @Test
@@ -143,13 +124,7 @@ class ClientProtectedDataPlaneParticipationGuardTest {
 
     ClientProtectedDataPlaneParticipationGuard guard =
         new ClientProtectedDataPlaneParticipationGuard(
-            propertiesHelper,
-            () -> store,
-            () -> null,
-            () -> false,
-            () -> false,
-            () -> null,
-            clock);
+            propertiesHelper, () -> store, () -> null, () -> false, () -> false, () -> null, clock);
 
     ClientProtectedDataPlaneParticipationGuard.Decision decision =
         guard.evaluate(ProtectedClientDataPlaneOperation.MESSAGE_EVENT, null);
@@ -199,4 +174,3 @@ class ClientProtectedDataPlaneParticipationGuardTest {
         .build();
   }
 }
-

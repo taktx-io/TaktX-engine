@@ -9,8 +9,9 @@ package io.taktx.engine.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import io.taktx.dto.ParticipantCapability;
 import io.taktx.dto.ParticipantEffectiveState;
-import io.taktx.dto.ParticipantRole;
+import io.taktx.dto.ParticipantKind;
 import io.taktx.dto.ParticipantStatusDTO;
 import io.taktx.dto.PolicyMismatchReasonDTO;
 import io.taktx.dto.StatusVerificationLevel;
@@ -18,6 +19,7 @@ import io.taktx.engine.security.NamespaceSecurityPolicyActivationService;
 import io.taktx.serdes.ParticipantStatusProtoMapper;
 import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
@@ -35,6 +37,12 @@ class ParticipantStatusProcessorTest {
 
   private static final String STATUS_TOPIC = "default.taktx-participant-status";
   private static final String STORE_NAME = "participant-status-store";
+  private static final Set<ParticipantCapability> ENGINE_CAPABILITIES =
+      Set.of(ParticipantCapability.ENFORCER, ParticipantCapability.SECURITY_OBSERVER);
+  private static final Set<ParticipantCapability> CONTROL_PLANE_CLIENT_CAPABILITIES =
+      Set.of(
+          ParticipantCapability.AUTHORITATIVE_POLICY_PUBLISHER,
+          ParticipantCapability.SECURITY_OBSERVER);
 
   private TopologyTestDriver driver;
   private TestInputTopic<String, byte[]> statusTopic;
@@ -76,16 +84,7 @@ class ParticipantStatusProcessorTest {
   @Test
   void statusRecord_updatesStore() {
     ParticipantStatusDTO status =
-        ParticipantStatusDTO.builder()
-            .participantId("engine-2")
-            .participantInstanceId("engine-2-pod-7f8c4d")
-            .role(ParticipantRole.ENGINE)
-            .namespace("bank.payments")
-            .startedAt(1716450000000L)
-            .lastSeenAt(1716450060000L)
-            .statusExpiresAt(1716450120000L)
-            .statusVerificationLevel(StatusVerificationLevel.UNVERIFIED_STATUS)
-            .effectiveState(ParticipantEffectiveState.MISMATCH)
+        engineStatus("engine-2-pod-7f8c4d", ParticipantEffectiveState.MISMATCH).toBuilder()
             .observedPolicyVersion(42L)
             .observedPolicyHash("abc123")
             .mismatchReasons(
@@ -108,17 +107,7 @@ class ParticipantStatusProcessorTest {
   @Test
   void tombstone_removesStatusFromStore() {
     ParticipantStatusDTO status =
-        ParticipantStatusDTO.builder()
-            .participantId("engine-2")
-            .participantInstanceId("engine-2-pod-7f8c4d")
-            .role(ParticipantRole.ENGINE)
-            .namespace("bank.payments")
-            .startedAt(1716450000000L)
-            .lastSeenAt(1716450060000L)
-            .statusExpiresAt(1716450120000L)
-            .statusVerificationLevel(StatusVerificationLevel.UNVERIFIED_STATUS)
-            .effectiveState(ParticipantEffectiveState.STALE)
-            .build();
+        engineStatus("engine-2-pod-7f8c4d", ParticipantEffectiveState.STALE);
 
     statusTopic.pipeInput(
         status.getParticipantInstanceId(),
@@ -133,16 +122,7 @@ class ParticipantStatusProcessorTest {
   @Test
   void invalidStatus_doesNotReplacePreviousValue() {
     ParticipantStatusDTO valid =
-        ParticipantStatusDTO.builder()
-            .participantId("engine-2")
-            .participantInstanceId("engine-2-pod-7f8c4d")
-            .role(ParticipantRole.ENGINE)
-            .namespace("bank.payments")
-            .startedAt(1716450000000L)
-            .lastSeenAt(1716450060000L)
-            .statusExpiresAt(1716450120000L)
-            .statusVerificationLevel(StatusVerificationLevel.UNVERIFIED_STATUS)
-            .effectiveState(ParticipantEffectiveState.READY)
+        engineStatus("engine-2-pod-7f8c4d", ParticipantEffectiveState.READY).toBuilder()
             .readyForDataPlane(true)
             .observedPolicyVersion(42L)
             .observedPolicyHash("abc123")
@@ -155,16 +135,7 @@ class ParticipantStatusProcessorTest {
     ParticipantStatusDTO previous = participantStatusStore.get(valid.getParticipantInstanceId());
 
     ParticipantStatusDTO invalid =
-        ParticipantStatusDTO.builder()
-            .participantId("engine-2")
-            .participantInstanceId("engine-2-pod-7f8c4d")
-            .role(ParticipantRole.ENGINE)
-            .namespace("bank.payments")
-            .startedAt(1716450000000L)
-            .lastSeenAt(1716450060000L)
-            .statusExpiresAt(1716450120000L)
-            .statusVerificationLevel(StatusVerificationLevel.UNVERIFIED_STATUS)
-            .effectiveState(ParticipantEffectiveState.MISMATCH)
+        engineStatus("engine-2-pod-7f8c4d", ParticipantEffectiveState.MISMATCH).toBuilder()
             .readyForDataPlane(true)
             .build();
 
@@ -178,16 +149,8 @@ class ParticipantStatusProcessorTest {
   @Test
   void currentSnapshot_excludesExpiredStatuses() {
     ParticipantStatusDTO expired =
-        ParticipantStatusDTO.builder()
-            .participantId("engine-2")
-            .participantInstanceId("engine-2-expired")
-            .role(ParticipantRole.ENGINE)
-            .namespace("bank.payments")
-            .startedAt(1716450000000L)
-            .lastSeenAt(1716450060000L)
+        engineStatus("engine-2-expired", ParticipantEffectiveState.READY).toBuilder()
             .statusExpiresAt(1716450060001L)
-            .statusVerificationLevel(StatusVerificationLevel.UNVERIFIED_STATUS)
-            .effectiveState(ParticipantEffectiveState.READY)
             .readyForDataPlane(true)
             .observedPolicyVersion(42L)
             .observedPolicyHash("abc123")
@@ -199,9 +162,11 @@ class ParticipantStatusProcessorTest {
             .build();
 
     statusTopic.pipeInput(
-        expired.getParticipantInstanceId(), ParticipantStatusProtoMapper.toProto(expired).toByteArray());
+        expired.getParticipantInstanceId(),
+        ParticipantStatusProtoMapper.toProto(expired).toByteArray());
     statusTopic.pipeInput(
-        current.getParticipantInstanceId(), ParticipantStatusProtoMapper.toProto(current).toByteArray());
+        current.getParticipantInstanceId(),
+        ParticipantStatusProtoMapper.toProto(current).toByteArray());
 
     assertThat(participantStatusStore.currentSnapshot(1716450119999L))
         .containsOnlyKeys(current.getParticipantInstanceId());
@@ -241,17 +206,7 @@ class ParticipantStatusProcessorTest {
           lifecycleDriver.createInputTopic(
               STATUS_TOPIC, Serdes.String().serializer(), Serdes.ByteArray().serializer());
       ParticipantStatusDTO status =
-          ParticipantStatusDTO.builder()
-              .participantId("tenant.bank.payments.console")
-              .participantInstanceId("console-1")
-              .role(ParticipantRole.CONSOLE)
-              .namespace("bank.payments")
-              .startedAt(1716450000000L)
-              .lastSeenAt(1716450060000L)
-              .statusExpiresAt(1716450120000L)
-              .statusVerificationLevel(StatusVerificationLevel.UNVERIFIED_STATUS)
-              .effectiveState(ParticipantEffectiveState.MISMATCH)
-              .readyForDataPlane(false)
+          controlPlaneClientStatus("tenant.bank.payments.console", "console-1").toBuilder()
               .observedPolicyVersion(42L)
               .observedPolicyHash("abc123")
               .mismatchReasons(
@@ -263,10 +218,46 @@ class ParticipantStatusProcessorTest {
               .build();
 
       lifecycleTopic.pipeInput(
-          status.getParticipantInstanceId(), ParticipantStatusProtoMapper.toProto(status).toByteArray());
+          status.getParticipantInstanceId(),
+          ParticipantStatusProtoMapper.toProto(status).toByteArray());
 
       assertThat(lifecycleStore.get(status.getParticipantInstanceId())).isEqualTo(status);
       Mockito.verify(activationService).onParticipantStatusesChanged();
     }
+  }
+
+  private static ParticipantStatusDTO engineStatus(
+      String participantInstanceId, ParticipantEffectiveState effectiveState) {
+    return ParticipantStatusDTO.builder()
+        .participantId("engine-2")
+        .participantInstanceId(participantInstanceId)
+        .participantKind(ParticipantKind.ENGINE)
+        .componentType("engine")
+        .capabilities(ENGINE_CAPABILITIES)
+        .namespace("bank.payments")
+        .startedAt(1716450000000L)
+        .lastSeenAt(1716450060000L)
+        .statusExpiresAt(1716450120000L)
+        .statusVerificationLevel(StatusVerificationLevel.UNVERIFIED_STATUS)
+        .effectiveState(effectiveState)
+        .build();
+  }
+
+  private static ParticipantStatusDTO controlPlaneClientStatus(
+      String participantId, String participantInstanceId) {
+    return ParticipantStatusDTO.builder()
+        .participantId(participantId)
+        .participantInstanceId(participantInstanceId)
+        .participantKind(ParticipantKind.CLIENT)
+        .componentType("console")
+        .capabilities(CONTROL_PLANE_CLIENT_CAPABILITIES)
+        .namespace("bank.payments")
+        .startedAt(1716450000000L)
+        .lastSeenAt(1716450060000L)
+        .statusExpiresAt(1716450120000L)
+        .statusVerificationLevel(StatusVerificationLevel.UNVERIFIED_STATUS)
+        .effectiveState(ParticipantEffectiveState.MISMATCH)
+        .readyForDataPlane(false)
+        .build();
   }
 }

@@ -8,8 +8,8 @@
 package io.taktx.engine.security;
 
 import io.taktx.dto.NamespaceSecurityPolicyDTO;
+import io.taktx.dto.ParticipantCapability;
 import io.taktx.dto.ParticipantEffectiveState;
-import io.taktx.dto.ParticipantRole;
 import io.taktx.dto.ParticipantStatusDTO;
 import io.taktx.dto.SecurityActivationState;
 import io.taktx.dto.SecurityEventDTO;
@@ -45,8 +45,8 @@ public class NamespaceSecurityPolicyActivationService {
   static final String BREAK_GLASS_DOWNGRADE_REJECTED_CODE = "BREAK_GLASS_DOWNGRADE_REJECTED";
   public static final String INVALID_POLICY_MUTATION_CODE = "INVALID_POLICY_MUTATION";
 
-  private static final Set<ParticipantRole> REQUIRED_ACTIVATION_ROLES =
-      EnumSet.of(ParticipantRole.ENGINE, ParticipantRole.INGESTER, ParticipantRole.CONSOLE);
+  private static final Set<ParticipantCapability> REQUIRED_ACTIVATION_CAPABILITIES =
+      EnumSet.of(ParticipantCapability.ENFORCER);
 
   private final TaktConfiguration configuration;
   private final NamespaceSecurityPolicyStore namespaceSecurityPolicyStore;
@@ -181,7 +181,8 @@ public class NamespaceSecurityPolicyActivationService {
             .namespace(configuration.getNamespace())
             .participantId(participantId())
             .participantInstanceId(participantInstanceId())
-            .activePolicyVersion(activePolicyVersion(namespaceSecurityPolicyStore.getActivePolicy()))
+            .activePolicyVersion(
+                activePolicyVersion(namespaceSecurityPolicyStore.getActivePolicy()))
             .activePolicyHash(activePolicyHash(namespaceSecurityPolicyStore.getActivePolicy()))
             .code(INVALID_POLICY_MUTATION_CODE)
             .message(reason)
@@ -257,27 +258,31 @@ public class NamespaceSecurityPolicyActivationService {
             ? policy.getActivePolicyHash()
             : policy.getDesiredPolicyHash();
     Map<String, ParticipantStatusDTO> currentStatuses =
-        participantStatusStore.currentSnapshot(REQUIRED_ACTIVATION_ROLES, nowMs);
+        participantStatusStore.currentSnapshot(REQUIRED_ACTIVATION_CAPABILITIES, nowMs);
 
-    Map<ParticipantRole, List<ParticipantStatusDTO>> byRole =
-        currentStatuses.values().stream()
-            .collect(Collectors.groupingBy(ParticipantStatusDTO::getRole));
-
-    List<String> missingRoles = new ArrayList<>();
-    for (ParticipantRole role : REQUIRED_ACTIVATION_ROLES) {
-      if (byRole.getOrDefault(role, List.of()).isEmpty()) {
-        missingRoles.add(role.name());
+    List<String> missingRequiredCapabilities = new ArrayList<>();
+    for (ParticipantCapability requiredCapability : REQUIRED_ACTIVATION_CAPABILITIES) {
+      boolean present =
+          currentStatuses.values().stream()
+              .anyMatch(status -> status.getCapabilities().contains(requiredCapability));
+      if (!present) {
+        missingRequiredCapabilities.add(requiredCapability.name());
       }
     }
-    if (!missingRoles.isEmpty()) {
+    if (!missingRequiredCapabilities.isEmpty()) {
       return new ConvergenceAssessment(
-          ConvergenceOutcome.PENDING, missingRoles, List.of(), List.of(), currentStatuses.size());
+          ConvergenceOutcome.PENDING,
+          missingRequiredCapabilities,
+          List.of(),
+          List.of(),
+          currentStatuses.size());
     }
 
     List<String> notReadyParticipants = new ArrayList<>();
     List<String> policyMismatchParticipants = new ArrayList<>();
     for (ParticipantStatusDTO status : currentStatuses.values()) {
-      if (status.getEffectiveState() != ParticipantEffectiveState.READY || !status.isReadyForDataPlane()) {
+      if (status.getEffectiveState() != ParticipantEffectiveState.READY
+          || !status.isReadyForDataPlane()) {
         notReadyParticipants.add(status.getParticipantInstanceId());
       }
       if (!Objects.equals(expectedPolicyVersion, status.getObservedPolicyVersion())
@@ -299,20 +304,22 @@ public class NamespaceSecurityPolicyActivationService {
         ConvergenceOutcome.SUCCESS, List.of(), List.of(), List.of(), currentStatuses.size());
   }
 
-  private void emitPostActivationDriftIfNeeded(NamespaceSecurityPolicyDTO activePolicy, long nowMs) {
+  private void emitPostActivationDriftIfNeeded(
+      NamespaceSecurityPolicyDTO activePolicy, long nowMs) {
     ConvergenceAssessment assessment = assess(activePolicy, nowMs);
     if (assessment.outcome() == ConvergenceOutcome.SUCCESS) {
       lastActiveDriftFingerprint.set(null);
       return;
     }
 
-    Map<String, String> metadata = new LinkedHashMap<>(metadataForAssessment(assessment, nowMs, nowMs));
+    Map<String, String> metadata =
+        new LinkedHashMap<>(metadataForAssessment(assessment, nowMs, nowMs));
     metadata.put("phase", SecurityActivationState.ACTIVE.name());
     metadata.put("postActivationDrift", Boolean.TRUE.toString());
     String fingerprint =
         String.join(
             "|",
-            metadata.getOrDefault("missingRoles", ""),
+            metadata.getOrDefault("missingRequiredCapabilities", ""),
             metadata.getOrDefault("notReadyParticipants", ""),
             metadata.getOrDefault("policyMismatchParticipants", ""),
             String.valueOf(activePolicy.getActivePolicyVersion()),
@@ -385,7 +392,8 @@ public class NamespaceSecurityPolicyActivationService {
       return;
     }
     namespaceSecurityPolicyStore.clearCurrentPolicy();
-    log.info("Namespace security policy activation failed; no previous ACTIVE policy was available");
+    log.info(
+        "Namespace security policy activation failed; no previous ACTIVE policy was available");
   }
 
   private void publish(
@@ -408,7 +416,8 @@ public class NamespaceSecurityPolicyActivationService {
             .participantInstanceId(participantInstanceId())
             .desiredPolicyVersion(policy.getDesiredPolicyVersion())
             .desiredPolicyHash(policy.getDesiredPolicyHash())
-            .activePolicyVersion(activePolicyVersion(namespaceSecurityPolicyStore.getActivePolicy()))
+            .activePolicyVersion(
+                activePolicyVersion(namespaceSecurityPolicyStore.getActivePolicy()))
             .activePolicyHash(activePolicyHash(namespaceSecurityPolicyStore.getActivePolicy()))
             .code(code)
             .message(message)
@@ -422,10 +431,19 @@ public class NamespaceSecurityPolicyActivationService {
     metadata.put("timeoutMs", Long.toString(activationTimeoutMs));
     metadata.put("validationStartedAtMs", Long.toString(startedAtMs));
     metadata.put("evaluatedAtMs", Long.toString(nowMs));
-    metadata.put("requiredRoles", REQUIRED_ACTIVATION_ROLES.stream().map(Enum::name).sorted().collect(Collectors.joining(",")));
-    metadata.put("observedRequiredParticipantCount", Integer.toString(assessment.observedRequiredParticipantCount()));
-    if (!assessment.missingRoles().isEmpty()) {
-      metadata.put("missingRoles", String.join(",", assessment.missingRoles()));
+    metadata.put(
+        "requiredActivationCapabilities",
+        REQUIRED_ACTIVATION_CAPABILITIES.stream()
+            .map(Enum::name)
+            .sorted()
+            .collect(Collectors.joining(",")));
+    metadata.put(
+        "observedRequiredParticipantCount",
+        Integer.toString(assessment.observedRequiredParticipantCount()));
+    if (!assessment.missingRequiredCapabilities().isEmpty()) {
+      metadata.put(
+          "missingRequiredCapabilities",
+          String.join(",", assessment.missingRequiredCapabilities()));
     }
     if (!assessment.notReadyParticipants().isEmpty()) {
       metadata.put("notReadyParticipants", String.join(",", assessment.notReadyParticipants()));
@@ -474,7 +492,10 @@ public class NamespaceSecurityPolicyActivationService {
 
   private static boolean isBreakGlassDowngrade(
       NamespaceSecurityPolicyDTO previousActive, NamespaceSecurityPolicyDTO requested) {
-    if (previousActive == null || previousActive.getMode() == null || requested == null || requested.getMode() == null) {
+    if (previousActive == null
+        || previousActive.getMode() == null
+        || requested == null
+        || requested.getMode() == null) {
       return false;
     }
     return securityStrength(requested.getMode()) < securityStrength(previousActive.getMode());
@@ -515,14 +536,8 @@ public class NamespaceSecurityPolicyActivationService {
 
   private record ConvergenceAssessment(
       ConvergenceOutcome outcome,
-      List<String> missingRoles,
+      List<String> missingRequiredCapabilities,
       List<String> notReadyParticipants,
       List<String> policyMismatchParticipants,
       int observedRequiredParticipantCount) {}
 }
-
-
-
-
-
-

@@ -159,10 +159,10 @@ class SignalProcessorDlqTest {
   void process_subscriptionMutationUnderPendingPolicy_remainsAllowed() {
     SignalProcessor guardedProcessor = guardedProcessorWithPolicy(requestedPolicy(42L), null);
     NewDefinitionSignalSubscriptionDTO subscription =
-        new NewDefinitionSignalSubscriptionDTO(new ProcessDefinitionKey("proc", 1), "start", "order-placed");
+        new NewDefinitionSignalSubscriptionDTO(
+            new ProcessDefinitionKey("proc", 1), "start", "order-placed");
 
-    guardedProcessor.process(
-        new Record<>("order-placed", subscription, 300L, new RecordHeaders()));
+    guardedProcessor.process(new Record<>("order-placed", subscription, 300L, new RecordHeaders()));
 
     verify(definitionStore).put(any(), eq("order-placed"));
     verify(context, never()).forward(any());

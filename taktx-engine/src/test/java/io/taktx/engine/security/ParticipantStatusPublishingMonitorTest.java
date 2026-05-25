@@ -24,4 +24,3 @@ class ParticipantStatusPublishingMonitorTest {
     verify(publisher).publishCurrentStatus();
   }
 }
-

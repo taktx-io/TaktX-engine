@@ -268,7 +268,8 @@ class ProcessInstanceResponderTest {
 
     assertThatThrownBy(
             () ->
-                responder.completeExternalTask(UUID.randomUUID(), List.of(1L), VariablesDTO.empty()))
+                responder.completeExternalTask(
+                    UUID.randomUUID(), List.of(1L), VariablesDTO.empty()))
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("blocked by policy");
 
@@ -285,7 +286,8 @@ class ProcessInstanceResponderTest {
         });
 
     assertThatThrownBy(
-            () -> responder.responderForExternalTask(UUID.randomUUID(), List.of(9L)).respondSuccess())
+            () ->
+                responder.responderForExternalTask(UUID.randomUUID(), List.of(9L)).respondSuccess())
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("blocked by policy");
 

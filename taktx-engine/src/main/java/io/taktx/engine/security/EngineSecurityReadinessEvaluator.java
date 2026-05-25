@@ -8,8 +8,9 @@
 package io.taktx.engine.security;
 
 import io.taktx.dto.NamespaceSecurityPolicyDTO;
+import io.taktx.dto.ParticipantCapability;
 import io.taktx.dto.ParticipantEffectiveState;
-import io.taktx.dto.ParticipantRole;
+import io.taktx.dto.ParticipantKind;
 import io.taktx.dto.ParticipantStatusDTO;
 import io.taktx.dto.PolicyMismatchReasonDTO;
 import io.taktx.dto.SecurityActivationState;
@@ -38,6 +39,9 @@ public class EngineSecurityReadinessEvaluator {
   static final String ENGINE_SIGNING_UNAVAILABLE = "ENGINE_SIGNING_UNAVAILABLE";
   static final String POLICY_MARKED_MISCONFIGURED = "POLICY_MARKED_MISCONFIGURED";
   static final long STATUS_TTL_MS = 30_000L;
+  private static final java.util.Set<ParticipantCapability> ENGINE_CAPABILITIES =
+      java.util.Set.of(
+          ParticipantCapability.ENFORCER, ParticipantCapability.SECURITY_OBSERVER);
 
   private final TaktConfiguration configuration;
   private final NamespaceSecurityPolicyStore namespaceSecurityPolicyStore;
@@ -103,7 +107,8 @@ public class EngineSecurityReadinessEvaluator {
                 ENGINE_SIGNING_UNAVAILABLE,
                 "Namespace requires engine outbound signing but the engine signing key is not yet available and published"));
       }
-    } else if (currentPolicy != null && currentPolicy.getActivationState() != SecurityActivationState.ACTIVE) {
+    } else if (currentPolicy != null
+        && currentPolicy.getActivationState() != SecurityActivationState.ACTIVE) {
       log.debug(
           "Namespace security policy pending activation; continuing to evaluate readiness under current authoritative behavior: activationState={} desiredPolicyVersion={} desiredPolicyHash={}",
           currentPolicy.getActivationState(),
@@ -114,7 +119,9 @@ public class EngineSecurityReadinessEvaluator {
     return ParticipantStatusDTO.builder()
         .participantId(participantId())
         .participantInstanceId(participantInstanceId())
-        .role(ParticipantRole.ENGINE)
+        .participantKind(ParticipantKind.ENGINE)
+        .componentType("engine")
+        .capabilities(ENGINE_CAPABILITIES)
         .namespace(configuration.getNamespace())
         .startedAt(startedAtMs)
         .lastSeenAt(nowMs)

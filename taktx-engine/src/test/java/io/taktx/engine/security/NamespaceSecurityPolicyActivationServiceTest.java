@@ -14,8 +14,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.taktx.dto.NamespaceSecurityPolicyDTO;
+import io.taktx.dto.ParticipantCapability;
 import io.taktx.dto.ParticipantEffectiveState;
-import io.taktx.dto.ParticipantRole;
+import io.taktx.dto.ParticipantKind;
 import io.taktx.dto.ParticipantStatusDTO;
 import io.taktx.dto.RequiredSigningDTO;
 import io.taktx.dto.SecurityActivationState;
@@ -31,6 +32,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -38,6 +40,13 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
 class NamespaceSecurityPolicyActivationServiceTest {
+
+  private static final Set<ParticipantCapability> ENGINE_CAPABILITIES =
+      Set.of(ParticipantCapability.ENFORCER, ParticipantCapability.SECURITY_OBSERVER);
+  private static final Set<ParticipantCapability> CONTROL_PLANE_CLIENT_CAPABILITIES =
+      Set.of(
+          ParticipantCapability.AUTHORITATIVE_POLICY_PUBLISHER,
+          ParticipantCapability.SECURITY_OBSERVER);
 
   private TaktConfiguration configuration;
   private NamespaceSecurityPolicyStore policyStore;
@@ -71,16 +80,15 @@ class NamespaceSecurityPolicyActivationServiceTest {
   @Test
   void requestedPolicy_transitionsFromValidatingToActiveWhenRequiredParticipantsConverge() {
     NamespaceSecurityPolicyDTO requested = requestedPolicy(42L);
-    addReadyParticipant(ParticipantRole.ENGINE, requested, clock.millis() + 500L);
-    addReadyParticipant(ParticipantRole.INGESTER, requested, clock.millis() + 500L);
-    addReadyParticipant(ParticipantRole.CONSOLE, requested, clock.millis() + 500L);
+    addReadyEnforcerParticipant(requested, clock.millis() + 500L);
 
     activationService.onPolicyUpdated(requested);
 
     assertThat(policyStore.get()).isNotNull();
     assertThat(policyStore.get().getActivationState()).isEqualTo(SecurityActivationState.ACTIVE);
     assertThat(policyStore.get().getActivePolicyVersion()).isEqualTo(42L);
-    assertThat(policyStore.get().getActivePolicyHash()).isEqualTo(policyStore.get().getDesiredPolicyHash());
+    assertThat(policyStore.get().getActivePolicyHash())
+        .isEqualTo(policyStore.get().getDesiredPolicyHash());
     assertThat(policyStore.getActivePolicy()).isEqualTo(policyStore.get());
     verify(securityEventPublisher, never()).publish(any(SecurityEventDTO.class));
   }
@@ -88,9 +96,7 @@ class NamespaceSecurityPolicyActivationServiceTest {
   @Test
   void anchoredRequestedPolicy_transitionsToActiveWhenRequiredParticipantsConverge() {
     NamespaceSecurityPolicyDTO requested = anchoredRequestedPolicy(84L);
-    addReadyParticipant(ParticipantRole.ENGINE, requested, clock.millis() + 500L);
-    addReadyParticipant(ParticipantRole.INGESTER, requested, clock.millis() + 500L);
-    addReadyParticipant(ParticipantRole.CONSOLE, requested, clock.millis() + 500L);
+    addReadyEnforcerParticipant(requested, clock.millis() + 500L);
 
     activationService.onPolicyUpdated(requested);
 
@@ -111,7 +117,9 @@ class NamespaceSecurityPolicyActivationServiceTest {
         ParticipantStatusDTO.builder()
             .participantId("tenant.bank.payments.engine")
             .participantInstanceId("engine-1")
-            .role(ParticipantRole.ENGINE)
+            .participantKind(ParticipantKind.ENGINE)
+            .componentType("engine")
+            .capabilities(ENGINE_CAPABILITIES)
             .namespace("bank.payments")
             .startedAt(clock.millis() - 200L)
             .lastSeenAt(clock.millis() - 100L)
@@ -122,13 +130,12 @@ class NamespaceSecurityPolicyActivationServiceTest {
             .observedPolicyVersion(requested.getDesiredPolicyVersion())
             .observedPolicyHash(requested.getDesiredPolicyHash())
             .build());
-    addReadyParticipant(ParticipantRole.INGESTER, requested, clock.millis() + 500L);
-    addReadyParticipant(ParticipantRole.CONSOLE, requested, clock.millis() + 500L);
 
     activationService.onPolicyUpdated(requested);
 
     assertThat(policyStore.get()).isNotNull();
-    assertThat(policyStore.get().getActivationState()).isEqualTo(SecurityActivationState.VALIDATING);
+    assertThat(policyStore.get().getActivationState())
+        .isEqualTo(SecurityActivationState.VALIDATING);
     assertThat(policyStore.getValidationStartedAtMs()).isEqualTo(clock.millis());
     verify(securityEventPublisher, never()).publish(any(SecurityEventDTO.class));
   }
@@ -141,7 +148,8 @@ class NamespaceSecurityPolicyActivationServiceTest {
     NamespaceSecurityPolicyDTO requested = requestedPolicy(42L);
     activationService.onPolicyUpdated(requested);
 
-    assertThat(policyStore.get().getActivationState()).isEqualTo(SecurityActivationState.VALIDATING);
+    assertThat(policyStore.get().getActivationState())
+        .isEqualTo(SecurityActivationState.VALIDATING);
 
     clock.advanceMillis(1_001L);
     activationService.reevaluate();
@@ -163,14 +171,32 @@ class NamespaceSecurityPolicyActivationServiceTest {
     policyStore.update(previousActive);
 
     NamespaceSecurityPolicyDTO requested = requestedPolicy(42L);
-    addReadyParticipant(ParticipantRole.ENGINE, requested, clock.millis() + 500L);
-    addReadyParticipant(ParticipantRole.INGESTER, requested, clock.millis() + 500L);
     participantStatusStore.update(
-        "console-1",
+        "engine-1",
+        ParticipantStatusDTO.builder()
+            .participantId("tenant.bank.payments.engine")
+            .participantInstanceId("engine-1")
+            .participantKind(ParticipantKind.ENGINE)
+            .componentType("engine")
+            .capabilities(ENGINE_CAPABILITIES)
+            .namespace("bank.payments")
+            .startedAt(clock.millis() - 100L)
+            .lastSeenAt(clock.millis())
+            .statusExpiresAt(clock.millis() + 500L)
+            .statusVerificationLevel(StatusVerificationLevel.LOCALLY_VERIFIED_STATUS)
+            .effectiveState(ParticipantEffectiveState.READY)
+            .readyForDataPlane(true)
+            .observedPolicyVersion(42L)
+            .observedPolicyHash("different-hash")
+            .build());
+    participantStatusStore.update(
+        "observer-1",
         ParticipantStatusDTO.builder()
             .participantId("tenant.bank.payments.console")
-            .participantInstanceId("console-1")
-            .role(ParticipantRole.CONSOLE)
+            .participantInstanceId("observer-1")
+            .participantKind(ParticipantKind.CLIENT)
+            .componentType("console")
+            .capabilities(CONTROL_PLANE_CLIENT_CAPABILITIES)
             .namespace("bank.payments")
             .startedAt(clock.millis() - 100L)
             .lastSeenAt(clock.millis())
@@ -191,20 +217,20 @@ class NamespaceSecurityPolicyActivationServiceTest {
         .extracting(SecurityEventDTO::getEventType)
         .containsExactly(SecurityEventType.READINESS_MISMATCH, SecurityEventType.POLICY_REJECTION);
     assertThat(captor.getAllValues().getFirst().getMetadata())
-        .containsEntry("policyMismatchParticipants", "console-1");
+        .containsEntry("policyMismatchParticipants", "engine-1");
   }
 
   @Test
   void notReadyRequiredParticipant_rejectsPolicyAndIdentifiesBlockingParticipant() {
     NamespaceSecurityPolicyDTO requested = requestedPolicy(42L);
-    addReadyParticipant(ParticipantRole.ENGINE, requested, clock.millis() + 500L);
-    addReadyParticipant(ParticipantRole.INGESTER, requested, clock.millis() + 500L);
     participantStatusStore.update(
-        "console-1",
+        "engine-1",
         ParticipantStatusDTO.builder()
-            .participantId("tenant.bank.payments.console")
-            .participantInstanceId("console-1")
-            .role(ParticipantRole.CONSOLE)
+            .participantId("tenant.bank.payments.engine")
+            .participantInstanceId("engine-1")
+            .participantKind(ParticipantKind.ENGINE)
+            .componentType("engine")
+            .capabilities(ENGINE_CAPABILITIES)
             .namespace("bank.payments")
             .startedAt(clock.millis() - 100L)
             .lastSeenAt(clock.millis())
@@ -226,7 +252,7 @@ class NamespaceSecurityPolicyActivationServiceTest {
         .extracting(SecurityEventDTO::getEventType)
         .containsExactly(SecurityEventType.READINESS_MISMATCH, SecurityEventType.POLICY_REJECTION);
     assertThat(captor.getAllValues().getFirst().getMetadata())
-        .containsEntry("notReadyParticipants", "console-1")
+        .containsEntry("notReadyParticipants", "engine-1")
         .doesNotContainKey("policyMismatchParticipants");
   }
 
@@ -257,14 +283,32 @@ class NamespaceSecurityPolicyActivationServiceTest {
   void activePolicyDrift_emitsReadinessMismatchWithoutReplacingActivePolicy() {
     NamespaceSecurityPolicyDTO active = activePolicy(41L);
     policyStore.update(active);
-    addReadyParticipant(ParticipantRole.ENGINE, active, clock.millis() + 500L);
-    addReadyParticipant(ParticipantRole.INGESTER, active, clock.millis() + 500L);
+    participantStatusStore.update(
+        "engine-1",
+        ParticipantStatusDTO.builder()
+            .participantId("tenant.bank.payments.engine")
+            .participantInstanceId("engine-1")
+            .participantKind(ParticipantKind.ENGINE)
+            .componentType("engine")
+            .capabilities(ENGINE_CAPABILITIES)
+            .namespace("bank.payments")
+            .startedAt(clock.millis() - 100L)
+            .lastSeenAt(clock.millis())
+            .statusExpiresAt(clock.millis() + 500L)
+            .statusVerificationLevel(StatusVerificationLevel.LOCALLY_VERIFIED_STATUS)
+            .effectiveState(ParticipantEffectiveState.READY)
+            .readyForDataPlane(true)
+            .observedPolicyVersion(active.getActivePolicyVersion())
+            .observedPolicyHash("different-hash")
+            .build());
     participantStatusStore.update(
         "console-1",
         ParticipantStatusDTO.builder()
             .participantId("tenant.bank.payments.console")
             .participantInstanceId("console-1")
-            .role(ParticipantRole.CONSOLE)
+            .participantKind(ParticipantKind.CLIENT)
+            .componentType("console")
+            .capabilities(CONTROL_PLANE_CLIENT_CAPABILITIES)
             .namespace("bank.payments")
             .startedAt(clock.millis() - 100L)
             .lastSeenAt(clock.millis())
@@ -286,21 +330,21 @@ class NamespaceSecurityPolicyActivationServiceTest {
     assertThat(captor.getValue().getEventType()).isEqualTo(SecurityEventType.READINESS_MISMATCH);
     assertThat(captor.getValue().getMetadata())
         .containsEntry("postActivationDrift", "true")
-        .containsEntry("policyMismatchParticipants", "console-1");
+        .containsEntry("policyMismatchParticipants", "engine-1");
   }
 
   @Test
   void activePolicyDrift_recoveryResetsFingerprintForFutureIncidents() {
     NamespaceSecurityPolicyDTO active = activePolicy(41L);
     policyStore.update(active);
-    addReadyParticipant(ParticipantRole.ENGINE, active, clock.millis() + 500L);
-    addReadyParticipant(ParticipantRole.INGESTER, active, clock.millis() + 500L);
     participantStatusStore.update(
-        "console-1",
+        "engine-1",
         ParticipantStatusDTO.builder()
-            .participantId("tenant.bank.payments.console")
-            .participantInstanceId("console-1")
-            .role(ParticipantRole.CONSOLE)
+            .participantId("tenant.bank.payments.engine")
+            .participantInstanceId("engine-1")
+            .participantKind(ParticipantKind.ENGINE)
+            .componentType("engine")
+            .capabilities(ENGINE_CAPABILITIES)
             .namespace("bank.payments")
             .startedAt(clock.millis() - 100L)
             .lastSeenAt(clock.millis())
@@ -314,15 +358,17 @@ class NamespaceSecurityPolicyActivationServiceTest {
 
     activationService.reevaluate();
 
-    addReadyParticipant(ParticipantRole.CONSOLE, active, clock.millis() + 500L);
+    addReadyEnforcerParticipant(active, clock.millis() + 500L);
     activationService.reevaluate();
 
     participantStatusStore.update(
-        "console-1",
+        "engine-1",
         ParticipantStatusDTO.builder()
-            .participantId("tenant.bank.payments.console")
-            .participantInstanceId("console-1")
-            .role(ParticipantRole.CONSOLE)
+            .participantId("tenant.bank.payments.engine")
+            .participantInstanceId("engine-1")
+            .participantKind(ParticipantKind.ENGINE)
+            .componentType("engine")
+            .capabilities(ENGINE_CAPABILITIES)
             .namespace("bank.payments")
             .startedAt(clock.millis() - 100L)
             .lastSeenAt(clock.millis())
@@ -340,16 +386,17 @@ class NamespaceSecurityPolicyActivationServiceTest {
   }
 
   @Test
-  void falseCompatibilityClaim_doesNotActivateRequestedPolicy() {
+  void observerCompatibilityClaim_doesNotBlockRequestedPolicyActivation() {
     NamespaceSecurityPolicyDTO requested = requestedPolicy(42L);
-    addReadyParticipant(ParticipantRole.ENGINE, requested, clock.millis() + 500L);
-    addReadyParticipant(ParticipantRole.INGESTER, requested, clock.millis() + 500L);
+    addReadyEnforcerParticipant(requested, clock.millis() + 500L);
     participantStatusStore.update(
         "console-1",
         ParticipantStatusDTO.builder()
             .participantId("tenant.bank.payments.console")
             .participantInstanceId("console-1")
-            .role(ParticipantRole.CONSOLE)
+            .participantKind(ParticipantKind.CLIENT)
+            .componentType("console")
+            .capabilities(CONTROL_PLANE_CLIENT_CAPABILITIES)
             .namespace("bank.payments")
             .startedAt(clock.millis() - 100L)
             .lastSeenAt(clock.millis())
@@ -363,15 +410,10 @@ class NamespaceSecurityPolicyActivationServiceTest {
 
     activationService.onPolicyUpdated(requested);
 
-    assertThat(policyStore.get()).isNull();
-    assertThat(policyStore.getActivePolicy()).isNull();
-    ArgumentCaptor<SecurityEventDTO> captor = ArgumentCaptor.forClass(SecurityEventDTO.class);
-    verify(securityEventPublisher, Mockito.times(2)).publish(captor.capture());
-    assertThat(captor.getAllValues())
-        .extracting(SecurityEventDTO::getEventType)
-        .containsExactly(SecurityEventType.READINESS_MISMATCH, SecurityEventType.POLICY_REJECTION);
-    assertThat(captor.getAllValues().getFirst().getMetadata())
-        .containsEntry("policyMismatchParticipants", "console-1");
+    assertThat(policyStore.get()).isNotNull();
+    assertThat(policyStore.get().getActivationState()).isEqualTo(SecurityActivationState.ACTIVE);
+    assertThat(policyStore.getActivePolicy()).isEqualTo(policyStore.get());
+    verify(securityEventPublisher, never()).publish(any(SecurityEventDTO.class));
   }
 
   @Test
@@ -434,9 +476,7 @@ class NamespaceSecurityPolicyActivationServiceTest {
                 .breakGlassActor("ops-admin")
                 .breakGlassReason("temporary trust anchor outage")
                 .build());
-    addReadyParticipant(ParticipantRole.ENGINE, requested, clock.millis() + 500L);
-    addReadyParticipant(ParticipantRole.INGESTER, requested, clock.millis() + 500L);
-    addReadyParticipant(ParticipantRole.CONSOLE, requested, clock.millis() + 500L);
+    addReadyEnforcerParticipant(requested, clock.millis() + 500L);
 
     activationService.onPolicyUpdated(requested);
 
@@ -452,15 +492,15 @@ class NamespaceSecurityPolicyActivationServiceTest {
         .containsEntry("breakGlassReason", "temporary trust anchor outage");
   }
 
-  private void addReadyParticipant(
-      ParticipantRole role, NamespaceSecurityPolicyDTO policy, long statusExpiresAt) {
-    String instanceId = role.name().toLowerCase() + "-1";
+  private void addReadyEnforcerParticipant(NamespaceSecurityPolicyDTO policy, long statusExpiresAt) {
     participantStatusStore.update(
-        instanceId,
+        "engine-1",
         ParticipantStatusDTO.builder()
-            .participantId("tenant.bank.payments." + role.name().toLowerCase())
-            .participantInstanceId(instanceId)
-            .role(role)
+            .participantId("tenant.bank.payments.engine")
+            .participantInstanceId("engine-1")
+            .participantKind(ParticipantKind.ENGINE)
+            .componentType("engine")
+            .capabilities(ENGINE_CAPABILITIES)
             .namespace("bank.payments")
             .startedAt(clock.millis() - 100L)
             .lastSeenAt(clock.millis())
@@ -540,10 +580,3 @@ class NamespaceSecurityPolicyActivationServiceTest {
     }
   }
 }
-
-
-
-
-
-
-

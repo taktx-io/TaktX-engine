@@ -7,13 +7,18 @@
  */
 package io.taktx.security;
 
+import io.taktx.dto.ParticipantCapability;
 import io.taktx.dto.ParticipantEffectiveState;
+import io.taktx.dto.ParticipantKind;
 import io.taktx.dto.ParticipantStatusDTO;
 import io.taktx.dto.PolicyMismatchReasonDTO;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 /** Shared normalization and validation support for participant status telemetry. */
 public final class ParticipantStatusSupport {
@@ -40,7 +45,14 @@ public final class ParticipantStatusSupport {
                             .build())
                 .toList();
 
-    return status.toBuilder().mismatchReasons(mismatchReasons).build();
+    Set<ParticipantCapability> capabilities = normalizeSet(status.getCapabilities());
+    String componentType = normalizeOptionalString(status.getComponentType());
+
+    return status.toBuilder()
+        .componentType(componentType)
+        .capabilities(capabilities)
+        .mismatchReasons(mismatchReasons)
+        .build();
   }
 
   public static List<String> validationErrors(ParticipantStatusDTO status) {
@@ -58,8 +70,14 @@ public final class ParticipantStatusSupport {
     if (isBlank(normalized.getParticipantInstanceId())) {
       errors.add("participantInstanceId must not be blank");
     }
-    if (normalized.getRole() == null) {
-      errors.add("role must not be null");
+    if (normalized.getParticipantKind() == null) {
+      errors.add("participantKind must not be null");
+    }
+    if (containsNull(normalized.getCapabilities())) {
+      errors.add("capabilities must not contain null values");
+    }
+    if (normalized.getCapabilities().isEmpty()) {
+      errors.add("capabilities must not be empty");
     }
     if (isBlank(normalized.getNamespace())) {
       errors.add("namespace must not be blank");
@@ -129,8 +147,8 @@ public final class ParticipantStatusSupport {
    *
    * <p>This deliberately treats participant status as posture/telemetry rather than trust. The
    * decision is based on non-expired status, `READY` posture, the participant's explicit
-   * `readyForDataPlane` flag, and an exact match to the active policy identity. Verification level is
-   * intentionally not used as a trust shortcut.
+   * `readyForDataPlane` flag, and an exact match to the active policy identity. Verification level
+   * is intentionally not used as a trust shortcut.
    */
   public static boolean allowsProtectedDataPlaneParticipation(
       ParticipantStatusDTO status, Long activePolicyVersion, String activePolicyHash, long nowMs) {
@@ -149,5 +167,20 @@ public final class ParticipantStatusSupport {
 
   private static boolean isBlank(String value) {
     return value == null || value.isBlank();
+  }
+
+  private static String normalizeOptionalString(String value) {
+    return isBlank(value) ? null : value.trim();
+  }
+
+  private static <T> Set<T> normalizeSet(Set<T> values) {
+    if (values == null || values.isEmpty()) {
+      return Set.of();
+    }
+    return Collections.unmodifiableSet(new LinkedHashSet<>(values));
+  }
+
+  private static boolean containsNull(Set<?> values) {
+    return values != null && values.stream().anyMatch(Objects::isNull);
   }
 }

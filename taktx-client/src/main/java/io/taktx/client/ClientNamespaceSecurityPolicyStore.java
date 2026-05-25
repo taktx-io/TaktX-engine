@@ -13,11 +13,15 @@ import io.taktx.security.NamespaceSecurityPolicySupport;
 import jakarta.annotation.Nullable;
 import java.util.concurrent.atomic.AtomicReference;
 
-/** In-memory view of the namespace security policy authoritative for client-side protected traffic. */
+/**
+ * In-memory view of the namespace security policy authoritative for client-side protected traffic.
+ */
 final class ClientNamespaceSecurityPolicyStore {
 
-  private final AtomicReference<NamespaceSecurityPolicyDTO> currentPolicy = new AtomicReference<>(null);
-  private final AtomicReference<NamespaceSecurityPolicyDTO> activePolicy = new AtomicReference<>(null);
+  private final AtomicReference<NamespaceSecurityPolicyDTO> currentPolicy =
+      new AtomicReference<>(null);
+  private final AtomicReference<NamespaceSecurityPolicyDTO> activePolicy =
+      new AtomicReference<>(null);
 
   synchronized void update(@Nullable NamespaceSecurityPolicyDTO dto) {
     NamespaceSecurityPolicyDTO validated =
@@ -53,4 +57,3 @@ final class ClientNamespaceSecurityPolicyStore {
     activePolicy.set(dto == null ? null : NamespaceSecurityPolicySupport.requireValid(dto));
   }
 }
-

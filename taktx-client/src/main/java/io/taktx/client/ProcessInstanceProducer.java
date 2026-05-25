@@ -158,7 +158,8 @@ public class ProcessInstanceProducer {
       @Nullable String businessKey,
       Set<String> tags,
       @Nullable String authorizationToken) {
-    protectedDataPlaneGuard.check(ProtectedClientDataPlaneOperation.START_COMMAND, authorizationToken);
+    protectedDataPlaneGuard.check(
+        ProtectedClientDataPlaneOperation.START_COMMAND, authorizationToken);
     UUID processInstanceId = UUID.randomUUID();
     StartCommandDTO startCommand =
         new StartCommandDTO(
@@ -221,7 +222,8 @@ public class ProcessInstanceProducer {
       List<Long> elementInstanceIdPath,
       VariablesDTO variables,
       @Nullable String authorizationToken) {
-    protectedDataPlaneGuard.check(ProtectedClientDataPlaneOperation.CLIENT_COMMAND, authorizationToken);
+    protectedDataPlaneGuard.check(
+        ProtectedClientDataPlaneOperation.CLIENT_COMMAND, authorizationToken);
     SetVariableTriggerDTO setVariableTrigger =
         new SetVariableTriggerDTO(processInstanceId, elementInstanceIdPath, variables);
     ProducerRecord<UUID, ProcessInstanceTriggerDTO> processInstanceTriggerRecord =
@@ -258,7 +260,8 @@ public class ProcessInstanceProducer {
       UUID processInstanceId,
       List<Long> elementInstanceIdPath,
       @Nullable String authorizationToken) {
-    protectedDataPlaneGuard.check(ProtectedClientDataPlaneOperation.CLIENT_COMMAND, authorizationToken);
+    protectedDataPlaneGuard.check(
+        ProtectedClientDataPlaneOperation.CLIENT_COMMAND, authorizationToken);
     AbortTriggerDTO terminateTrigger =
         new AbortTriggerDTO(processInstanceId, elementInstanceIdPath);
     ProducerRecord<UUID, ProcessInstanceTriggerDTO> processInstanceTriggerRecord =

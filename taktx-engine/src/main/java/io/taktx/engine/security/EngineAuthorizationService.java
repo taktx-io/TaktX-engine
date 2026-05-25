@@ -13,8 +13,8 @@ import io.taktx.dto.AbortTriggerDTO;
 import io.taktx.dto.CommandAuthMethod;
 import io.taktx.dto.CommandTrustMetadataDTO;
 import io.taktx.dto.CommandTrustVerificationResult;
-import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.dto.Constants;
+import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.dto.EventSignalTriggerDTO;
 import io.taktx.dto.ExternalTaskResponseTriggerDTO;
 import io.taktx.dto.GlobalConfigurationDTO;
@@ -197,7 +197,12 @@ public class EngineAuthorizationService {
       GlobalConfigStore globalConfigStore,
       PublicKeyProvider publicKeyProvider,
       KafkaStreams kafkaStreams) {
-    this(config, globalConfigStore, new NamespaceSecurityPolicyStore(), publicKeyProvider, kafkaStreams);
+    this(
+        config,
+        globalConfigStore,
+        new NamespaceSecurityPolicyStore(),
+        publicKeyProvider,
+        kafkaStreams);
   }
 
   @PostConstruct
@@ -460,9 +465,9 @@ public class EngineAuthorizationService {
   /**
    * Authorizes an authoritative namespace-security-policy mutation.
    *
-   * <p>Unlike protected runtime topics, authoritative control-plane mutation must never fall back to
-   * legacy opt-in runtime flags. A valid {@code tx-sig} from a trusted {@code PLATFORM} signer is
-   * always required, and the signature is verified directly against the raw payload bytes (or an
+   * <p>Unlike protected runtime topics, authoritative control-plane mutation must never fall back
+   * to legacy opt-in runtime flags. A valid {@code tx-sig} from a trusted {@code PLATFORM} signer
+   * is always required, and the signature is verified directly against the raw payload bytes (or an
    * empty payload for tombstones).
    */
   public SigningKeyDTO authorizeNamespaceSecurityPolicyMutation(Headers headers, byte[] payload) {
@@ -588,7 +593,8 @@ public class EngineAuthorizationService {
       return isAuthorizationGateActive(
           cfg,
           messageSecurityPolicyRegistry.resolve(
-              Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName(), UserTaskResponseTriggerDTO.class),
+              Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName(),
+              UserTaskResponseTriggerDTO.class),
           authoritativePolicy());
     }
     return false;
@@ -767,7 +773,8 @@ public class EngineAuthorizationService {
     return false;
   }
 
-  private static boolean requiresCommandAuthorization(NamespaceSecurityPolicyDTO authoritativePolicy) {
+  private static boolean requiresCommandAuthorization(
+      NamespaceSecurityPolicyDTO authoritativePolicy) {
     return authoritativePolicy != null
         && authoritativePolicy.getRequiredAuthorization() != null
         && authoritativePolicy.getRequiredAuthorization().isStartCommands();
@@ -780,7 +787,8 @@ public class EngineAuthorizationService {
         && authoritativePolicy.getRequiredAuthorization().isExternalTaskCompletion();
   }
 
-  private static boolean requiresUserTaskAuthorization(NamespaceSecurityPolicyDTO authoritativePolicy) {
+  private static boolean requiresUserTaskAuthorization(
+      NamespaceSecurityPolicyDTO authoritativePolicy) {
     return authoritativePolicy != null
         && authoritativePolicy.getRequiredAuthorization() != null
         && authoritativePolicy.getRequiredAuthorization().isUserTaskCompletion();
@@ -792,7 +800,8 @@ public class EngineAuthorizationService {
         || requiresUserTaskAuthorization(authoritativePolicy);
   }
 
-  private void assertTrustAnchorRequirementSatisfied(NamespaceSecurityPolicyDTO authoritativePolicy) {
+  private void assertTrustAnchorRequirementSatisfied(
+      NamespaceSecurityPolicyDTO authoritativePolicy) {
     if (authoritativePolicy == null || !authoritativePolicy.isTrustAnchorRequired()) {
       return;
     }
@@ -810,7 +819,9 @@ public class EngineAuthorizationService {
   }
 
   private NamespaceSecurityPolicyDTO authoritativePolicy() {
-    return namespaceSecurityPolicyStore != null ? namespaceSecurityPolicyStore.getAuthoritativePolicy() : null;
+    return namespaceSecurityPolicyStore != null
+        ? namespaceSecurityPolicyStore.getAuthoritativePolicy()
+        : null;
   }
 
   private static Header lastHeader(Headers headers, String headerName) {

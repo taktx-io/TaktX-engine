@@ -82,7 +82,8 @@ class ProtectedDataPlaneParticipationGuardTest {
     ProtectedDataPlaneParticipationGuard.Decision decision = guard.evaluate();
 
     assertThat(decision.permitted()).isFalse();
-    assertThat(decision.reasonHint()).isEqualTo(EngineSecurityReadinessEvaluator.TRUST_ANCHOR_MISSING);
+    assertThat(decision.reasonHint())
+        .isEqualTo(EngineSecurityReadinessEvaluator.TRUST_ANCHOR_MISSING);
     assertThat(decision.reasonText()).contains("no platform public key");
   }
 
@@ -144,5 +145,3 @@ class ProtectedDataPlaneParticipationGuardTest {
             .build());
   }
 }
-
-

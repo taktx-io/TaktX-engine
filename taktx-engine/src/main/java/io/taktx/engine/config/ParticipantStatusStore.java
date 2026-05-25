@@ -7,8 +7,8 @@
  */
 package io.taktx.engine.config;
 
+import io.taktx.dto.ParticipantCapability;
 import io.taktx.dto.ParticipantStatusDTO;
-import io.taktx.dto.ParticipantRole;
 import io.taktx.security.ParticipantStatusSupport;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.util.Map;
@@ -48,10 +48,15 @@ public class ParticipantStatusStore {
             java.util.stream.Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
   }
 
-  public Map<String, ParticipantStatusDTO> currentSnapshot(Set<ParticipantRole> roles, long nowMs) {
+  public Map<String, ParticipantStatusDTO> currentSnapshot(
+      Set<ParticipantCapability> requiredCapabilities, long nowMs) {
     return statuses.entrySet().stream()
         .filter(entry -> !ParticipantStatusSupport.isExpired(entry.getValue(), nowMs))
-        .filter(entry -> roles == null || roles.isEmpty() || roles.contains(entry.getValue().getRole()))
+        .filter(
+            entry ->
+                requiredCapabilities == null
+                    || requiredCapabilities.isEmpty()
+                    || entry.getValue().getCapabilities().stream().anyMatch(requiredCapabilities::contains))
         .collect(
             java.util.stream.Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
   }

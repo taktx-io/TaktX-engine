@@ -18,4 +18,3 @@ enum ProtectedClientDataPlaneOperation {
   EXTERNAL_TASK_CONSUME,
   USER_TASK_CONSUME
 }
-
