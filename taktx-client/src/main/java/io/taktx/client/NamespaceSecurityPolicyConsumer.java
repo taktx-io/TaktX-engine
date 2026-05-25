@@ -12,4 +12,3 @@ package io.taktx.client;
 public interface NamespaceSecurityPolicyConsumer {
   void accept(ObservedPolicySnapshot snapshot);
 }
-

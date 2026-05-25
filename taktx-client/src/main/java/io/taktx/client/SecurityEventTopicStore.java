@@ -65,7 +65,8 @@ final class SecurityEventTopicStore implements AutoCloseable {
 
     Properties props = new Properties();
     props.putAll(consumerProperties);
-    props.put(ConsumerConfig.GROUP_ID_CONFIG, "security-event-store-" + ProcessHandle.current().pid());
+    props.put(
+        ConsumerConfig.GROUP_ID_CONFIG, "security-event-store-" + ProcessHandle.current().pid());
     props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
     props.put(
         ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class.getName());
@@ -202,5 +203,3 @@ final class SecurityEventTopicStore implements AutoCloseable {
     }
   }
 }
-
-

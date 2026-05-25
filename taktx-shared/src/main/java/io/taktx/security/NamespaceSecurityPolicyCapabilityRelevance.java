@@ -86,4 +86,3 @@ public final class NamespaceSecurityPolicyCapabilityRelevance {
         .build();
   }
 }
-

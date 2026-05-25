@@ -22,4 +22,3 @@ public record SecurityParticipantDescriptor(
     ParticipantKind kind,
     Set<ParticipantCapability> capabilities,
     String componentType) {}
-

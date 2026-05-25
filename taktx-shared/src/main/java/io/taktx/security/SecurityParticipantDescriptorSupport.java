@@ -54,7 +54,8 @@ public final class SecurityParticipantDescriptorSupport {
     return List.copyOf(errors);
   }
 
-  public static SecurityParticipantDescriptor requireValid(SecurityParticipantDescriptor descriptor) {
+  public static SecurityParticipantDescriptor requireValid(
+      SecurityParticipantDescriptor descriptor) {
     List<String> errors = validationErrors(descriptor);
     if (!errors.isEmpty()) {
       throw new IllegalArgumentException(String.join("; ", errors));
@@ -85,5 +86,3 @@ public final class SecurityParticipantDescriptorSupport {
     return value == null || value.isBlank();
   }
 }
-
-

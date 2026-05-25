@@ -56,7 +56,8 @@ public class ParticipantStatusStore {
             entry ->
                 requiredCapabilities == null
                     || requiredCapabilities.isEmpty()
-                    || entry.getValue().getCapabilities().stream().anyMatch(requiredCapabilities::contains))
+                    || entry.getValue().getCapabilities().stream()
+                        .anyMatch(requiredCapabilities::contains))
         .collect(
             java.util.stream.Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
   }

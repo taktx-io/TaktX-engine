@@ -46,10 +46,7 @@ class TaktXClientFacetTest {
 
     SecurityParticipantDescriptor descriptor =
         new SecurityParticipantDescriptor(
-            "tenant.default.admin-console",
-            ParticipantKind.CLIENT,
-            capabilities,
-            "admin-console");
+            "tenant.default.admin-console", ParticipantKind.CLIENT, capabilities, "admin-console");
 
     TaktXClient client = buildClient(descriptor, publisherProperties());
     try {
@@ -57,7 +54,8 @@ class TaktXClientFacetTest {
       SecurityObservabilityClient observabilityFacet = client.observability();
       RuntimeClient runtimeFacet = client.runtime();
 
-      assertThat(client.getParticipantDescriptor().capabilities()).containsExactlyElementsOf(capabilities);
+      assertThat(client.getParticipantDescriptor().capabilities())
+          .containsExactlyElementsOf(capabilities);
       assertThat(securityFacet).isNotNull();
       assertThat(observabilityFacet).isNotNull();
       assertThat(runtimeFacet).isNotNull();
@@ -75,18 +73,25 @@ class TaktXClientFacetTest {
     Method dlqEntryPoint = TaktXClient.class.getMethod("dlq");
 
     assertThat(securityEntryPoint.getReturnType()).isEqualTo(SecurityClient.class);
-    assertThat(observabilityEntryPoint.getReturnType()).isEqualTo(SecurityObservabilityClient.class);
+    assertThat(observabilityEntryPoint.getReturnType())
+        .isEqualTo(SecurityObservabilityClient.class);
     assertThat(runtimeEntryPoint.getReturnType()).isEqualTo(RuntimeClient.class);
     assertThat(workersEntryPoint.getReturnType()).isEqualTo(WorkersClient.class);
     assertThat(dlqEntryPoint.getReturnType()).isEqualTo(DlqClient.class);
 
-    assertThat(SecurityClient.class.getMethod("publishNamespaceSecurityPolicy", NamespaceSecurityPolicyDTO.class))
+    assertThat(
+            SecurityClient.class.getMethod(
+                "publishNamespaceSecurityPolicy", NamespaceSecurityPolicyDTO.class))
         .isNotNull();
     assertThat(SecurityClient.class.getMethod("clearNamespaceSecurityPolicy")).isNotNull();
-    assertThat(RuntimeClient.class.getMethod("startProcess", String.class, VariablesDTO.class)).isNotNull();
-    assertThat(WorkersClient.class.getMethod("registerExternalTaskConsumer", ExternalTaskTriggerConsumer.class, String.class))
+    assertThat(RuntimeClient.class.getMethod("startProcess", String.class, VariablesDTO.class))
         .isNotNull();
-    assertThat(DlqClient.class.getMethod("submitReplayCommand", io.taktx.dto.DlqReplayCommand.class))
+    assertThat(
+            WorkersClient.class.getMethod(
+                "registerExternalTaskConsumer", ExternalTaskTriggerConsumer.class, String.class))
+        .isNotNull();
+    assertThat(
+            DlqClient.class.getMethod("submitReplayCommand", io.taktx.dto.DlqReplayCommand.class))
         .isNotNull();
   }
 
@@ -130,5 +135,3 @@ class TaktXClientFacetTest {
         "generic-client");
   }
 }
-
-

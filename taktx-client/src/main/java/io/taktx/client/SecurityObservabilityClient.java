@@ -16,10 +16,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.locks.LockSupport;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
-import java.util.concurrent.locks.LockSupport;
 
 /**
  * Public observability facade backed only by namespace control-plane topics.
@@ -65,7 +65,8 @@ public class SecurityObservabilityClient {
     this.observedPolicySnapshotSupplier =
         Objects.requireNonNull(observedPolicySnapshotSupplier, "observedPolicySnapshotSupplier");
     this.participantStatusSnapshotSupplier =
-        Objects.requireNonNull(participantStatusSnapshotSupplier, "participantStatusSnapshotSupplier");
+        Objects.requireNonNull(
+            participantStatusSnapshotSupplier, "participantStatusSnapshotSupplier");
     this.recentSecurityEventsSupplier =
         Objects.requireNonNull(recentSecurityEventsSupplier, "recentSecurityEventsSupplier");
     this.consumerRegistrars = Objects.requireNonNull(consumerRegistrars, "consumerRegistrars");
@@ -181,8 +182,7 @@ public class SecurityObservabilityClient {
       }
       long remainingNanos = deadline - System.nanoTime();
       if (remainingNanos <= 0L) {
-        throw new IllegalStateException(
-            "Timed out waiting for security event within " + timeout);
+        throw new IllegalStateException("Timed out waiting for security event within " + timeout);
       }
       LockSupport.parkNanos(Math.min(pollInterval.toNanos(), remainingNanos));
     }
@@ -226,5 +226,3 @@ public class SecurityObservabilityClient {
       Consumer<ParticipantStatusConsumer> participantStatusConsumerRegistrar,
       Consumer<SecurityEventConsumer> securityEventConsumerRegistrar) {}
 }
-
-

@@ -39,4 +39,3 @@ public final class DlqClient {
     client.registerReplayResultConsumer(groupId, handler);
   }
 }
-

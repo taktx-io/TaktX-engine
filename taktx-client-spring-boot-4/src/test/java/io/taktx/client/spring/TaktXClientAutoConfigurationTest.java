@@ -10,13 +10,13 @@ package io.taktx.client.spring;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
-import io.taktx.dto.ParticipantCapability;
-import io.taktx.dto.ParticipantKind;
-import io.taktx.dto.SecurityParticipantDescriptor;
 import io.taktx.client.ParameterResolverFactory;
 import io.taktx.client.ResultProcessorFactory;
 import io.taktx.client.TaktXClient;
 import io.taktx.client.WorkerBeanInstanceProvider;
+import io.taktx.dto.ParticipantCapability;
+import io.taktx.dto.ParticipantKind;
+import io.taktx.dto.SecurityParticipantDescriptor;
 import io.taktx.util.TaktPropertiesHelper;
 import java.util.Properties;
 import org.junit.jupiter.api.BeforeEach;

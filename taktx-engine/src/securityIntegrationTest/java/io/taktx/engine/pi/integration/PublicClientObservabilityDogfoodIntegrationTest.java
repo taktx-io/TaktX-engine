@@ -11,10 +11,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
-import io.taktx.client.InstanceUpdateRecord;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
+import io.taktx.client.InstanceUpdateRecord;
 import io.taktx.client.ObservedPolicySnapshot;
 import io.taktx.client.SecurityPostureSnapshot;
 import io.taktx.client.TaktXClient;
@@ -78,7 +78,8 @@ class PublicClientObservabilityDogfoodIntegrationTest
     Queue<DlqEnvelope> dlqEntries = new ConcurrentLinkedQueue<>();
     observer
         .dlq()
-        .registerDlqEntryConsumer("dogfood-anchored-dlq-" + UUID.randomUUID(), dlqEntries::add, true);
+        .registerDlqEntryConsumer(
+            "dogfood-anchored-dlq-" + UUID.randomUUID(), dlqEntries::add, true);
 
     awaitNoPolicy(observer);
 
@@ -96,7 +97,8 @@ class PublicClientObservabilityDogfoodIntegrationTest
                 event ->
                     event.getEventType() == SecurityEventType.READINESS_MISMATCH
                         && "READINESS_MISMATCH".equals(event.getCode())
-                        && Long.valueOf(anchoredPolicyVersion).equals(event.getDesiredPolicyVersion()),
+                        && Long.valueOf(anchoredPolicyVersion)
+                            .equals(event.getDesiredPolicyVersion()),
                 Duration.ofSeconds(30));
     SecurityEventDTO blockedEvent =
         observer
@@ -105,7 +107,8 @@ class PublicClientObservabilityDogfoodIntegrationTest
                 event ->
                     event.getEventType() == SecurityEventType.DATA_PLANE_BLOCKED
                         && "TRUST_ANCHOR_MISSING".equals(event.getCode())
-                        && Long.valueOf(anchoredPolicyVersion).equals(event.getActivePolicyVersion()),
+                        && Long.valueOf(anchoredPolicyVersion)
+                            .equals(event.getActivePolicyVersion()),
                 Duration.ofSeconds(30));
 
     SecurityPostureSnapshot posture =
@@ -115,7 +118,8 @@ class PublicClientObservabilityDogfoodIntegrationTest
                 snapshot ->
                     snapshot.hasEffectivePolicy()
                         && snapshot.effectiveMode() == SecurityMode.ANCHORED_SECURED
-                        && Long.valueOf(anchoredPolicyVersion).equals(snapshot.effectivePolicyVersion())
+                        && Long.valueOf(anchoredPolicyVersion)
+                            .equals(snapshot.effectivePolicyVersion())
                         && snapshot.recentSecurityEvents().stream()
                             .anyMatch(
                                 event ->
@@ -141,7 +145,8 @@ class PublicClientObservabilityDogfoodIntegrationTest
     assertThat(posture.participantStatuses()).isEmpty();
     assertThat(posture.mismatchReasons()).isEmpty();
 
-    assertThatThrownBy(() -> runtimeClient.runtime().startProcess(OPEN_PROCESS_ID, VariablesDTO.empty()))
+    assertThatThrownBy(
+            () -> runtimeClient.runtime().startProcess(OPEN_PROCESS_ID, VariablesDTO.empty()))
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("platform public key");
 
@@ -192,8 +197,8 @@ class PublicClientObservabilityDogfoodIntegrationTest
                       snapshot ->
                           snapshot.values().stream()
                               .anyMatch(
-                                  PublicClientDogfoodIntegrationTestSupport::
-                                      isAnchoredEngineMismatchStatus),
+                                  PublicClientDogfoodIntegrationTestSupport
+                                      ::isAnchoredEngineMismatchStatus),
                       Duration.ofSeconds(30));
 
           SecurityPostureSnapshot posture =
@@ -204,8 +209,8 @@ class PublicClientObservabilityDogfoodIntegrationTest
                           snapshot.hasParticipantStatuses()
                               && snapshot.participantStatuses().values().stream()
                                   .anyMatch(
-                                      PublicClientDogfoodIntegrationTestSupport::
-                                          isAnchoredEngineMismatchStatus)
+                                      PublicClientDogfoodIntegrationTestSupport
+                                          ::isAnchoredEngineMismatchStatus)
                               && snapshot.hasMismatchReasons(),
                       Duration.ofSeconds(30));
 
@@ -225,8 +230,7 @@ class PublicClientObservabilityDogfoodIntegrationTest
                   });
           assertThat(posture.mismatchReasons())
               .anyMatch(
-                  mismatch ->
-                      "TRUST_ANCHOR_MISSING".equals(mismatch.mismatchReason().getCode()));
+                  mismatch -> "TRUST_ANCHOR_MISSING".equals(mismatch.mismatchReason().getCode()));
         });
   }
 
@@ -349,7 +353,8 @@ class PublicClientObservabilityDogfoodIntegrationTest
                   .isFalse();
             });
 
-    assertThatThrownBy(() -> securedActor.runtime().startProcess(OPEN_PROCESS_ID, VariablesDTO.empty()))
+    assertThatThrownBy(
+            () -> securedActor.runtime().startProcess(OPEN_PROCESS_ID, VariablesDTO.empty()))
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("signed client commands");
 
@@ -357,4 +362,3 @@ class PublicClientObservabilityDogfoodIntegrationTest
     awaitProcessCompleted(openUpdates, openInstanceId);
   }
 }
-

@@ -40,8 +40,7 @@ public class EngineSecurityReadinessEvaluator {
   static final String POLICY_MARKED_MISCONFIGURED = "POLICY_MARKED_MISCONFIGURED";
   static final long STATUS_TTL_MS = 30_000L;
   private static final java.util.Set<ParticipantCapability> ENGINE_CAPABILITIES =
-      java.util.Set.of(
-          ParticipantCapability.ENFORCER, ParticipantCapability.SECURITY_OBSERVER);
+      java.util.Set.of(ParticipantCapability.ENFORCER, ParticipantCapability.SECURITY_OBSERVER);
 
   private final TaktConfiguration configuration;
   private final NamespaceSecurityPolicyStore namespaceSecurityPolicyStore;

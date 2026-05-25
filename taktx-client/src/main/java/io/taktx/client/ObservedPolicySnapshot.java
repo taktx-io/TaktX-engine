@@ -61,4 +61,3 @@ public record ObservedPolicySnapshot(
     return currentPolicy != null ? currentPolicy.getDesiredPolicyHash() : null;
   }
 }
-

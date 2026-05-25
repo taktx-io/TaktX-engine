@@ -38,7 +38,8 @@ class SecurityObservabilityClientTest {
   @Test
   void observedPolicySnapshot_prefersAuthoritativePolicyForEffectiveHelpers() {
     ObservedPolicySnapshot snapshot =
-        new ObservedPolicySnapshot(requestedPolicy(11L), activePolicy(7L, SecurityMode.ANCHORED_SECURED));
+        new ObservedPolicySnapshot(
+            requestedPolicy(11L), activePolicy(7L, SecurityMode.ANCHORED_SECURED));
 
     assertThat(snapshot.hasCurrentPolicy()).isTrue();
     assertThat(snapshot.hasAuthoritativePolicy()).isTrue();
@@ -59,7 +60,8 @@ class SecurityObservabilityClientTest {
     assertThat(observedSnapshots).hasSize(1);
     assertThat(observedSnapshots.getFirst().effectivePolicyVersion()).isEqualTo(4L);
 
-    harness.observedPolicySnapshot.set(new ObservedPolicySnapshot(requestedPolicy(5L), activePolicy(5L)));
+    harness.observedPolicySnapshot.set(
+        new ObservedPolicySnapshot(requestedPolicy(5L), activePolicy(5L)));
     harness.emitPolicySnapshot();
 
     assertThat(observedSnapshots).hasSize(2);
@@ -74,10 +76,12 @@ class SecurityObservabilityClientTest {
         Map.of(
             "engine#1",
             participantStatus(
-                "engine#1", Set.of(ParticipantCapability.ENFORCER, ParticipantCapability.SECURITY_OBSERVER))));
+                "engine#1",
+                Set.of(ParticipantCapability.ENFORCER, ParticipantCapability.SECURITY_OBSERVER))));
 
     List<Map<String, ParticipantStatusDTO>> observedSnapshots = new ArrayList<>();
-    harness.client.registerParticipantStatusConsumer(snapshot -> observedSnapshots.add(new LinkedHashMap<>(snapshot)));
+    harness.client.registerParticipantStatusConsumer(
+        snapshot -> observedSnapshots.add(new LinkedHashMap<>(snapshot)));
 
     assertThat(observedSnapshots).hasSize(1);
     assertThat(observedSnapshots.getFirst()).containsOnlyKeys("engine#1");
@@ -98,25 +102,33 @@ class SecurityObservabilityClientTest {
   @Test
   void registerSecurityEventConsumer_replaysRecentHistoryAndNewEvents() {
     TestHarness harness = new TestHarness();
-    harness.securityEvents.set(List.of(securityEvent("POLICY_REQUESTED", 1L), securityEvent("POLICY_ACTIVE", 2L)));
+    harness.securityEvents.set(
+        List.of(securityEvent("POLICY_REQUESTED", 1L), securityEvent("POLICY_ACTIVE", 2L)));
 
     List<SecurityEventDTO> observedEvents = new ArrayList<>();
     harness.client.registerSecurityEventConsumer(observedEvents::add);
 
-    assertThat(observedEvents).extracting(SecurityEventDTO::getCode).containsExactly("POLICY_REQUESTED", "POLICY_ACTIVE");
+    assertThat(observedEvents)
+        .extracting(SecurityEventDTO::getCode)
+        .containsExactly("POLICY_REQUESTED", "POLICY_ACTIVE");
 
     SecurityEventDTO blocked = securityEvent("DATA_PLANE_BLOCKED", 3L);
-    harness.securityEvents.set(List.of(securityEvent("POLICY_REQUESTED", 1L), securityEvent("POLICY_ACTIVE", 2L), blocked));
+    harness.securityEvents.set(
+        List.of(
+            securityEvent("POLICY_REQUESTED", 1L), securityEvent("POLICY_ACTIVE", 2L), blocked));
     harness.emitSecurityEvent(blocked);
 
-    assertThat(observedEvents).extracting(SecurityEventDTO::getCode).containsExactly("POLICY_REQUESTED", "POLICY_ACTIVE", "DATA_PLANE_BLOCKED");
+    assertThat(observedEvents)
+        .extracting(SecurityEventDTO::getCode)
+        .containsExactly("POLICY_REQUESTED", "POLICY_ACTIVE", "DATA_PLANE_BLOCKED");
   }
 
   @Test
   void getPostureSnapshot_assemblesPolicyStatusesMismatchesAndEvents() {
     TestHarness harness = new TestHarness();
     harness.observedPolicySnapshot.set(
-        new ObservedPolicySnapshot(requestedPolicy(12L), activePolicy(11L, SecurityMode.ANCHORED_SECURED)));
+        new ObservedPolicySnapshot(
+            requestedPolicy(12L), activePolicy(11L, SecurityMode.ANCHORED_SECURED)));
     harness.participantStatuses.set(
         Map.of(
             "client#7",
@@ -136,19 +148,23 @@ class SecurityObservabilityClientTest {
     assertThat(snapshot.mismatchReasons().getFirst().participantInstanceId()).isEqualTo("client#7");
     assertThat(snapshot.mismatchReasons().getFirst().mismatchReason().getCode())
         .isEqualTo("TRUST_ANCHOR_MISSING");
-    assertThat(snapshot.recentSecurityEvents()).extracting(SecurityEventDTO::getCode)
+    assertThat(snapshot.recentSecurityEvents())
+        .extracting(SecurityEventDTO::getCode)
         .containsExactly("DATA_PLANE_BLOCKED");
   }
 
   @Test
   void getPostureSnapshot_keepsMismatchVisibilitySeparateFromEventHistory() {
     TestHarness harness = new TestHarness();
-    harness.observedPolicySnapshot.set(new ObservedPolicySnapshot(requestedPolicy(6L), activePolicy(6L)));
+    harness.observedPolicySnapshot.set(
+        new ObservedPolicySnapshot(requestedPolicy(6L), activePolicy(6L)));
     harness.participantStatuses.set(
         Map.of(
             "client#2",
             participantStatus(
-                "client#2", Set.of(ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT), List.of())));
+                "client#2",
+                Set.of(ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT),
+                List.of())));
     harness.securityEvents.set(List.of(securityEvent("DATA_PLANE_BLOCKED", 6L)));
 
     SecurityPostureSnapshot snapshot = harness.client.getPostureSnapshot();
@@ -164,7 +180,8 @@ class SecurityObservabilityClientTest {
     TestHarness harness = new TestHarness();
     SecurityPostureSnapshot postureSnapshot = harness.client.getPostureSnapshot();
 
-    assertThat(harness.client.getObservedPolicySnapshot()).isEqualTo(ObservedPolicySnapshot.empty());
+    assertThat(harness.client.getObservedPolicySnapshot())
+        .isEqualTo(ObservedPolicySnapshot.empty());
     assertThat(harness.client.getParticipantStatusSnapshot()).isEmpty();
     assertThat(harness.client.getRecentSecurityEvents()).isEmpty();
     assertThat(postureSnapshot).isEqualTo(SecurityPostureSnapshot.empty());
@@ -209,7 +226,9 @@ class SecurityObservabilityClientTest {
             candidate -> "POLICY_ACTIVE".equals(candidate.getCode()), Duration.ofSeconds(1));
     SecurityPostureSnapshot postureSnapshot =
         harness.client.awaitPostureSnapshot(
-            snapshot -> snapshot.hasMismatchReasons() && snapshot.participantStatuses().containsKey("engine#1"),
+            snapshot ->
+                snapshot.hasMismatchReasons()
+                    && snapshot.participantStatuses().containsKey("engine#1"),
             Duration.ofSeconds(1));
 
     updater.join();
@@ -217,7 +236,8 @@ class SecurityObservabilityClientTest {
     assertThat(policySnapshot.effectivePolicyHash()).isEqualTo("active-9");
     assertThat(statuses).containsKey("engine#1");
     assertThat(event.getOccurredAtMs()).isEqualTo(9L);
-    assertThat(postureSnapshot.mismatchReasons()).extracting(mismatch -> mismatch.mismatchReason().getCode())
+    assertThat(postureSnapshot.mismatchReasons())
+        .extracting(mismatch -> mismatch.mismatchReason().getCode())
         .containsExactly("ENGINE_SYNC_PENDING");
   }
 
@@ -317,9 +337,7 @@ class SecurityObservabilityClientTest {
             participantStatuses::get,
             securityEvents::get,
             new SecurityObservabilityClient.ConsumerRegistrars(
-                policyConsumers::add,
-                participantStatusConsumers::add,
-                securityEventConsumers::add),
+                policyConsumers::add, participantStatusConsumers::add, securityEventConsumers::add),
             initializerCalls::incrementAndGet,
             Duration.ofMillis(10));
 
@@ -344,5 +362,3 @@ class SecurityObservabilityClientTest {
     }
   }
 }
-
-

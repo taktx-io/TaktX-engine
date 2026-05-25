@@ -525,7 +525,8 @@ class NamespaceSecurityPolicyActivationServiceTest {
         .containsEntry("breakGlassReason", "temporary trust anchor outage");
   }
 
-  private void addReadyEnforcerParticipant(NamespaceSecurityPolicyDTO policy, long statusExpiresAt) {
+  private void addReadyEnforcerParticipant(
+      NamespaceSecurityPolicyDTO policy, long statusExpiresAt) {
     participantStatusStore.update(
         "engine-1",
         ParticipantStatusDTO.builder()

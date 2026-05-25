@@ -14,11 +14,11 @@ import io.taktx.dto.ParticipantKind;
 import io.taktx.dto.ParticipantStatusDTO;
 import io.taktx.dto.SecurityParticipantDescriptor;
 import java.io.IOException;
+import java.lang.reflect.Field;
+import java.lang.reflect.RecordComponent;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.lang.reflect.Field;
-import java.lang.reflect.RecordComponent;
 import java.util.Arrays;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
@@ -28,8 +28,9 @@ class SharedParticipantIdentityContractTest {
   @Test
   void sharedContract_exposesKindCapabilitiesAndComponentTypeInsteadOfLegacyRoleField()
       throws IOException {
-    assertThat(Stream.of(SecurityParticipantDescriptor.class.getRecordComponents())
-            .map(RecordComponent::getName))
+    assertThat(
+            Stream.of(SecurityParticipantDescriptor.class.getRecordComponents())
+                .map(RecordComponent::getName))
         .containsExactly("participantId", "kind", "capabilities", "componentType")
         .doesNotContain("role", "participantRole");
 
@@ -63,6 +64,3 @@ class SharedParticipantIdentityContractTest {
         .doesNotContain("ENGINE", "INGESTER", "CONSOLE", "CLIENT");
   }
 }
-
-
-

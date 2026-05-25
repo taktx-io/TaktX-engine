@@ -14,4 +14,3 @@ import io.taktx.dto.SecurityEventDTO;
 public interface SecurityEventConsumer {
   void accept(SecurityEventDTO event);
 }
-

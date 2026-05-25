@@ -127,7 +127,8 @@ class TaktXClientBuilderParticipantDescriptorTest {
 
     assertThatThrownBy(() -> builder.resolveParticipantDescriptor(baseProperties()))
         .isInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining("AUTHORITATIVE_POLICY_PUBLISHER requires an explicit authoritative signing identity");
+        .hasMessageContaining(
+            "AUTHORITATIVE_POLICY_PUBLISHER requires an explicit authoritative signing identity");
   }
 
   private Properties baseProperties() {
@@ -138,4 +139,3 @@ class TaktXClientBuilderParticipantDescriptorTest {
     return properties;
   }
 }
-

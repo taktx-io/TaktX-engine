@@ -84,9 +84,7 @@ class ParticipantStatusSupportTest {
                 .participantKind(ParticipantKind.ENGINE)
                 .componentType("engine")
                 .capabilities(
-                    Set.of(
-                        ParticipantCapability.ENFORCER,
-                        ParticipantCapability.SECURITY_OBSERVER))
+                    Set.of(ParticipantCapability.ENFORCER, ParticipantCapability.SECURITY_OBSERVER))
                 .namespace("bank.payments")
                 .startedAt(100L)
                 .lastSeenAt(150L)

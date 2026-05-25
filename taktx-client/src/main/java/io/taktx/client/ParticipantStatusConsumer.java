@@ -15,4 +15,3 @@ import java.util.Map;
 public interface ParticipantStatusConsumer {
   void accept(Map<String, ParticipantStatusDTO> statuses);
 }
-

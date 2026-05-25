@@ -80,7 +80,8 @@ final class ParticipantStatusTopicStore implements AutoCloseable {
       }
       if (Thread.currentThread().isInterrupted()) {
         Thread.currentThread().interrupt();
-        throw new IllegalStateException("Interrupted while waiting for ParticipantStatusTopicStore");
+        throw new IllegalStateException(
+            "Interrupted while waiting for ParticipantStatusTopicStore");
       }
       LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(50));
     }
@@ -193,10 +194,7 @@ final class ParticipantStatusTopicStore implements AutoCloseable {
     try {
       onStatusesChanged.run();
     } catch (Exception e) {
-      log.warn(
-          "ParticipantStatusTopicStore: status-change callback failed: {}", e.getMessage());
+      log.warn("ParticipantStatusTopicStore: status-change callback failed: {}", e.getMessage());
     }
   }
 }
-
-

@@ -167,7 +167,6 @@ public final class ParticipantStatusProtoMapper {
     };
   }
 
-
   private static StatusVerificationLevelMessage toProto(StatusVerificationLevel level) {
     return switch (level) {
       case UNVERIFIED_STATUS -> StatusVerificationLevelMessage.UNVERIFIED_STATUS;

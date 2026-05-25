@@ -10,14 +10,13 @@ package io.taktx.client;
 import io.taktx.dto.NamespaceSecurityPolicyDTO;
 import io.taktx.dto.ParticipantCapability;
 import io.taktx.dto.ParticipantEffectiveState;
-import io.taktx.dto.ParticipantKind;
 import io.taktx.dto.ParticipantStatusDTO;
 import io.taktx.dto.PolicyMismatchReasonDTO;
 import io.taktx.dto.RequiredAuthorizationDTO;
 import io.taktx.dto.RequiredSigningDTO;
-import io.taktx.dto.SecurityParticipantDescriptor;
 import io.taktx.dto.SecurityActivationState;
 import io.taktx.dto.SecurityMode;
+import io.taktx.dto.SecurityParticipantDescriptor;
 import io.taktx.dto.StatusVerificationLevel;
 import io.taktx.security.ParticipantStatusSupport;
 import io.taktx.security.SecurityParticipantDescriptorSupport;
@@ -47,8 +46,7 @@ final class ClientProtectedDataPlaneParticipationGuard {
   static final String EXTERNAL_TASK_AUTHORIZATION_UNAVAILABLE =
       "EXTERNAL_TASK_AUTHORIZATION_UNAVAILABLE";
   static final String USER_TASK_AUTHORIZATION_UNAVAILABLE = "USER_TASK_AUTHORIZATION_UNAVAILABLE";
-  static final String PROTECTED_RUNTIME_CAPABILITY_MISSING =
-      "PROTECTED_RUNTIME_CAPABILITY_MISSING";
+  static final String PROTECTED_RUNTIME_CAPABILITY_MISSING = "PROTECTED_RUNTIME_CAPABILITY_MISSING";
 
   private final TaktPropertiesHelper taktPropertiesHelper;
   private final SecurityParticipantDescriptor participantDescriptor;
@@ -70,7 +68,8 @@ final class ClientProtectedDataPlaneParticipationGuard {
       Supplier<String> platformPublicKeySupplier,
       Clock clock) {
     this.taktPropertiesHelper = taktPropertiesHelper;
-    this.participantDescriptor = SecurityParticipantDescriptorSupport.requireValid(participantDescriptor);
+    this.participantDescriptor =
+        SecurityParticipantDescriptorSupport.requireValid(participantDescriptor);
     this.policyStoreSupplier = policyStoreSupplier;
     this.signingIdentitySupplier = signingIdentitySupplier;
     this.signingReadySupplier = signingReadySupplier;

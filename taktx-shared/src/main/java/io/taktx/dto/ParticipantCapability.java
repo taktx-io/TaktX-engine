@@ -14,4 +14,3 @@ public enum ParticipantCapability {
   PROTECTED_RUNTIME_PARTICIPANT,
   SECURITY_OBSERVER
 }
-

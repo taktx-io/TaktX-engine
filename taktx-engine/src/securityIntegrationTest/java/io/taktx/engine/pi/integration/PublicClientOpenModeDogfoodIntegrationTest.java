@@ -106,7 +106,8 @@ class PublicClientOpenModeDogfoodIntegrationTest extends PublicClientDogfoodInte
                 snapshot ->
                     snapshot.hasEffectivePolicy()
                         && snapshot.effectiveMode() == SecurityMode.COMMUNITY_OPEN
-                        && Long.valueOf(openPolicyVersion).equals(snapshot.effectivePolicyVersion()),
+                        && Long.valueOf(openPolicyVersion)
+                            .equals(snapshot.effectivePolicyVersion()),
                 Duration.ofSeconds(30));
 
     assertThat(observedPolicy.hasAuthoritativePolicy()).isTrue();
@@ -174,8 +175,7 @@ class PublicClientOpenModeDogfoodIntegrationTest extends PublicClientDogfoodInte
     workerClient
         .workers()
         .registerExternalTaskConsumer(
-            collectingExternalTaskConsumer(triggers),
-            "dogfood-open-worker-" + UUID.randomUUID());
+            collectingExternalTaskConsumer(triggers), "dogfood-open-worker-" + UUID.randomUUID());
 
     ObservedPolicySnapshot observedPolicy =
         publishPolicyAndAwaitObserved(
@@ -193,21 +193,24 @@ class PublicClientOpenModeDogfoodIntegrationTest extends PublicClientDogfoodInte
                 snapshot ->
                     snapshot.hasEffectivePolicy()
                         && snapshot.effectiveMode() == SecurityMode.COMMUNITY_OPEN
-                        && Long.valueOf(openPolicyVersion).equals(snapshot.effectivePolicyVersion()),
+                        && Long.valueOf(openPolicyVersion)
+                            .equals(snapshot.effectivePolicyVersion()),
                 Duration.ofSeconds(30));
 
     assertThat(observedPolicy.effectiveMode()).isEqualTo(SecurityMode.COMMUNITY_OPEN);
     assertThat(posture.currentActivationState()).isEqualTo(SecurityActivationState.ACTIVE);
 
-    UUID instanceId = runtimeClient.runtime().startProcess(SERVICE_PROCESS_ID, VariablesDTO.empty());
+    UUID instanceId =
+        runtimeClient.runtime().startProcess(SERVICE_PROCESS_ID, VariablesDTO.empty());
 
     ExternalTaskTriggerDTO trigger = awaitExternalTaskTrigger(triggers, instanceId);
     workerClient
         .runtime()
         .completeExternalTask(
-            trigger.getProcessInstanceId(), trigger.getElementInstanceIdPath(), VariablesDTO.empty());
+            trigger.getProcessInstanceId(),
+            trigger.getElementInstanceIdPath(),
+            VariablesDTO.empty());
 
     awaitProcessCompleted(updates, instanceId);
   }
 }
-
