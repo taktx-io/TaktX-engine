@@ -1,6 +1,6 @@
 # Client Dogfood Enablement — Implementation Tracker
 
-**Status:** In progress — DOG-01 through DOG-05 are now recorded complete; client faceting is next  
+**Status:** In progress — DOG-01 through DOG-06 are now recorded complete; wrapper updates are next  
 **Date:** 2026-05-25  
 **Companion docs:** `docs/SECURITY-POLICY-ENGINE-REQUIREMENTS.md`, `docs/SECURITY-POLICY-IMPLEMENTATION-PLAN.md`, `docs/ARCHITECTURE.md`
 
@@ -26,6 +26,8 @@ Recorded progress currently implemented and verified on the branch:
   client identities with builder validation
 - `TaktXClient.observability()` now exposes public policy, participant-status, and security-event
   observation with polling/snapshot helpers built on the public control-plane topics only
+- `TaktXClient` now exposes focused `security()`, `observability()`, `runtime()`, `workers()`,
+  and `dlq()` facets while keeping lifecycle management on the root client for wrapper stability
 - the following verification has been run successfully after these changes:
   - `:taktx-shared:test`
   - `:taktx-engine:test`
@@ -209,7 +211,7 @@ This initiative is done when all of the following are true:
 - [ ] authorization logic is no longer derived from product-role labels
 - [x] engine activation depends only on `ENFORCER` participants
 - [x] the public client can publish policy and observe policy/status/events
-- [ ] the public client surface is organized around facets instead of one growing flat facade
+- [x] the public client surface is organized around facets instead of one growing flat facade
 - [ ] framework wrappers configure the new participant descriptor cleanly
 - [x] unit tests cover shared, engine, client, and wrapper behavior under the new model
 - [ ] a focused public-client-only integration suite is implemented and stable
@@ -383,23 +385,23 @@ This initiative is done when all of the following are true:
 
 **Checklist:**
 
-- [ ] introduce `security()`
-- [ ] introduce `observability()`
-- [ ] introduce `runtime()`
-- [ ] introduce `workers()`
-- [ ] introduce `dlq()`
-- [ ] keep lifecycle on the root client
-- [ ] preserve public naming consistency for dogfood tests and wrappers
+- [x] introduce `security()`
+- [x] introduce `observability()`
+- [x] introduce `runtime()`
+- [x] introduce `workers()`
+- [x] introduce `dlq()`
+- [x] keep lifecycle on the root client
+- [x] preserve public naming consistency for dogfood tests and wrappers
 
 **Unit-test gate:**
 
-- [ ] facet contract tests
-- [ ] tests proving mixed-capability participants can safely use multiple facets
-- [ ] tests proving policy mutation and observation are exposed through supported public APIs
+- [x] facet contract tests
+- [x] tests proving mixed-capability participants can safely use multiple facets
+- [x] tests proving policy mutation and observation are exposed through supported public APIs
 
 **Complete when:**
 
-- [ ] the root client is stable and the behavior surface is facet-oriented
+- [x] the root client is stable and the behavior surface is facet-oriented
 
 ## DOG-07 — Console-grade posture helpers
 

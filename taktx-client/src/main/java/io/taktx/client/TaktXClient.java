@@ -149,6 +149,10 @@ public class TaktXClient {
   private ParticipantStatusTopicStore participantStatusTopicStore;
   private ClientSecurityEventStore securityEventStore;
   private SecurityEventTopicStore securityEventTopicStore;
+  private SecurityClient securityClient;
+  private RuntimeClient runtimeClient;
+  private WorkersClient workersClient;
+  private DlqClient dlqClient;
   private SecurityObservabilityClient securityObservabilityClient;
   private final CopyOnWriteArrayList<NamespaceSecurityPolicyConsumer> namespaceSecurityPolicyConsumers =
       new CopyOnWriteArrayList<>();
@@ -2221,6 +2225,14 @@ public class TaktXClient {
     return participantDescriptor;
   }
 
+  /** Returns the focused security facet for namespace security-policy mutation operations. */
+  public synchronized SecurityClient security() {
+    if (securityClient == null) {
+      securityClient = new SecurityClient(this);
+    }
+    return securityClient;
+  }
+
   /** Returns the public observability facade backed by namespace control-plane topics only. */
   public synchronized SecurityObservabilityClient observability() {
     if (securityObservabilityClient == null) {
@@ -2236,6 +2248,30 @@ public class TaktXClient {
               this::ensureObservabilityStoresInitialized);
     }
     return securityObservabilityClient;
+  }
+
+  /** Returns the focused runtime facet for deployment and protected runtime operations. */
+  public synchronized RuntimeClient runtime() {
+    if (runtimeClient == null) {
+      runtimeClient = new RuntimeClient(this);
+    }
+    return runtimeClient;
+  }
+
+  /** Returns the focused workers facet for worker topic management and subscriptions. */
+  public synchronized WorkersClient workers() {
+    if (workersClient == null) {
+      workersClient = new WorkersClient(this);
+    }
+    return workersClient;
+  }
+
+  /** Returns the focused DLQ facet for dead-letter observation and replay operations. */
+  public synchronized DlqClient dlq() {
+    if (dlqClient == null) {
+      dlqClient = new DlqClient(this);
+    }
+    return dlqClient;
   }
 
   /**
