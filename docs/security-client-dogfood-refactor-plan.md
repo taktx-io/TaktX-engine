@@ -1,6 +1,6 @@
 # Client Dogfood Enablement — Implementation Tracker
 
-**Status:** Updated implementation tracker for the agreed participant-model redesign  
+**Status:** In progress — tracker updated with recorded DOG-01/DOG-02 completion and DOG-03 enforcer-activation progress  
 **Date:** 2026-05-25  
 **Companion docs:** `docs/SECURITY-POLICY-ENGINE-REQUIREMENTS.md`, `docs/SECURITY-POLICY-IMPLEMENTATION-PLAN.md`, `docs/ARCHITECTURE.md`
 
@@ -12,6 +12,21 @@ APIs.
 
 This remains a breaking redesign. Backward compatibility with the legacy participant-role model is not a
 goal for this branch.
+
+## Progress snapshot — 2026-05-25
+
+Recorded progress currently implemented and verified on the branch:
+
+- shared participant status now uses `ParticipantKind` + `ParticipantCapability` + optional
+  `componentType`
+- legacy active shared-contract role relevance has been replaced by capability relevance
+- engine activation now converges on `ENFORCER` participants instead of product-role labels
+- engine and client participant status publication now emit the simplified capability model
+- the following verification has been run successfully after these changes:
+  - `:taktx-shared:test`
+  - `:taktx-engine:test`
+  - `:taktx-client:test`
+  - combined run of `:taktx-shared:test :taktx-engine:test :taktx-client:test`
 
 ## 2. Agreed semantic cleanup
 
@@ -180,10 +195,10 @@ Expected responsibilities:
 
 This initiative is done when all of the following are true:
 
-- [ ] the shared contract no longer encodes product-specific participant roles
+- [x] the shared contract no longer encodes product-specific participant roles
 - [ ] a single client instance can advertise multiple capabilities
 - [ ] authorization logic is no longer derived from product-role labels
-- [ ] engine activation depends only on `ENFORCER` participants
+- [x] engine activation depends only on `ENFORCER` participants
 - [ ] the public client can publish policy and observe policy/status/events
 - [ ] the public client surface is organized around facets instead of one growing flat facade
 - [ ] framework wrappers configure the new participant descriptor cleanly
@@ -208,25 +223,25 @@ This initiative is done when all of the following are true:
 
 **Checklist:**
 
-- [ ] remove `ParticipantRole` from active shared-contract usage
-- [ ] define `ParticipantKind`
-- [ ] define `ParticipantCapability`
+- [x] remove `ParticipantRole` from active shared-contract usage
+- [x] define `ParticipantKind`
+- [x] define `ParticipantCapability`
 - [ ] introduce the shared participant descriptor shape
-- [ ] update `ParticipantStatusDTO` to carry kind, capabilities, and `componentType`
-- [ ] update protobuf schema and mapper logic
-- [ ] update validation/normalization for empty or invalid capability sets
-- [ ] remove remaining production references to legacy product-role names in shared code
+- [x] update `ParticipantStatusDTO` to carry kind, capabilities, and `componentType`
+- [x] update protobuf schema and mapper logic
+- [x] update validation/normalization for empty or invalid capability sets
+- [x] remove remaining production references to legacy product-role names in shared code
 
 **Unit-test gate:**
 
-- [ ] round-trip proto serialization tests
-- [ ] DTO mapper tests
-- [ ] validation tests for missing kind / invalid capability sets / blank optional component labels
+- [x] round-trip proto serialization tests
+- [x] DTO mapper tests
+- [x] validation tests for missing kind / invalid capability sets / blank optional component labels
 - [ ] tests proving no shared callers still depend on `ENGINE | INGESTER | CONSOLE | CLIENT`
 
 **Complete when:**
 
-- [ ] `taktx-shared:test` passes with the new participant model only
+- [x] `taktx-shared:test` passes with the new participant model only
 
 ## DOG-02 — Capability-based policy relevance
 
@@ -239,21 +254,21 @@ This initiative is done when all of the following are true:
 
 **Checklist:**
 
-- [ ] remove role-relevance types from active design
-- [ ] map relevant policy behavior from capabilities
-- [ ] ensure worker-like behavior is represented through `PROTECTED_RUNTIME_PARTICIPANT`
-- [ ] support mixed-capability clients without requiring multiple identities
+- [x] remove role-relevance types from active design
+- [x] map relevant policy behavior from capabilities
+- [x] ensure worker-like behavior is represented through `PROTECTED_RUNTIME_PARTICIPANT`
+- [x] support mixed-capability clients without requiring multiple identities
 
 **Unit-test gate:**
 
 - [ ] capability relevance tests for publisher-only clients
 - [ ] capability relevance tests for observer-only clients
-- [ ] capability relevance tests for protected runtime clients
-- [ ] mixed-capability tests
+- [x] capability relevance tests for protected runtime clients
+- [x] mixed-capability tests
 
 **Complete when:**
 
-- [ ] shared relevance rules are expressed in capability terms only
+- [x] shared relevance rules are expressed in capability terms only
 
 ## DOG-03 — Engine activation and participant-status refactor
 
@@ -269,23 +284,23 @@ This initiative is done when all of the following are true:
 
 **Checklist:**
 
-- [ ] remove hard-coded activation dependence on `ENGINE`, `INGESTER`, and `CONSOLE`
-- [ ] make activation depend on `ENFORCER` participants only
-- [ ] preserve observability of non-enforcer participants
-- [ ] update engine participant-status publication to emit the new descriptor
-- [ ] update grouping and mismatch reasoning to avoid product-role assumptions
+- [x] remove hard-coded activation dependence on `ENGINE`, `INGESTER`, and `CONSOLE`
+- [x] make activation depend on `ENFORCER` participants only
+- [x] preserve observability of non-enforcer participants
+- [x] update engine participant-status publication to emit the new descriptor
+- [x] update grouping and mismatch reasoning to avoid product-role assumptions
 
 **Unit-test gate:**
 
-- [ ] all enforcers ready => active
-- [ ] enforcer missing or not ready => not active
-- [ ] observer-only clients do not block activation
-- [ ] authoritative publishers do not block activation by existing
+- [x] all enforcers ready => active
+- [x] enforcer missing or not ready => not active
+- [x] observer-only clients do not block activation
+- [x] authoritative publishers do not block activation by existing
 - [ ] protected runtime clients do not block activation unless they are also enforcers
 
 **Complete when:**
 
-- [ ] `taktx-engine:test` passes for activation/posture logic under the new semantics
+- [x] `taktx-engine:test` passes for activation/posture logic under the new semantics
 
 ## DOG-04 — Client participant descriptor and builder support
 
@@ -485,9 +500,9 @@ This initiative is done when all of the following are true:
 
 ## 10. Immediate next actions
 
-- [ ] use this document as the authoritative tracker for the redesign branch
-- [ ] finish `DOG-01` and `DOG-02` against the simplified participant model
-- [ ] verify engine activation semantics against enforcer-only readiness rules
+- [x] use this document as the authoritative tracker for the redesign branch
+- [x] finish `DOG-01` and `DOG-02` against the simplified participant model
+- [x] verify engine activation semantics against enforcer-only readiness rules
 - [ ] add public observability APIs before starting the integration suite
 - [ ] keep unit tests green as the gating signal for each workstream
 
