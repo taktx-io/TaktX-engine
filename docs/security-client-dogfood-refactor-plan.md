@@ -1,6 +1,6 @@
 # Client Dogfood Enablement — Implementation Tracker
 
-**Status:** In progress — tracker updated with recorded DOG-01/DOG-02 completion and DOG-03 enforcer-activation progress  
+**Status:** In progress — DOG-01 through DOG-04 are now recorded complete; public observability APIs are next  
 **Date:** 2026-05-25  
 **Companion docs:** `docs/SECURITY-POLICY-ENGINE-REQUIREMENTS.md`, `docs/SECURITY-POLICY-IMPLEMENTATION-PLAN.md`, `docs/ARCHITECTURE.md`
 
@@ -22,10 +22,15 @@ Recorded progress currently implemented and verified on the branch:
 - legacy active shared-contract role relevance has been replaced by capability relevance
 - engine activation now converges on `ENFORCER` participants instead of product-role labels
 - engine and client participant status publication now emit the simplified capability model
+- `TaktXClient` now accepts an explicit shared participant descriptor and supports mixed-capability
+  client identities with builder validation
 - the following verification has been run successfully after these changes:
   - `:taktx-shared:test`
   - `:taktx-engine:test`
   - `:taktx-client:test`
+  - `:taktx-client-quarkus:test`
+  - `:taktx-client-spring-boot-3:test`
+  - `:taktx-client-spring-boot-4:test`
   - combined run of `:taktx-shared:test :taktx-engine:test :taktx-client:test`
 
 ## 2. Agreed semantic cleanup
@@ -196,13 +201,13 @@ Expected responsibilities:
 This initiative is done when all of the following are true:
 
 - [x] the shared contract no longer encodes product-specific participant roles
-- [ ] a single client instance can advertise multiple capabilities
+- [x] a single client instance can advertise multiple capabilities
 - [ ] authorization logic is no longer derived from product-role labels
 - [x] engine activation depends only on `ENFORCER` participants
 - [ ] the public client can publish policy and observe policy/status/events
 - [ ] the public client surface is organized around facets instead of one growing flat facade
 - [ ] framework wrappers configure the new participant descriptor cleanly
-- [ ] unit tests cover shared, engine, client, and wrapper behavior under the new model
+- [x] unit tests cover shared, engine, client, and wrapper behavior under the new model
 - [ ] a focused public-client-only integration suite is implemented and stable
 
 ## 7. Trackable workstreams
@@ -226,7 +231,7 @@ This initiative is done when all of the following are true:
 - [x] remove `ParticipantRole` from active shared-contract usage
 - [x] define `ParticipantKind`
 - [x] define `ParticipantCapability`
-- [ ] introduce the shared participant descriptor shape
+- [x] introduce the shared participant descriptor shape
 - [x] update `ParticipantStatusDTO` to carry kind, capabilities, and `componentType`
 - [x] update protobuf schema and mapper logic
 - [x] update validation/normalization for empty or invalid capability sets
@@ -314,22 +319,22 @@ This initiative is done when all of the following are true:
 
 **Checklist:**
 
-- [ ] add participant descriptor input to the builder
-- [ ] allow multiple capabilities for one client instance
-- [ ] validate inconsistent participant configuration
-- [ ] remove singular-role assumptions from client construction
-- [ ] adapt protected runtime guards to the new descriptor model
+- [x] add participant descriptor input to the builder
+- [x] allow multiple capabilities for one client instance
+- [x] validate inconsistent participant configuration
+- [x] remove singular-role assumptions from client construction
+- [x] adapt protected runtime guards to the new descriptor model
 
 **Unit-test gate:**
 
-- [ ] builder validation tests
-- [ ] multi-capability participant tests
-- [ ] mixed publisher + observer + runtime participant tests
-- [ ] invalid descriptor tests
+- [x] builder validation tests
+- [x] multi-capability participant tests
+- [x] mixed publisher + observer + runtime participant tests
+- [x] invalid descriptor tests
 
 **Complete when:**
 
-- [ ] `taktx-client:test` passes for builder/descriptor coverage
+- [x] `taktx-client:test` passes for builder/descriptor coverage
 
 ## DOG-05 — Public observability APIs
 

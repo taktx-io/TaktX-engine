@@ -15,10 +15,12 @@ import io.taktx.dto.ParticipantStatusDTO;
 import io.taktx.dto.PolicyMismatchReasonDTO;
 import io.taktx.dto.RequiredAuthorizationDTO;
 import io.taktx.dto.RequiredSigningDTO;
+import io.taktx.dto.SecurityParticipantDescriptor;
 import io.taktx.dto.SecurityActivationState;
 import io.taktx.dto.SecurityMode;
 import io.taktx.dto.StatusVerificationLevel;
 import io.taktx.security.ParticipantStatusSupport;
+import io.taktx.security.SecurityParticipantDescriptorSupport;
 import io.taktx.security.SigningIdentity;
 import io.taktx.util.TaktPropertiesHelper;
 import jakarta.annotation.Nullable;
@@ -45,12 +47,11 @@ final class ClientProtectedDataPlaneParticipationGuard {
   static final String EXTERNAL_TASK_AUTHORIZATION_UNAVAILABLE =
       "EXTERNAL_TASK_AUTHORIZATION_UNAVAILABLE";
   static final String USER_TASK_AUTHORIZATION_UNAVAILABLE = "USER_TASK_AUTHORIZATION_UNAVAILABLE";
-  private static final java.util.Set<ParticipantCapability> GENERIC_CLIENT_CAPABILITIES =
-      java.util.Set.of(
-          ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT,
-          ParticipantCapability.SECURITY_OBSERVER);
+  static final String PROTECTED_RUNTIME_CAPABILITY_MISSING =
+      "PROTECTED_RUNTIME_CAPABILITY_MISSING";
 
   private final TaktPropertiesHelper taktPropertiesHelper;
+  private final SecurityParticipantDescriptor participantDescriptor;
   private final Supplier<ClientNamespaceSecurityPolicyStore> policyStoreSupplier;
   private final Supplier<SigningIdentity> signingIdentitySupplier;
   private final BooleanSupplier signingReadySupplier;
@@ -61,6 +62,7 @@ final class ClientProtectedDataPlaneParticipationGuard {
 
   ClientProtectedDataPlaneParticipationGuard(
       TaktPropertiesHelper taktPropertiesHelper,
+      SecurityParticipantDescriptor participantDescriptor,
       Supplier<ClientNamespaceSecurityPolicyStore> policyStoreSupplier,
       Supplier<SigningIdentity> signingIdentitySupplier,
       BooleanSupplier signingReadySupplier,
@@ -68,6 +70,7 @@ final class ClientProtectedDataPlaneParticipationGuard {
       Supplier<String> platformPublicKeySupplier,
       Clock clock) {
     this.taktPropertiesHelper = taktPropertiesHelper;
+    this.participantDescriptor = SecurityParticipantDescriptorSupport.requireValid(participantDescriptor);
     this.policyStoreSupplier = policyStoreSupplier;
     this.signingIdentitySupplier = signingIdentitySupplier;
     this.signingReadySupplier = signingReadySupplier;
@@ -137,6 +140,21 @@ final class ClientProtectedDataPlaneParticipationGuard {
     List<PolicyMismatchReasonDTO> mismatchReasons = new ArrayList<>();
     ParticipantEffectiveState effectiveState = ParticipantEffectiveState.READY;
     boolean readyForDataPlane = true;
+
+    if (!participantDescriptor
+        .capabilities()
+        .contains(ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT)) {
+      effectiveState = ParticipantEffectiveState.MISMATCH;
+      readyForDataPlane = false;
+      mismatchReasons.add(
+          mismatchReason(
+              PROTECTED_RUNTIME_CAPABILITY_MISSING,
+              "Participant descriptor "
+                  + participantDescriptor.participantId()
+                  + " does not declare PROTECTED_RUNTIME_PARTICIPANT and therefore cannot"
+                  + " perform protected runtime operation "
+                  + operation.name()));
+    }
 
     if (policy.getMode() == SecurityMode.MISCONFIGURED_SECURITY) {
       effectiveState = ParticipantEffectiveState.MISMATCH;
@@ -249,11 +267,11 @@ final class ClientProtectedDataPlaneParticipationGuard {
     }
 
     return ParticipantStatusDTO.builder()
-        .participantId(participantId())
+        .participantId(participantDescriptor.participantId())
         .participantInstanceId(participantInstanceId())
-        .participantKind(ParticipantKind.CLIENT)
-        .componentType("generic-client")
-        .capabilities(GENERIC_CLIENT_CAPABILITIES)
+        .participantKind(participantDescriptor.kind())
+        .componentType(participantDescriptor.componentType())
+        .capabilities(participantDescriptor.capabilities())
         .namespace(taktPropertiesHelper.getNamespace())
         .startedAt(startedAtMs)
         .lastSeenAt(nowMs)
@@ -278,10 +296,7 @@ final class ClientProtectedDataPlaneParticipationGuard {
   }
 
   private String participantId() {
-    return taktPropertiesHelper.getTenantId()
-        + "."
-        + taktPropertiesHelper.getNamespace()
-        + ".client";
+    return participantDescriptor.participantId();
   }
 
   private String participantInstanceId() {

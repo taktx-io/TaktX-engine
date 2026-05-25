@@ -26,10 +26,13 @@ import io.taktx.dto.GlobalConfigurationDTO;
 import io.taktx.dto.KeyRole;
 import io.taktx.dto.MessageEventDTO;
 import io.taktx.dto.NamespaceSecurityPolicyDTO;
+import io.taktx.dto.ParticipantCapability;
+import io.taktx.dto.ParticipantKind;
 import io.taktx.dto.ParsedDefinitionsDTO;
 import io.taktx.dto.ProcessDefinitionDTO;
 import io.taktx.dto.ProcessDefinitionKey;
 import io.taktx.dto.ProcessInstanceTriggerDTO;
+import io.taktx.dto.SecurityParticipantDescriptor;
 import io.taktx.dto.SignalDTO;
 import io.taktx.dto.UserTaskTriggerDTO;
 import io.taktx.dto.VariablesDTO;
@@ -43,6 +46,7 @@ import io.taktx.security.NamespaceSecurityPolicyActivationAuthorityContract;
 import io.taktx.security.NamespaceSecurityPolicyControlPlaneContract;
 import io.taktx.security.NamespaceSecurityPolicySupport;
 import io.taktx.security.RuntimeConfigurationHolder;
+import io.taktx.security.SecurityParticipantDescriptorSupport;
 import io.taktx.security.SigningIdentity;
 import io.taktx.security.SigningIdentitySource;
 import io.taktx.security.SigningKeyRegistrar;
@@ -61,6 +65,7 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -106,6 +111,7 @@ public class TaktXClient {
   private final TaktPropertiesHelper taktPropertiesHelper;
   private final SigningIdentitySource signingIdentitySource;
   private final @Nullable AuthorizationTokenProvider authorizationTokenProvider;
+  private final SecurityParticipantDescriptor participantDescriptor;
   private final ClientProtectedDataPlaneParticipationGuard protectedDataPlaneParticipationGuard;
 
   // ── DLQ client (lazily initialised on first use) ──────────────────────────────
@@ -144,12 +150,14 @@ public class TaktXClient {
       ProcessInstanceResponder processInstanceResponder,
       ParameterResolverFactory parameterResolverFactory,
       ResultProcessorFactory resultProcessorFactory,
+      SecurityParticipantDescriptor participantDescriptor,
       SigningIdentitySource signingIdentitySource,
       @Nullable AuthorizationTokenProvider authorizationTokenProvider,
       @Nullable String workerKeyRegistrationSignature) {
     Executor executor = Executors.newVirtualThreadPerTaskExecutor();
 
     this.taktPropertiesHelper = taktPropertiesHelper;
+    this.participantDescriptor = participantDescriptor;
     this.signingIdentitySource = signingIdentitySource;
     this.authorizationTokenProvider = authorizationTokenProvider;
     this.workerKeyRegistrationSignature = workerKeyRegistrationSignature;
@@ -179,6 +187,7 @@ public class TaktXClient {
     this.protectedDataPlaneParticipationGuard =
         new ClientProtectedDataPlaneParticipationGuard(
             taktPropertiesHelper,
+            participantDescriptor,
             () -> namespaceSecurityPolicyStore,
             this::currentSigningIdentity,
             this::hasPublishedSigningCapability,
@@ -221,7 +230,9 @@ public class TaktXClient {
     this.processDefinitionConsumer.subscribeToDefinitionRecords();
     this.xmlByProcessDefinitionIdConsumer.subscribeToTopic();
     this.xmlByDmnDefinitionIdConsumer.subscribeToTopic();
-    publishWorkerSigningKeyIfConfigured();
+    if (declaresCapability(ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT)) {
+      publishWorkerSigningKeyIfConfigured();
+    }
   }
 
   private void initRuntimeConfigurationStore() {
@@ -436,6 +447,9 @@ public class TaktXClient {
    * Publishes an authoritative namespace security policy to the compacted security-policy topic.
    */
   public void publishNamespaceSecurityPolicy(NamespaceSecurityPolicyDTO policy) {
+    ensureParticipantCapability(
+        ParticipantCapability.AUTHORITATIVE_POLICY_PUBLISHER,
+        "publish authoritative namespace security policy");
     publishNamespaceSecurityPolicy(taktPropertiesHelper.getTaktProperties(), policy);
   }
 
@@ -482,6 +496,9 @@ public class TaktXClient {
    * `policy`.
    */
   public void clearNamespaceSecurityPolicy() {
+    ensureParticipantCapability(
+        ParticipantCapability.AUTHORITATIVE_POLICY_PUBLISHER,
+        "clear authoritative namespace security policy");
     clearNamespaceSecurityPolicy(taktPropertiesHelper.getTaktProperties());
   }
 
@@ -959,6 +976,15 @@ public class TaktXClient {
   }
 
   void refreshWorkerSigningFunctionRegistration() {
+    if (!declaresCapability(ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT)) {
+      logWorkerSigningRegistrationState(
+          "runtime-capability-disabled",
+          "Worker response signing inactive — participant descriptor {} does not declare {}",
+          participantDescriptor.participantId(),
+          ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT);
+      return;
+    }
+
     boolean signingEnabled = isEffectiveSigningEnabled();
     boolean commandAuthRequired = isStartCommandAuthorizationRequired();
     boolean externalTaskAuthRequired = isExternalTaskAuthorizationRequired();
@@ -1114,7 +1140,27 @@ public class TaktXClient {
     protectedDataPlaneParticipationGuard.check(operation, explicitAuthorizationToken);
   }
 
+  private void ensureParticipantCapability(
+      ParticipantCapability capability, String operationDescription) {
+    if (!declaresCapability(capability)) {
+      throw new IllegalStateException(
+          "TaktXClient participant descriptor "
+              + participantDescriptor.participantId()
+              + " does not declare "
+              + capability
+              + " and therefore cannot "
+              + operationDescription);
+    }
+  }
+
+  private boolean declaresCapability(ParticipantCapability capability) {
+    return participantDescriptor.capabilities().contains(capability);
+  }
+
   private boolean hasPublishedSigningCapability() {
+    if (!declaresCapability(ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT)) {
+      return false;
+    }
     if (!isEffectiveSigningEnabled()) {
       return false;
     }
@@ -1980,6 +2026,11 @@ public class TaktXClient {
     return resultProcessorFactory;
   }
 
+  /** Returns the normalized participant descriptor configured for this client instance. */
+  public SecurityParticipantDescriptor getParticipantDescriptor() {
+    return participantDescriptor;
+  }
+
   /**
    * Gets the ProcessInstanceResponder instance.
    *
@@ -2007,6 +2058,7 @@ public class TaktXClient {
     private Properties properties;
     private ParameterResolverFactory parameterResolverFactory;
     private ResultProcessorFactory resultProcessorFactory;
+    private SecurityParticipantDescriptor participantDescriptor;
     private SigningIdentitySource signingIdentitySource;
     private AuthorizationTokenProvider authorizationTokenProvider;
     private String workerKeyRegistrationSignature;
@@ -2030,6 +2082,8 @@ public class TaktXClient {
           resolveSigningIdentitySource(properties);
       AuthorizationTokenProvider effectiveAuthorizationTokenProvider =
           resolveAuthorizationTokenProvider(properties);
+      SecurityParticipantDescriptor effectiveParticipantDescriptor =
+          resolveParticipantDescriptor(properties);
       String effectiveRegistrationSignature = resolveWorkerKeyRegistrationSignature(properties);
 
       // Wrap the value serializer with ProtoSigningSerializer so signing happens in one pass.
@@ -2060,6 +2114,7 @@ public class TaktXClient {
               externalTaskResponder,
               clientParameterResolverFactory,
               clientResultProcessorFactory,
+              effectiveParticipantDescriptor,
               effectiveSigningIdentitySource,
               effectiveAuthorizationTokenProvider,
               effectiveRegistrationSignature);
@@ -2077,6 +2132,38 @@ public class TaktXClient {
             effectiveAuthorizationTokenProvider.getClass().getSimpleName());
       }
       return client;
+    }
+
+    SecurityParticipantDescriptor resolveParticipantDescriptor(Properties properties) {
+      if (participantDescriptor != null) {
+        return validateClientParticipantDescriptor(
+            properties, SecurityParticipantDescriptorSupport.requireValid(participantDescriptor));
+      }
+
+      TaktPropertiesHelper helper = new TaktPropertiesHelper(properties);
+      Set<ParticipantCapability> inferredCapabilities = new LinkedHashSet<>();
+      inferredCapabilities.add(ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT);
+      inferredCapabilities.add(ParticipantCapability.SECURITY_OBSERVER);
+      if (resolveAuthoritativeControlPlaneSigningIdentityIfAvailable(properties) != null) {
+        inferredCapabilities.add(ParticipantCapability.AUTHORITATIVE_POLICY_PUBLISHER);
+      }
+
+      SecurityParticipantDescriptor inferredDescriptor =
+          new SecurityParticipantDescriptor(
+              firstNonBlank(
+                  properties.getProperty("taktx.client.participant-id"),
+                  properties.getProperty("taktx.participant.id"),
+                  helper.getTenantId() + "." + helper.getNamespace() + ".client"),
+              ParticipantKind.CLIENT,
+              inferredCapabilities,
+              firstNonBlank(
+                  properties.getProperty("taktx.client.component-type"),
+                  properties.getProperty("quarkus.application.name"),
+                  properties.getProperty("spring.application.name"),
+                  properties.getProperty("application.name"),
+                  "generic-client"));
+      return validateClientParticipantDescriptor(
+          properties, SecurityParticipantDescriptorSupport.requireValid(inferredDescriptor));
     }
 
     AuthorizationTokenProvider resolveAuthorizationTokenProvider(Properties properties) {
@@ -2173,6 +2260,18 @@ public class TaktXClient {
     }
 
     /**
+     * Declares the participant descriptor advertised by this client instance.
+     *
+     * @param participantDescriptor shared participant descriptor for this client instance
+     * @return this builder
+     */
+    public TaktXClientBuilder withParticipantDescriptor(
+        SecurityParticipantDescriptor participantDescriptor) {
+      this.participantDescriptor = participantDescriptor;
+      return this;
+    }
+
+    /**
      * Overrides the signing-identity source used by the client for worker response signing.
      *
      * @param signingIdentitySource signing-identity source to use
@@ -2215,6 +2314,35 @@ public class TaktXClient {
           properties.getProperty("taktx.signing.registration-signature"),
           System.getProperty("taktx.signing.registration-signature"),
           System.getenv("TAKTX_SIGNING_REGISTRATION_SIGNATURE"));
+    }
+
+    private SecurityParticipantDescriptor validateClientParticipantDescriptor(
+        Properties properties, SecurityParticipantDescriptor descriptor) {
+      if (descriptor.kind() != ParticipantKind.CLIENT) {
+        throw new IllegalArgumentException(
+            "TaktXClient participant descriptor kind must be CLIENT");
+      }
+      if (descriptor.capabilities().contains(ParticipantCapability.ENFORCER)) {
+        throw new IllegalArgumentException(
+            "TaktXClient participant descriptor must not declare ENFORCER");
+      }
+      if (descriptor.capabilities().contains(ParticipantCapability.AUTHORITATIVE_POLICY_PUBLISHER)
+          && resolveAuthoritativeControlPlaneSigningIdentityIfAvailable(properties) == null) {
+        throw new IllegalArgumentException(
+            "AUTHORITATIVE_POLICY_PUBLISHER requires an explicit authoritative signing identity"
+                + " configured via taktx.signing.private-key + taktx.signing.key-id or"
+                + " taktx.signing.file.* properties");
+      }
+      return descriptor;
+    }
+
+    private SigningIdentity resolveAuthoritativeControlPlaneSigningIdentityIfAvailable(
+        Properties properties) {
+      try {
+        return resolveAuthoritativeControlPlaneSigningIdentity(properties);
+      } catch (IllegalArgumentException e) {
+        return null;
+      }
     }
 
     /**
