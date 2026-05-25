@@ -28,10 +28,12 @@ import io.taktx.dto.MessageEventDTO;
 import io.taktx.dto.NamespaceSecurityPolicyDTO;
 import io.taktx.dto.ParticipantCapability;
 import io.taktx.dto.ParticipantKind;
+import io.taktx.dto.ParticipantStatusDTO;
 import io.taktx.dto.ParsedDefinitionsDTO;
 import io.taktx.dto.ProcessDefinitionDTO;
 import io.taktx.dto.ProcessDefinitionKey;
 import io.taktx.dto.ProcessInstanceTriggerDTO;
+import io.taktx.dto.SecurityEventDTO;
 import io.taktx.dto.SecurityParticipantDescriptor;
 import io.taktx.dto.SignalDTO;
 import io.taktx.dto.UserTaskTriggerDTO;
@@ -72,6 +74,7 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.function.BiConsumer;
@@ -90,6 +93,7 @@ public class TaktXClient {
 
   public static final String NAMESPACE_SECURITY_POLICY_RECORD_KEY =
       NamespaceSecurityPolicyControlPlaneContract.POLICY_RECORD_KEY;
+  private static final int DEFAULT_SECURITY_EVENT_HISTORY_SIZE = 256;
 
   private static final Logger log = org.slf4j.LoggerFactory.getLogger(TaktXClient.class);
   private final ProcessDefinitionConsumer processDefinitionConsumer;
@@ -141,6 +145,17 @@ public class TaktXClient {
   private RuntimeConfigurationStore runtimeConfigurationStore;
   private ClientNamespaceSecurityPolicyStore namespaceSecurityPolicyStore;
   private NamespaceSecurityPolicyTopicStore namespaceSecurityPolicyTopicStore;
+  private ClientParticipantStatusStore participantStatusStore;
+  private ParticipantStatusTopicStore participantStatusTopicStore;
+  private ClientSecurityEventStore securityEventStore;
+  private SecurityEventTopicStore securityEventTopicStore;
+  private SecurityObservabilityClient securityObservabilityClient;
+  private final CopyOnWriteArrayList<NamespaceSecurityPolicyConsumer> namespaceSecurityPolicyConsumers =
+      new CopyOnWriteArrayList<>();
+  private final CopyOnWriteArrayList<ParticipantStatusConsumer> participantStatusConsumers =
+      new CopyOnWriteArrayList<>();
+  private final CopyOnWriteArrayList<SecurityEventConsumer> securityEventConsumers =
+      new CopyOnWriteArrayList<>();
   private volatile String publishedWorkerKeyId;
   private volatile String workerSigningRegistrationState = "uninitialized";
 
@@ -224,7 +239,7 @@ public class TaktXClient {
    */
   public void start() {
     initRuntimeConfigurationStore();
-    initNamespaceSecurityPolicyStore();
+    ensureObservabilityStoresInitialized();
     refreshWorkerSigningFunctionRegistration();
     initSigningKeysStore();
     this.processDefinitionConsumer.subscribeToDefinitionRecords();
@@ -233,6 +248,12 @@ public class TaktXClient {
     if (declaresCapability(ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT)) {
       publishWorkerSigningKeyIfConfigured();
     }
+  }
+
+  private synchronized void ensureObservabilityStoresInitialized() {
+    initNamespaceSecurityPolicyStore();
+    initParticipantStatusStore();
+    initSecurityEventStore();
   }
 
   private void initRuntimeConfigurationStore() {
@@ -273,6 +294,9 @@ public class TaktXClient {
   }
 
   private void initNamespaceSecurityPolicyStore() {
+    if (namespaceSecurityPolicyStore != null && namespaceSecurityPolicyTopicStore != null) {
+      return;
+    }
     String bootstrapServers = taktPropertiesHelper.getBootstrapServers();
     if (bootstrapServers == null || bootstrapServers.isBlank()) {
       log.debug(
@@ -295,15 +319,17 @@ public class TaktXClient {
               consumerProps,
               topic,
               namespaceSecurityPolicyStore,
-              this::refreshWorkerSigningFunctionRegistration);
+              () -> {
+                refreshWorkerSigningFunctionRegistration();
+                notifyNamespaceSecurityPolicyConsumers();
+              });
       namespaceSecurityPolicyTopicStore.awaitReady(java.time.Duration.ofSeconds(10));
+      NamespaceSecurityPolicyDTO currentPolicy = namespaceSecurityPolicyStore.get();
       NamespaceSecurityPolicyDTO authoritativePolicy =
           namespaceSecurityPolicyStore.getAuthoritativePolicy();
       log.info(
           "✅ NamespaceSecurityPolicyTopicStore ready — currentActivationState={} activePolicyVersion={} activePolicyHash={}",
-          namespaceSecurityPolicyStore.get() != null
-              ? namespaceSecurityPolicyStore.get().getActivationState()
-              : null,
+          currentPolicy != null ? currentPolicy.getActivationState() : null,
           authoritativePolicy != null ? authoritativePolicy.getActivePolicyVersion() : null,
           authoritativePolicy != null ? authoritativePolicy.getActivePolicyHash() : null);
     } catch (Exception e) {
@@ -318,6 +344,97 @@ public class TaktXClient {
       namespaceSecurityPolicyTopicStore = null;
       log.warn(
           "NamespaceSecurityPolicyTopicStore initialisation failed — using default open behavior: {}",
+          e.getMessage());
+    }
+  }
+
+  private void initParticipantStatusStore() {
+    if (participantStatusStore != null && participantStatusTopicStore != null) {
+      return;
+    }
+    String bootstrapServers = taktPropertiesHelper.getBootstrapServers();
+    if (bootstrapServers == null || bootstrapServers.isBlank()) {
+      log.debug(
+          "No bootstrap.servers configured — skipping ParticipantStatusTopicStore initialisation");
+      return;
+    }
+    String topic =
+        taktPropertiesHelper.getPrefixedTopicName(
+            io.taktx.Topics.PARTICIPANT_STATUS_TOPIC.getTopicName());
+    try {
+      Properties consumerProps =
+          taktPropertiesHelper.getKafkaConsumerProperties(
+              "participant-status-store-" + ProcessHandle.current().pid(),
+              org.apache.kafka.common.serialization.StringDeserializer.class,
+              org.apache.kafka.common.serialization.ByteArrayDeserializer.class,
+              "earliest");
+      participantStatusStore = new ClientParticipantStatusStore();
+      participantStatusTopicStore =
+          new ParticipantStatusTopicStore(
+              consumerProps, topic, participantStatusStore, this::notifyParticipantStatusConsumers);
+      participantStatusTopicStore.awaitReady(java.time.Duration.ofSeconds(10));
+      log.info(
+          "✅ ParticipantStatusTopicStore ready — currentParticipantCount={}",
+          participantStatusStore.currentSnapshot(System.currentTimeMillis()).size());
+    } catch (Exception e) {
+      participantStatusStore = null;
+      if (participantStatusTopicStore != null) {
+        try {
+          participantStatusTopicStore.close();
+        } catch (Exception closeEx) {
+          log.debug("Error closing failed ParticipantStatusTopicStore", closeEx);
+        }
+      }
+      participantStatusTopicStore = null;
+      log.warn(
+          "ParticipantStatusTopicStore initialisation failed — current participant snapshot will be empty: {}",
+          e.getMessage());
+    }
+  }
+
+  private void initSecurityEventStore() {
+    if (securityEventStore != null && securityEventTopicStore != null) {
+      return;
+    }
+    String bootstrapServers = taktPropertiesHelper.getBootstrapServers();
+    if (bootstrapServers == null || bootstrapServers.isBlank()) {
+      log.debug("No bootstrap.servers configured — skipping SecurityEventTopicStore initialisation");
+      return;
+    }
+    String topic =
+        taktPropertiesHelper.getPrefixedTopicName(
+            io.taktx.Topics.SECURITY_EVENTS_TOPIC.getTopicName());
+    try {
+      Properties consumerProps =
+          taktPropertiesHelper.getKafkaConsumerProperties(
+              "security-event-store-" + ProcessHandle.current().pid(),
+              org.apache.kafka.common.serialization.StringDeserializer.class,
+              org.apache.kafka.common.serialization.ByteArrayDeserializer.class,
+              "latest");
+      securityEventStore = new ClientSecurityEventStore(DEFAULT_SECURITY_EVENT_HISTORY_SIZE);
+      securityEventTopicStore =
+          new SecurityEventTopicStore(
+              consumerProps,
+              topic,
+              securityEventStore,
+              this::notifySecurityEventConsumers,
+              DEFAULT_SECURITY_EVENT_HISTORY_SIZE);
+      securityEventTopicStore.awaitReady(java.time.Duration.ofSeconds(10));
+      log.info(
+          "✅ SecurityEventTopicStore ready — recentEventCount={}",
+          securityEventStore.snapshot().size());
+    } catch (Exception e) {
+      securityEventStore = null;
+      if (securityEventTopicStore != null) {
+        try {
+          securityEventTopicStore.close();
+        } catch (Exception closeEx) {
+          log.debug("Error closing failed SecurityEventTopicStore", closeEx);
+        }
+      }
+      securityEventTopicStore = null;
+      log.warn(
+          "SecurityEventTopicStore initialisation failed — recent security event history will be empty: {}",
           e.getMessage());
     }
   }
@@ -1276,10 +1393,83 @@ public class TaktXClient {
       namespaceSecurityPolicyTopicStore = null;
     }
     namespaceSecurityPolicyStore = null;
+    if (participantStatusTopicStore != null) {
+      participantStatusTopicStore.close();
+      participantStatusTopicStore = null;
+    }
+    participantStatusStore = null;
+    if (securityEventTopicStore != null) {
+      securityEventTopicStore.close();
+      securityEventTopicStore = null;
+    }
+    securityEventStore = null;
     publishedWorkerKeyId = null;
     workerSigningRegistrationState = "uninitialized";
     RuntimeConfigurationHolder.clear();
     SigningServiceHolder.clear();
+  }
+
+  private ObservedPolicySnapshot currentObservedPolicySnapshot() {
+    if (namespaceSecurityPolicyStore == null) {
+      return ObservedPolicySnapshot.empty();
+    }
+    return new ObservedPolicySnapshot(
+        namespaceSecurityPolicyStore.get(), namespaceSecurityPolicyStore.getAuthoritativePolicy());
+  }
+
+  private Map<String, ParticipantStatusDTO> currentParticipantStatusSnapshot() {
+    if (participantStatusStore == null) {
+      return Map.of();
+    }
+    return participantStatusStore.currentSnapshot(System.currentTimeMillis());
+  }
+
+  private List<SecurityEventDTO> currentSecurityEventSnapshot() {
+    return securityEventStore != null ? securityEventStore.snapshot() : List.of();
+  }
+
+  private void registerNamespaceSecurityPolicyConsumer(NamespaceSecurityPolicyConsumer consumer) {
+    namespaceSecurityPolicyConsumers.add(consumer);
+  }
+
+  private void registerParticipantStatusConsumer(ParticipantStatusConsumer consumer) {
+    participantStatusConsumers.add(consumer);
+  }
+
+  private void registerSecurityEventConsumer(SecurityEventConsumer consumer) {
+    securityEventConsumers.add(consumer);
+  }
+
+  private void notifyNamespaceSecurityPolicyConsumers() {
+    ObservedPolicySnapshot snapshot = currentObservedPolicySnapshot();
+    for (NamespaceSecurityPolicyConsumer consumer : namespaceSecurityPolicyConsumers) {
+      try {
+        consumer.accept(snapshot);
+      } catch (Exception e) {
+        log.warn("Namespace security policy consumer callback failed: {}", e.getMessage());
+      }
+    }
+  }
+
+  private void notifyParticipantStatusConsumers() {
+    Map<String, ParticipantStatusDTO> snapshot = currentParticipantStatusSnapshot();
+    for (ParticipantStatusConsumer consumer : participantStatusConsumers) {
+      try {
+        consumer.accept(snapshot);
+      } catch (Exception e) {
+        log.warn("Participant status consumer callback failed: {}", e.getMessage());
+      }
+    }
+  }
+
+  private void notifySecurityEventConsumers(SecurityEventDTO event) {
+    for (SecurityEventConsumer consumer : securityEventConsumers) {
+      try {
+        consumer.accept(event);
+      } catch (Exception e) {
+        log.warn("Security event consumer callback failed: {}", e.getMessage());
+      }
+    }
   }
 
   /**
@@ -2029,6 +2219,23 @@ public class TaktXClient {
   /** Returns the normalized participant descriptor configured for this client instance. */
   public SecurityParticipantDescriptor getParticipantDescriptor() {
     return participantDescriptor;
+  }
+
+  /** Returns the public observability facade backed by namespace control-plane topics only. */
+  public synchronized SecurityObservabilityClient observability() {
+    if (securityObservabilityClient == null) {
+      securityObservabilityClient =
+          new SecurityObservabilityClient(
+              this::currentObservedPolicySnapshot,
+              this::currentParticipantStatusSnapshot,
+              this::currentSecurityEventSnapshot,
+              new SecurityObservabilityClient.ConsumerRegistrars(
+                  this::registerNamespaceSecurityPolicyConsumer,
+                  this::registerParticipantStatusConsumer,
+                  this::registerSecurityEventConsumer),
+              this::ensureObservabilityStoresInitialized);
+    }
+    return securityObservabilityClient;
   }
 
   /**

@@ -1,6 +1,6 @@
 # Client Dogfood Enablement — Implementation Tracker
 
-**Status:** In progress — DOG-01 through DOG-04 are now recorded complete; public observability APIs are next  
+**Status:** In progress — DOG-01 through DOG-05 are now recorded complete; client faceting is next  
 **Date:** 2026-05-25  
 **Companion docs:** `docs/SECURITY-POLICY-ENGINE-REQUIREMENTS.md`, `docs/SECURITY-POLICY-IMPLEMENTATION-PLAN.md`, `docs/ARCHITECTURE.md`
 
@@ -24,6 +24,8 @@ Recorded progress currently implemented and verified on the branch:
 - engine and client participant status publication now emit the simplified capability model
 - `TaktXClient` now accepts an explicit shared participant descriptor and supports mixed-capability
   client identities with builder validation
+- `TaktXClient.observability()` now exposes public policy, participant-status, and security-event
+  observation with polling/snapshot helpers built on the public control-plane topics only
 - the following verification has been run successfully after these changes:
   - `:taktx-shared:test`
   - `:taktx-engine:test`
@@ -32,6 +34,8 @@ Recorded progress currently implemented and verified on the branch:
   - `:taktx-client-spring-boot-3:test`
   - `:taktx-client-spring-boot-4:test`
   - combined run of `:taktx-shared:test :taktx-engine:test :taktx-client:test`
+  - combined run of
+    `:taktx-client:test :taktx-client-quarkus:test :taktx-client-spring-boot-3:test :taktx-client-spring-boot-4:test`
 
 ## 2. Agreed semantic cleanup
 
@@ -204,7 +208,7 @@ This initiative is done when all of the following are true:
 - [x] a single client instance can advertise multiple capabilities
 - [ ] authorization logic is no longer derived from product-role labels
 - [x] engine activation depends only on `ENFORCER` participants
-- [ ] the public client can publish policy and observe policy/status/events
+- [x] the public client can publish policy and observe policy/status/events
 - [ ] the public client surface is organized around facets instead of one growing flat facade
 - [ ] framework wrappers configure the new participant descriptor cleanly
 - [x] unit tests cover shared, engine, client, and wrapper behavior under the new model
@@ -350,23 +354,23 @@ This initiative is done when all of the following are true:
 
 **Checklist:**
 
-- [ ] add public API to observe effective namespace security policy
-- [ ] add public API to observe participant statuses
-- [ ] add public API to observe security events
-- [ ] add polling/snapshot helpers suitable for integration tests
-- [ ] ensure all posture helpers are built on public topics/streams only
+- [x] add public API to observe effective namespace security policy
+- [x] add public API to observe participant statuses
+- [x] add public API to observe security events
+- [x] add polling/snapshot helpers suitable for integration tests
+- [x] ensure all posture helpers are built on public topics/streams only
 
 **Unit-test gate:**
 
-- [ ] policy observation consumer tests
-- [ ] participant-status consumer tests
-- [ ] security-event consumer tests
-- [ ] empty-stream/default posture tests
-- [ ] snapshot assembly tests
+- [x] policy observation consumer tests
+- [x] participant-status consumer tests
+- [x] security-event consumer tests
+- [x] empty-stream/default posture tests
+- [x] snapshot assembly tests
 
 **Complete when:**
 
-- [ ] the public client can observe every posture stream needed by the focused dogfood suite
+- [x] the public client can observe every posture stream needed by the focused dogfood suite
 
 ## DOG-06 — Facet the public client surface
 
@@ -508,7 +512,7 @@ This initiative is done when all of the following are true:
 - [x] use this document as the authoritative tracker for the redesign branch
 - [x] finish `DOG-01` and `DOG-02` against the simplified participant model
 - [x] verify engine activation semantics against enforcer-only readiness rules
-- [ ] add public observability APIs before starting the integration suite
+- [x] add public observability APIs before starting the integration suite
 - [ ] keep unit tests green as the gating signal for each workstream
 
 
