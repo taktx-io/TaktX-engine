@@ -51,7 +51,7 @@ Recorded progress currently implemented and verified on the branch:
   - `:taktx-client-spring-boot-4:test`
   - combined run of `:taktx-shared:test :taktx-engine:test :taktx-client:test`
   - targeted run of
-    `:taktx-engine:securityIntegrationTest --tests io.taktx.engine.pi.integration.PublicClientDogfoodIntegrationTest`
+    `:taktx-engine:securityIntegrationTest --tests io.taktx.engine.pi.integration.PublicClientOpenModeDogfoodIntegrationTest --tests io.taktx.engine.pi.integration.PublicClientSecuredModeDogfoodIntegrationTest --tests io.taktx.engine.pi.integration.PublicClientObservabilityDogfoodIntegrationTest`
   - combined run of
     `:taktx-client:test :taktx-client-quarkus:test :taktx-client-spring-boot-3:test :taktx-client-spring-boot-4:test`
   - combined run of
