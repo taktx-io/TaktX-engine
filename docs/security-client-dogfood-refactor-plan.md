@@ -1,6 +1,6 @@
 # Client Dogfood Enablement — Implementation Tracker
 
-**Status:** In progress — DOG-01 through DOG-06 are now recorded complete; wrapper updates are next  
+**Status:** In progress — DOG-01 through DOG-07 are now recorded complete; wrapper updates are next  
 **Date:** 2026-05-25  
 **Companion docs:** `docs/SECURITY-POLICY-ENGINE-REQUIREMENTS.md`, `docs/SECURITY-POLICY-IMPLEMENTATION-PLAN.md`, `docs/ARCHITECTURE.md`
 
@@ -28,6 +28,8 @@ Recorded progress currently implemented and verified on the branch:
   observation with polling/snapshot helpers built on the public control-plane topics only
 - `TaktXClient` now exposes focused `security()`, `observability()`, `runtime()`, `workers()`,
   and `dlq()` facets while keeping lifecycle management on the root client for wrapper stability
+- public console-grade posture snapshots now aggregate effective policy identity, participant
+  statuses, mismatch reasons, and recent security events without relying on internal hooks or DLQ
 - the following verification has been run successfully after these changes:
   - `:taktx-shared:test`
   - `:taktx-engine:test`
@@ -413,20 +415,20 @@ This initiative is done when all of the following are true:
 
 **Checklist:**
 
-- [ ] define a public posture snapshot including effective mode, policy version, policy hash,
+- [x] define a public posture snapshot including effective mode, policy version, policy hash,
       participant statuses, mismatch reasons, and recent security events
-- [ ] add polling/snapshot helpers usable by integration tests without internal hooks
-- [ ] ensure mismatch visibility does not masquerade as DLQ behavior
+- [x] add polling/snapshot helpers usable by integration tests without internal hooks
+- [x] ensure mismatch visibility does not masquerade as DLQ behavior
 
 **Unit-test gate:**
 
-- [ ] posture snapshot assembly tests
-- [ ] mismatch visibility tests
-- [ ] empty/default posture tests
+- [x] posture snapshot assembly tests
+- [x] mismatch visibility tests
+- [x] empty/default posture tests
 
 **Complete when:**
 
-- [ ] console-grade posture assertions are possible through public client APIs alone
+- [x] console-grade posture assertions are possible through public client APIs alone
 
 ## DOG-08 — Framework wrapper updates
 

@@ -100,6 +100,15 @@ public class SecurityObservabilityClient {
     return events == null || events.isEmpty() ? List.of() : List.copyOf(events);
   }
 
+  /**
+   * Returns a combined console-grade posture snapshot assembled from the public policy, participant
+   * status, and security-event topics only.
+   */
+  public SecurityPostureSnapshot getPostureSnapshot() {
+    return SecurityPostureSnapshot.from(
+        getObservedPolicySnapshot(), getParticipantStatusSnapshot(), getRecentSecurityEvents());
+  }
+
   /** Registers a callback and immediately replays the current policy snapshot. */
   public void registerNamespaceSecurityPolicyConsumer(NamespaceSecurityPolicyConsumer consumer) {
     Objects.requireNonNull(consumer, CONSUMER_ARGUMENT);
@@ -145,6 +154,13 @@ public class SecurityObservabilityClient {
     Objects.requireNonNull(predicate, PREDICATE_ARGUMENT);
     return awaitSnapshot(
         "participant status snapshot", this::getParticipantStatusSnapshot, predicate, timeout);
+  }
+
+  /** Polls until the combined posture snapshot satisfies the supplied predicate. */
+  public SecurityPostureSnapshot awaitPostureSnapshot(
+      Predicate<SecurityPostureSnapshot> predicate, Duration timeout) {
+    Objects.requireNonNull(predicate, PREDICATE_ARGUMENT);
+    return awaitSnapshot("security posture snapshot", this::getPostureSnapshot, predicate, timeout);
   }
 
   /** Polls until a matching security event appears in the bounded recent event history. */
