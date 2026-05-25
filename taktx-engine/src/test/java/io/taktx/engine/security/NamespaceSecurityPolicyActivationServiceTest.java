@@ -47,6 +47,8 @@ class NamespaceSecurityPolicyActivationServiceTest {
       Set.of(
           ParticipantCapability.AUTHORITATIVE_POLICY_PUBLISHER,
           ParticipantCapability.SECURITY_OBSERVER);
+  private static final Set<ParticipantCapability> PROTECTED_RUNTIME_CLIENT_CAPABILITIES =
+      Set.of(ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT);
 
   private TaktConfiguration configuration;
   private NamespaceSecurityPolicyStore policyStore;
@@ -406,6 +408,37 @@ class NamespaceSecurityPolicyActivationServiceTest {
             .readyForDataPlane(true)
             .observedPolicyVersion(requested.getDesiredPolicyVersion())
             .observedPolicyHash("forged-hash")
+            .build());
+
+    activationService.onPolicyUpdated(requested);
+
+    assertThat(policyStore.get()).isNotNull();
+    assertThat(policyStore.get().getActivationState()).isEqualTo(SecurityActivationState.ACTIVE);
+    assertThat(policyStore.getActivePolicy()).isEqualTo(policyStore.get());
+    verify(securityEventPublisher, never()).publish(any(SecurityEventDTO.class));
+  }
+
+  @Test
+  void protectedRuntimeClientWithoutEnforcerCapability_doesNotBlockRequestedPolicyActivation() {
+    NamespaceSecurityPolicyDTO requested = requestedPolicy(42L);
+    addReadyEnforcerParticipant(requested, clock.millis() + 500L);
+    participantStatusStore.update(
+        "runtime-client-1",
+        ParticipantStatusDTO.builder()
+            .participantId("tenant.bank.payments.orders-service")
+            .participantInstanceId("runtime-client-1")
+            .participantKind(ParticipantKind.CLIENT)
+            .componentType("orders-service")
+            .capabilities(PROTECTED_RUNTIME_CLIENT_CAPABILITIES)
+            .namespace("bank.payments")
+            .startedAt(clock.millis() - 100L)
+            .lastSeenAt(clock.millis())
+            .statusExpiresAt(clock.millis() + 500L)
+            .statusVerificationLevel(StatusVerificationLevel.LOCALLY_VERIFIED_STATUS)
+            .effectiveState(ParticipantEffectiveState.MISMATCH)
+            .readyForDataPlane(false)
+            .observedPolicyVersion(requested.getDesiredPolicyVersion())
+            .observedPolicyHash("runtime-client-local-mismatch")
             .build());
 
     activationService.onPolicyUpdated(requested);

@@ -1,6 +1,6 @@
 # Client Dogfood Enablement — Implementation Tracker
 
-**Status:** In progress — DOG-01 through DOG-08 are now recorded complete; focused integration coverage is next  
+**Status:** Complete — the client dogfood refactor epic is implemented and verified on the branch; future multi-engine consistency coverage is deferred to `docs/security-client-dogfood-multi-engine-follow-up.md`  
 **Date:** 2026-05-25  
 **Companion docs:** `docs/SECURITY-POLICY-ENGINE-REQUIREMENTS.md`, `docs/SECURITY-POLICY-IMPLEMENTATION-PLAN.md`, `docs/ARCHITECTURE.md`
 
@@ -21,6 +21,8 @@ Recorded progress currently implemented and verified on the branch:
   `componentType`
 - legacy active shared-contract role relevance has been replaced by capability relevance
 - engine activation now converges on `ENFORCER` participants instead of product-role labels
+- authorization gating now derives from namespace policy plus JWT/signature trust checks rather than
+  legacy participant product-role labels
 - engine and client participant status publication now emit the simplified capability model
 - `TaktXClient` now accepts an explicit shared participant descriptor and supports mixed-capability
   client identities with builder validation
@@ -32,16 +34,28 @@ Recorded progress currently implemented and verified on the branch:
   statuses, mismatch reasons, and recent security events without relying on internal hooks or DLQ
 - Quarkus and Spring wrappers now pass explicit participant descriptors into the builder and wire
   worker/runtime integration through the public facet contract instead of legacy root leakage
+- `taktx-engine` now includes a focused public-client-only `securityIntegrationTest` suite proving
+  open-mode runtime behavior, policy publication/reflection, invalid-vs-valid auth/signing,
+  worker completion, unauthorized client rejection, console-grade observability, and namespace
+  isolation using only public `TaktXClient` APIs
+- future multi-engine consistency coverage has been explicitly split into a follow-up test plan so
+  the focused dogfood epic can close without conflating single-engine public-client contract
+  verification with clustered-engine bootstrap infrastructure work
 - the following verification has been run successfully after these changes:
   - `:taktx-shared:test`
   - `:taktx-engine:test`
+  - `:taktx-engine:securityIntegrationTest`
   - `:taktx-client:test`
   - `:taktx-client-quarkus:test`
   - `:taktx-client-spring-boot-3:test`
   - `:taktx-client-spring-boot-4:test`
   - combined run of `:taktx-shared:test :taktx-engine:test :taktx-client:test`
+  - targeted run of
+    `:taktx-engine:securityIntegrationTest --tests io.taktx.engine.pi.integration.PublicClientDogfoodIntegrationTest`
   - combined run of
     `:taktx-client:test :taktx-client-quarkus:test :taktx-client-spring-boot-3:test :taktx-client-spring-boot-4:test`
+  - combined run of
+    `:taktx-shared:test :taktx-engine:test :taktx-engine:securityIntegrationTest :taktx-client:test :taktx-client-quarkus:test :taktx-client-spring-boot-3:test :taktx-client-spring-boot-4:test`
 
 ## 2. Agreed semantic cleanup
 
@@ -212,13 +226,13 @@ This initiative is done when all of the following are true:
 
 - [x] the shared contract no longer encodes product-specific participant roles
 - [x] a single client instance can advertise multiple capabilities
-- [ ] authorization logic is no longer derived from product-role labels
+- [x] authorization logic is no longer derived from product-role labels
 - [x] engine activation depends only on `ENFORCER` participants
 - [x] the public client can publish policy and observe policy/status/events
 - [x] the public client surface is organized around facets instead of one growing flat facade
 - [x] framework wrappers configure the new participant descriptor cleanly
 - [x] unit tests cover shared, engine, client, and wrapper behavior under the new model
-- [ ] a focused public-client-only integration suite is implemented and stable
+- [x] a focused public-client-only integration suite is implemented and stable
 
 ## 7. Trackable workstreams
 
@@ -252,7 +266,7 @@ This initiative is done when all of the following are true:
 - [x] round-trip proto serialization tests
 - [x] DTO mapper tests
 - [x] validation tests for missing kind / invalid capability sets / blank optional component labels
-- [ ] tests proving no shared callers still depend on `ENGINE | INGESTER | CONSOLE | CLIENT`
+- [x] tests proving no shared callers still depend on `ENGINE | INGESTER | CONSOLE | CLIENT`
 
 **Complete when:**
 
@@ -276,8 +290,8 @@ This initiative is done when all of the following are true:
 
 **Unit-test gate:**
 
-- [ ] capability relevance tests for publisher-only clients
-- [ ] capability relevance tests for observer-only clients
+- [x] capability relevance tests for publisher-only clients
+- [x] capability relevance tests for observer-only clients
 - [x] capability relevance tests for protected runtime clients
 - [x] mixed-capability tests
 
@@ -311,7 +325,7 @@ This initiative is done when all of the following are true:
 - [x] enforcer missing or not ready => not active
 - [x] observer-only clients do not block activation
 - [x] authoritative publishers do not block activation by existing
-- [ ] protected runtime clients do not block activation unless they are also enforcers
+- [x] protected runtime clients do not block activation unless they are also enforcers
 
 **Complete when:**
 
@@ -463,6 +477,10 @@ This initiative is done when all of the following are true:
 
 **Goal:** validate namespace security behavior end to end using the official client contract only.
 
+**Current branch status:** implemented and green on the current branch for the focused single-engine
+suite; the future multi-engine scenario has been intentionally moved to
+`docs/security-client-dogfood-multi-engine-follow-up.md` so it no longer blocks this epic.
+
 **Rules:**
 
 - use real Kafka
@@ -481,7 +499,8 @@ This initiative is done when all of the following are true:
   - [x] policy publication and reflection
   - [x] command enforcement for invalid vs valid auth/signing
   - [x] worker behavior through the public client
-  - [ ] multi-engine consistency
+  - [x] multi-engine consistency follow-up requirements documented in
+        `docs/security-client-dogfood-multi-engine-follow-up.md`
   - [x] unauthorized/random client behavior
   - [x] console-grade observability
   - [x] namespace isolation
@@ -504,6 +523,9 @@ This initiative is done when all of the following are true:
 
 ## 9. Suggested commit structure
 
+This section is retained as the original planning aid. The branch history no longer maps perfectly
+to these proposed buckets, and the focused integration suite is now present on the branch.
+
 - [ ] Commit 1: shared participant model replacement (`DOG-01` + tests)
 - [ ] Commit 2: capability-based relevance (`DOG-02` + tests)
 - [ ] Commit 3: engine activation/status refactor (`DOG-03` + tests)
@@ -519,7 +541,9 @@ This initiative is done when all of the following are true:
 - [x] finish `DOG-01` and `DOG-02` against the simplified participant model
 - [x] verify engine activation semantics against enforcer-only readiness rules
 - [x] add public observability APIs before starting the integration suite
-- [ ] keep unit tests green as the gating signal for each workstream
+- [x] keep unit tests green as the gating signal for each workstream
+- [x] move the future multi-engine consistency scenario into a separate follow-up plan:
+      `docs/security-client-dogfood-multi-engine-follow-up.md`
 
 
 
