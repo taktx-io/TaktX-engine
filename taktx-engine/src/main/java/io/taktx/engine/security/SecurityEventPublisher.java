@@ -16,6 +16,7 @@ import io.taktx.serdes.SecurityEventProtoMapper;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.producer.KafkaProducer;
@@ -33,6 +34,7 @@ public class SecurityEventPublisher {
   private final KafkaClientsConfig kafkaClientsConfig;
   private KafkaProducer<String, byte[]> producer;
 
+  @Inject
   public SecurityEventPublisher(
       TaktConfiguration configuration, KafkaClientsConfig kafkaClientsConfig) {
     this.configuration = configuration;

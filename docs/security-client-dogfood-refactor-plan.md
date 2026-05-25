@@ -474,23 +474,23 @@ This initiative is done when all of the following are true:
 
 **Checklist:**
 
-- [ ] create shared fixtures for Kafka, engine bootstrap, namespace generation, client creation, JWT
+- [x] create shared fixtures for Kafka, engine bootstrap, namespace generation, client creation, JWT
       / signing setup, policy helpers, observability helpers, runtime helpers, and worker helpers
-- [ ] add must-have scenarios for:
-  - [ ] default behavior in open mode
-  - [ ] policy publication and reflection
-  - [ ] command enforcement for invalid vs valid auth/signing
-  - [ ] worker behavior through the public client
+- [x] add must-have scenarios for:
+  - [x] default behavior in open mode
+  - [x] policy publication and reflection
+  - [x] command enforcement for invalid vs valid auth/signing
+  - [x] worker behavior through the public client
   - [ ] multi-engine consistency
-  - [ ] unauthorized/random client behavior
-  - [ ] console-grade observability
-  - [ ] namespace isolation
+  - [x] unauthorized/random client behavior
+  - [x] console-grade observability
+  - [x] namespace isolation
 
 **Acceptance gate:**
 
-- [ ] the suite proves the public client can both drive and observe namespace-security behavior end to
+- [x] the suite proves the public client can both drive and observe namespace-security behavior end to
       end
-- [ ] the suite is small and stable enough to run regularly
+- [x] the suite is small and stable enough to run regularly
 
 ## 8. Recommended implementation order
 
@@ -511,7 +511,7 @@ This initiative is done when all of the following are true:
 - [ ] Commit 5: observability + posture helpers (`DOG-05` + `DOG-07` + tests)
 - [ ] Commit 6: facet split (`DOG-06` + tests)
 - [ ] Commit 7: wrapper updates (`DOG-08` + tests)
-- [ ] Commit 8: focused integration suite (`DOG-09`)
+- [x] Commit 8: focused integration suite (`DOG-09`)
 
 ## 10. Immediate next actions
 

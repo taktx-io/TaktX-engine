@@ -20,6 +20,7 @@ import io.taktx.engine.config.NamespaceSecurityPolicyStore;
 import io.taktx.engine.config.ParticipantStatusStore;
 import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.security.NamespaceSecurityPolicySupport;
+import jakarta.inject.Inject;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.time.Clock;
 import java.util.ArrayList;
@@ -56,6 +57,7 @@ public class NamespaceSecurityPolicyActivationService {
   private final long activationTimeoutMs;
   private final AtomicReference<String> lastActiveDriftFingerprint = new AtomicReference<>(null);
 
+  @Inject
   public NamespaceSecurityPolicyActivationService(
       TaktConfiguration configuration,
       NamespaceSecurityPolicyStore namespaceSecurityPolicyStore,
