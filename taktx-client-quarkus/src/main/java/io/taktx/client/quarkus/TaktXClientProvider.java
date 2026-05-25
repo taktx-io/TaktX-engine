@@ -17,6 +17,7 @@ import io.taktx.client.ResultProcessorFactory;
 import io.taktx.client.TaktXClient;
 import io.taktx.client.TaktXClient.TaktXClientBuilder;
 import io.taktx.client.WorkerBeanInstanceProvider;
+import io.taktx.dto.SecurityParticipantDescriptor;
 import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Event;
@@ -115,35 +116,33 @@ public class TaktXClientProvider {
               .getOptionalValue(name, String.class)
               .ifPresent(value -> taktProperties.put(name, value));
         }
+        SecurityParticipantDescriptor participantDescriptor =
+            resolveParticipantDescriptor(taktProperties);
         taktClientBuilder
+            .withParticipantDescriptor(participantDescriptor)
             .withTaktParameterResolverFactory(parameterResolverFactory)
             .withResultProcessorFactory(resultProcessorFactory);
 
         taktClient = taktClientBuilder.withProperties(taktProperties).build();
         taktClient.start();
 
-        taktClient.deployTaktDeploymentAnnotatedClasses();
+        taktClient.workers().deployTaktDeploymentAnnotatedClasses();
 
         AnnotationScanningExternalTaskTriggerConsumer externalTaskTriggerConsumer =
-            new AnnotationScanningExternalTaskTriggerConsumer(
-                taktClient.getParameterResolverFactory(),
-                taktClient.getResultProcessorFactory(),
-                taktClient.getProcessInstanceResponder(),
-                instanceProvider,
-                taktClient::requestExternalTaskTopic,
-                partitions,
-                CleanupPolicy.COMPACT,
-                replicationFactor);
+            taktClient
+                .workers()
+                .annotationScanningExternalTaskTriggerConsumer(
+                    instanceProvider, partitions, CleanupPolicy.COMPACT, replicationFactor);
 
         if (!externalTaskTriggerConsumer.getJobIds().isEmpty()) {
-          taktClient.registerExternalTaskConsumer(
+          taktClient.workers().registerExternalTaskConsumer(
               externalTaskTriggerConsumer, "taktx-client-external-task-trigger-consumer");
         }
 
         if (observerChecker.hasInstanceUpdateRecordObservers()) {
           InstanceUpdateStartStrategy strategy =
               InstanceUpdateStartStrategy.valueOf(instanceUpdateStartStrategy.toUpperCase());
-          taktClient.registerInstanceUpdateConsumer(
+          taktClient.runtime().registerInstanceUpdateConsumer(
               groupIdInstanceUpdate,
               instanceUpdateRecords -> {
                 for (InstanceUpdateRecord instanceUpdateRecord : instanceUpdateRecords) {
@@ -164,5 +163,11 @@ public class TaktXClientProvider {
   @Produces
   public TaktXClient taktClient() {
     return taktClient;
+  }
+
+  SecurityParticipantDescriptor resolveParticipantDescriptor(Properties taktProperties) {
+    return TaktXClient.defaultClientParticipantDescriptor(
+        taktProperties,
+        config.getOptionalValue("quarkus.application.name", String.class).orElse(null));
   }
 }

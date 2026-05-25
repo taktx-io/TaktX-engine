@@ -15,6 +15,7 @@ import io.taktx.client.ResultProcessorFactory;
 import io.taktx.client.TaktXClient;
 import io.taktx.client.TaktXClient.TaktXClientBuilder;
 import io.taktx.client.WorkerBeanInstanceProvider;
+import io.taktx.dto.SecurityParticipantDescriptor;
 import io.taktx.util.TaktPropertiesHelper;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
@@ -91,8 +92,10 @@ public class TaktXClientAutoConfiguration {
   @PostConstruct
   public void init() {
     TaktXClientBuilder taktClientBuilder = TaktXClient.newClientBuilder();
+    SecurityParticipantDescriptor participantDescriptor = resolveParticipantDescriptor();
 
     taktClientBuilder
+        .withParticipantDescriptor(participantDescriptor)
         .withTaktParameterResolverFactory(parameterResolverFactory)
         .withResultProcessorFactory(resultProcessorFactory);
 
@@ -100,21 +103,16 @@ public class TaktXClientAutoConfiguration {
 
     taktClient.start();
 
-    taktClient.deployTaktDeploymentAnnotatedClasses();
+    taktClient.workers().deployTaktDeploymentAnnotatedClasses();
 
     AnnotationScanningExternalTaskTriggerConsumer externalTaskTriggerConsumer =
-        new AnnotationScanningExternalTaskTriggerConsumer(
-            taktClient.getParameterResolverFactory(),
-            taktClient.getResultProcessorFactory(),
-            taktClient.getProcessInstanceResponder(),
-            instanceProvider,
-            taktClient::requestExternalTaskTopic,
-            partitions,
-            CleanupPolicy.COMPACT,
-            replicationFactor);
+        taktClient
+            .workers()
+            .annotationScanningExternalTaskTriggerConsumer(
+                instanceProvider, partitions, CleanupPolicy.COMPACT, replicationFactor);
 
     if (!externalTaskTriggerConsumer.getJobIds().isEmpty()) {
-      taktClient.registerExternalTaskConsumer(
+      taktClient.workers().registerExternalTaskConsumer(
           externalTaskTriggerConsumer, "taktx-client-external-task-trigger-consumer");
     }
 
@@ -123,7 +121,7 @@ public class TaktXClientAutoConfiguration {
         && !groupIdInstanceUpdate.isEmpty()) {
       InstanceUpdateStartStrategy strategy =
           InstanceUpdateStartStrategy.valueOf(instanceUpdateStartStrategy.toUpperCase());
-      taktClient.registerInstanceUpdateConsumer(
+      taktClient.runtime().registerInstanceUpdateConsumer(
           groupIdInstanceUpdate,
           instanceUpdateRecords -> {
             for (var instanceUpdateRecord : instanceUpdateRecords) {
@@ -143,5 +141,11 @@ public class TaktXClientAutoConfiguration {
   @ConditionalOnMissingBean
   public TaktXClient taktXClient() {
     return taktClient;
+  }
+
+  SecurityParticipantDescriptor resolveParticipantDescriptor() {
+    return TaktXClient.defaultClientParticipantDescriptor(
+        taktPropertiesHelper.getTaktProperties(),
+        taktPropertiesHelper.getTaktProperties().getProperty("spring.application.name"));
   }
 }

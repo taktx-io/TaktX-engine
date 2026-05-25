@@ -1,6 +1,6 @@
 # Client Dogfood Enablement — Implementation Tracker
 
-**Status:** In progress — DOG-01 through DOG-07 are now recorded complete; wrapper updates are next  
+**Status:** In progress — DOG-01 through DOG-08 are now recorded complete; focused integration coverage is next  
 **Date:** 2026-05-25  
 **Companion docs:** `docs/SECURITY-POLICY-ENGINE-REQUIREMENTS.md`, `docs/SECURITY-POLICY-IMPLEMENTATION-PLAN.md`, `docs/ARCHITECTURE.md`
 
@@ -30,6 +30,8 @@ Recorded progress currently implemented and verified on the branch:
   and `dlq()` facets while keeping lifecycle management on the root client for wrapper stability
 - public console-grade posture snapshots now aggregate effective policy identity, participant
   statuses, mismatch reasons, and recent security events without relying on internal hooks or DLQ
+- Quarkus and Spring wrappers now pass explicit participant descriptors into the builder and wire
+  worker/runtime integration through the public facet contract instead of legacy root leakage
 - the following verification has been run successfully after these changes:
   - `:taktx-shared:test`
   - `:taktx-engine:test`
@@ -214,7 +216,7 @@ This initiative is done when all of the following are true:
 - [x] engine activation depends only on `ENFORCER` participants
 - [x] the public client can publish policy and observe policy/status/events
 - [x] the public client surface is organized around facets instead of one growing flat facade
-- [ ] framework wrappers configure the new participant descriptor cleanly
+- [x] framework wrappers configure the new participant descriptor cleanly
 - [x] unit tests cover shared, engine, client, and wrapper behavior under the new model
 - [ ] a focused public-client-only integration suite is implemented and stable
 
@@ -442,20 +444,20 @@ This initiative is done when all of the following are true:
 
 **Checklist:**
 
-- [ ] update wrappers to use the builder with participant descriptor input
-- [ ] assign sane default client descriptors
-- [ ] ensure worker wiring maps to `PROTECTED_RUNTIME_PARTICIPANT`, not a worker role
-- [ ] remove wrapper dependency on legacy root-client leakage methods
+- [x] update wrappers to use the builder with participant descriptor input
+- [x] assign sane default client descriptors
+- [x] ensure worker wiring maps to `PROTECTED_RUNTIME_PARTICIPANT`, not a worker role
+- [x] remove wrapper dependency on legacy root-client leakage methods
 
 **Unit-test gate:**
 
-- [ ] Quarkus provider tests
-- [ ] Spring Boot 3 auto-configuration tests
-- [ ] Spring Boot 4 auto-configuration tests
+- [x] Quarkus provider tests
+- [x] Spring Boot 3 auto-configuration tests
+- [x] Spring Boot 4 auto-configuration tests
 
 **Complete when:**
 
-- [ ] wrappers build and test against the new public client contract only
+- [x] wrappers build and test against the new public client contract only
 
 ## DOG-09 — Focused public-client-only integration suite
 
