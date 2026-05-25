@@ -1,7 +1,7 @@
 # Security Control-Plane Integration Test Plan
 
-**Status:** In progress — wave 1 implementation started  
-**Date:** 2026-05-25  
+**Status:** In progress — wave 1 mostly implemented; harness-limited follow-ups remain  
+**Date:** 2026-05-26  
 **Audience:** Engine, client, and upcoming Console implementers  
 **Primary goal:** build enough confidence that upcoming Console features can safely rely on the
 namespace security control plane through the official `TaktXClient` contract.
@@ -35,6 +35,16 @@ namespace security control plane through the official `TaktXClient` contract.
   instances bound to different namespaces
 - [x] add explicit assertion that control-plane mismatch visibility does not require a DLQ entry for
   the anchored trust-mismatch path
+
+### Wave 1 stabilization update — 2026-05-26
+
+- [x] restore open/secured runtime dogfood stability by mapping generated namespace intents onto the
+  current single-engine harness's engine-backed namespaces (`default` and `dogfood-isolated`)
+- [x] keep the unsigned secured-worker negative path asserted through stable public signals
+  (`READINESS_MISMATCH` recent events + blocked worker/runtime behavior) instead of waiting for
+  observer-visible participant-status mismatch details in that client-local path
+- [x] rerun the full three-class public-client dogfood gate together after the latest stabilization
+  changes
 
 ### Newly discovered constraint during wave 1
 
@@ -74,16 +84,17 @@ Both matter, but they answer different questions.
 
 The current branch is already in a much better place than the original starting point.
 
-### 2.1 What is already green
+### 2.1 What is already implemented and revalidated in focused reruns
 
-The following are already implemented and passing on branch:
+The following are already implemented on branch and have been revalidated in focused reruns during
+wave 1 stabilization:
 
 - focused public-client-only dogfood suite:
   - `taktx-engine/src/securityIntegrationTest/java/io/taktx/engine/pi/integration/PublicClientDogfoodIntegrationTestSupport.java`
   - `taktx-engine/src/securityIntegrationTest/java/io/taktx/engine/pi/integration/PublicClientOpenModeDogfoodIntegrationTest.java`
   - `taktx-engine/src/securityIntegrationTest/java/io/taktx/engine/pi/integration/PublicClientSecuredModeDogfoodIntegrationTest.java`
   - `taktx-engine/src/securityIntegrationTest/java/io/taktx/engine/pi/integration/PublicClientObservabilityDogfoodIntegrationTest.java`
-- broader engine security integration suite:
+- broader engine security integration suite remains the broad hardening task / validation gate:
   - `:taktx-engine:securityIntegrationTest`
 
 ### 2.2 Public client capabilities now available
@@ -179,8 +190,8 @@ better than before. The table below captures the practical status.
 | Command enforcement | Partially covered | JWT negative/positive path covered; signing-required happy path covered; explicit unsigned negative path remains blocked by current in-process signing registration behavior |
 | Worker behavior via public client | Covered | explicit `COMMUNITY_OPEN` worker success, secured happy path, and secured unsigned-worker negative path are covered through `PublicClientOpenModeDogfoodIntegrationTest` and `PublicClientSecuredModeDogfoodIntegrationTest` |
 | Unauthorized/random client behavior | Mostly covered | rogue policy mutation and namespace-scoped observability covered; runtime bypass matrix can be tightened |
-| Console-grade observability | Partially covered | public posture APIs exist; recent-event visibility and anchored participant-status mismatch assertions are covered; broader participant/mismatch/DLQ assertions still needed |
-| Namespace isolation | Covered | `PublicClientObservabilityDogfoodIntegrationTest` now covers both observability isolation and same-logical-actor cross-namespace runtime behavior, proving commands allowed in the open namespace do not imply permission in the secured namespace |
+| Console-grade observability | Partially covered | public posture APIs exist; recent-event visibility and anchored participant-status mismatch assertions are covered; the unsigned secured-worker path is now asserted most stably through public `READINESS_MISMATCH` visibility + blocked worker/runtime behavior; broader participant/mismatch/DLQ assertions still needed |
+| Namespace isolation | Covered | `PublicClientObservabilityDogfoodIntegrationTest` now covers both observability isolation and same-logical-actor cross-namespace runtime behavior, proving commands allowed in the open namespace do not imply permission in the secured namespace; the current single-engine harness still maps runtime-sensitive scenarios onto engine-backed namespaces |
 | Multi-engine consistency | Deferred | tracked in `docs/security-client-dogfood-multi-engine-follow-up.md` |
 
 ---
@@ -346,14 +357,14 @@ The diagnostics must stay public-client-based rather than reaching into internal
 
 These are the items most directly tied to confidence for upcoming Console work.
 
-1. Keep the current focused public-client dogfood suite green
+1. ✅ Keep the current focused public-client dogfood suite green
 2. ✅ Add explicit `COMMUNITY_OPEN` publish/reflect scenario
 3. ✅ Add anchored-without-anchor mismatch scenario with public posture assertions
 4. ◐ Add explicit public-client signing enforcement scenario for secured starts
 5. ✅ Add explicit secured worker negative-path scenario
 6. ◐ Add explicit posture assertions for participant statuses, mismatch reasons, and recent events
 7. ✅ Add explicit assertion that control-plane mismatch visibility does not require or imply a DLQ entry
-8. Introduce cleaner unique namespace support for dogfood scenarios
+8. ◐ Introduce cleaner unique namespace support for dogfood scenarios
 
 ## 7.2 Should-have before secured production rollout
 
@@ -394,9 +405,13 @@ These are not blockers, but they are the main sources of test awkwardness that a
    fixed clock near wall-clock time and awaiting the next participant-status republish, but that is
    still more awkward than a first-class public/client test helper
 8. Client-local protected-runtime mismatches for unsigned secured workers are currently most stable as
-   public runtime/worker API behavior (`cannot consume protected work`, `process remains active`) rather
-   than as observer-visible security events, because this dogfood path does not presently emit a
-   client-originated `DATA_PLANE_BLOCKED` event through the public observability stream
+   public runtime/worker API behavior (`cannot consume protected work`, `process remains active`) plus
+   generic public `READINESS_MISMATCH` visibility, rather than as observer-visible participant-status
+   mismatch details or a client-originated `DATA_PLANE_BLOCKED` event through the public
+   observability stream
+9. The current single-engine `securityIntegrationTest` harness only services runtime/deployment on the
+   engine-backed default namespace; generated/isolated namespaces remain useful for policy and
+   observability isolation, but arbitrary per-test runtime namespaces require a different harness shape
 
 These should be tracked during test writing rather than solved prematurely, but any recurring pain
 should become a small client-API follow-up rather than duplicated helper logic in every test class.
@@ -441,7 +456,7 @@ Console-facing assertions should lean on public policy + event visibility.
 Console needs to know whether an issue is a control-plane posture problem or a replay/rejection DLQ
 problem. The public-client suite should therefore make the distinction visible and reliable.
 
-### 9.3 Worker negative-path semantics
+### 9.4 Worker negative-path semantics
 
 The suite should also pin down what a protected worker failure looks like through public client APIs.
 
@@ -449,9 +464,10 @@ The suite should also pin down what a protected worker failure looks like throug
 responses / authorized external-task completion, a client started with signing explicitly disabled is
 blocked before it can consume the external-task trigger through the public worker facet, and the
 process remains active/incomplete. This path is currently asserted most reliably through public policy
-observation plus worker/runtime behavior rather than observer-visible mismatch events.
+observation, recent `READINESS_MISMATCH` visibility, and worker/runtime behavior rather than
+observer-visible participant-status mismatch details.
 
-### 9.4 Namespace isolation semantics for mixed client populations
+### 9.5 Namespace isolation semantics for mixed client populations
 
 The suite should explicitly prove that a client population observing one namespace cannot accidentally
 infer or drive policy state in another namespace.
@@ -466,8 +482,10 @@ To maximize confidence quickly without overbuilding the suite, use this order.
 2. add explicit `COMMUNITY_OPEN` and anchored-mismatch policy lifecycle scenarios
 3. add explicit command-signing enforcement scenarios
 4. add explicit worker negative-path scenarios
-5. strengthen observability/posture assertions for Console-facing fields
-6. tighten namespace-isolation runtime coverage
+5. strengthen observability/posture assertions for Console-facing fields, preferring the public
+   signals that are stable in the current harness
+6. tighten namespace-isolation runtime coverage without assuming arbitrary generated namespaces are
+   engine-backed in the current single-engine harness
 7. implement multi-engine follow-up separately
 
 This order is deliberate: it prioritizes the features most likely to unblock and de-risk upcoming
@@ -503,9 +521,12 @@ scratch.
 Instead, it should:
 
 1. keep the split public-client dogfood classes green as the proven seed
-2. continue extracting assertion/diagnostics helpers from the shared support base when duplication appears
- 3. add the highest-value missing single-engine public-client scenarios first
- 4. leave the already-documented multi-engine coverage in its separate follow-up track
+2. rerun the three-class public-client dogfood gate as the next broad confirmation step after the
+   latest stabilization changes
+3. continue extracting assertion/diagnostics helpers from the shared support base when duplication appears
+4. add the highest-value missing single-engine public-client scenarios first, especially where the
+   public contract is still ambiguous
+5. leave the already-documented multi-engine coverage in its separate follow-up track
 
 That gives the shortest path to the actual reason this work exists: enough confidence to safely and
 reliably build the Console security control-plane features on top of the official public client

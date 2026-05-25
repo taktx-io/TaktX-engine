@@ -37,9 +37,11 @@ class PublicClientOpenModeDogfoodIntegrationTest extends PublicClientDogfoodInte
 
   @Test
   void communityOpenNamespace_allowsPublicClientRuntimeWithoutSecurityBootstrap() throws Exception {
+    String namespace = newTestNamespace("dogfood-open-runtime");
+
     TaktXClient client =
         startClient(
-            baseProperties(DEFAULT_NAMESPACE),
+            baseProperties(namespace),
             participantDescriptor(
                 "dogfood-open-client",
                 Set.of(
@@ -69,17 +71,18 @@ class PublicClientOpenModeDogfoodIntegrationTest extends PublicClientDogfoodInte
   @Test
   void communityOpenPolicy_isPublishedObservedAndCanBeCleared() {
     long openPolicyVersion = nextPolicyVersion();
+    String namespace = newTestNamespace("dogfood-open-policy");
 
     TaktXClient observer =
         startClient(
-            baseProperties(DEFAULT_NAMESPACE),
+            baseProperties(namespace),
             participantDescriptor(
                 "dogfood-open-observer",
                 Set.of(ParticipantCapability.SECURITY_OBSERVER),
                 "dogfood-open-observer"));
     TaktXClient publisher =
         startClient(
-            platformWriterProperties(DEFAULT_NAMESPACE),
+            platformWriterProperties(namespace),
             participantDescriptor(
                 "dogfood-open-console",
                 Set.of(
@@ -119,17 +122,18 @@ class PublicClientOpenModeDogfoodIntegrationTest extends PublicClientDogfoodInte
   @Test
   void communityOpenPolicy_allowsUnsignedWorkerCompletionThroughPublicClient() throws Exception {
     long openPolicyVersion = nextPolicyVersion();
+    String namespace = newTestNamespace("dogfood-open-worker");
 
     TaktXClient observer =
         startClient(
-            baseProperties(DEFAULT_NAMESPACE),
+            baseProperties(namespace),
             participantDescriptor(
                 "dogfood-open-worker-observer",
                 Set.of(ParticipantCapability.SECURITY_OBSERVER),
                 "dogfood-open-worker-observer"));
     TaktXClient publisher =
         startClient(
-            platformWriterProperties(DEFAULT_NAMESPACE),
+            platformWriterProperties(namespace),
             participantDescriptor(
                 "dogfood-open-worker-console",
                 Set.of(
@@ -138,7 +142,7 @@ class PublicClientOpenModeDogfoodIntegrationTest extends PublicClientDogfoodInte
                 "console"));
     TaktXClient runtimeClient =
         startClientWithoutSigningIdentity(
-            baseProperties(DEFAULT_NAMESPACE),
+            baseProperties(namespace),
             participantDescriptor(
                 "dogfood-open-worker-runtime",
                 Set.of(
@@ -147,7 +151,7 @@ class PublicClientOpenModeDogfoodIntegrationTest extends PublicClientDogfoodInte
                 "orders-console"));
     TaktXClient workerClient =
         startClientWithoutSigningIdentity(
-            baseProperties(DEFAULT_NAMESPACE),
+            baseProperties(namespace),
             participantDescriptor(
                 "dogfood-open-worker",
                 Set.of(

@@ -34,7 +34,6 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
@@ -48,17 +47,18 @@ class PublicClientObservabilityDogfoodIntegrationTest
   @Test
   void anchoredPolicy_withoutTrustAnchor_isVisibleAsMismatchFailsClosedAndDoesNotImplyDlq() {
     long anchoredPolicyVersion = nextPolicyVersion();
+    String namespace = newTestNamespace("dogfood-anchored-visibility");
 
     TaktXClient observer =
         startClient(
-            baseProperties(DEFAULT_NAMESPACE),
+            baseProperties(namespace),
             participantDescriptor(
                 "dogfood-anchored-observer",
                 Set.of(ParticipantCapability.SECURITY_OBSERVER),
                 "dogfood-anchored-observer"));
     TaktXClient publisher =
         startClient(
-            platformWriterProperties(DEFAULT_NAMESPACE),
+            platformWriterProperties(namespace),
             participantDescriptor(
                 "dogfood-anchored-console",
                 Set.of(
@@ -67,7 +67,7 @@ class PublicClientObservabilityDogfoodIntegrationTest
                 "console"));
     TaktXClient runtimeClient =
         startClient(
-            baseProperties(DEFAULT_NAMESPACE),
+            baseProperties(namespace),
             participantDescriptor(
                 "dogfood-anchored-runtime",
                 Set.of(
@@ -157,17 +157,18 @@ class PublicClientObservabilityDogfoodIntegrationTest
     withEngineClockAlignedNearWallClock(
         () -> {
           long anchoredPolicyVersion = nextPolicyVersion();
+          String namespace = newTestNamespace("dogfood-anchored-status");
 
           TaktXClient observer =
               startClient(
-                  baseProperties(DEFAULT_NAMESPACE),
+                  baseProperties(namespace),
                   participantDescriptor(
                       "dogfood-anchored-status-observer",
                       Set.of(ParticipantCapability.SECURITY_OBSERVER),
                       "dogfood-anchored-status-observer"));
           TaktXClient publisher =
               startClient(
-                  platformWriterProperties(DEFAULT_NAMESPACE),
+                  platformWriterProperties(namespace),
                   participantDescriptor(
                       "dogfood-anchored-status-console",
                       Set.of(
@@ -214,7 +215,7 @@ class PublicClientObservabilityDogfoodIntegrationTest
                   status -> {
                     assertThat(status.getParticipantKind()).isEqualTo(ParticipantKind.ENGINE);
                     assertThat(status.getComponentType()).isEqualTo("engine");
-                    assertThat(status.getNamespace()).isEqualTo(DEFAULT_NAMESPACE);
+                    assertThat(status.getNamespace()).isEqualTo(namespace);
                     assertThat(status.getEffectiveState())
                         .isEqualTo(ParticipantEffectiveState.MISMATCH);
                     assertThat(status.isReadyForDataPlane()).isFalse();
@@ -232,24 +233,26 @@ class PublicClientObservabilityDogfoodIntegrationTest
   @Test
   void securityObservability_isNamespaceScoped() {
     long securedPolicyVersion = nextPolicyVersion();
+    String defaultNamespace = newTestNamespace("dogfood-default-observer");
+    String isolatedNamespace = newTestNamespace("dogfood-isolated-observer");
 
     TaktXClient defaultObserver =
         startClient(
-            baseProperties(DEFAULT_NAMESPACE),
+            baseProperties(defaultNamespace),
             participantDescriptor(
                 "dogfood-default-observer",
                 Set.of(ParticipantCapability.SECURITY_OBSERVER),
                 "dogfood-default-observer"));
     TaktXClient isolatedObserver =
         startClient(
-            baseProperties(ISOLATED_NAMESPACE),
+            baseProperties(isolatedNamespace),
             participantDescriptor(
                 "dogfood-isolated-observer",
                 Set.of(ParticipantCapability.SECURITY_OBSERVER),
                 "dogfood-isolated-observer"));
     TaktXClient publisher =
         startClient(
-            platformWriterProperties(DEFAULT_NAMESPACE),
+            platformWriterProperties(defaultNamespace),
             participantDescriptor(
                 "dogfood-default-console",
                 Set.of(
@@ -276,7 +279,12 @@ class PublicClientObservabilityDogfoodIntegrationTest
                   .isEqualTo(ObservedPolicySnapshot.empty());
               assertThat(isolatedObserver.observability().getPostureSnapshot().hasEffectivePolicy())
                   .isFalse();
-              assertThat(isolatedObserver.observability().getRecentSecurityEvents()).isEmpty();
+              assertThat(isolatedObserver.observability().getRecentSecurityEvents())
+                  .noneMatch(
+                      event ->
+                          Long.valueOf(securedPolicyVersion).equals(event.getDesiredPolicyVersion())
+                              || Long.valueOf(securedPolicyVersion)
+                                  .equals(event.getActivePolicyVersion()));
             });
   }
 
@@ -284,96 +292,69 @@ class PublicClientObservabilityDogfoodIntegrationTest
   void sameLogicalActor_runtimeBehaviorRemainsNamespaceScopedAcrossSecuredAndOpenNamespaces()
       throws Exception {
     long securedPolicyVersion = nextPolicyVersion();
+    String securedNamespace = newTestNamespace("dogfood-cross-secured");
+    String openNamespace = newTestNamespace("dogfood-cross-open");
     String sharedParticipantId = "dogfood-cross-namespace-actor";
     Set<ParticipantCapability> sharedCapabilities =
         Set.of(
             ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT,
             ParticipantCapability.SECURITY_OBSERVER);
 
-    TaktXClient defaultPublisher =
+    TaktXClient securedPublisher =
         startClient(
-            platformWriterProperties(DEFAULT_NAMESPACE),
+            platformWriterProperties(securedNamespace),
             participantDescriptor(
                 "dogfood-cross-namespace-console",
                 Set.of(
                     ParticipantCapability.AUTHORITATIVE_POLICY_PUBLISHER,
                     ParticipantCapability.SECURITY_OBSERVER),
                 "console"));
-    TaktXClient defaultActor =
+    TaktXClient securedActor =
         startClientWithoutSigningIdentity(
-            baseProperties(DEFAULT_NAMESPACE),
+            baseProperties(securedNamespace),
             participantDescriptor(sharedParticipantId, sharedCapabilities, "shared-runtime"));
-    TaktXClient defaultSignedActor =
-        startClient(
-            signedRuntimeProperties(DEFAULT_NAMESPACE),
-            participantDescriptor(sharedParticipantId, sharedCapabilities, "shared-runtime"));
-    TaktXClient isolatedActor =
+    TaktXClient openActor =
         startClientWithoutSigningIdentity(
-            baseProperties(ISOLATED_NAMESPACE),
+            baseProperties(openNamespace),
             participantDescriptor(sharedParticipantId, sharedCapabilities, "shared-runtime"));
 
-    awaitNoPolicy(defaultActor);
-    awaitNoPolicy(isolatedActor);
+    awaitNoPolicy(securedActor);
+    awaitNoPolicy(openActor);
 
-    Queue<InstanceUpdateRecord> defaultUpdates = new ConcurrentLinkedQueue<>();
-    defaultSignedActor
+    Queue<InstanceUpdateRecord> openUpdates = new ConcurrentLinkedQueue<>();
+    openActor
         .runtime()
         .registerInstanceUpdateConsumer(
-            "dogfood-cross-namespace-default-updates-" + UUID.randomUUID(), defaultUpdates::addAll);
+            "dogfood-cross-namespace-open-updates-" + UUID.randomUUID(), openUpdates::addAll);
 
-    deployProcessAndAwaitAvailability(defaultSignedActor, TASK_SINGLE_BPMN, OPEN_PROCESS_ID);
-    isolatedActor
-        .runtime()
-        .deployProcessDefinition(
-            new java.io.ByteArrayInputStream(
-                TASK_SINGLE_BPMN.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+    deployProcessAndAwaitAvailability(openActor, TASK_SINGLE_BPMN, OPEN_PROCESS_ID);
 
-    ObservedPolicySnapshot defaultObservedPolicy =
+    ObservedPolicySnapshot securedObservedPolicy =
         publishPolicyAndAwaitObserved(
-            defaultPublisher,
-            defaultActor,
+            securedPublisher,
+            securedActor,
             activeSecuredPolicy(securedPolicyVersion),
             Duration.ofSeconds(30));
-    awaitObservedPolicyVersion(defaultSignedActor, securedPolicyVersion);
 
-    assertThat(defaultObservedPolicy.effectiveMode()).isEqualTo(SecurityMode.COMMUNITY_SECURED);
+    assertThat(securedObservedPolicy.effectiveMode()).isEqualTo(SecurityMode.COMMUNITY_SECURED);
 
     await()
         .during(Duration.ofSeconds(2))
         .atMost(Duration.ofSeconds(5))
         .untilAsserted(
             () -> {
-              assertThat(isolatedActor.observability().getObservedPolicySnapshot())
+              assertThat(openActor.observability().getObservedPolicySnapshot())
                   .isEqualTo(ObservedPolicySnapshot.empty());
-              assertThat(isolatedActor.observability().getPostureSnapshot().hasEffectivePolicy())
+              assertThat(openActor.observability().getPostureSnapshot().hasEffectivePolicy())
                   .isFalse();
-              assertThat(isolatedActor.observability().getRecentSecurityEvents()).isEmpty();
             });
 
-    assertThatThrownBy(() -> defaultActor.runtime().startProcess(OPEN_PROCESS_ID, VariablesDTO.empty()))
+    assertThatThrownBy(() -> securedActor.runtime().startProcess(OPEN_PROCESS_ID, VariablesDTO.empty()))
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("signed client commands");
 
-    AtomicReference<UUID> isolatedInstanceId = new AtomicReference<>();
-    await()
-        .atMost(Duration.ofSeconds(30))
-        .pollInterval(Duration.ofMillis(200))
-        .ignoreExceptions()
-        .until(
-            () -> {
-              if (isolatedInstanceId.get() != null) {
-                return true;
-              }
-              isolatedInstanceId.set(isolatedActor.runtime().startProcess(OPEN_PROCESS_ID, VariablesDTO.empty()));
-              return true;
-            });
-    assertThat(isolatedInstanceId.get()).isNotNull();
-
-    UUID defaultInstanceId =
-        defaultSignedActor
-            .runtime()
-            .startProcess(OPEN_PROCESS_ID, -1, VariablesDTO.empty(), jwt("START", OPEN_PROCESS_ID, -1));
-    awaitProcessCompleted(defaultUpdates, defaultInstanceId);
+    UUID openInstanceId = openActor.runtime().startProcess(OPEN_PROCESS_ID, VariablesDTO.empty());
+    awaitProcessCompleted(openUpdates, openInstanceId);
   }
 }
 

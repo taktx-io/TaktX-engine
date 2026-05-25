@@ -44,6 +44,7 @@ import java.util.Properties;
 import java.util.Queue;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicLong;
@@ -66,6 +67,7 @@ abstract class PublicClientDogfoodIntegrationTestSupport {
   protected static final String SERVICE_PROCESS_ID = "service-task-single";
   protected static final String SERVICE_TASK_TYPE = "service-task";
   private static final AtomicLong POLICY_VERSIONS = new AtomicLong(10_000L);
+  private static final Set<String> BOOTSTRAPPED_NAMESPACES = ConcurrentHashMap.newKeySet();
 
   protected static final String TASK_SINGLE_BPMN =
       """
@@ -181,6 +183,7 @@ abstract class PublicClientDogfoodIntegrationTestSupport {
   private static String runtimeSignerPublicKeyBase64;
 
   private final List<TaktXClient> startedClients = new CopyOnWriteArrayList<>();
+  private final Set<String> namespacesUsedByCurrentTest = ConcurrentHashMap.newKeySet();
 
   @BeforeAll
   protected static void publishTrustedControlPlaneKeys() {
@@ -201,11 +204,49 @@ abstract class PublicClientDogfoodIntegrationTestSupport {
         SigningKeyGenerator.encodePrivateKey(runtimeSignerKeys.getPrivate());
     runtimeSignerPublicKeyBase64 = SigningKeyGenerator.encodePublicKey(runtimeSignerKeys.getPublic());
 
-    publishTrustedControlPlaneKeysForNamespace(DEFAULT_NAMESPACE);
-    publishTrustedControlPlaneKeysForNamespace(ISOLATED_NAMESPACE);
+    bootstrapNamespaceIfNeeded(DEFAULT_NAMESPACE);
+    bootstrapNamespaceIfNeeded(ISOLATED_NAMESPACE);
+    clearNamespaceSecurityPolicy(DEFAULT_NAMESPACE);
+    clearNamespaceSecurityPolicy(ISOLATED_NAMESPACE);
+  }
 
-    TaktXClient.clearNamespaceSecurityPolicy(platformWriterProperties(DEFAULT_NAMESPACE));
-    TaktXClient.clearNamespaceSecurityPolicy(platformWriterProperties(ISOLATED_NAMESPACE));
+  protected final String newTestNamespace(String prefix) {
+    String sanitizedPrefix =
+        (prefix == null || prefix.isBlank())
+            ? "dogfood"
+            : prefix.toLowerCase().replaceAll("[^a-z0-9-]", "-").replaceAll("-+", "-");
+    String namespace = stableHarnessNamespaceFor(sanitizedPrefix);
+    namespacesUsedByCurrentTest.add(namespace);
+    bootstrapNamespaceIfNeeded(namespace);
+    clearNamespaceSecurityPolicy(namespace);
+    return namespace;
+  }
+
+  private static String stableHarnessNamespaceFor(String sanitizedPrefix) {
+    // The current in-JVM security dogfood harness runs a single engine instance bound to the
+    // default namespace. Public-client scenarios that need active engine processing must therefore
+    // stay on that engine-backed namespace. The isolated namespace remains useful for namespace
+    // scoping / policy-only visibility scenarios where no engine-side runtime execution is needed.
+    if (sanitizedPrefix.contains("isolated") || sanitizedPrefix.contains("cross-secured")) {
+      return ISOLATED_NAMESPACE;
+    }
+    return DEFAULT_NAMESPACE;
+  }
+
+  private static void bootstrapNamespaceIfNeeded(String namespace) {
+    if (BOOTSTRAPPED_NAMESPACES.contains(namespace)) {
+      return;
+    }
+    synchronized (BOOTSTRAPPED_NAMESPACES) {
+      if (BOOTSTRAPPED_NAMESPACES.add(namespace)) {
+        publishTrustedControlPlaneKeysForNamespace(namespace);
+      }
+    }
+  }
+
+  private static void clearNamespaceSecurityPolicy(String namespace) {
+    bootstrapNamespaceIfNeeded(namespace);
+    TaktXClient.clearNamespaceSecurityPolicy(platformWriterProperties(namespace));
   }
 
   private static void publishTrustedControlPlaneKeysForNamespace(String namespace) {
@@ -251,12 +292,19 @@ abstract class PublicClientDogfoodIntegrationTestSupport {
         // Best-effort cleanup — the next test creates fresh clients and unique consumer groups.
       }
     }
-    TaktXClient.clearNamespaceSecurityPolicy(platformWriterProperties(DEFAULT_NAMESPACE));
-    TaktXClient.clearNamespaceSecurityPolicy(platformWriterProperties(ISOLATED_NAMESPACE));
+    for (String namespace : List.copyOf(namespacesUsedByCurrentTest)) {
+      try {
+        clearNamespaceSecurityPolicy(namespace);
+      } catch (Exception ignored) {
+        // Best-effort cleanup — unique namespaces limit cross-test leakage even if policy clear races.
+      }
+    }
+    namespacesUsedByCurrentTest.clear();
   }
 
   protected final TaktXClient startClient(
       Properties properties, SecurityParticipantDescriptor descriptor) {
+    trackNamespace(properties);
     TaktXClient client =
         TaktXClient.newClientBuilder()
             .withProperties(properties)
@@ -269,6 +317,7 @@ abstract class PublicClientDogfoodIntegrationTestSupport {
 
   protected final TaktXClient startClientWithoutSigningIdentity(
       Properties properties, SecurityParticipantDescriptor descriptor) {
+    trackNamespace(properties);
     TaktXClient client =
         TaktXClient.newClientBuilder()
             .withProperties(properties)
@@ -278,6 +327,12 @@ abstract class PublicClientDogfoodIntegrationTestSupport {
     client.start();
     startedClients.add(client);
     return client;
+  }
+
+  private void trackNamespace(Properties properties) {
+    String namespace = properties.getProperty("taktx.engine.namespace", DEFAULT_NAMESPACE);
+    namespacesUsedByCurrentTest.add(namespace);
+    bootstrapNamespaceIfNeeded(namespace);
   }
 
   protected static ExternalTaskTriggerConsumer collectingExternalTaskConsumer(
