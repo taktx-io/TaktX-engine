@@ -22,6 +22,7 @@ import io.taktx.serdes.ParticipantStatusProtoMapper;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -49,6 +50,7 @@ public class ParticipantStatusPublisher {
   private final AtomicReference<String> lastBlockedEventFingerprint = new AtomicReference<>(null);
   private KafkaProducer<String, byte[]> producer;
 
+  @Inject
   public ParticipantStatusPublisher(
       TaktConfiguration configuration,
       KafkaClientsConfig kafkaClientsConfig,
