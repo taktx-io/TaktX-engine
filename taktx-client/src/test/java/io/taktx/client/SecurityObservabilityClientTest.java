@@ -14,6 +14,7 @@ import io.taktx.dto.ParticipantCapability;
 import io.taktx.dto.ParticipantEffectiveState;
 import io.taktx.dto.ParticipantKind;
 import io.taktx.dto.ParticipantStatusDTO;
+import io.taktx.dto.PolicyMismatchReasonDTO;
 import io.taktx.dto.RequiredAuthorizationDTO;
 import io.taktx.dto.RequiredSigningDTO;
 import io.taktx.dto.SecurityActivationState;
@@ -112,17 +113,66 @@ class SecurityObservabilityClientTest {
   }
 
   @Test
+  void getPostureSnapshot_assemblesPolicyStatusesMismatchesAndEvents() {
+    TestHarness harness = new TestHarness();
+    harness.observedPolicySnapshot.set(
+        new ObservedPolicySnapshot(requestedPolicy(12L), activePolicy(11L, SecurityMode.ANCHORED_SECURED)));
+    harness.participantStatuses.set(
+        Map.of(
+            "client#7",
+            participantStatus(
+                "client#7",
+                Set.of(ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT),
+                List.of(mismatchReason("TRUST_ANCHOR_MISSING", "Platform trust anchor missing")))));
+    harness.securityEvents.set(List.of(securityEvent("DATA_PLANE_BLOCKED", 11L)));
+
+    SecurityPostureSnapshot snapshot = harness.client.getPostureSnapshot();
+
+    assertThat(snapshot.effectiveMode()).isEqualTo(SecurityMode.ANCHORED_SECURED);
+    assertThat(snapshot.effectivePolicyVersion()).isEqualTo(11L);
+    assertThat(snapshot.effectivePolicyHash()).isEqualTo("active-11");
+    assertThat(snapshot.participantStatuses()).containsOnlyKeys("client#7");
+    assertThat(snapshot.mismatchReasons()).hasSize(1);
+    assertThat(snapshot.mismatchReasons().getFirst().participantInstanceId()).isEqualTo("client#7");
+    assertThat(snapshot.mismatchReasons().getFirst().mismatchReason().getCode())
+        .isEqualTo("TRUST_ANCHOR_MISSING");
+    assertThat(snapshot.recentSecurityEvents()).extracting(SecurityEventDTO::getCode)
+        .containsExactly("DATA_PLANE_BLOCKED");
+  }
+
+  @Test
+  void getPostureSnapshot_keepsMismatchVisibilitySeparateFromEventHistory() {
+    TestHarness harness = new TestHarness();
+    harness.observedPolicySnapshot.set(new ObservedPolicySnapshot(requestedPolicy(6L), activePolicy(6L)));
+    harness.participantStatuses.set(
+        Map.of(
+            "client#2",
+            participantStatus(
+                "client#2", Set.of(ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT), List.of())));
+    harness.securityEvents.set(List.of(securityEvent("DATA_PLANE_BLOCKED", 6L)));
+
+    SecurityPostureSnapshot snapshot = harness.client.getPostureSnapshot();
+
+    assertThat(snapshot.hasRecentSecurityEvents()).isTrue();
+    assertThat(snapshot.recentSecurityEvents()).hasSize(1);
+    assertThat(snapshot.mismatchReasons()).isEmpty();
+    assertThat(snapshot.participantsWithMismatches()).isEmpty();
+  }
+
+  @Test
   void snapshotHelpers_defaultToEmptyStateWhenNothingHasBeenObserved() {
     TestHarness harness = new TestHarness();
+    SecurityPostureSnapshot postureSnapshot = harness.client.getPostureSnapshot();
 
     assertThat(harness.client.getObservedPolicySnapshot()).isEqualTo(ObservedPolicySnapshot.empty());
     assertThat(harness.client.getParticipantStatusSnapshot()).isEmpty();
     assertThat(harness.client.getRecentSecurityEvents()).isEmpty();
-    assertThat(harness.initializerCalls.get()).isGreaterThanOrEqualTo(3);
+    assertThat(postureSnapshot).isEqualTo(SecurityPostureSnapshot.empty());
+    assertThat(harness.initializerCalls.get()).isGreaterThanOrEqualTo(4);
   }
 
   @Test
-  void awaitHelpers_pollUntilPolicyStatusesAndEventsAppear() throws Exception {
+  void awaitHelpers_pollUntilPolicyStatusesEventsAndPostureAppear() throws Exception {
     TestHarness harness = new TestHarness();
 
     Thread updater =
@@ -140,7 +190,10 @@ class SecurityObservabilityClientTest {
                   harness.participantStatuses.set(
                       Map.of(
                           "engine#1",
-                          participantStatus("engine#1", Set.of(ParticipantCapability.ENFORCER))));
+                          participantStatus(
+                              "engine#1",
+                              Set.of(ParticipantCapability.ENFORCER),
+                              List.of(mismatchReason("ENGINE_SYNC_PENDING", "Waiting for peer")))));
                   harness.securityEvents.set(List.of(securityEvent("POLICY_ACTIVE", 9L)));
                 });
 
@@ -154,12 +207,18 @@ class SecurityObservabilityClientTest {
     SecurityEventDTO event =
         harness.client.awaitSecurityEvent(
             candidate -> "POLICY_ACTIVE".equals(candidate.getCode()), Duration.ofSeconds(1));
+    SecurityPostureSnapshot postureSnapshot =
+        harness.client.awaitPostureSnapshot(
+            snapshot -> snapshot.hasMismatchReasons() && snapshot.participantStatuses().containsKey("engine#1"),
+            Duration.ofSeconds(1));
 
     updater.join();
 
     assertThat(policySnapshot.effectivePolicyHash()).isEqualTo("active-9");
     assertThat(statuses).containsKey("engine#1");
     assertThat(event.getOccurredAtMs()).isEqualTo(9L);
+    assertThat(postureSnapshot.mismatchReasons()).extracting(mismatch -> mismatch.mismatchReason().getCode())
+        .containsExactly("ENGINE_SYNC_PENDING");
   }
 
   private static NamespaceSecurityPolicyDTO requestedPolicy(long version) {
@@ -192,6 +251,13 @@ class SecurityObservabilityClientTest {
 
   private static ParticipantStatusDTO participantStatus(
       String participantInstanceId, Set<ParticipantCapability> capabilities) {
+    return participantStatus(participantInstanceId, capabilities, List.of());
+  }
+
+  private static ParticipantStatusDTO participantStatus(
+      String participantInstanceId,
+      Set<ParticipantCapability> capabilities,
+      List<PolicyMismatchReasonDTO> mismatchReasons) {
     return ParticipantStatusDTO.builder()
         .participantId(participantInstanceId.substring(0, participantInstanceId.indexOf('#')))
         .participantInstanceId(participantInstanceId)
@@ -203,11 +269,19 @@ class SecurityObservabilityClientTest {
         .lastSeenAt(System.currentTimeMillis())
         .statusExpiresAt(System.currentTimeMillis() + 60_000L)
         .statusVerificationLevel(StatusVerificationLevel.LOCALLY_VERIFIED_STATUS)
-        .effectiveState(ParticipantEffectiveState.READY)
-        .readyForDataPlane(true)
+        .effectiveState(
+            mismatchReasons == null || mismatchReasons.isEmpty()
+                ? ParticipantEffectiveState.READY
+                : ParticipantEffectiveState.MISMATCH)
+        .readyForDataPlane(mismatchReasons == null || mismatchReasons.isEmpty())
         .observedPolicyVersion(7L)
         .observedPolicyHash("active-7")
+        .mismatchReasons(mismatchReasons == null ? List.of() : List.copyOf(mismatchReasons))
         .build();
+  }
+
+  private static PolicyMismatchReasonDTO mismatchReason(String code, String message) {
+    return PolicyMismatchReasonDTO.builder().code(code).message(message).build();
   }
 
   private static SecurityEventDTO securityEvent(String code, long occurredAtMs) {
