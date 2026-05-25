@@ -31,6 +31,8 @@ namespace security control plane through the official `TaktXClient` contract.
 - [x] add richer recent-event posture assertions for anchored trust mismatch
 - [x] extract shared dogfood support and split the monolithic dogfood class into
   scenario-oriented test classes
+- [x] add same-logical-actor cross-namespace runtime isolation coverage through public client
+  instances bound to different namespaces
 - [x] add explicit assertion that control-plane mismatch visibility does not require a DLQ entry for
   the anchored trust-mismatch path
 
@@ -109,21 +111,24 @@ single-engine setup:
 
 - operate with default open behavior when no policy is present
 - publish and observe secured policy
+- publish and publicly observe anchored trust-mismatch / fail-closed posture
 - reject unauthorized authoritative policy mutation
 - reject unauthorized start under secured policy
 - accept authorized runtime under secured policy
 - drive worker completion through public client APIs
 - observe policy and recent security events through public topics
 - prove namespace-scoped observability behavior
+- prove same-logical-actor cross-namespace runtime behavior where open-namespace start acceptance
+  does not imply equivalent permission in a secured namespace
 
 ### 2.4 What it does not yet prove
 
 The focused dogfood suite does **not** yet prove all of the originally requested matrix:
 
-- anchored-mode mismatch / `MISCONFIGURED_SECURITY` scenario through public assertions
 - a full public-client command-signing matrix for secured start behavior, especially an explicit
   unsigned negative path in a harness that does not inherit in-process signing state
-- richer posture assertions for participant-status mismatch reasons and DLQ-non-involvement
+- broader posture assertions beyond the currently covered anchored mismatch / DLQ-non-involvement
+  path
 - multi-engine consistency through public-client-only assertions
 
 ---
@@ -170,12 +175,12 @@ better than before. The table below captures the practical status.
 | Requirement area | Current status | Notes |
 |---|---|---|
 | Default open behavior through public client | Covered | Default open and explicit `COMMUNITY_OPEN` publication / clear are covered in `PublicClientOpenModeDogfoodIntegrationTest` |
-| Policy publication and reflection | Partially covered | `COMMUNITY_OPEN` and `COMMUNITY_SECURED` are covered; anchored mismatch still missing |
+| Policy publication and reflection | Partially covered | `COMMUNITY_OPEN`, `COMMUNITY_SECURED`, and anchored mismatch visibility are covered; anchored happy-path / trust-anchor-distributed coverage still missing |
 | Command enforcement | Partially covered | JWT negative/positive path covered; signing-required happy path covered; explicit unsigned negative path remains blocked by current in-process signing registration behavior |
 | Worker behavior via public client | Covered | explicit `COMMUNITY_OPEN` worker success, secured happy path, and secured unsigned-worker negative path are covered through `PublicClientOpenModeDogfoodIntegrationTest` and `PublicClientSecuredModeDogfoodIntegrationTest` |
 | Unauthorized/random client behavior | Mostly covered | rogue policy mutation and namespace-scoped observability covered; runtime bypass matrix can be tightened |
 | Console-grade observability | Partially covered | public posture APIs exist; recent-event visibility and anchored participant-status mismatch assertions are covered; broader participant/mismatch/DLQ assertions still needed |
-| Namespace isolation | Partially covered | observability isolation is covered; same-client dual-namespace runtime scenario still missing |
+| Namespace isolation | Covered | `PublicClientObservabilityDogfoodIntegrationTest` now covers both observability isolation and same-logical-actor cross-namespace runtime behavior, proving commands allowed in the open namespace do not imply permission in the secured namespace |
 | Multi-engine consistency | Deferred | tracked in `docs/security-client-dogfood-multi-engine-follow-up.md` |
 
 ---
@@ -234,6 +239,8 @@ client APIs.
 - mismatched security state is visible publicly
 - mismatch visibility does not masquerade as a DLQ-only concern
 - control-plane observability remains available during convergence and recovery
+- same-logical-actor cross-namespace observation/runtime isolation is currently covered here until a
+  dedicated namespace-isolation class becomes worthwhile
 
 ### `PublicClientNamespaceIsolationIntegrationTest`
 
@@ -341,11 +348,11 @@ These are the items most directly tied to confidence for upcoming Console work.
 
 1. Keep the current focused public-client dogfood suite green
 2. ✅ Add explicit `COMMUNITY_OPEN` publish/reflect scenario
-3. Add anchored-without-anchor mismatch scenario with public posture assertions
+3. ✅ Add anchored-without-anchor mismatch scenario with public posture assertions
 4. ◐ Add explicit public-client signing enforcement scenario for secured starts
-5. Add explicit secured worker negative-path scenario
-6. Add explicit posture assertions for participant statuses, mismatch reasons, and recent events
-7. Add explicit assertion that control-plane mismatch visibility does not require or imply a DLQ entry
+5. ✅ Add explicit secured worker negative-path scenario
+6. ◐ Add explicit posture assertions for participant statuses, mismatch reasons, and recent events
+7. ✅ Add explicit assertion that control-plane mismatch visibility does not require or imply a DLQ entry
 8. Introduce cleaner unique namespace support for dogfood scenarios
 
 ## 7.2 Should-have before secured production rollout
@@ -358,8 +365,8 @@ These are the items most directly tied to confidence for upcoming Console work.
 
 ## 7.3 Regression hardening / follow-on quality
 
-1. Split the current monolithic dogfood class into clearer scenario-oriented classes
-2. Add same-logical-actor cross-namespace scenarios
+1. ✅ Split the current monolithic dogfood class into clearer scenario-oriented classes
+2. ✅ Add same-logical-actor cross-namespace scenarios
 3. Add restart/re-observation stability cases for public posture consumers
 4. Add more test-friendly public diagnostics helpers where needed
 5. Regularly run the public dogfood suite together with the broader `securityIntegrationTest` task

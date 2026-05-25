@@ -44,6 +44,7 @@ import java.util.Properties;
 import java.util.Queue;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -200,37 +201,43 @@ abstract class PublicClientDogfoodIntegrationTestSupport {
         SigningKeyGenerator.encodePrivateKey(runtimeSignerKeys.getPrivate());
     runtimeSignerPublicKeyBase64 = SigningKeyGenerator.encodePublicKey(runtimeSignerKeys.getPublic());
 
-    Properties defaultNamespaceProperties = baseProperties(DEFAULT_NAMESPACE);
+    publishTrustedControlPlaneKeysForNamespace(DEFAULT_NAMESPACE);
+    publishTrustedControlPlaneKeysForNamespace(ISOLATED_NAMESPACE);
+
+    TaktXClient.clearNamespaceSecurityPolicy(platformWriterProperties(DEFAULT_NAMESPACE));
+    TaktXClient.clearNamespaceSecurityPolicy(platformWriterProperties(ISOLATED_NAMESPACE));
+  }
+
+  private static void publishTrustedControlPlaneKeysForNamespace(String namespace) {
+    Properties namespaceProperties = baseProperties(namespace);
     TaktXClient.publishSigningKey(
-        defaultNamespaceProperties,
+        namespaceProperties,
         SecurityTestConfigResource.PLATFORM_KID,
         SecurityTestConfigResource.rsaPublicKeyBase64,
         "dogfood-platform-jwt",
         "RSA",
         KeyRole.PLATFORM);
     TaktXClient.publishSigningKey(
-        defaultNamespaceProperties,
+        namespaceProperties,
         POLICY_WRITER_KEY_ID,
         policyWriterPublicKeyBase64,
         "dogfood-policy-writer",
         "Ed25519",
         KeyRole.PLATFORM);
     TaktXClient.publishSigningKey(
-        defaultNamespaceProperties,
+        namespaceProperties,
         ROGUE_WRITER_KEY_ID,
         rogueWriterPublicKeyBase64,
         "dogfood-random-client",
         "Ed25519",
         KeyRole.CLIENT);
     TaktXClient.publishSigningKey(
-        defaultNamespaceProperties,
+        namespaceProperties,
         RUNTIME_SIGNER_KEY_ID,
         runtimeSignerPublicKeyBase64,
         "dogfood-runtime-signer",
         "Ed25519",
         KeyRole.CLIENT);
-
-    TaktXClient.clearNamespaceSecurityPolicy(platformWriterProperties(DEFAULT_NAMESPACE));
   }
 
   @AfterEach
@@ -245,6 +252,7 @@ abstract class PublicClientDogfoodIntegrationTestSupport {
       }
     }
     TaktXClient.clearNamespaceSecurityPolicy(platformWriterProperties(DEFAULT_NAMESPACE));
+    TaktXClient.clearNamespaceSecurityPolicy(platformWriterProperties(ISOLATED_NAMESPACE));
   }
 
   protected final TaktXClient startClient(
@@ -322,16 +330,34 @@ abstract class PublicClientDogfoodIntegrationTestSupport {
 
   protected static void deployProcessAndAwaitAvailability(
       TaktXClient client, String bpmnXml, String processDefinitionId) throws Exception {
+    AtomicReference<String> expectedHash = new AtomicReference<>();
+    AtomicBoolean definitionObserved = new AtomicBoolean(false);
+    client
+        .runtime()
+        .registerProcessDefinitionUpdateConsumer(
+            (definitionKey, definition) -> {
+              String hash = expectedHash.get();
+              if (hash != null
+                  && processDefinitionId.equals(definitionKey.getProcessDefinitionId())
+                  && definition.getDefinitions() != null
+                  && definition.getDefinitions().getDefinitionsKey() != null
+                  && hash.equals(definition.getDefinitions().getDefinitionsKey().getHash())) {
+                definitionObserved.set(true);
+              }
+            });
     var parsedDefinitions =
         client
             .runtime()
             .deployProcessDefinition(
                 new ByteArrayInputStream(bpmnXml.getBytes(StandardCharsets.UTF_8)));
+    expectedHash.set(parsedDefinitions.getDefinitionsKey().getHash());
     await()
         .atMost(Duration.ofSeconds(30))
         .pollInterval(Duration.ofMillis(100))
         .until(
             () ->
+                definitionObserved.get()
+                    ||
                 client
                     .runtime()
                     .getProcessDefinitionByHash(
