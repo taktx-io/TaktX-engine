@@ -10,8 +10,11 @@ package io.taktx.client;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import io.taktx.dto.NamespaceSecurityPolicyDTO;
+import io.taktx.dto.ParticipantCapability;
+import io.taktx.dto.ParticipantKind;
 import io.taktx.dto.RequiredAuthorizationDTO;
 import io.taktx.dto.RequiredSigningDTO;
+import io.taktx.dto.SecurityParticipantDescriptor;
 import io.taktx.dto.SecurityActivationState;
 import io.taktx.dto.SecurityMode;
 import io.taktx.security.SigningIdentity;
@@ -46,7 +49,14 @@ class ClientProtectedDataPlaneParticipationGuardTest {
 
     ClientProtectedDataPlaneParticipationGuard guard =
         new ClientProtectedDataPlaneParticipationGuard(
-            propertiesHelper, () -> store, () -> null, () -> false, () -> false, () -> null, clock);
+            propertiesHelper,
+            runtimeDescriptor(),
+            () -> store,
+            () -> null,
+            () -> false,
+            () -> false,
+            () -> null,
+            clock);
 
     ClientProtectedDataPlaneParticipationGuard.Decision decision =
         guard.evaluate(ProtectedClientDataPlaneOperation.START_COMMAND, null);
@@ -64,7 +74,14 @@ class ClientProtectedDataPlaneParticipationGuardTest {
 
     ClientProtectedDataPlaneParticipationGuard guard =
         new ClientProtectedDataPlaneParticipationGuard(
-            propertiesHelper, () -> store, () -> null, () -> false, () -> false, () -> null, clock);
+            propertiesHelper,
+            runtimeDescriptor(),
+            () -> store,
+            () -> null,
+            () -> false,
+            () -> false,
+            () -> null,
+            clock);
 
     ClientProtectedDataPlaneParticipationGuard.Decision decision =
         guard.evaluate(ProtectedClientDataPlaneOperation.START_COMMAND, "jwt-explicit");
@@ -87,6 +104,7 @@ class ClientProtectedDataPlaneParticipationGuardTest {
     ClientProtectedDataPlaneParticipationGuard guard =
         new ClientProtectedDataPlaneParticipationGuard(
             propertiesHelper,
+            runtimeDescriptor(),
             () -> store,
             () -> identity,
             () -> true,
@@ -107,7 +125,14 @@ class ClientProtectedDataPlaneParticipationGuardTest {
 
     ClientProtectedDataPlaneParticipationGuard guard =
         new ClientProtectedDataPlaneParticipationGuard(
-            propertiesHelper, () -> store, () -> null, () -> false, () -> false, () -> null, clock);
+            propertiesHelper,
+            runtimeDescriptor(),
+            () -> store,
+            () -> null,
+            () -> false,
+            () -> false,
+            () -> null,
+            clock);
 
     ClientProtectedDataPlaneParticipationGuard.Decision decision =
         guard.evaluate(ProtectedClientDataPlaneOperation.CLIENT_COMMAND, null);
@@ -124,7 +149,14 @@ class ClientProtectedDataPlaneParticipationGuardTest {
 
     ClientProtectedDataPlaneParticipationGuard guard =
         new ClientProtectedDataPlaneParticipationGuard(
-            propertiesHelper, () -> store, () -> null, () -> false, () -> false, () -> null, clock);
+            propertiesHelper,
+            runtimeDescriptor(),
+            () -> store,
+            () -> null,
+            () -> false,
+            () -> false,
+            () -> null,
+            clock);
 
     ClientProtectedDataPlaneParticipationGuard.Decision decision =
         guard.evaluate(ProtectedClientDataPlaneOperation.MESSAGE_EVENT, null);
@@ -132,6 +164,83 @@ class ClientProtectedDataPlaneParticipationGuardTest {
     assertThat(decision.permitted()).isFalse();
     assertThat(decision.reasonHint())
         .isEqualTo(ClientProtectedDataPlaneParticipationGuard.TRUST_ANCHOR_MISSING);
+  }
+
+  @Test
+  void evaluate_blocksProtectedRuntimeTrafficWhenDescriptorLacksRuntimeCapability() {
+    ClientNamespaceSecurityPolicyStore store = new ClientNamespaceSecurityPolicyStore();
+    store.setCurrentPolicy(activePolicy(false, false, false, false, false, false));
+
+    ClientProtectedDataPlaneParticipationGuard guard =
+        new ClientProtectedDataPlaneParticipationGuard(
+            propertiesHelper,
+            observerDescriptor(),
+            () -> store,
+            () -> null,
+            () -> false,
+            () -> false,
+            () -> null,
+            clock);
+
+    ClientProtectedDataPlaneParticipationGuard.Decision decision =
+        guard.evaluate(ProtectedClientDataPlaneOperation.MESSAGE_EVENT, null);
+
+    assertThat(decision.permitted()).isFalse();
+    assertThat(decision.reasonHint())
+        .isEqualTo(ClientProtectedDataPlaneParticipationGuard.PROTECTED_RUNTIME_CAPABILITY_MISSING);
+  }
+
+  @Test
+  void evaluateCurrentStatus_usesExplicitMixedCapabilityDescriptor() {
+    ClientNamespaceSecurityPolicyStore store = new ClientNamespaceSecurityPolicyStore();
+    NamespaceSecurityPolicyDTO policy = activePolicy(false, false, true, false, false, false);
+    store.setCurrentPolicy(policy);
+
+    SecurityParticipantDescriptor descriptor =
+        new SecurityParticipantDescriptor(
+            "tenant.default.admin-console",
+            ParticipantKind.CLIENT,
+            java.util.Set.of(
+                ParticipantCapability.AUTHORITATIVE_POLICY_PUBLISHER,
+                ParticipantCapability.SECURITY_OBSERVER,
+                ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT),
+            "admin-console");
+    ClientProtectedDataPlaneParticipationGuard guard =
+        new ClientProtectedDataPlaneParticipationGuard(
+            propertiesHelper,
+            descriptor,
+            () -> store,
+            () -> null,
+            () -> false,
+            () -> true,
+            () -> null,
+            clock);
+
+    var status =
+        guard.evaluateCurrentStatus(policy, ProtectedClientDataPlaneOperation.START_COMMAND, null);
+
+    assertThat(status.getParticipantId()).isEqualTo("tenant.default.admin-console");
+    assertThat(status.getParticipantKind()).isEqualTo(ParticipantKind.CLIENT);
+    assertThat(status.getComponentType()).isEqualTo("admin-console");
+    assertThat(status.getCapabilities())
+        .containsExactlyInAnyOrderElementsOf(descriptor.capabilities());
+    assertThat(status.isReadyForDataPlane()).isTrue();
+  }
+
+  private SecurityParticipantDescriptor runtimeDescriptor() {
+    return new SecurityParticipantDescriptor(
+        "tenant.default.client",
+        ParticipantKind.CLIENT,
+        java.util.Set.of(ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT),
+        "generic-client");
+  }
+
+  private SecurityParticipantDescriptor observerDescriptor() {
+    return new SecurityParticipantDescriptor(
+        "tenant.default.observer",
+        ParticipantKind.CLIENT,
+        java.util.Set.of(ParticipantCapability.SECURITY_OBSERVER),
+        "observer");
   }
 
   private NamespaceSecurityPolicyDTO requestedPolicy() {
