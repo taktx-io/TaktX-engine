@@ -1,10 +1,10 @@
 TaktX Engine
 =============
 
-Version:       0.5.0-beta
-Release Date:  2026-04-10
+Version:       0.8.0-beta
+Release Date:  2026-05-26 (current branch line)
 
-This file contains the official version information for TaktX Engine.
+This file contains the current version information for TaktX Engine on this branch.
 
 All modules in this repository are licensed under the Apache License, Version 2.0.
 See the LICENSE file in each module directory for the full license text.

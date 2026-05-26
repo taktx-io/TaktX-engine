@@ -1,18 +1,21 @@
 # Namespace Security Policy — Console Implementation Plan
 
-**Status:** Proposed — implementation planning for the Console repo  
-**Date:** 2026-05-23  
-**Companion docs:** `docs/ARCHITECTURE.md`, `docs/SECURITY-POLICY-ENGINE-REQUIREMENTS.md`
+**Status:** Historical detailed planning reference — start active Console work from `docs/console-security-control-plane-handoff.md`  
+**Date:** 2026-05-26  
+**Companion docs:** `docs/console-security-control-plane-handoff.md`, `docs/ARCHITECTURE.md`, `docs/SECURITY-POLICY-ENGINE-REQUIREMENTS.md`
 
 ## 1. Purpose
 
-This document turns the proposed Security, Verifiability & Compatibility redesign into a
-trackable delivery plan for the active Console repository:
+This document turns the Security, Verifiability & Compatibility redesign into a detailed delivery
+plan for the active Console repository:
 - `backend/platform-service`
 - `backend/ingesters/inmemory`
 - `frontend/taktx-console`
 
 It is intentionally scoped to the Console repo.
+
+Use `docs/console-security-control-plane-handoff.md` as the current implementation kickoff document.
+This file is retained as the deeper planning/rationale reference rather than the primary handoff.
 
 Engine work is **not** implemented here and is tracked separately in
 `docs/SECURITY-POLICY-ENGINE-REQUIREMENTS.md`.

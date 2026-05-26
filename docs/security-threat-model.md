@@ -1,6 +1,6 @@
 # TaktX — Security Threat Model
 
-**Last updated:** 2026-05-15  
+**Last updated:** 2026-05-26  
 **Status:** Active reference — aligned with the implemented security baseline and current M2 external replay-hardening slice  
 **Audience:** Platform operators, security reviewers, and maintainers assessing TaktX deployment risk
 
@@ -10,7 +10,7 @@ and compensating controls for the current TaktX codebase.
 **Related security documents:**
 - Implemented controls reference: [`docs/security.md`](security.md)
 - Security roadmap and milestones: [`docs/security-future-development-plan.md`](security-future-development-plan.md)
-- Task-level backlog: [`docs/security-implementation-backlog.md`](security-implementation-backlog.md)
+- Namespace security control-plane handoff: [`docs/console-security-control-plane-handoff.md`](console-security-control-plane-handoff.md)
 - Vulnerability reporting and support policy: [`SECURITY.md`](../SECURITY.md)
 
 ---

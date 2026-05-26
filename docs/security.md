@@ -1,6 +1,6 @@
 # TaktX — Security & Trust Chain Reference
 
-**Last updated:** 2026-05-15
+**Last updated:** 2026-05-26
 **Status:** Fully implemented — all features described here are live in the current codebase
 **Audience:** Platform and security engineers operating or integrating TaktX
 
@@ -11,6 +11,7 @@ This document describes the security controls that are implemented and active in
 **Related security documents:**
 - Vulnerability reporting and support policy: [`SECURITY.md`](../SECURITY.md)
 - Security boundaries, assumptions, and residual risks: [`docs/security-threat-model.md`](security-threat-model.md)
+- Namespace security control-plane handoff for Console adoption: [`docs/console-security-control-plane-handoff.md`](console-security-control-plane-handoff.md)
 - Security roadmap and implementation history: [`docs/security-future-development-plan.md`](security-future-development-plan.md)
 - **DLQ implementation (complete)**: [`docs/dlq-engine-design.md`](dlq-engine-design.md), [`docs/dlq-console-contract.md`](dlq-console-contract.md), [`docs/dlq-feature-matrix.md`](dlq-feature-matrix.md)
 
@@ -868,7 +869,7 @@ The current security controls described in this document are implemented and act
 Remaining planned work is tracked in:
 
 - [`docs/security-future-development-plan.md`](security-future-development-plan.md) — workstream roadmap
-- [`docs/security-implementation-backlog.md`](security-implementation-backlog.md) — task-level backlog (SEC-001 onwards)
+- [`docs/console-security-control-plane-handoff.md`](console-security-control-plane-handoff.md) — current namespace-security-control-plane handoff and adoption guide
 - [`docs/security-threat-model.md`](security-threat-model.md) — threat boundaries, assumptions, residual risks, and compensating controls
 
 That roadmap now records the completed external phase-1 replay hardening slice (Workstream 1,

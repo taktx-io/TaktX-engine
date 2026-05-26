@@ -1,14 +1,17 @@
 # Security Future Development Plan
 
-**Last updated:** 2026-05-15  
+**Last updated:** 2026-05-26  
 **Status:** Active roadmap — Workstreams 1, 2, 3, and 4 are complete for the current documented release scope  
 **Audience:** Platform and security engineers planning upcoming hardening work
 
 This document tracks planned security development beyond the implemented baseline.
 
+The earlier task-level backlog document has been retired; this roadmap now carries the surviving
+future-work summary directly.
+
 **Related security documents:**
 - Implemented controls reference: [`docs/security.md`](security.md)
-- Task-level tracking backlog: [`docs/security-implementation-backlog.md`](security-implementation-backlog.md)
+- Namespace security control-plane handoff: [`docs/console-security-control-plane-handoff.md`](console-security-control-plane-handoff.md)
 - Vulnerability reporting and support policy: [`SECURITY.md`](../SECURITY.md)
 
 ---

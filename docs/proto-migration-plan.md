@@ -1,10 +1,16 @@
 # TaktX v1.0 — Full Protobuf Migration Plan
 
-**Status:** Complete — PROTO-1.1 ✅ PROTO-1.2 ✅ PROTO-1.3 ✅ PROTO-1.4 ✅ PROTO-1.5 ✅ PROTO-2.1 ✅ PROTO-2.2 ✅ PROTO-2.3 ✅ PROTO-3.1 ✅ PROTO-3.2 ✅ PROTO-3.3 ✅ PROTO-4.1 ✅ PROTO-4.2 ✅ PROTO-4.3 ✅ PROTO-4.4 ✅ PROTO-4.5 ✅ PROTO-4.6 ✅ PROTO-4.7 ✅ PROTO-4.8 ✅ PROTO-4.9 ✅ PROTO-4.10 ✅ PROTO-4.11 ✅ PROTO-4.12 ✅ PROTO-5.1 ✅ PROTO-5.2 ✅ PROTO-5.3 ✅ PROTO-5.4 ✅ PROTO-6.1 ✅ PROTO-6.2 ✅ PROTO-6.3 ✅ PROTO-6.4 ✅  
+**Status:** Complete — historical migration record and protocol-reference document, not an active tracker. PROTO-1.1 ✅ PROTO-1.2 ✅ PROTO-1.3 ✅ PROTO-1.4 ✅ PROTO-1.5 ✅ PROTO-2.1 ✅ PROTO-2.2 ✅ PROTO-2.3 ✅ PROTO-3.1 ✅ PROTO-3.2 ✅ PROTO-3.3 ✅ PROTO-4.1 ✅ PROTO-4.2 ✅ PROTO-4.3 ✅ PROTO-4.4 ✅ PROTO-4.5 ✅ PROTO-4.6 ✅ PROTO-4.7 ✅ PROTO-4.8 ✅ PROTO-4.9 ✅ PROTO-4.10 ✅ PROTO-4.11 ✅ PROTO-4.12 ✅ PROTO-5.1 ✅ PROTO-5.2 ✅ PROTO-5.3 ✅ PROTO-5.4 ✅ PROTO-6.1 ✅ PROTO-6.2 ✅ PROTO-6.3 ✅ PROTO-6.4 ✅  
 **Target release:** v1.0.0 (major, beta → stable)  
 **Decision context:** Replace all CBOR+Jackson serialization with `protobuf-java-lite`.  
 Remove Jackson entirely from `taktx-shared` and `taktx-client`.  
 Eliminate the positional-array brittleness that blocks schema evolution.
+
+**Current use of this document:** keep as the historical implementation record for the protobuf
+migration and as a reference for non-obvious protocol decisions such as field-number permanence,
+header-name shortening, and the explicit rule that range-queryable Kafka Streams store keys remain
+raw binary rather than protobuf. For active work, prefer the live `.proto` files under
+`taktx-shared/src/main/proto/`, the current code/tests, and `scripts/check_proto_field_numbers.py`.
 
 ---
 

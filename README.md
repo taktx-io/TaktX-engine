@@ -14,7 +14,7 @@
 
 <!-- License & Version -->
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-green.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.5.0--beta)](VERSION.txt)
+[![Version](https://img.shields.io/badge/version-0.8.0--beta)](VERSION.txt)
 
 TaktX Engine is an open-source, high-performance **BPMN 2.0 process automation engine** built on Apache Kafka. Unlike traditional workflow engines that rely on a central database, TaktX uses Kafka topics and RocksDB-backed state stores as its persistence layer — giving you the throughput, fault-tolerance, and horizontal scalability of a streaming platform with the full expressiveness of BPMN 2.0.
 
@@ -53,13 +53,16 @@ Add the client dependency to your project:
 
 ```kotlin
 // Gradle
-implementation("io.taktx:taktx-client:0.5.0-beta")
+implementation("io.taktx:taktx-client:0.8.0-beta")
 
-// Or for Spring Boot auto-configuration:
-implementation("io.taktx:taktx-client-spring:0.5.0-beta")
+// Or for Spring Boot 3 auto-configuration:
+implementation("io.taktx:taktx-client-spring-boot-3:0.8.0-beta")
+
+// Or for Spring Boot 4 auto-configuration:
+implementation("io.taktx:taktx-client-spring-boot-4:0.8.0-beta")
 
 // Or for Quarkus / CDI auto-configuration:
-implementation("io.taktx:taktx-client-quarkus:0.5.0-beta")
+implementation("io.taktx:taktx-client-quarkus:0.8.0-beta")
 ```
 
 Then connect to the engine via Kafka:
@@ -100,7 +103,8 @@ TaktX Engine is structured as a multi-module Gradle project:
 |---|---|
 | **taktx-engine** | Core BPMN execution engine (Quarkus/Kafka Streams) |
 | **taktx-client** | Framework-agnostic Java client library |
-| **taktx-client-spring** | Spring Boot auto-configuration wrapper |
+| **taktx-client-spring-boot-3** | Spring Boot 3 auto-configuration wrapper |
+| **taktx-client-spring-boot-4** | Spring Boot 4 auto-configuration wrapper |
 | **taktx-client-quarkus** | Quarkus / CDI auto-configuration wrapper |
 | **taktx-shared** | Shared DTOs, BPMN models, and utilities |
 
@@ -150,6 +154,9 @@ For full documentation, visit our [documentation site](https://taktx.io/document
 
 Repository notes:
 
+- Namespace security control-plane handoff for the Console team: [`docs/console-security-control-plane-handoff.md`](docs/console-security-control-plane-handoff.md)
+- Namespace security migration/compatibility notes: [`docs/console-namespace-security-migration-notes.md`](docs/console-namespace-security-migration-notes.md)
+- Security controls and operations reference: [`docs/security.md`](docs/security.md)
 - DMN result-reference behaviour in TaktX: [`docs/dmn-result-references.md`](docs/dmn-result-references.md)
 
 ## Contributing

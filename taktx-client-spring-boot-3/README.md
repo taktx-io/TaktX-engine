@@ -41,15 +41,15 @@ The auto-configuration does all of that for you.
 ```xml
 <dependency>
   <groupId>io.taktx</groupId>
-  <artifactId>taktx-client-spring</artifactId>
-  <version>0.5.0-beta</version>
+  <artifactId>taktx-client-spring-boot-3</artifactId>
+  <version>0.8.0-beta</version>
 </dependency>
 ```
 
 ### Gradle
 
 ```kotlin
-implementation("io.taktx:taktx-client-spring:0.5.0-beta")
+implementation("io.taktx:taktx-client-spring-boot-3:0.8.0-beta")
 ```
 
 ---

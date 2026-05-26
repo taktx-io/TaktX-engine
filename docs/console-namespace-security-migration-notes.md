@@ -3,17 +3,18 @@
 This document captures the migration and compatibility guidance for Console-side adoption of the
 engine-repo namespace-security-policy contract.
 
-For the current confidence and validation strategy behind upcoming Console security-control-plane
-features, also see `docs/security-control-plane-integration-test-plan.md`.
+For the active handoff overview and implementation kickoff, start with
+`docs/console-security-control-plane-handoff.md`.
 
-> Target release for Console refresh: `0.8.0-beta`.
+> Current branch handoff version: `0.8.0-beta`.
 >
-> After the local release is published, pin the Console-side dependency refresh to the exact
-> `0.8.0-beta` artifacts listed below.
+> If Console is consuming published artifacts rather than a branch build, pin the dependency refresh
+> to the exact externally published version confirmed in release notes.
 
 ## Exact version to consume
 
-For the namespace-security-policy handoff, Console should refresh to the `0.8.0-beta` line.
+For the namespace-security-policy handoff, Console should target the `0.8.0-beta` branch/release
+line.
 
 ### Core artifacts
 
@@ -128,17 +129,14 @@ population is compatible with the target policy requirements:
 
 ## Validation planning reference
 
-For the broader integration-test strategy that is meant to give enough confidence for upcoming
-Console security-control-plane features, use:
+For the current handoff summary, known validation coverage, and the main deferred follow-up areas,
+use:
 
-- `docs/security-control-plane-integration-test-plan.md`
-
-That plan distinguishes the already-green focused public-client dogfood coverage from the remaining
-single-engine and deferred multi-engine follow-up scenarios.
+- `docs/console-security-control-plane-handoff.md`
 
 ## Remaining release-gate item
 
-This document is intentionally version-agnostic until the actual engine/client release is published.
-After publication, update Console dependency pins to the exact released version documented in the
-release notes and release-gate checklist.
+This document intentionally separates branch reality from release publication. After publication,
+update Console dependency pins to the exact released version documented in the release notes and
+release-gate checklist.
 
