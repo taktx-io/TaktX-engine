@@ -18,10 +18,15 @@ import io.taktx.dto.ProcessInstanceDTO;
 import io.taktx.dto.ScopeDTO;
 import io.taktx.dto.SubscriptionsDTO;
 import io.taktx.dto.TimeBucket;
+import io.taktx.dto.subscriptions.CatchAllErrorSubscriptionDTO;
+import io.taktx.dto.subscriptions.CatchAllEscalationSubscriptionDTO;
+import io.taktx.dto.subscriptions.ErrorSubscriptionDTO;
+import io.taktx.dto.subscriptions.EscalationSubscriptionDTO;
 import io.taktx.dto.subscriptions.MessageSubscriptionDTO;
 import io.taktx.dto.subscriptions.SignalSubscriptionDTO;
 import io.taktx.dto.subscriptions.SubScriptionType;
 import io.taktx.dto.subscriptions.TimerSubscriptionDTO;
+import io.taktx.proto.ProcessInstanceMessage;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -31,6 +36,18 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 class ProcessInstanceProtoMapperTest {
+
+  @Test
+  void nullAndUnsupportedInputs_areHandledExplicitly() {
+    assertThat(ProcessInstanceProtoMapper.toProto(null))
+        .isEqualTo(ProcessInstanceMessage.getDefaultInstance());
+    assertThat(ProcessInstanceProtoMapper.toDto(null)).isNull();
+    assertThat(ProcessInstanceProtoMapper.toDto(ProcessInstanceMessage.getDefaultInstance()))
+        .usingRecursiveComparison()
+        .isEqualTo(
+            new ProcessInstanceDTO(
+                null, null, null, null, null, false, Set.of(), null, null, Set.of()));
+  }
 
   @Test
   void processInstance_roundTripsThroughProtoMapper() {
@@ -47,6 +64,24 @@ class ProcessInstanceProtoMapperTest {
     signalSubscription.setSubScriptionType(SubScriptionType.CONTINUING);
     signalSubscription.setElementId("signal-catch-1");
     signalSubscription.setName("cancel-order");
+
+    CatchAllErrorSubscriptionDTO catchAllError = new CatchAllErrorSubscriptionDTO();
+    catchAllError.setSubScriptionType(SubScriptionType.CONTINUING);
+    catchAllError.setElementId("error-catch-all");
+
+    ErrorSubscriptionDTO errorSubscription = new ErrorSubscriptionDTO();
+    errorSubscription.setSubScriptionType(SubScriptionType.CONTINUING);
+    errorSubscription.setElementId("error-catch-1");
+    errorSubscription.setCode("ERR-42");
+
+    CatchAllEscalationSubscriptionDTO catchAllEscalation = new CatchAllEscalationSubscriptionDTO();
+    catchAllEscalation.setSubScriptionType(SubScriptionType.STARTING);
+    catchAllEscalation.setElementId("escalation-catch-all");
+
+    EscalationSubscriptionDTO escalationSubscription = new EscalationSubscriptionDTO();
+    escalationSubscription.setSubScriptionType(SubScriptionType.CONTINUING);
+    escalationSubscription.setElementId("escalation-catch-1");
+    escalationSubscription.setCode("ESC-99");
 
     TimerSubscriptionDTO timerSubscription = new TimerSubscriptionDTO();
     timerSubscription.setSubScriptionType(SubScriptionType.CONTINUING);
@@ -67,7 +102,14 @@ class ProcessInstanceProtoMapperTest {
         new LinkedHashMap<>(
             Map.of(
                 -1L, List.of(messageSubscription, processLevelTimerSubscription),
-                200L, List.of(timerSubscription, signalSubscription))));
+                200L,
+                    List.of(
+                        timerSubscription,
+                        signalSubscription,
+                        catchAllError,
+                        errorSubscription,
+                        catchAllEscalation,
+                        escalationSubscription))));
 
     ScopeDTO scope =
         new ScopeDTO(

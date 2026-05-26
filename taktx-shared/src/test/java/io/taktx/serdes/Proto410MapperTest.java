@@ -216,4 +216,61 @@ class Proto410MapperTest {
     assertThat(DmnDefinitionsProtoMapper.toDto(DmnDefinitionsProtoMapper.toProto(dto)))
         .isEqualTo(dto);
   }
+
+  @Test
+  void dmnDefinition_defaultsUnspecifiedEnumsAndEmptyStringsOnDecode() {
+    io.taktx.proto.DmnDefinitionMessage message =
+        io.taktx.proto.DmnDefinitionMessage.newBuilder()
+            .setDefinitions(
+                io.taktx.proto.ParsedDmnDefinitionsMessage.newBuilder()
+                    .setDefinitionsKey(
+                        io.taktx.proto.DmnDefinitionsKeyMessage.newBuilder()
+                            .setDmnDefinitionId("")
+                            .setHash("")
+                            .build())
+                    .setName("")
+                    .addDecisions(
+                        io.taktx.proto.DmnDecisionMessage.newBuilder()
+                            .setId("")
+                            .setName("")
+                            .setDecisionTable(
+                                io.taktx.proto.DmnDecisionTableMessage.newBuilder()
+                                    .setId("")
+                                    .setHitPolicy(
+                                        io.taktx.proto.DmnHitPolicy.DMN_HIT_POLICY_UNSPECIFIED)
+                                    .setCollectOperator(
+                                        io.taktx.proto.DmnCollectOperator.DMN_COLLECT_UNSPECIFIED)
+                                    .build())
+                            .build())
+                    .build())
+            .setState(io.taktx.proto.DmnDefinitionStateEnum.DMN_DEFINITION_STATE_UNSPECIFIED)
+            .build();
+
+    DmnDefinitionDTO dto = DmnDefinitionsProtoMapper.toDto(message);
+
+    assertThat(dto.getState()).isEqualTo(DmnDefinitionStateEnum.ACTIVE);
+    assertThat(dto.getDefinitions().getDefinitionsKey().getDmnDefinitionId()).isNull();
+    assertThat(dto.getDefinitions().getDefinitionsKey().getHash()).isNull();
+    assertThat(dto.getDefinitions().getName()).isNull();
+    assertThat(dto.getDefinitions().getDecisions())
+        .singleElement()
+        .satisfies(
+            decision -> {
+              assertThat(decision.getId()).isNull();
+              assertThat(decision.getName()).isNull();
+              assertThat(decision.getDecisionTable().getHitPolicy()).isEqualTo(DmnHitPolicy.UNIQUE);
+              assertThat(decision.getDecisionTable().getCollectOperator())
+                  .isEqualTo(DmnCollectOperator.NONE);
+            });
+  }
+
+  @Test
+  void xmlDmnDefinitions_handlesNullAndEmptyInput() {
+    assertThat(DmnDefinitionsProtoMapper.toProto((XmlDmnDefinitionsDTO) null).getXml()).isEmpty();
+    assertThat(
+            DmnDefinitionsProtoMapper.toDto(
+                    io.taktx.proto.XmlDmnDefinitionsMessage.newBuilder().setXml("").build())
+                .getXml())
+        .isNull();
+  }
 }

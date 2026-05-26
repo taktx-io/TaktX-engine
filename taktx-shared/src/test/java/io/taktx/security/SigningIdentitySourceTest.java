@@ -206,4 +206,51 @@ class SigningIdentitySourceTest {
         .hasMessageContaining("private key")
         .hasMessageContaining("blank");
   }
+
+  @Test
+  void fileSource_allowsMissingOptionalPublicKeyFile() throws Exception {
+    Path keyId = Files.writeString(tempDir.resolve("key-id"), "worker-file-key-a");
+    Path privateKey = Files.writeString(tempDir.resolve("private-key.b64"), "private-a");
+
+    FileSigningIdentitySource source =
+        new FileSigningIdentitySource(
+            Map.of(),
+            new Properties(),
+            keyId.toString(),
+            privateKey.toString(),
+            null,
+            1000L,
+            () -> 0L);
+
+    SigningIdentity identity = source.currentIdentity();
+
+    assertThat(identity.getKeyId()).isEqualTo("worker-file-key-a");
+    assertThat(identity.getPrivateKeyBase64()).isEqualTo("private-a");
+    assertThat(identity.getPublicKeyBase64()).isNull();
+  }
+
+  @Test
+  void fileSource_rejectsNegativeRefreshIntervalOverride() {
+    Runnable createSource =
+        () ->
+            new FileSigningIdentitySource(
+                Map.of(), new Properties(), null, null, null, -1L, () -> 0L);
+
+    assertThatThrownBy(createSource::run)
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("refresh interval override")
+        .hasMessageContaining(">= 0");
+  }
+
+  @Test
+  void fileSource_rejectsInvalidConfiguredRefreshInterval() {
+    Properties props = new Properties();
+    props.setProperty("taktx.signing.file.refresh-interval-ms", "not-a-number");
+    Runnable createSource =
+        () -> new FileSigningIdentitySource(Map.of(), props, null, null, null, null, () -> 0L);
+
+    assertThatThrownBy(createSource::run)
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Invalid signing file refresh interval");
+  }
 }

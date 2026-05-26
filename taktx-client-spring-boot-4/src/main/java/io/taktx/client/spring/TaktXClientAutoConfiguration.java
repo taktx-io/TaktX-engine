@@ -9,6 +9,7 @@ package io.taktx.client.spring;
 
 import io.taktx.CleanupPolicy;
 import io.taktx.client.AnnotationScanningExternalTaskTriggerConsumer;
+import io.taktx.client.InstanceUpdateRecord;
 import io.taktx.client.InstanceUpdateStartStrategy;
 import io.taktx.client.ParameterResolverFactory;
 import io.taktx.client.ResultProcessorFactory;
@@ -18,6 +19,8 @@ import io.taktx.client.WorkerBeanInstanceProvider;
 import io.taktx.dto.SecurityParticipantDescriptor;
 import io.taktx.util.TaktPropertiesHelper;
 import jakarta.annotation.PostConstruct;
+import java.util.List;
+import java.util.function.Consumer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -91,7 +94,7 @@ public class TaktXClientAutoConfiguration {
   /** Initializes the TaktXClient after construction. */
   @PostConstruct
   public void init() {
-    TaktXClientBuilder taktClientBuilder = TaktXClient.newClientBuilder();
+    TaktXClientBuilder taktClientBuilder = newClientBuilder();
     SecurityParticipantDescriptor participantDescriptor = resolveParticipantDescriptor();
 
     taktClientBuilder
@@ -101,21 +104,15 @@ public class TaktXClientAutoConfiguration {
 
     taktClient = taktClientBuilder.withProperties(taktPropertiesHelper.getTaktProperties()).build();
 
-    taktClient.start();
+    startClient(taktClient);
 
-    taktClient.workers().deployTaktDeploymentAnnotatedClasses();
+    deployAnnotatedClasses(taktClient);
 
     AnnotationScanningExternalTaskTriggerConsumer externalTaskTriggerConsumer =
-        taktClient
-            .workers()
-            .annotationScanningExternalTaskTriggerConsumer(
-                instanceProvider, partitions, CleanupPolicy.COMPACT, replicationFactor);
+        createExternalTaskTriggerConsumer(taktClient);
 
     if (!externalTaskTriggerConsumer.getJobIds().isEmpty()) {
-      taktClient
-          .workers()
-          .registerExternalTaskConsumer(
-              externalTaskTriggerConsumer, "taktx-client-external-task-trigger-consumer");
+      registerExternalTaskConsumer(taktClient, externalTaskTriggerConsumer);
     }
 
     if (instanceUpdateEnabled
@@ -123,17 +120,52 @@ public class TaktXClientAutoConfiguration {
         && !groupIdInstanceUpdate.isEmpty()) {
       InstanceUpdateStartStrategy strategy =
           InstanceUpdateStartStrategy.valueOf(instanceUpdateStartStrategy.toUpperCase());
-      taktClient
-          .runtime()
-          .registerInstanceUpdateConsumer(
-              groupIdInstanceUpdate,
-              instanceUpdateRecords -> {
-                for (var instanceUpdateRecord : instanceUpdateRecords) {
-                  eventChecker.publishInstanceUpdateRecord(instanceUpdateRecord);
-                }
-              },
-              strategy);
+      Consumer<List<InstanceUpdateRecord>> instanceUpdateConsumer =
+          instanceUpdateRecords -> {
+            for (var instanceUpdateRecord : instanceUpdateRecords) {
+              eventChecker.publishInstanceUpdateRecord(instanceUpdateRecord);
+            }
+          };
+      registerInstanceUpdateConsumer(taktClient, strategy, instanceUpdateConsumer);
     }
+  }
+
+  TaktXClientBuilder newClientBuilder() {
+    return TaktXClient.newClientBuilder();
+  }
+
+  void startClient(TaktXClient client) {
+    client.start();
+  }
+
+  void deployAnnotatedClasses(TaktXClient client) {
+    client.workers().deployTaktDeploymentAnnotatedClasses();
+  }
+
+  AnnotationScanningExternalTaskTriggerConsumer createExternalTaskTriggerConsumer(
+      TaktXClient client) {
+    return client
+        .workers()
+        .annotationScanningExternalTaskTriggerConsumer(
+            instanceProvider, partitions, CleanupPolicy.COMPACT, replicationFactor);
+  }
+
+  void registerExternalTaskConsumer(
+      TaktXClient client,
+      AnnotationScanningExternalTaskTriggerConsumer externalTaskTriggerConsumer) {
+    client
+        .workers()
+        .registerExternalTaskConsumer(
+            externalTaskTriggerConsumer, "taktx-client-external-task-trigger-consumer");
+  }
+
+  void registerInstanceUpdateConsumer(
+      TaktXClient client,
+      InstanceUpdateStartStrategy strategy,
+      Consumer<List<InstanceUpdateRecord>> instanceUpdateConsumer) {
+    client
+        .runtime()
+        .registerInstanceUpdateConsumer(groupIdInstanceUpdate, instanceUpdateConsumer, strategy);
   }
 
   /**

@@ -124,6 +124,14 @@ val runAllTests by tasks.registering {
     dependsOn(":taktx-engine:quarkusIntTest")
 }
 
+subprojects {
+    plugins.withId("jacoco") {
+        tasks.named("jacocoTestReport") {
+            mustRunAfter(rootProject.tasks.named("runAllTests"))
+        }
+    }
+}
+
 val refreshCoverageReports by tasks.registering {
     group = "verification"
     description = "Regenerates all JaCoCo XML reports after tests"
@@ -132,6 +140,7 @@ val refreshCoverageReports by tasks.registering {
 }
 
 tasks.named("generateCoverageBadges") {
+    dependsOn(refreshCoverageReports)
     mustRunAfter(refreshCoverageReports)
 }
 

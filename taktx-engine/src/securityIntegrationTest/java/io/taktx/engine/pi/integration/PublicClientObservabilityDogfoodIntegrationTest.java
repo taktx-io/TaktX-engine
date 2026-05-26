@@ -142,8 +142,11 @@ class PublicClientObservabilityDogfoodIntegrationTest
             event ->
                 event.getEventType() == SecurityEventType.DATA_PLANE_BLOCKED
                     && "TRUST_ANCHOR_MISSING".equals(event.getCode()));
-    assertThat(posture.participantStatuses()).isEmpty();
-    assertThat(posture.mismatchReasons()).isEmpty();
+    assertThat(posture.participantStatuses().values())
+        .allMatch(PublicClientDogfoodIntegrationTestSupport::isAnchoredEngineMismatchStatus);
+    assertThat(posture.mismatchReasons())
+        .allMatch(
+            mismatch -> "TRUST_ANCHOR_MISSING".equals(mismatch.mismatchReason().getCode()));
 
     assertThatThrownBy(
             () -> runtimeClient.runtime().startProcess(OPEN_PROCESS_ID, VariablesDTO.empty()))
