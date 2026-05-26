@@ -2,12 +2,14 @@
 
 > **Living document** — update this file when new insights are reached. Do not create new per-topic documents.
 
-**Last updated:** May 21, 2026  
+**Last updated:** May 26, 2026  
 **Status:** Beta release — all planned phases complete. Remaining gaps documented in §9.
 
 **Companion docs:**
 - `docs/TASK-COMPLETION-AUTH-IMPLEMENTATION-PLAN.md`
 - `docs/TASK-COMPLETION-AUTH-ENGINE-DESIGN.md`
+- `docs/console-security-control-plane-handoff.md`
+- `docs/SECURITY-POLICY-ENGINE-REQUIREMENTS.md`
 
 ---
 
@@ -299,8 +301,12 @@ The consumer reads `iss` first, looks up the correct key from the signing-keys K
 
 ### 4.7 Namespace security policy model
 
-The long-term direction is to move TaktX security from independent runtime flags to an explicit
-namespace-level security policy with participant capability validation.
+The current branch now implements the first namespace-level security-policy slice in parallel with
+the older runtime-flag bridge.
+
+TaktX security is therefore no longer only a set of independent runtime flags. The repo now also
+contains an explicit namespace security control plane with participant capability validation,
+desired-vs-active policy identity, public observability, and trusted-writer policy mutation.
 
 **Default posture remains lightweight:** if no explicit secured policy is activated, the effective
 mode is `COMMUNITY_OPEN`. Existing standalone/community deployments should remain runnable without
@@ -338,17 +344,31 @@ TAKTX_ENGINE_NAMESPACE      # Second segment of Kafka topic prefix
 
 ### 4.7.1 Current implementation in this repo
 
-Today, this repo still implements namespace security as a set of per-namespace runtime fields
-delivered through `taktx-configuration` (key `"config"`). This is the currently verified behavior,
-not the target end-state.
+This repo now implements **both**:
 
-The platform service stores these per namespace and pushes them to the engine via the ingester
-(`POST /internal/config` → `TaktXClient.publishGlobalConfig(GlobalConfigurationDTO)`).
-All default to `false` / safe values so no existing deployment is affected on upgrade.
+1. an explicit namespace security-policy control plane
+2. the older per-namespace runtime fields delivered through `taktx-configuration` (key `"config"`)
 
-Where control-plane publication/consumption semantics are part of the official runtime model, they
-should be exposed through `TaktXClient` rather than reimplemented with bespoke Kafka publishers in
-each repo.
+That coexistence is intentional during the migration slice.
+
+Current branch reality:
+
+- explicit namespace policy exists on the namespace-local control-plane topics
+- shared/public client support exists for authoritative policy publication, policy clear/tombstone,
+  and public policy/status/event observation
+- explicit `ACTIVE` namespace policy is authoritative for protected runtime behavior
+- absent `ACTIVE` namespace policy preserves the current/default `COMMUNITY_OPEN` behavior
+- legacy `GlobalConfigurationDTO` delivery via Console -> ingester -> engine remains operational as a
+  migration bridge for existing integrations
+
+The older flag-centric transport is therefore still relevant for compatibility, but it is no longer
+the only security-control-plane model present in the codebase.
+
+Legacy bridge details:
+
+- the platform service stores these per namespace and pushes them to the engine via the ingester
+  (`POST /internal/config` → `TaktXClient.publishGlobalConfig(GlobalConfigurationDTO)`)
+- all default to `false` / safe values so no existing deployment is affected on upgrade
 
 | Field | Type | Default | Runtime effect |
 |---|---|---|---|
@@ -359,10 +379,10 @@ each repo.
 | `rbacEnabled` | boolean | `false` | **Reserved — forward-declared; currently no-op on engine** |
 | `trustedKeyIds` | `List<String>` | `[]` | JWT `kid` allow-list for RS256 validation. Currently fail-open (any kid in `taktx-signing-keys` accepted). Included for forward-compatibility. |
 
-### 4.7.2 Planned explicit policy model
+### 4.7.2 Implemented explicit policy model on the current branch
 
-The planned replacement for the current flag model is a namespace-owned security policy with an
-explicit effective security mode:
+The current branch includes a namespace-owned security policy with an explicit effective security
+mode:
 
 ```java
 enum SecurityMode {
@@ -389,7 +409,7 @@ The canonical namespace policy should include at least:
 are operating against the exact same policy content, and desired-vs-active identity must remain
 separate while a policy is only `REQUESTED` / `VALIDATING`.
 
-For the first slice, `policyHash` is defined as the SHA-256 digest of the canonical requested
+For the current first slice, `policyHash` is defined as the SHA-256 digest of the canonical requested
 effective policy content only. It excludes activation-state wrappers, timestamps, publisher
 identity, and unrelated metadata.
 
@@ -482,16 +502,24 @@ broker ACLs are misconfigured.
 
 ### 4.7.4 TaktXClient control-plane support notes
 
-Where the redesigned namespace-policy model requires official control-plane publication or
-consumption semantics, those operations should be added to `TaktXClient` (or the official shared
-runtime client surface) and then used by Console/ingester/runtime code.
+The current branch now provides official shared-client support for the namespace-policy slice and
+Console-style public observability.
 
-This is a design requirement, not a statement that all such methods already exist today.
+Relevant public client surfaces now include:
 
-The goal is to avoid duplicating bespoke Kafka publishers/consumers across repos for the same
-authoritative policy/configuration semantics. Existing supported methods such as
-`publishGlobalConfig()`, `publishLicense()`, and signing-key publication should be treated as the
-precedent for extending the shared client rather than rolling parallel ad-hoc publication paths.
+- `TaktXClient.security()`
+- `TaktXClient.observability()`
+- `SecurityClient.publishNamespaceSecurityPolicy(...)`
+- `SecurityClient.clearNamespaceSecurityPolicy()`
+- `SecurityObservabilityClient.getObservedPolicySnapshot()`
+- `SecurityObservabilityClient.getParticipantStatusSnapshot()`
+- `SecurityObservabilityClient.getRecentSecurityEvents()`
+- `SecurityObservabilityClient.getPostureSnapshot()`
+
+The architectural rule remains the same: where authoritative control-plane publication/consumption
+semantics are part of the supported runtime model, downstream repos should use the official shared
+client surface rather than recreate bespoke duplicate Kafka publishers/consumers for equivalent
+semantics.
 
 ### 4.7.5 First-slice implementation rules now fixed
 
@@ -536,7 +564,7 @@ The following rules are now fixed for implementation:
 | `taktClient.abortElementInstance(instanceId, elementPath, jwtToken)` overload | ✅ |
 | Integration tests (`SecurityIntegrationTest` — 5 scenarios against Redpanda) | ✅ |
 | Task-completion JWT authorization (`USER_TASK_COMPLETE`, `EXTERNAL_TASK_COMPLETE`) | ❌ planned — see `docs/TASK-COMPLETION-AUTH-ENGINE-DESIGN.md` |
-| Explicit namespace security policy (`SecurityMode`, canonical policy identity, convergence rules) | ❌ planned — see `docs/SECURITY-POLICY-ENGINE-REQUIREMENTS.md` |
+| Explicit namespace security policy (`SecurityMode`, canonical policy identity, convergence rules) | ✅ implemented on current branch — see `docs/SECURITY-POLICY-ENGINE-REQUIREMENTS.md` and `docs/console-security-control-plane-handoff.md` |
 
 ### ✅ Complete (Console team scope)
 
@@ -550,7 +578,7 @@ The following rules are now fixed for implementation:
 | **C3/C4** — Ed25519 verification: `InstanceUpdateJsonDeserializer` with `shouldValidateSignature=true`; controlled by `taktx.security.signing.enabled` | ✅ |
 | **C5** — WebSocket token auth: BFF `GET /api/runway/ws-token`, frontend fetches before WS open, `ProcessEventWebSocket.onOpen()` validates | ✅ |
 | Platform Service task-completion BFF contract — `POST /api/runway/usertasks/complete` and `POST /api/runway/externaltasks/complete` resolve ownership for the selected flow-node instance via ingester lookup, enforce process permission, and mint `USER_TASK_COMPLETE` / `EXTERNAL_TASK_COMPLETE` JWTs | ✅ |
-| Explicit namespace security policy UX / API model (`SecurityMode`, policy version, mismatch posture, incidents) | ❌ planned — see `docs/SECURITY-POLICY-IMPLEMENTATION-PLAN.md` |
+| Explicit namespace security policy UX / API model (`SecurityMode`, policy version, mismatch posture, incidents) | 🟡 upstream engine/client/shared contract implemented here; downstream Console repo adoption remains pending — see `docs/console-security-control-plane-handoff.md` |
 
 ### ❌ Not yet done (post-beta)
 
@@ -708,11 +736,12 @@ NamespaceConfigPublisher.publishToAllNamespaces() / publishToNamespace()
               No restart required
 ```
 
-**Planned redesign note:** this flow is the currently implemented transport, but the intended
-architecture direction is to publish an explicit namespace security policy rather than isolated
-security booleans. Until a different transport is verified, the Platform Service remains the
-authority for desired policy and the existing Console -> ingester -> engine bridge remains the
-verified delivery seam.
+**Migration note:** this flow remains the legacy compatibility transport for isolated security
+booleans, but the current branch also implements an explicit namespace security policy. New
+control-plane work should prefer the explicit policy contract and official client helpers. The
+Platform Service still remains the activation authority for the first slice, and the existing
+Console -> ingester -> engine bridge remains an operational compatibility seam where the legacy flag
+path is still in use.
 
 Under the redesigned model, participants must observe the same canonical policy identity
 (`policyVersion` + `policyHash`) before a stricter policy becomes active. If not all required
@@ -791,25 +820,22 @@ The `X-TaktX-Rotation-Proof` mechanism is fully designed (§4.2) but not impleme
 - Fix: implement rotation proof in `PlatformKeyPublisher` + engine `PublicKeyProvider`
 - Impact: blocks production key management; does not block beta
 
-**Explicit namespace security policy convergence**
-The current production code path still distributes security posture as independent runtime flags.
-The planned architecture requires a canonical namespace policy identity plus participant convergence
-rules, but that redesign is not yet implemented.
-- Remaining fix: replace the flag-centric model with explicit namespace policy, policy version,
-  policy digest, participant posture reporting, and activation rejection when required participants
-  do not converge
-- Remaining fix: explicitly classify control-plane vs protected data-plane message flows per
-  participant role so engine/client/runtime participants know what may continue during convergence
-  and what must be gated on `ACTIVE` + `READY`
-- Remaining fix: secure authoritative control-plane mutation so arbitrary Kafka writers cannot
-  overwrite desired policy or trust material
-- Remaining fix: add official `TaktXClient` support for any new control-plane operations required by
-  the policy model and use those methods instead of bespoke duplicate publishers
-- Remaining fix: define activation authority, desired-vs-active identity fields, rollback rules, and
-  participant TTL/incarnation semantics explicitly before implementation
-- Safety rule: participant status must remain observability only; runtime enforcement must continue
-  to fail closed if a participant later drifts or was falsely reported compatible
-- Detailed delivery docs: `docs/SECURITY-POLICY-IMPLEMENTATION-PLAN.md`, `docs/SECURITY-POLICY-ENGINE-REQUIREMENTS.md`
+**Explicit namespace security policy rollout and clustered validation**
+The current branch already implements the explicit namespace security-policy slice: canonical
+desired-vs-active identity, activation state, participant posture reporting, trusted-writer policy
+mutation, public observability, and official `TaktXClient` control-plane helpers.
+
+The main remaining work is now downstream adoption and broader validation rather than first-slice
+upstream implementation.
+- Remaining follow-up: adopt the new policy/status/event contract in the downstream Console repo and
+  retire raw flag-centric security UX over time
+- Remaining follow-up: publish and pin the exact external release artifacts that downstream repos
+  should consume
+- Remaining follow-up: extend public-only validation to clustered multi-engine convergence and drift
+  scenarios, not just the current focused single-engine slice
+- Safety rule: participant status remains observability only; runtime enforcement must continue to
+  fail closed if a participant later drifts or was falsely reported compatible
+- Detailed delivery docs: `docs/console-security-control-plane-handoff.md`, `docs/SECURITY-POLICY-IMPLEMENTATION-PLAN.md`, `docs/SECURITY-POLICY-ENGINE-REQUIREMENTS.md`
 
 **Future verifiability extension**
 Hash-chaining / verifiable process-instance update chains should be tracked as a separate future epic
@@ -831,8 +857,8 @@ The `eventSigning` flag is distributed to the engine via the `taktx-configuratio
 ### 9.3 Priority order before production
 
 1. Task-completion JWT authorization (`USER_TASK_COMPLETE`, `EXTERNAL_TASK_COMPLETE`)
-2. Explicit namespace security policy convergence (`SecurityMode`, canonical policy identity,
-   participant convergence / drift handling)
+2. Clustered multi-engine validation and downstream Console adoption of the explicit namespace
+   security policy contract
 3. `processInstanceId` CANCEL token binding
 4. Key rotation (`X-TaktX-Rotation-Proof`)
 5. Persistent ingester (`runwayStorageTier=persisted`)
@@ -908,10 +934,12 @@ Consumer groups and Kafka Streams `application.id` must also carry the `<tenant-
 ### Priority order before production (beta items all complete)
 
 1. Task-completion JWT authorization (security / RBAC gap)
-2. `processInstanceId` CANCEL token binding (security gap)
-3. Key rotation (`X-TaktX-Rotation-Proof`) (security gap)
-4. Persistent ingester (first sellable STANDARD tier deployment)
-5. Multi-namespace ingester support
-6. `eventSigning` engine enforcement
+2. Clustered multi-engine validation and downstream Console adoption of the explicit namespace
+   security policy contract
+3. `processInstanceId` CANCEL token binding (security gap)
+4. Key rotation (`X-TaktX-Rotation-Proof`) (security gap)
+5. Persistent ingester (first sellable STANDARD tier deployment)
+6. Multi-namespace ingester support
+7. `eventSigning` engine enforcement
 
 

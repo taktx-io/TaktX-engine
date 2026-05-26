@@ -1,6 +1,6 @@
 # Security Policy
 
-**Last updated:** 2026-05-15
+**Last updated:** 2026-05-26
 **Status:** Active policy
 **Audience:** Security researchers, operators, and maintainers
 
@@ -10,16 +10,17 @@ This document defines how to report vulnerabilities and the repository security 
 
 - Implemented architecture and controls: [`docs/security.md`](docs/security.md)
 - Security boundaries, assumptions, and residual risks: [`docs/security-threat-model.md`](docs/security-threat-model.md)
+- Console handoff for the namespace security control plane: [`docs/console-security-control-plane-handoff.md`](docs/console-security-control-plane-handoff.md)
 - Security roadmap and implementation history: [`docs/security-future-development-plan.md`](docs/security-future-development-plan.md)
 
 ## Supported Versions
 
-TaktX Engine is currently in **beta**. Security fixes are applied to the **latest release only**. Pre-1.0.0 versions do not receive backported security patches.
+TaktX Engine is currently in **beta**. Security fixes are applied to the latest supported beta line only. Pre-1.0.0 versions do not receive backported security patches.
 
 | Version | Supported |
 |---|---|
-| 0.5.x (latest beta) | ✅ Active |
-| 0.2.x and earlier | ❌ No longer supported |
+| 0.8.x (current beta line) | ✅ Active |
+| 0.5.x and earlier | ❌ No longer supported |
 
 Once `1.0.0` is released, a formal long-term support policy will be published.
 

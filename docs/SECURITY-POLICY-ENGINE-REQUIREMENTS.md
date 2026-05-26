@@ -1,12 +1,12 @@
 # Namespace Security Policy — Engine + Client Handoff Requirements
 
-**Status:** Proposed handoff requirements/design for the engine repo  
-**Date:** 2026-05-23  
-**Companion docs:** `docs/SECURITY-POLICY-IMPLEMENTATION-PLAN.md`, `docs/security-client-dogfood-refactor-plan.md`, `docs/ARCHITECTURE.md`
+**Status:** Implemented on branch — detailed upstream requirements/design reference for the Console handoff  
+**Date:** 2026-05-26  
+**Companion docs:** `docs/console-security-control-plane-handoff.md`, `docs/SECURITY-POLICY-IMPLEMENTATION-PLAN.md`, `docs/console-namespace-security-migration-notes.md`, `docs/ARCHITECTURE.md`
 
 ## 1. Purpose
 
-This document is the direct requirements/design handoff for the engine team's repo, which owns both:
+This document remains the detailed requirements/design reference for the engine team's repo, which owns both:
 
 - engine runtime changes
 - shared `TaktXClient` changes
@@ -20,11 +20,12 @@ The intended delivery order is:
 2. engine team publishes a release containing those changes
 3. Console repo upgrades to that release and implements its dependent integration work
 
-This document should therefore be usable 1-to-1 as the upstream requirements/design doc for the
+This document should therefore still be usable 1-to-1 as the upstream requirements/design doc for the
 engine repo.
 
-The concrete implementation tracker for the planned breaking client redesign and the unit/integration
-test enablement work lives in `docs/security-client-dogfood-refactor-plan.md`.
+For the active Console handoff starting point, use
+`docs/console-security-control-plane-handoff.md`. Earlier implementation trackers used during the
+branch work have been retired now that the upstream slice is implemented.
 
 The goal is not to make the default deployment heavier.
 
@@ -967,12 +968,12 @@ on unpublished or bespoke patches.
 - [x] Document any migration notes or compatibility constraints relevant to Console integration.
 - [x] Ensure release notes clearly identify which namespace-security-policy capabilities are included.
 
-**Current status note:** prerelease handoff material now exists in-repo: `CHANGELOG.md` has an
-explicit `[Unreleased]` namespace-security-policy release-notes section, and
-`docs/console-namespace-security-migration-notes.md` captures the Console migration and
-compatibility constraints, including the exact intended Console refresh target of
-`0.8.0-beta` for `taktx-client`, `taktx-shared`, and the optional framework wrappers. The only
-remaining release-gate item is publishing the actual engine/client artifacts.
+**Current status note:** handoff material now exists in-repo: `CHANGELOG.md` has an explicit
+`[Unreleased]` namespace-security-policy release-notes section,
+`docs/console-namespace-security-migration-notes.md` captures the migration and compatibility
+constraints, and `docs/console-security-control-plane-handoff.md` is the authoritative Console-team
+kickoff document. The current branch version is `0.8.0-beta`; actual external artifact publication
+remains a separate release-management step.
 
 ### Acceptance criteria
 - A concrete released engine/client version exists for Console adoption.
@@ -1025,8 +1026,9 @@ remaining release-gate item is publishing the actual engine/client artifacts.
 - The engine slice is safe to pair with the Console-side rollout plan.
 
 **Current planning note:** the focused public-client-only dogfood slice is already implemented on the
-branch, and the next broader Console-confidence integration expansion is tracked in
-`docs/security-control-plane-integration-test-plan.md`.
+branch. The main remaining validation follow-up is clustered multi-engine public-client coverage,
+which is summarized in `docs/console-security-control-plane-handoff.md` as a deferred item rather
+than an active in-repo tracker.
 
 ## 13. Engine-repo release gate for Console adoption
 
