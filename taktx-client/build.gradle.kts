@@ -59,7 +59,22 @@ tasks.test {
 }
 
 tasks.jacocoTestReport {
-    dependsOn(tasks.test)
+    val engineSecurityIntegrationTest = project(":taktx-engine").tasks.named<Test>("securityIntegrationTest")
+    val engineQuarkusIntTest = project(":taktx-engine").tasks.named<Test>("quarkusIntTest")
+    val engineBuildDir = project(":taktx-engine").layout.buildDirectory
+
+    dependsOn(tasks.test, engineSecurityIntegrationTest, engineQuarkusIntTest)
+    executionData.setFrom(
+        files(
+            fileTree(layout.buildDirectory) {
+                include("jacoco/test.exec")
+            },
+            fileTree(engineBuildDir) {
+                include("jacoco/securityIntegrationTest.exec")
+                include("jacoco/quarkusIntTest.exec")
+            }
+        )
+    )
     reports {
         xml.required = true
         html.required = true

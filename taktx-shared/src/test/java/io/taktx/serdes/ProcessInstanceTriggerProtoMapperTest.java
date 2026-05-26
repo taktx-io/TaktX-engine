@@ -8,6 +8,7 @@
 package io.taktx.serdes;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.taktx.dto.AbortTriggerDTO;
 import io.taktx.dto.CommandAuthMethod;
@@ -15,16 +16,20 @@ import io.taktx.dto.CommandTrustMetadataDTO;
 import io.taktx.dto.CommandTrustVerificationResult;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.dto.ErrorEventSignalDTO;
+import io.taktx.dto.EscalationEventSignalDTO;
 import io.taktx.dto.EventSignalTriggerDTO;
 import io.taktx.dto.ExternalTaskResponseResultDTO;
 import io.taktx.dto.ExternalTaskResponseTriggerDTO;
 import io.taktx.dto.ExternalTaskResponseType;
 import io.taktx.dto.IoVariableMappingDTO;
+import io.taktx.dto.MessageEventSignalDTO;
 import io.taktx.dto.ProcessDefinitionKey;
 import io.taktx.dto.ProcessInstanceTriggerDTO;
 import io.taktx.dto.SetVariableTriggerDTO;
+import io.taktx.dto.SignalEventSignalDTO;
 import io.taktx.dto.StartCommandDTO;
 import io.taktx.dto.StartFlowElementTriggerDTO;
+import io.taktx.dto.TimerEventSignalDTO;
 import io.taktx.dto.UserTaskResponseResultDTO;
 import io.taktx.dto.UserTaskResponseTriggerDTO;
 import io.taktx.dto.UserTaskResponseType;
@@ -39,6 +44,24 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 class ProcessInstanceTriggerProtoMapperTest {
+
+  @org.junit.jupiter.api.Test
+  void nullAndUnsupportedInputs_areHandledExplicitly() {
+    assertThat(ProcessInstanceTriggerProtoMapper.toProto(null).getTriggerCase())
+        .isEqualTo(ProcessInstanceTriggerEnvelope.TriggerCase.TRIGGER_NOT_SET);
+    assertThat(ProcessInstanceTriggerProtoMapper.toDto(null)).isNull();
+    assertThat(
+            ProcessInstanceTriggerProtoMapper.toDto(
+                ProcessInstanceTriggerEnvelope.getDefaultInstance()))
+        .isNull();
+
+    ProcessInstanceTriggerDTO unsupported =
+        new ProcessInstanceTriggerDTO(UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")) {};
+
+    assertThatThrownBy(() -> ProcessInstanceTriggerProtoMapper.toProto(unsupported))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Unsupported process-instance trigger type");
+  }
 
   @ParameterizedTest(name = "{0} round-trips through ProcessInstanceTriggerEnvelope")
   @MethodSource("triggerCases")
@@ -127,6 +150,24 @@ class ProcessInstanceTriggerProtoMapperTest {
     EventSignalTriggerDTO eventSignalTrigger =
         new EventSignalTriggerDTO(processInstanceId, eventSignal);
 
+    MessageEventSignalDTO messageSignal =
+        new MessageEventSignalDTO("message-catch", "payment.received");
+    messageSignal.setElementInstanceIdPath(List.of(5L, 4L));
+    messageSignal.setVariables(VariablesDTO.of("channel", "email"));
+
+    EscalationEventSignalDTO escalationSignal =
+        new EscalationEventSignalDTO("ESC-42", "manual review required");
+    escalationSignal.setElementInstanceIdPath(List.of(2L, 3L));
+    escalationSignal.setVariables(VariablesDTO.of("severity", "high"));
+
+    TimerEventSignalDTO timerSignal = new TimerEventSignalDTO("timer-boundary");
+    timerSignal.setElementInstanceIdPath(List.of(1L, 2L, 3L));
+    timerSignal.setVariables(VariablesDTO.of("deadline", "2026-05-26T12:00:00Z"));
+
+    SignalEventSignalDTO signalSignal = new SignalEventSignalDTO("cancel-order");
+    signalSignal.setElementInstanceIdPath(List.of(7L, 6L));
+    signalSignal.setVariables(VariablesDTO.of("source", "customer"));
+
     return Stream.of(
         Arguments.of("startCommand", startCommand),
         Arguments.of("continueFlow", continueTrigger),
@@ -135,6 +176,14 @@ class ProcessInstanceTriggerProtoMapperTest {
         Arguments.of("setVariable", setVariable),
         Arguments.of("abort", abortTrigger),
         Arguments.of("userTaskResponse", userTaskResponse),
-        Arguments.of("eventSignal", eventSignalTrigger));
+        Arguments.of("errorEventSignal", eventSignalTrigger),
+        Arguments.of(
+            "messageEventSignal", new EventSignalTriggerDTO(processInstanceId, messageSignal)),
+        Arguments.of(
+            "escalationEventSignal",
+            new EventSignalTriggerDTO(processInstanceId, escalationSignal)),
+        Arguments.of("timerEventSignal", new EventSignalTriggerDTO(processInstanceId, timerSignal)),
+        Arguments.of(
+            "signalEventSignal", new EventSignalTriggerDTO(processInstanceId, signalSignal)));
   }
 }

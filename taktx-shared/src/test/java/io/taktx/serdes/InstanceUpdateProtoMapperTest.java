@@ -8,6 +8,7 @@
 package io.taktx.serdes;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.taktx.dto.CommandAuthMethod;
 import io.taktx.dto.CommandTrustMetadataDTO;
@@ -24,6 +25,10 @@ import io.taktx.dto.SubscriptionsDTO;
 import io.taktx.dto.TaskInstanceDTO;
 import io.taktx.dto.TimeBucket;
 import io.taktx.dto.VariablesDTO;
+import io.taktx.dto.subscriptions.CatchAllErrorSubscriptionDTO;
+import io.taktx.dto.subscriptions.CatchAllEscalationSubscriptionDTO;
+import io.taktx.dto.subscriptions.ErrorSubscriptionDTO;
+import io.taktx.dto.subscriptions.EscalationSubscriptionDTO;
 import io.taktx.dto.subscriptions.MessageSubscriptionDTO;
 import io.taktx.dto.subscriptions.SignalSubscriptionDTO;
 import io.taktx.dto.subscriptions.SubScriptionType;
@@ -42,6 +47,21 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 class InstanceUpdateProtoMapperTest {
+
+  @org.junit.jupiter.api.Test
+  void nullAndUnsupportedInputs_areHandledExplicitly() {
+    assertThat(InstanceUpdateProtoMapper.toProto(null).getUpdateCase())
+        .isEqualTo(InstanceUpdateEnvelope.UpdateCase.UPDATE_NOT_SET);
+    assertThat(InstanceUpdateProtoMapper.toDto(null)).isNull();
+    assertThat(InstanceUpdateProtoMapper.toDto(InstanceUpdateEnvelope.getDefaultInstance()))
+        .isNull();
+
+    InstanceUpdateDTO unsupported = new InstanceUpdateDTO() {};
+
+    assertThatThrownBy(() -> InstanceUpdateProtoMapper.toProto(unsupported))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Unsupported instance update type");
+  }
 
   @ParameterizedTest(name = "{0} round-trips through InstanceUpdateEnvelope")
   @MethodSource("updateCases")
@@ -139,12 +159,37 @@ class InstanceUpdateProtoMapperTest {
     signalSubscription.setElementId("signal-catch-1");
     signalSubscription.setName("cancel-order");
 
+    CatchAllErrorSubscriptionDTO catchAllError = new CatchAllErrorSubscriptionDTO();
+    catchAllError.setSubScriptionType(SubScriptionType.CONTINUING);
+    catchAllError.setElementId("error-catch-all");
+
+    ErrorSubscriptionDTO errorSubscription = new ErrorSubscriptionDTO();
+    errorSubscription.setSubScriptionType(SubScriptionType.CONTINUING);
+    errorSubscription.setElementId("error-catch-1");
+    errorSubscription.setCode("ERR-42");
+
+    CatchAllEscalationSubscriptionDTO catchAllEscalation = new CatchAllEscalationSubscriptionDTO();
+    catchAllEscalation.setSubScriptionType(SubScriptionType.STARTING);
+    catchAllEscalation.setElementId("escalation-catch-all");
+
+    EscalationSubscriptionDTO escalationSubscription = new EscalationSubscriptionDTO();
+    escalationSubscription.setSubScriptionType(SubScriptionType.CONTINUING);
+    escalationSubscription.setElementId("escalation-catch-1");
+    escalationSubscription.setCode("ESC-99");
+
     SubscriptionsDTO subscriptions = new SubscriptionsDTO();
     subscriptions.setInstanceSubscriptions(
         new LinkedHashMap<>(
             Map.of(
                 -1L, List.of(messageSubscription, processLevelTimerSubscription),
-                200L, List.of(timerSubscription, signalSubscription))));
+                200L,
+                    List.of(
+                        timerSubscription,
+                        signalSubscription,
+                        catchAllError,
+                        errorSubscription,
+                        catchAllEscalation,
+                        escalationSubscription))));
 
     ScopeDTO scope =
         new ScopeDTO(

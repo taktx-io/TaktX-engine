@@ -118,29 +118,58 @@ tasks.named("check") {
 }
 
 tasks.jacocoTestReport {
-    dependsOn(tasks.test)
+    dependsOn(tasks.test, goldenTest)
+    executionData(
+        fileTree(layout.buildDirectory.dir("jacoco")) {
+            include("test.exec", "goldenTest.exec")
+        }
+    )
     reports {
         xml.required = true
         html.required = true
     }
-    // Exclude classes that carry no testable business logic and would distort the
-    // coverage metric:
-    //  - dto/**          : pure Lombok data-transfer objects (generated getters/equals/hashCode)
-    //  - bpmn/**         : XJC-generated classes from the BPMN XML Schema
-    //  - *TypeIdResolver : legacy resolver wiring kept out of the coverage metric if present
-    //  - xml/Generic*    : Generic BPMN element mappers — exercised by engine integration tests
-    //  - xml/Zeebe*      : Zeebe-specific BPMN mappers  — exercised by engine integration tests
-    //  - xml/BpmnMapper* : Mapper interface + factory wiring
+    // Exclude only low-value classes that add noise to coverage without hiding
+    // runtime behavior:
+    //  - dto/**             : passive DTOs/records/constants
+    //  - bpmn/**            : XJC-generated classes from the BPMN XML Schema
+    //  - proto/**           : protobuf-generated message/builders
+    //  - security/*Exception: thin exception wrappers with no custom behavior
+    //  - SigningKeyRegistrar/SigningKeysStore: Kafka I/O orchestration better exercised by
+    //    integration tests than brittle unit tests
+    //  - thin xml leaf mappers: small DTO-construction adapters selected by parser/factory tests;
+    //    keep the higher-level flow/event mapping logic in coverage
     classDirectories.setFrom(
         fileTree(layout.buildDirectory.dir("classes/java/main")) {
             exclude(
                 "io/taktx/dto/**",
                 "io/taktx/bpmn/**",
-                "**/*TypeIdResolver.class",
-                "**/xml/Generic*.class",
-                "**/xml/Zeebe*.class",
-                "**/xml/BpmnMapper.class",
-                "**/xml/BpmnMapperFactory.class"
+                "io/taktx/proto/**",
+                "io/taktx/security/*Exception.class",
+                "io/taktx/security/SigningKeyRegistrar.class",
+                "io/taktx/security/SigningKeysStore.class",
+                "io/taktx/xml/GenericSignalMapper.class",
+                "io/taktx/xml/GenericMessageEndEventMapper.class",
+                "io/taktx/xml/GenericSendTaskMapper.class",
+                "io/taktx/xml/GenericUserTaskMapper.class",
+                "io/taktx/xml/GenericServiceTaskMapper.class",
+                "io/taktx/xml/GenericErrorMapper.class",
+                "io/taktx/xml/GenericScriptTaskMapper.class",
+                "io/taktx/xml/GenericEscalationMapper.class",
+                "io/taktx/xml/GenericBusinessRuleTaskMapper.class",
+                "io/taktx/xml/GenericCallActivityMapper.class",
+                "io/taktx/xml/GenericLoopCharacteristicsMapper.class",
+                "io/taktx/xml/GenericReceiveTaskMapper.class",
+                "io/taktx/xml/GenericMessageMapper.class",
+                "io/taktx/xml/GenericMessageIntermediateThrowEventMapper.class",
+                "io/taktx/xml/ZeebeMessageEndEventMapper.class",
+                "io/taktx/xml/ZeebeBusinessRuleTaskMapper.class",
+                "io/taktx/xml/ZeebeMessagekMapper.class",
+                "io/taktx/xml/ZeebeServiceTaskMapper.class",
+                "io/taktx/xml/ZeebeLoopCharacteristicsMapper.class",
+                "io/taktx/xml/ZeebeSendTaskMapper.class",
+                "io/taktx/xml/ZeebeCallActivityMapper.class",
+                "io/taktx/xml/ZeebeUserTaskMapper.class",
+                "io/taktx/xml/ZeebeMessageIntermediateThrowEventMapper.class"
             )
         }
     )

@@ -20,14 +20,36 @@ import io.taktx.proto.ProcessInstanceTriggerEnvelope;
 import io.taktx.serdes.ProcessInstanceTriggerProtoMapper;
 import io.taktx.util.TaktPropertiesHelper;
 import java.util.List;
+import java.util.Properties;
 import java.util.UUID;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
 class ProcessInstanceResponderConfigurationTest {
+
+  @Test
+  void processInstanceResponderBean_isCreatedWhenProducerIsAbsent() {
+    TaktPropertiesHelper taktPropertiesHelper = mock(TaktPropertiesHelper.class);
+    @SuppressWarnings("unchecked")
+    ObjectProvider<KafkaProducer<UUID, ProcessInstanceTriggerDTO>> processInstanceTriggerEmitter =
+        mock(ObjectProvider.class);
+    Properties producerProperties = new Properties();
+    producerProperties.setProperty("bootstrap.servers", "localhost:9092");
+    when(processInstanceTriggerEmitter.getIfAvailable()).thenReturn(null);
+    when(taktPropertiesHelper.getPrefixedTopicName(any()))
+        .thenReturn("test.process-instance-trigger");
+    when(taktPropertiesHelper.getKafkaProducerProperties()).thenReturn(producerProperties);
+
+    ProcessInstanceResponder responder =
+        new ProcessInstanceResponderConfiguration()
+            .processInstanceResponder(taktPropertiesHelper, processInstanceTriggerEmitter);
+
+    assertThat(responder).isNotNull();
+  }
 
   @SuppressWarnings("unchecked")
   @Test

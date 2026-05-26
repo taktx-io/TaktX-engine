@@ -80,4 +80,34 @@ class SecurityObservabilityProtoMapperTest {
     assertThat(SecurityEventProtoMapper.toDto(SecurityEventProtoMapper.toProto(dto)))
         .isEqualTo(dto);
   }
+
+  @Test
+  void securityEvent_defaultsUnspecifiedEnumsAndEmptyStringsOnDecode() {
+    io.taktx.proto.SecurityEventMessage message =
+        io.taktx.proto.SecurityEventMessage.newBuilder()
+            .setEventType(io.taktx.proto.SecurityEventTypeMessage.SECURITY_EVENT_TYPE_UNSPECIFIED)
+            .setSeverity(
+                io.taktx.proto.SecurityEventSeverityMessage.SECURITY_EVENT_SEVERITY_UNSPECIFIED)
+            .setNamespace("")
+            .setParticipantId("")
+            .setParticipantInstanceId("")
+            .setDesiredPolicyHash("")
+            .setActivePolicyHash("")
+            .setCode("")
+            .setMessage("")
+            .build();
+
+    SecurityEventDTO dto = SecurityEventProtoMapper.toDto(message);
+
+    assertThat(dto.getEventType()).isNull();
+    assertThat(dto.getSeverity()).isNull();
+    assertThat(dto.getNamespace()).isNull();
+    assertThat(dto.getParticipantId()).isNull();
+    assertThat(dto.getParticipantInstanceId()).isNull();
+    assertThat(dto.getDesiredPolicyHash()).isNull();
+    assertThat(dto.getActivePolicyHash()).isNull();
+    assertThat(dto.getCode()).isNull();
+    assertThat(dto.getMessage()).isNull();
+    assertThat(dto.getMetadata()).isEmpty();
+  }
 }

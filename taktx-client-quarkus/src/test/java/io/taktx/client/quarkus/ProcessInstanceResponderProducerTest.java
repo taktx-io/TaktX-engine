@@ -20,6 +20,7 @@ import io.taktx.serdes.ProcessInstanceTriggerProtoMapper;
 import io.taktx.util.TaktPropertiesHelper;
 import jakarta.enterprise.inject.Instance;
 import java.util.List;
+import java.util.Properties;
 import java.util.UUID;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -29,8 +30,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class ProcessInstanceResponderProducerTest {
 
   @Mock private TaktPropertiesHelper taktPropertiesHelper;
@@ -43,6 +47,7 @@ class ProcessInstanceResponderProducerTest {
   void setUp() {
     when(taktPropertiesHelper.getPrefixedTopicName(any()))
         .thenReturn("test.process-instance-trigger");
+    when(taktPropertiesHelper.getKafkaProducerProperties()).thenReturn(defaultProducerProperties());
     when(emitterInstance.isUnsatisfied()).thenReturn(false);
     when(emitterInstance.isAmbiguous()).thenReturn(false);
     when(emitterInstance.get()).thenReturn(mockProducer);
@@ -75,5 +80,40 @@ class ProcessInstanceResponderProducerTest {
     assertThat(envelope.hasUserTaskResponse()).isTrue();
     assertThat(envelope.getUserTaskResponse().getProcessInstanceId().getHigh())
         .isEqualTo(processInstanceId.getMostSignificantBits());
+  }
+
+  @Test
+  void processInstanceResponder_isCreatedWhenEmitterInstanceIsNull() {
+    ProcessInstanceResponderProducer localProducer =
+        new ProcessInstanceResponderProducer(taktPropertiesHelper, null);
+
+    ProcessInstanceResponder responder = localProducer.processInstanceResponder();
+
+    assertThat(responder).isNotNull();
+  }
+
+  @Test
+  void processInstanceResponder_isCreatedWhenEmitterInstanceIsUnsatisfied() {
+    when(emitterInstance.isUnsatisfied()).thenReturn(true);
+
+    ProcessInstanceResponder responder = producer.processInstanceResponder();
+
+    assertThat(responder).isNotNull();
+  }
+
+  @Test
+  void processInstanceResponder_isCreatedWhenEmitterInstanceIsAmbiguous() {
+    when(emitterInstance.isUnsatisfied()).thenReturn(false);
+    when(emitterInstance.isAmbiguous()).thenReturn(true);
+
+    ProcessInstanceResponder responder = producer.processInstanceResponder();
+
+    assertThat(responder).isNotNull();
+  }
+
+  private static Properties defaultProducerProperties() {
+    Properties properties = new Properties();
+    properties.setProperty("bootstrap.servers", "localhost:9092");
+    return properties;
   }
 }

@@ -8,6 +8,8 @@
 package io.taktx.serdes;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import com.google.protobuf.Parser;
 import io.taktx.dto.Constants;
@@ -16,10 +18,13 @@ import io.taktx.proto.UserTaskTriggerMessage;
 import io.taktx.security.Ed25519Service;
 import io.taktx.security.RuntimeConfigurationHolder;
 import io.taktx.security.SigningKeyGenerator;
+import io.taktx.security.SigningKeysStore;
+import io.taktx.security.SigningKeysStoreHolder;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
 import java.util.Base64;
 import java.util.Map;
+import org.apache.kafka.common.header.internals.RecordHeader;
 import org.apache.kafka.common.header.internals.RecordHeaders;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -31,6 +36,7 @@ class FaultTolerantProtoDeserializerTest {
   @AfterEach
   void tearDown() {
     RuntimeConfigurationHolder.clear();
+    SigningKeysStoreHolder.clear();
   }
 
   @Test
@@ -154,9 +160,75 @@ class FaultTolerantProtoDeserializerTest {
     assertThat(unsignedRejected.getError()).contains(Constants.HEADER_ENGINE_SIGNATURE);
   }
 
+  @Test
+  void malformedSignatureHeader_returnsDecodedBodyWithError() {
+    UserTaskTriggerMessage message =
+        UserTaskTriggerMessage.newBuilder().setUserTaskId("user-task-5").build();
+    byte[] bytes = message.toByteArray();
+    RecordHeaders headers = new RecordHeaders();
+    headers.add(
+        new RecordHeader(
+            Constants.HEADER_ENGINE_SIGNATURE, "bad-header".getBytes(StandardCharsets.UTF_8)));
+
+    DeserializationResult<UserTaskTriggerMessage> result;
+    try (SignValidatingDeserializer deserializer = new SignValidatingDeserializer()) {
+      deserializer.configure(
+          Map.of(FaultTolerantProtoDeserializer.ENGINE_PUBLIC_KEY_CONFIG, "static-key-placeholder"),
+          false);
+      result = deserializer.deserialize(TOPIC, headers, bytes);
+    }
+
+    assertThat(result.isSuccess()).isFalse();
+    assertThat(result.hasValue()).isTrue();
+    assertThat(result.getValue()).isEqualTo(message);
+    assertThat(result.getError()).contains("Malformed").contains(Constants.HEADER_ENGINE_SIGNATURE);
+  }
+
+  @Test
+  void unknownSigningKey_returnsDecodedBodyWithError() {
+    KeyPair kp = SigningKeyGenerator.generate();
+    String privateKeyBase64 = SigningKeyGenerator.encodePrivateKey(kp.getPrivate());
+    UserTaskTriggerMessage message =
+        UserTaskTriggerMessage.newBuilder().setUserTaskId("user-task-6").build();
+    byte[] bytes = message.toByteArray();
+    SigningKeysStore store = mock(SigningKeysStore.class);
+    when(store.getPublicKeyBase64("missing-key")).thenReturn(null);
+
+    DeserializationResult<UserTaskTriggerMessage> result;
+    try (SignValidatingDeserializer deserializer = new SignValidatingDeserializer()) {
+      deserializer.setSigningKeysStore(store);
+      result =
+          deserializer.deserialize(
+              TOPIC, signedHeaders(bytes, privateKeyBase64, "missing-key"), bytes);
+    }
+
+    assertThat(result.isSuccess()).isFalse();
+    assertThat(result.hasValue()).isTrue();
+    assertThat(result.getValue()).isEqualTo(message);
+    assertThat(result.getError()).contains("Unknown or revoked signing keyId='missing-key'");
+  }
+
+  @Test
+  void configure_usesSigningStoreHolderWhenStaticKeyMissing() {
+    SigningKeysStore store = mock(SigningKeysStore.class);
+    SigningKeysStoreHolder.set(store);
+
+    try (SignValidatingDeserializer deserializer = new SignValidatingDeserializer()) {
+      deserializer.configure(Map.of(), false);
+
+      assertThat(deserializer.getSigningKeysStore()).isSameAs(store);
+      assertThat(deserializer.getEnginePublicKeyBase64()).isNull();
+    }
+  }
+
   private static RecordHeaders signedHeaders(byte[] payload, String privateKeyBase64) {
+    return signedHeaders(payload, privateKeyBase64, "engine-key");
+  }
+
+  private static RecordHeaders signedHeaders(
+      byte[] payload, String privateKeyBase64, String keyId) {
     byte[] sig = Ed25519Service.sign(payload, privateKeyBase64);
-    String sigHeader = "engine-key." + Base64.getEncoder().encodeToString(sig);
+    String sigHeader = keyId + "." + Base64.getEncoder().encodeToString(sig);
     RecordHeaders headers = new RecordHeaders();
     headers.add(Constants.HEADER_ENGINE_SIGNATURE, sigHeader.getBytes(StandardCharsets.UTF_8));
     return headers;

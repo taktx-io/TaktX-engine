@@ -258,6 +258,17 @@ class VariablesTest {
   }
 
   @Test
+  void helperBean_accessorsRemainUsableForBeanMapping() {
+    TestBean bean = new TestBean();
+    bean.setName("gamma");
+    bean.setCount(11);
+    bean.setId(UUID.fromString("123e4567-e89b-12d3-a456-426614174001"));
+
+    assertThat(bean.getCount()).isEqualTo(11);
+    assertThat(bean.getId()).isEqualTo(UUID.fromString("123e4567-e89b-12d3-a456-426614174001"));
+  }
+
+  @Test
   void toTypedObject_reconstructsRecordFromVariableMap() {
     Map<String, VariableValue> variables =
         Variables.map("name", "beta", "createdAt", Instant.parse("2026-05-19T10:15:30Z"));
@@ -266,6 +277,37 @@ class VariablesTest {
 
     assertThat(typedRecord)
         .isEqualTo(new TestRecord("beta", Instant.parse("2026-05-19T10:15:30Z")));
+  }
+
+  @Test
+  void fromJavaObject_convertsStringsToEnumAndCharacter() {
+    assertThat(VariableObjectMapper.fromJavaObject("ACTIVE", TestStatus.class))
+        .isEqualTo(TestStatus.ACTIVE);
+    assertThat(VariableObjectMapper.fromJavaObject("Z", Character.class)).isEqualTo('Z');
+    assertThatThrownBy(() -> VariableObjectMapper.fromJavaObject("too-long", Character.class))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("expected length 1");
+  }
+
+  @Test
+  void of_object_handlesArrays() {
+    VariableValue value = Variables.of(new String[] {"alpha", "beta"});
+
+    assertThat(value.getKindCase()).isEqualTo(VariableValue.KindCase.LIST_VALUE);
+    assertThat(Variables.toJavaObject(value)).isEqualTo(List.of("alpha", "beta"));
+  }
+
+  @Test
+  void toVariableMap_rejectsCyclicObjectGraphs() {
+    CyclicBean bean = new CyclicBean();
+    bean.setName("root");
+    bean.setSelf(bean);
+
+    assertThat(bean.getSelf()).isSameAs(bean);
+
+    assertThatThrownBy(() -> VariableObjectMapper.toVariableMap(bean))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("cyclic object graph");
   }
 
   // ── Size assertion ───────────────────────────────────────────────────────
@@ -338,4 +380,30 @@ class VariablesTest {
   }
 
   record TestRecord(String name, Instant createdAt) {}
+
+  enum TestStatus {
+    ACTIVE,
+    INACTIVE
+  }
+
+  static final class CyclicBean {
+    private String name;
+    private CyclicBean self;
+
+    public String getName() {
+      return name;
+    }
+
+    public void setName(String name) {
+      this.name = name;
+    }
+
+    public CyclicBean getSelf() {
+      return self;
+    }
+
+    public void setSelf(CyclicBean self) {
+      this.self = self;
+    }
+  }
 }
