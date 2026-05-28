@@ -153,7 +153,7 @@ class PublicClientSecuredModeDogfoodIntegrationTest
                                         && event.getMessage().contains(ROGUE_WRITER_KEY_ID)),
                 Duration.ofSeconds(30));
 
-    assertThat(observedPolicy.effectiveMode()).isEqualTo(SecurityMode.COMMUNITY_SECURED);
+    assertThat(observedPolicy.effectiveMode()).isEqualTo(SecurityMode.SECURED);
     assertThat(posture.recentSecurityEvents())
         .extracting(SecurityEventDTO::getEventType)
         .contains(SecurityEventType.CONTROL_PLANE_MUTATION_REJECTED);
@@ -307,12 +307,12 @@ class PublicClientSecuredModeDogfoodIntegrationTest
             .awaitPostureSnapshot(
                 snapshot ->
                     snapshot.hasEffectivePolicy()
-                        && snapshot.effectiveMode() == SecurityMode.COMMUNITY_SECURED
+                        && snapshot.effectiveMode() == SecurityMode.SECURED
                         && Long.valueOf(securedPolicyVersion)
                             .equals(snapshot.effectivePolicyVersion()),
                 Duration.ofSeconds(30));
 
-    assertThat(observedPolicy.effectiveMode()).isEqualTo(SecurityMode.COMMUNITY_SECURED);
+    assertThat(observedPolicy.effectiveMode()).isEqualTo(SecurityMode.SECURED);
     assertThat(posture.currentActivationState()).isEqualTo(SecurityActivationState.ACTIVE);
 
     UUID instanceId =

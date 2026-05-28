@@ -128,7 +128,7 @@ class ParticipantStatusPublisherTest {
     NamespaceSecurityPolicyDTO requested =
         NamespaceSecurityPolicySupport.requireValid(
             NamespaceSecurityPolicyDTO.builder()
-                .mode(SecurityMode.COMMUNITY_SECURED)
+                .mode(SecurityMode.SECURED)
                 .activationState(SecurityActivationState.VALIDATING)
                 .desiredPolicyVersion(42L)
                 .requiredSigning(RequiredSigningDTO.builder().engineOutbound(true).build())

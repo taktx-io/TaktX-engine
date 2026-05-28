@@ -32,7 +32,7 @@ The goal is not to make the default deployment heavier.
 The required default posture remains:
 - lightweight
 - unsecured by default
-- runnable in `COMMUNITY_OPEN` mode without extra security bootstrap material
+- runnable in `OPEN` mode without extra security bootstrap material
 
 ## 1.0 Context and reasons for this change
 
@@ -85,7 +85,7 @@ Just as importantly, this redesign is **not** intended to make the default exper
 The design must still preserve:
 
 - a sensible lightweight bare-engine path
-- default `COMMUNITY_OPEN` behavior when no explicit secured policy is active
+- default `OPEN` behavior when no explicit secured policy is active
 - the ability to run community/unsecured deployments without trust anchors or extra bootstrap
   material
 
@@ -169,7 +169,7 @@ implementation should treat them as settled requirements rather than open questi
     - `GlobalConfigurationDTO` remains operational for legacy behavior
     - `NamespaceSecurityPolicyDTO` is introduced in parallel
     - explicit `ACTIVE` namespace policy overrides legacy configuration
-    - absent `ACTIVE` namespace policy preserves current/default `COMMUNITY_OPEN` behavior
+    - absent `ACTIVE` namespace policy preserves current/default `OPEN` behavior
 14. **Status expiration semantics are required in the first slice**:
     - `participantInstanceId`
     - `startedAt`
@@ -243,7 +243,7 @@ The following decisions are fixed for this requirements document:
 
 1. **Namespace-owned policy** — security policy remains tied to each namespace.
 2. **Official modes** — security posture must be expressible as explicit modes.
-3. **Default mode is `COMMUNITY_OPEN`**.
+3. **Default mode is `OPEN`**.
 4. **Simplest first slice** — incompatible policy activation should be rejected instead of activating
    degraded or excluded states.
 5. **Status is not trust** — participant status is observability only.
@@ -265,8 +265,8 @@ The engine-side model must recognize the following effective modes:
 
 ```java
 enum SecurityMode {
-  COMMUNITY_OPEN,
-  COMMUNITY_SECURED,
+  OPEN,
+  SECURED,
   ANCHORED_SECURED,
   MISCONFIGURED_SECURITY
 }
@@ -276,14 +276,14 @@ enum SecurityMode {
 
 | Mode | Meaning |
 |---|---|
-| `COMMUNITY_OPEN` | Minimal trust posture; Kafka ACLs / network trust only; no mandatory signing/auth by default |
-| `COMMUNITY_SECURED` | Runtime signing and/or authorization enabled with community trust semantics |
+| `OPEN` | Minimal trust posture; Kafka ACLs / network trust only; no mandatory signing/auth by default |
+| `SECURED` | Runtime signing and/or authorization enabled with community trust semantics |
 | `ANCHORED_SECURED` | Runtime signing/auth enabled with explicit root-anchored trust |
 | `MISCONFIGURED_SECURITY` | Current runtime policy cannot be satisfied by available participant capabilities |
 
 ### Default requirement
 
-If no explicit security policy has been activated yet, the system must behave as `COMMUNITY_OPEN`.
+If no explicit security policy has been activated yet, the system must behave as `OPEN`.
 
 That means:
 - no mandatory trust-anchor bootstrap
@@ -291,7 +291,7 @@ That means:
 - existing lightweight community-style setups remain runnable
 
 That includes a bare engine deployment with no Console/control-plane integration: it must still run
-with sensible `COMMUNITY_OPEN` semantics rather than failing because policy inputs are absent.
+with sensible `OPEN` semantics rather than failing because policy inputs are absent.
 
 ## 4.1 Canonical policy identity
 
@@ -357,7 +357,7 @@ For the first slice:
 - these topics do not participate in normal DLQ semantics
 - protected data-plane behavior must continue following the previously active policy until the new
   policy becomes `ACTIVE`
-- if there is no previously active secured policy, the default remains `COMMUNITY_OPEN`
+- if there is no previously active secured policy, the default remains `OPEN`
 - once a policy is `ACTIVE`, only `READY` participants for the exact active policy identity may
   process, acknowledge as successfully handled, commit/mark successful, or publish derived protected
   data-plane output for that namespace
@@ -641,9 +641,9 @@ Policy changes are versioned and must affect new ingress according to the active
 
 | Transition | Required behavior |
 |---|---|
-| `COMMUNITY_OPEN -> COMMUNITY_SECURED` | allowed when validated |
-| `COMMUNITY_SECURED -> ANCHORED_SECURED` | allowed when validated |
-| `ANCHORED_SECURED -> COMMUNITY_SECURED` | allowed only as privileged break-glass downgrade with reason + audit |
+| `OPEN -> SECURED` | allowed when validated |
+| `SECURED -> ANCHORED_SECURED` | allowed when validated |
+| `ANCHORED_SECURED -> SECURED` | allowed only as privileged break-glass downgrade with reason + audit |
 | invalid partial states | rejected |
 | required participants do not converge on same canonical policy identity | rejected |
 
@@ -809,7 +809,7 @@ as engine+client work, not engine-only work.
 - [x] Reject incompatible policies instead of activating degraded states.
 - [x] Reject activation when required participants have not converged on the same canonical policy
       identity.
-- [x] Preserve `COMMUNITY_OPEN` as the effective default when no explicit policy is active.
+- [x] Preserve `OPEN` as the effective default when no explicit policy is active.
 - [x] Keep protected data-plane behavior governed by the previous active policy until the new policy
       becomes `ACTIVE`.
 - [x] Preserve sensible bare-engine behavior when no external control-plane publisher is present.
@@ -821,7 +821,7 @@ as engine+client work, not engine-only work.
 - Default behavior remains lightweight and unsecured when no policy has been activated.
 - The previous active policy remains in force when convergence or capability checks fail.
 - Protected data-plane behavior does not switch early during `REQUESTED` / `VALIDATING`.
-- Bare-engine deployments remain functional under `COMMUNITY_OPEN` without extra control-plane
+- Bare-engine deployments remain functional under `OPEN` without extra control-plane
   bootstrap dependencies.
 
 ## ENG-SP-03 — Capability evaluation and readiness
@@ -988,8 +988,8 @@ remains a separate release-management step.
 ### Required tests
 - [x] parse valid policy payloads
 - [x] reject invalid partial states
-- [x] default to `COMMUNITY_OPEN` when no explicit policy is active
-- [x] activate `COMMUNITY_SECURED` after successful validation
+- [x] default to `OPEN` when no explicit policy is active
+- [x] activate `SECURED` after successful validation
 - [x] activate `ANCHORED_SECURED` only when trust-anchor requirements are satisfied
 - [x] reject incompatible policy activation
 - [x] reject activation when required participants observe different canonical policy identities
@@ -1005,7 +1005,7 @@ remains a separate release-management step.
 - [x] ensure control-plane traffic remains available during convergence/recovery
 - [x] ensure engine and client participants do not publish/consume/process protected runtime traffic
       unless policy is `ACTIVE` and they are `READY`
-- [x] ensure bare engine remains functional with sensible `COMMUNITY_OPEN` defaults when no external
+- [x] ensure bare engine remains functional with sensible `OPEN` defaults when no external
       control plane is present
 - [x] ensure authoritative control-plane mutation is rejected when attempted from untrusted writers
 - [x] ensure the required control-plane client operations are available via `TaktXClient`
@@ -1052,7 +1052,7 @@ artifacts, not ad-hoc snapshots or parallel bespoke publishers.
 The engine-repo handoff requirements are satisfied when:
 
 - explicit namespace security policy is supported
-- `COMMUNITY_OPEN` remains the effective default with no extra bootstrap burden
+- `OPEN` remains the effective default with no extra bootstrap burden
 - incompatible policy activation is rejected rather than partially activated
 - readiness and mismatch reasons are explicit
 - status is observability only and not trust

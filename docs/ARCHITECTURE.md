@@ -309,11 +309,11 @@ contains an explicit namespace security control plane with participant capabilit
 desired-vs-active policy identity, public observability, and trusted-writer policy mutation.
 
 **Default posture remains lightweight:** if no explicit secured policy is activated, the effective
-mode is `COMMUNITY_OPEN`. Existing standalone/community deployments should remain runnable without
+mode is `OPEN`. Existing standalone/community deployments should remain runnable without
 trust anchors, mandatory signing, or mandatory authorization bootstrap.
 
 That includes a bare engine deployment with no Console/control-plane integration: absence of policy
-distribution must not make the engine unusable. The default remains sensible `COMMUNITY_OPEN`
+distribution must not make the engine unusable. The default remains sensible `OPEN`
 behavior.
 
 ### 4.7.0 Terminology used in this section
@@ -357,7 +357,7 @@ Current branch reality:
 - shared/public client support exists for authoritative policy publication, policy clear/tombstone,
   and public policy/status/event observation
 - explicit `ACTIVE` namespace policy is authoritative for protected runtime behavior
-- absent `ACTIVE` namespace policy preserves the current/default `COMMUNITY_OPEN` behavior
+- absent `ACTIVE` namespace policy preserves the current/default `OPEN` behavior
 - legacy `GlobalConfigurationDTO` delivery via Console -> ingester -> engine remains operational as a
   migration bridge for existing integrations
 
@@ -386,8 +386,8 @@ mode:
 
 ```java
 enum SecurityMode {
-  COMMUNITY_OPEN,
-  COMMUNITY_SECURED,
+  OPEN,
+  SECURED,
   ANCHORED_SECURED,
   MISCONFIGURED_SECURITY
 }
@@ -474,7 +474,7 @@ mutation of policy/configuration/trust material.
 
 Protected data-plane behavior must remain governed by the previously active policy until the new
 policy becomes `ACTIVE`. If there is no previously active secured policy, the default remains
-`COMMUNITY_OPEN`.
+`OPEN`.
 
 If a requested policy cannot be satisfied by all required participants:
 
@@ -536,7 +536,7 @@ The following rules are now fixed for implementation:
 - first-slice verification vocabulary is `UNVERIFIED_STATUS`, `LOCALLY_VERIFIED_STATUS`
 - first-slice effective-state vocabulary is `READY`, `NOT_READY`, `MISMATCH`, `STALE`
 - migration posture is parallel coexistence: explicit `ACTIVE` namespace policy overrides legacy
-  config; absent `ACTIVE` policy preserves current/default `COMMUNITY_OPEN`
+  config; absent `ACTIVE` policy preserves current/default `OPEN`
 - break-glass downgrade requires privileged actor, explicit reason, audit/security event, visible
   transition state, and high-severity classification
 - a policy stuck in `VALIDATING` beyond the configured timeout must fail activation, emit an event,

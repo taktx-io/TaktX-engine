@@ -449,7 +449,7 @@ class EngineAuthorizationServiceTest {
     byte[] payload =
         NamespaceSecurityPolicyProtoMapper.toProto(
                 NamespaceSecurityPolicyDTO.builder()
-                    .mode(io.taktx.dto.SecurityMode.COMMUNITY_SECURED)
+                    .mode(io.taktx.dto.SecurityMode.SECURED)
                     .activationState(SecurityActivationState.REQUESTED)
                     .desiredPolicyVersion(42L)
                     .requiredSigning(RequiredSigningDTO.builder().engineOutbound(true).build())
@@ -468,7 +468,7 @@ class EngineAuthorizationServiceTest {
     byte[] payload =
         NamespaceSecurityPolicyProtoMapper.toProto(
                 NamespaceSecurityPolicyDTO.builder()
-                    .mode(io.taktx.dto.SecurityMode.COMMUNITY_OPEN)
+                    .mode(io.taktx.dto.SecurityMode.OPEN)
                     .activationState(SecurityActivationState.REQUESTED)
                     .desiredPolicyVersion(1L)
                     .build())
@@ -501,7 +501,7 @@ class EngineAuthorizationServiceTest {
     byte[] payload =
         NamespaceSecurityPolicyProtoMapper.toProto(
                 NamespaceSecurityPolicyDTO.builder()
-                    .mode(io.taktx.dto.SecurityMode.COMMUNITY_OPEN)
+                    .mode(io.taktx.dto.SecurityMode.OPEN)
                     .activationState(SecurityActivationState.REQUESTED)
                     .desiredPolicyVersion(9L)
                     .build())
@@ -535,7 +535,7 @@ class EngineAuthorizationServiceTest {
     byte[] payload =
         NamespaceSecurityPolicyProtoMapper.toProto(
                 NamespaceSecurityPolicyDTO.builder()
-                    .mode(io.taktx.dto.SecurityMode.COMMUNITY_OPEN)
+                    .mode(io.taktx.dto.SecurityMode.OPEN)
                     .activationState(SecurityActivationState.REQUESTED)
                     .desiredPolicyVersion(77L)
                     .breakGlassActor("ops-admin")
@@ -1062,7 +1062,7 @@ class EngineAuthorizationServiceTest {
   void pendingPolicyWithoutAuthoritativeActiveState_doesNotPrematurelyEnableAuthorization() {
     namespaceSecurityPolicyStore.setCurrentPolicy(
         NamespaceSecurityPolicyDTO.builder()
-            .mode(io.taktx.dto.SecurityMode.COMMUNITY_SECURED)
+            .mode(io.taktx.dto.SecurityMode.SECURED)
             .activationState(SecurityActivationState.REQUESTED)
             .desiredPolicyVersion(55L)
             .requiredAuthorization(RequiredAuthorizationDTO.builder().startCommands(true).build())
@@ -1208,7 +1208,7 @@ class EngineAuthorizationServiceTest {
       RequiredSigningDTO requiredSigning,
       boolean trustAnchorRequired) {
     return NamespaceSecurityPolicyDTO.builder()
-        .mode(io.taktx.dto.SecurityMode.COMMUNITY_SECURED)
+        .mode(io.taktx.dto.SecurityMode.SECURED)
         .activationState(SecurityActivationState.ACTIVE)
         .desiredPolicyVersion(42L)
         .desiredPolicyHash("policy-hash-42")

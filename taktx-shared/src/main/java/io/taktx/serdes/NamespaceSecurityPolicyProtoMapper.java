@@ -131,8 +131,8 @@ public final class NamespaceSecurityPolicyProtoMapper {
 
   private static SecurityModeMessage toProto(SecurityMode mode) {
     return switch (mode) {
-      case COMMUNITY_OPEN -> SecurityModeMessage.COMMUNITY_OPEN;
-      case COMMUNITY_SECURED -> SecurityModeMessage.COMMUNITY_SECURED;
+      case OPEN -> SecurityModeMessage.OPEN;
+      case SECURED -> SecurityModeMessage.SECURED;
       case ANCHORED_SECURED -> SecurityModeMessage.ANCHORED_SECURED;
       case MISCONFIGURED_SECURITY -> SecurityModeMessage.MISCONFIGURED_SECURITY;
     };
@@ -140,8 +140,8 @@ public final class NamespaceSecurityPolicyProtoMapper {
 
   private static SecurityMode toDto(SecurityModeMessage mode) {
     return switch (mode) {
-      case COMMUNITY_OPEN -> SecurityMode.COMMUNITY_OPEN;
-      case COMMUNITY_SECURED -> SecurityMode.COMMUNITY_SECURED;
+      case OPEN -> SecurityMode.OPEN;
+      case SECURED -> SecurityMode.SECURED;
       case ANCHORED_SECURED -> SecurityMode.ANCHORED_SECURED;
       case MISCONFIGURED_SECURITY -> SecurityMode.MISCONFIGURED_SECURITY;
       case SECURITY_MODE_UNSPECIFIED, UNRECOGNIZED -> null;

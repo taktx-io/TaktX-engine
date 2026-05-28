@@ -8,8 +8,8 @@ option java_outer_classname = "SecurityPolicyProto";
 
 enum SecurityModeMessage {
   SECURITY_MODE_UNSPECIFIED = 0;
-  COMMUNITY_OPEN = 1;
-  COMMUNITY_SECURED = 2;
+  OPEN = 1;
+  SECURED = 2;
   ANCHORED_SECURED = 3;
   MISCONFIGURED_SECURITY = 4;
 }

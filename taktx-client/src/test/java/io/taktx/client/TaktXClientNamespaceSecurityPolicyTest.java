@@ -33,7 +33,7 @@ class TaktXClientNamespaceSecurityPolicyTest {
     NamespaceSecurityPolicyDTO normalized =
         TaktXClient.normalizeNamespaceSecurityPolicy(
             NamespaceSecurityPolicyDTO.builder()
-                .mode(SecurityMode.COMMUNITY_SECURED)
+                .mode(SecurityMode.SECURED)
                 .activationState(SecurityActivationState.REQUESTED)
                 .policyVersion(42L)
                 .requiredSigning(RequiredSigningDTO.builder().engineOutbound(true).build())
@@ -107,7 +107,7 @@ class TaktXClientNamespaceSecurityPolicyTest {
     NamespaceSecurityPolicyDTO validated =
         TaktXClient.validateNamespaceSecurityPolicy(
             NamespaceSecurityPolicyDTO.builder()
-                .mode(SecurityMode.COMMUNITY_SECURED)
+                .mode(SecurityMode.SECURED)
                 .activationState(SecurityActivationState.ACTIVE)
                 .desiredPolicyVersion(99L)
                 .requiredSigning(RequiredSigningDTO.builder().engineOutbound(true).build())
@@ -124,7 +124,7 @@ class TaktXClientNamespaceSecurityPolicyTest {
   void validateNamespaceSecurityPolicy_rejectsPartialBreakGlassMetadata() {
     NamespaceSecurityPolicyDTO policy =
         NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.COMMUNITY_SECURED)
+            .mode(SecurityMode.SECURED)
             .activationState(SecurityActivationState.REQUESTED)
             .desiredPolicyVersion(42L)
             .breakGlassActor("ops-admin")
@@ -140,7 +140,7 @@ class TaktXClientNamespaceSecurityPolicyTest {
       throws Exception {
     NamespaceSecurityPolicyDTO input =
         NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.COMMUNITY_SECURED)
+            .mode(SecurityMode.SECURED)
             .activationState(SecurityActivationState.REQUESTED)
             .desiredPolicyVersion(42L)
             .requiredSigning(RequiredSigningDTO.builder().engineOutbound(true).build())
@@ -163,7 +163,7 @@ class TaktXClientNamespaceSecurityPolicyTest {
   void buildNamespaceSecurityPolicyRecord_rejectsBlankTopic() {
     NamespaceSecurityPolicyDTO input =
         NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.COMMUNITY_SECURED)
+            .mode(SecurityMode.SECURED)
             .activationState(SecurityActivationState.REQUESTED)
             .desiredPolicyVersion(42L)
             .build();
@@ -201,7 +201,7 @@ class TaktXClientNamespaceSecurityPolicyTest {
 
     NamespaceSecurityPolicyDTO input =
         NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.COMMUNITY_SECURED)
+            .mode(SecurityMode.SECURED)
             .activationState(SecurityActivationState.REQUESTED)
             .desiredPolicyVersion(42L)
             .requiredSigning(RequiredSigningDTO.builder().engineOutbound(true).build())
@@ -230,7 +230,7 @@ class TaktXClientNamespaceSecurityPolicyTest {
   void publishNamespaceSecurityPolicy_requiresExplicitTrustedWriterIdentity() {
     NamespaceSecurityPolicyDTO input =
         NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.COMMUNITY_OPEN)
+            .mode(SecurityMode.OPEN)
             .activationState(SecurityActivationState.REQUESTED)
             .desiredPolicyVersion(42L)
             .build();
@@ -260,7 +260,7 @@ class TaktXClientNamespaceSecurityPolicyTest {
       namespaceSecurityPolicyWriterSecurityProperties_forSecuredBreakGlassPolicy_addsExtraRequirements() {
     NamespaceSecurityPolicyDTO policy =
         NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.COMMUNITY_SECURED)
+            .mode(SecurityMode.SECURED)
             .activationState(SecurityActivationState.REQUESTED)
             .desiredPolicyVersion(42L)
             .breakGlassActor("ops-admin")
@@ -292,7 +292,7 @@ class TaktXClientNamespaceSecurityPolicyTest {
                 .build(),
             42L);
 
-    assertThat(policy.getMode()).isEqualTo(SecurityMode.COMMUNITY_SECURED);
+    assertThat(policy.getMode()).isEqualTo(SecurityMode.SECURED);
     assertThat(policy.getActivationState()).isEqualTo(SecurityActivationState.REQUESTED);
     assertThat(policy.getDesiredPolicyVersion()).isEqualTo(42L);
     assertThat(policy.getRequiredSigning().isEngineOutbound()).isTrue();
@@ -308,7 +308,7 @@ class TaktXClientNamespaceSecurityPolicyTest {
         TaktXClient.legacyGlobalSecurityConfigToNamespaceSecurityPolicy(
             GlobalConfigurationDTO.builder().build(), 7L, SecurityActivationState.VALIDATING);
 
-    assertThat(policy.getMode()).isEqualTo(SecurityMode.COMMUNITY_OPEN);
+    assertThat(policy.getMode()).isEqualTo(SecurityMode.OPEN);
     assertThat(policy.getActivationState()).isEqualTo(SecurityActivationState.VALIDATING);
     assertThat(policy.getRequiredSigning().isAnyRequired()).isFalse();
     assertThat(policy.getRequiredAuthorization().isAnyRequired()).isFalse();

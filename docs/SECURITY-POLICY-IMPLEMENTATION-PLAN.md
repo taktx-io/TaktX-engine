@@ -85,7 +85,7 @@ integration should treat them as settled inputs.
     - `GlobalConfigurationDTO` remains operational for legacy behavior
     - `NamespaceSecurityPolicyDTO` is introduced in parallel
     - explicit `ACTIVE` namespace policy overrides legacy configuration
-    - absent `ACTIVE` namespace policy preserves current/default `COMMUNITY_OPEN` behavior
+    - absent `ACTIVE` namespace policy preserves current/default `OPEN` behavior
 13. **Status expiration semantics are required in the first slice** via `participantInstanceId`,
     `startedAt`, `lastSeenAt`, and `statusExpiresAt`; expired status must not participate in
     activation readiness decisions.
@@ -135,8 +135,8 @@ The target architecture for the Console repo is:
 
 ```java
 enum SecurityMode {
-  COMMUNITY_OPEN,
-  COMMUNITY_SECURED,
+  OPEN,
+  SECURED,
   ANCHORED_SECURED,
   MISCONFIGURED_SECURITY
 }
@@ -146,18 +146,18 @@ enum SecurityMode {
 
 The sensible default must remain lightweight and runnable out of the box:
 
-- newly created namespaces default to `COMMUNITY_OPEN`
+- newly created namespaces default to `OPEN`
 - community / unsecured operation remains supported
 - no trust anchors, signing, or authorization should be required unless explicitly enabled by policy
 - a bare engine with no Console/control-plane integration must still run with sensible
-  `COMMUNITY_OPEN` semantics
+  `OPEN` semantics
 
 ### 3.3 Fixed delivery decisions for the first slice
 
 These decisions are already chosen for this plan:
 
 1. **Policy stays on the namespace** — not in a separate aggregate.
-2. **Default mode is `COMMUNITY_OPEN`**.
+2. **Default mode is `OPEN`**.
 3. **No degraded active mode in the first slice** — if required capabilities are missing, the policy
    activation is rejected rather than partially activated.
 4. **Participant status is observability only** — it must never establish trust.
@@ -244,7 +244,7 @@ For the first slice:
   not mean “open to arbitrary producers”
 - protected data-plane participation must stay governed by the previously active policy until the new
   policy becomes `ACTIVE`
-- if there is no previously active secured policy, the default remains `COMMUNITY_OPEN`
+- if there is no previously active secured policy, the default remains `OPEN`
 - once a policy is `ACTIVE`, only `READY` participants for that exact active policy identity may
   process, acknowledge as successfully handled, commit/mark successful, or publish derived protected
   data-plane work
@@ -317,7 +317,7 @@ Those non-required participants should instead be validated at use time.
 
 - **Do not assume**: if an interface, topic name, engine DTO, or transport path is not verified, it
   must be explicitly confirmed before code is merged.
-- **Default safe and simple**: `COMMUNITY_OPEN` remains the default behavior.
+- **Default safe and simple**: `OPEN` remains the default behavior.
 - **No implicit security state**: desired policy, effective mode, readiness, and incidents must each
   be represented explicitly.
 - **No partial activation in the first slice**: invalid or incompatible policy changes are rejected.
@@ -439,7 +439,7 @@ in assumptions that later have to be unwound.
 ## EPIC SP-01 — Namespace policy domain model and persistence
 
 **Goal:** make namespace security policy explicit in the Platform Service data model while keeping
-`COMMUNITY_OPEN` as the default.
+`OPEN` as the default.
 
 ### Tasks
 - [ ] **SP-01.1** Introduce `SecurityMode` in `backend/platform-service`.
@@ -456,7 +456,7 @@ in assumptions that later have to be unwound.
   - effective mode label
   - `MISCONFIGURED_SECURITY` when policy cannot be satisfied
 - [ ] **SP-01.6** Add a deterministic migration from existing booleans to the new policy fields.
-- [ ] **SP-01.7** Ensure newly created namespaces default to `COMMUNITY_OPEN` with no hidden
+- [ ] **SP-01.7** Ensure newly created namespaces default to `OPEN` with no hidden
       requirements enabled.
 
 ### Implementation notes
@@ -480,7 +480,7 @@ in assumptions that later have to be unwound.
   policy fields.
 
 ### Acceptance criteria
-- A namespace can store an explicit security policy with `COMMUNITY_OPEN` as the default.
+- A namespace can store an explicit security policy with `OPEN` as the default.
 - Existing namespace rows can be mapped deterministically into the new model.
 - `MISCONFIGURED_SECURITY` is derived consistently from policy + capability mismatch, not hand-set.
 - The namespace model can distinguish policy version from exact policy content identity.
@@ -515,10 +515,10 @@ in assumptions that later have to be unwound.
 - [x] **SP-02.5c** Keep protected data-plane behavior governed by the previously active policy until
       the new policy becomes `ACTIVE`.
 - [x] **SP-02.5d** If there is no previous secured policy, continue operating under
-      `COMMUNITY_OPEN` semantics until a stricter policy successfully activates.
+      `OPEN` semantics until a stricter policy successfully activates.
 - [x] **SP-02.5e** Define timeout / rollback behavior for failed or stalled activation.
-- [ ] **SP-02.5f** Define break-glass downgrade rules for `ANCHORED_SECURED -> COMMUNITY_SECURED`
-      or `COMMUNITY_OPEN`, including privileged role, reason, and audit/security event.
+- [ ] **SP-02.5f** Define break-glass downgrade rules for `ANCHORED_SECURED -> SECURED`
+      or `OPEN`, including privileged role, reason, and audit/security event.
 - [ ] **SP-02.6** Increment `policyVersion` only for accepted policy changes.
 - [ ] **SP-02.7** Preserve a compatibility window for existing UI callers only if proven necessary;
       otherwise migrate the frontend in the same change.
@@ -558,9 +558,9 @@ in assumptions that later have to be unwound.
 ### Testing / verification
 - Resource tests for create/update validation.
 - Tests covering mode transitions:
-  - `COMMUNITY_OPEN -> COMMUNITY_SECURED`
-  - `COMMUNITY_SECURED -> ANCHORED_SECURED`
-  - `ANCHORED_SECURED -> COMMUNITY_SECURED`
+  - `OPEN -> SECURED`
+  - `SECURED -> ANCHORED_SECURED`
+  - `ANCHORED_SECURED -> SECURED`
   - invalid partial policy rejected
 - Tests proving activation is rejected when any required participant reports a different canonical
   policy identity.
@@ -673,7 +673,7 @@ unverified transport.
 - Tests proving `same policyVersion, different policyHash` is detected as a mismatch.
 - Tests proving status/reporting failures do not alter trust decisions.
 - Tests proving stale participant status expires and does not continue to count as current posture.
-- Tests proving `COMMUNITY_OPEN` still works with minimal configuration.
+- Tests proving `OPEN` still works with minimal configuration.
 - Tests proving control-plane handling remains available during convergence while protected
   data-plane participation is gated.
 
@@ -765,7 +765,7 @@ or pre-policy namespaces.
   behavior.
 
 ### Acceptance criteria
-- Rollout preserves a working default `COMMUNITY_OPEN` path.
+- Rollout preserves a working default `OPEN` path.
 - Existing namespaces are migrated or interpreted deterministically.
 - Negative cases fail clearly and are observable.
 - False-compatibility and post-activation drift scenarios are explicitly covered by tests and do not
@@ -810,8 +810,8 @@ Suggested first-slice mapping:
 
 | Current namespace flags | Initial desired mode | Notes |
 |---|---|---|
-| all current security booleans `false` | `COMMUNITY_OPEN` | default, unsecured, lightweight |
-| signing or authorization booleans enabled, but no trust-anchor requirement represented | `COMMUNITY_SECURED` | preserve secured intent without inventing anchoring |
+| all current security booleans `false` | `OPEN` | default, unsecured, lightweight |
+| signing or authorization booleans enabled, but no trust-anchor requirement represented | `SECURED` | preserve secured intent without inventing anchoring |
 | any future verified trust-anchor requirement exists | `ANCHORED_SECURED` | only when anchored data is explicitly present |
 
 ### Migration rule constraints
@@ -853,8 +853,8 @@ minimum verification matrix:
 ### End-to-end / rollout verification
 - create namespace in default `Community` mode
 - verify a bare engine with no Console/control-plane integration still behaves sensibly in
-  `COMMUNITY_OPEN`
-- migrate an old namespace with all flags off -> `COMMUNITY_OPEN`
+  `OPEN`
+- migrate an old namespace with all flags off -> `OPEN`
 - reject invalid policy combination
 - verify status is visible but not treated as trust
 - verify a missing capability yields mismatch reason and non-ready posture
@@ -873,14 +873,14 @@ minimum verification matrix:
 This plan is complete when:
 
 - namespace security is represented as explicit policy rather than implicit booleans
-- `COMMUNITY_OPEN` is the default for new namespaces and remains easy to run
+- `OPEN` is the default for new namespaces and remains easy to run
 - invalid or incompatible secured policies are rejected rather than partially activated
 - Ops UI shows mode, policy version, readiness, mismatch reasons, and incidents
 - the Console repo has tests proving the above behavior
 - engine-team requirements are agreed and tracked separately
 - canonical policy convergence and false-compatibility scenarios are explicitly handled and tested
 - control-plane vs protected data-plane gating is explicitly defined and verified
-- bare-engine `COMMUNITY_OPEN` defaults remain intact
+- bare-engine `OPEN` defaults remain intact
 - authoritative control-plane mutation is explicitly protected
 - required control-plane functionality is supported through `TaktXClient` rather than duplicated
   bespoke publishers

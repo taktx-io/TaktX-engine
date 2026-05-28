@@ -1104,8 +1104,8 @@ public class TaktXClient {
         NamespaceSecurityPolicyDTO.builder()
             .mode(
                 anySecurityRequirement
-                    ? io.taktx.dto.SecurityMode.COMMUNITY_SECURED
-                    : io.taktx.dto.SecurityMode.COMMUNITY_OPEN)
+                    ? io.taktx.dto.SecurityMode.SECURED
+                    : io.taktx.dto.SecurityMode.OPEN)
             .activationState(activationState)
             .desiredPolicyVersion(desiredPolicyVersion)
             .requiredSigning(

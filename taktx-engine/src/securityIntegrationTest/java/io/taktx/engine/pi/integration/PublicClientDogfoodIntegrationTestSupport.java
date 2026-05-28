@@ -536,7 +536,7 @@ abstract class PublicClientDogfoodIntegrationTestSupport {
 
   protected static NamespaceSecurityPolicyDTO requestedSecuredPolicy(long version) {
     return NamespaceSecurityPolicyDTO.builder()
-        .mode(SecurityMode.COMMUNITY_SECURED)
+        .mode(SecurityMode.SECURED)
         .activationState(SecurityActivationState.REQUESTED)
         .desiredPolicyVersion(version)
         .requiredSigning(
@@ -552,7 +552,7 @@ abstract class PublicClientDogfoodIntegrationTestSupport {
   protected static NamespaceSecurityPolicyDTO activeCommunityOpenPolicy(long version) {
     NamespaceSecurityPolicyDTO requestedPolicy =
         NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.COMMUNITY_OPEN)
+            .mode(SecurityMode.OPEN)
             .activationState(SecurityActivationState.REQUESTED)
             .desiredPolicyVersion(version)
             .build();
@@ -566,7 +566,7 @@ abstract class PublicClientDogfoodIntegrationTestSupport {
   protected static NamespaceSecurityPolicyDTO activeSigningRequiredPolicy(long version) {
     NamespaceSecurityPolicyDTO requestedPolicy =
         NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.COMMUNITY_SECURED)
+            .mode(SecurityMode.SECURED)
             .activationState(SecurityActivationState.REQUESTED)
             .desiredPolicyVersion(version)
             .requiredSigning(RequiredSigningDTO.builder().clientCommands(true).build())

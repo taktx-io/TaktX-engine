@@ -30,7 +30,7 @@ class NamespaceSecurityPolicyControlPlaneContractTest {
   void securedPolicy_requiresIntegrityProtectionProperty() {
     NamespaceSecurityPolicyDTO policy =
         NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.COMMUNITY_SECURED)
+            .mode(SecurityMode.SECURED)
             .activationState(SecurityActivationState.REQUESTED)
             .desiredPolicyVersion(42L)
             .build();
@@ -45,7 +45,7 @@ class NamespaceSecurityPolicyControlPlaneContractTest {
   void breakGlassMetadata_requiresBreakGlassContractProperty() {
     NamespaceSecurityPolicyDTO policy =
         NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.COMMUNITY_SECURED)
+            .mode(SecurityMode.SECURED)
             .activationState(SecurityActivationState.REQUESTED)
             .desiredPolicyVersion(42L)
             .breakGlassActor("ops-admin")
