@@ -193,7 +193,7 @@ class SignalProcessorDlqTest {
   private static NamespaceSecurityPolicyDTO requestedPolicy(long version) {
     return NamespaceSecurityPolicySupport.requireValid(
         NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.COMMUNITY_SECURED)
+            .mode(SecurityMode.SECURED)
             .activationState(SecurityActivationState.REQUESTED)
             .desiredPolicyVersion(version)
             .requiredSigning(RequiredSigningDTO.builder().engineOutbound(true).build())

@@ -105,13 +105,13 @@ class PublicClientOpenModeDogfoodIntegrationTest extends PublicClientDogfoodInte
             .awaitPostureSnapshot(
                 snapshot ->
                     snapshot.hasEffectivePolicy()
-                        && snapshot.effectiveMode() == SecurityMode.COMMUNITY_OPEN
+                        && snapshot.effectiveMode() == SecurityMode.OPEN
                         && Long.valueOf(openPolicyVersion)
                             .equals(snapshot.effectivePolicyVersion()),
                 Duration.ofSeconds(30));
 
     assertThat(observedPolicy.hasAuthoritativePolicy()).isTrue();
-    assertThat(observedPolicy.effectiveMode()).isEqualTo(SecurityMode.COMMUNITY_OPEN);
+    assertThat(observedPolicy.effectiveMode()).isEqualTo(SecurityMode.OPEN);
     assertThat(observedPolicy.effectivePolicyVersion()).isEqualTo(openPolicyVersion);
     assertThat(posture.currentActivationState()).isEqualTo(SecurityActivationState.ACTIVE);
 
@@ -192,12 +192,12 @@ class PublicClientOpenModeDogfoodIntegrationTest extends PublicClientDogfoodInte
             .awaitPostureSnapshot(
                 snapshot ->
                     snapshot.hasEffectivePolicy()
-                        && snapshot.effectiveMode() == SecurityMode.COMMUNITY_OPEN
+                        && snapshot.effectiveMode() == SecurityMode.OPEN
                         && Long.valueOf(openPolicyVersion)
                             .equals(snapshot.effectivePolicyVersion()),
                 Duration.ofSeconds(30));
 
-    assertThat(observedPolicy.effectiveMode()).isEqualTo(SecurityMode.COMMUNITY_OPEN);
+    assertThat(observedPolicy.effectiveMode()).isEqualTo(SecurityMode.OPEN);
     assertThat(posture.currentActivationState()).isEqualTo(SecurityActivationState.ACTIVE);
 
     UUID instanceId =

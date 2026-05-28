@@ -243,7 +243,7 @@ class SecurityObservabilityClientTest {
 
   private static NamespaceSecurityPolicyDTO requestedPolicy(long version) {
     return NamespaceSecurityPolicyDTO.builder()
-        .mode(SecurityMode.COMMUNITY_SECURED)
+        .mode(SecurityMode.SECURED)
         .activationState(SecurityActivationState.REQUESTED)
         .desiredPolicyVersion(version)
         .desiredPolicyHash("desired-" + version)
@@ -253,7 +253,7 @@ class SecurityObservabilityClientTest {
   }
 
   private static NamespaceSecurityPolicyDTO activePolicy(long version) {
-    return activePolicy(version, SecurityMode.COMMUNITY_SECURED);
+    return activePolicy(version, SecurityMode.SECURED);
   }
 
   private static NamespaceSecurityPolicyDTO activePolicy(long version, SecurityMode mode) {

@@ -23,7 +23,7 @@ class NamespaceSecurityPolicySupportTest {
   void normalize_fillsLegacyAliasesAndComputesDesiredHash() {
     NamespaceSecurityPolicyDTO policy =
         NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.COMMUNITY_SECURED)
+            .mode(SecurityMode.SECURED)
             .activationState(SecurityActivationState.REQUESTED)
             .policyVersion(42L)
             .requiredSigning(RequiredSigningDTO.builder().engineOutbound(true).build())
@@ -97,7 +97,7 @@ class NamespaceSecurityPolicySupportTest {
   void requireValid_rejectsActiveIdentityMismatch() {
     NamespaceSecurityPolicyDTO policy =
         NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.COMMUNITY_SECURED)
+            .mode(SecurityMode.SECURED)
             .activationState(SecurityActivationState.ACTIVE)
             .desiredPolicyVersion(10L)
             .desiredPolicyHash("requested")
@@ -116,7 +116,7 @@ class NamespaceSecurityPolicySupportTest {
   void requireValid_acceptsConsistentActivePolicy() {
     NamespaceSecurityPolicyDTO policy =
         NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.COMMUNITY_SECURED)
+            .mode(SecurityMode.SECURED)
             .activationState(SecurityActivationState.ACTIVE)
             .desiredPolicyVersion(10L)
             .requiredSigning(RequiredSigningDTO.builder().engineOutbound(true).build())
@@ -155,7 +155,7 @@ class NamespaceSecurityPolicySupportTest {
   void requireValid_rejectsPartialActiveIdentityState() {
     NamespaceSecurityPolicyDTO policy =
         NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.COMMUNITY_SECURED)
+            .mode(SecurityMode.SECURED)
             .activationState(SecurityActivationState.REQUESTED)
             .desiredPolicyVersion(10L)
             .activePolicyVersion(9L)
@@ -170,7 +170,7 @@ class NamespaceSecurityPolicySupportTest {
   void requireValid_rejectsPartialBreakGlassMetadata() {
     NamespaceSecurityPolicyDTO policy =
         NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.COMMUNITY_SECURED)
+            .mode(SecurityMode.SECURED)
             .activationState(SecurityActivationState.REQUESTED)
             .desiredPolicyVersion(10L)
             .breakGlassActor("ops-admin")
@@ -184,7 +184,7 @@ class NamespaceSecurityPolicySupportTest {
   @Test
   void parseSecurityMode_acceptsCommonOperatorFormats() {
     assertThat(NamespaceSecurityPolicySupport.parseSecurityMode("community-secured"))
-        .isEqualTo(SecurityMode.COMMUNITY_SECURED);
+        .isEqualTo(SecurityMode.SECURED);
     assertThat(NamespaceSecurityPolicySupport.parseSecurityMode("anchored secured"))
         .isEqualTo(SecurityMode.ANCHORED_SECURED);
     assertThat(NamespaceSecurityPolicySupport.parseSecurityMode("MISCONFIGURED_SECURITY"))

@@ -46,7 +46,7 @@ public final class NamespaceSecurityPolicyControlPlaneContract {
     if (policy == null || policy.getMode() == null) {
       return Set.copyOf(requirements);
     }
-    if (policy.getMode() == SecurityMode.COMMUNITY_SECURED
+    if (policy.getMode() == SecurityMode.SECURED
         || policy.getMode() == SecurityMode.ANCHORED_SECURED) {
       requirements.add(
           AuthoritativeControlPlaneSecurityProperty.INTEGRITY_PROTECTION_REQUIRED_IN_SECURED_MODES);

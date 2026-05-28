@@ -145,8 +145,7 @@ class PublicClientObservabilityDogfoodIntegrationTest
     assertThat(posture.participantStatuses().values())
         .allMatch(PublicClientDogfoodIntegrationTestSupport::isAnchoredEngineMismatchStatus);
     assertThat(posture.mismatchReasons())
-        .allMatch(
-            mismatch -> "TRUST_ANCHOR_MISSING".equals(mismatch.mismatchReason().getCode()));
+        .allMatch(mismatch -> "TRUST_ANCHOR_MISSING".equals(mismatch.mismatchReason().getCode()));
 
     assertThatThrownBy(
             () -> runtimeClient.runtime().startProcess(OPEN_PROCESS_ID, VariablesDTO.empty()))
@@ -343,7 +342,7 @@ class PublicClientObservabilityDogfoodIntegrationTest
             activeSecuredPolicy(securedPolicyVersion),
             Duration.ofSeconds(30));
 
-    assertThat(securedObservedPolicy.effectiveMode()).isEqualTo(SecurityMode.COMMUNITY_SECURED);
+    assertThat(securedObservedPolicy.effectiveMode()).isEqualTo(SecurityMode.SECURED);
 
     await()
         .during(Duration.ofSeconds(2))

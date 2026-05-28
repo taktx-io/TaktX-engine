@@ -58,7 +58,7 @@ class NamespaceSecurityPolicyProtoMapperTest {
     NamespaceSecurityPolicyDTO dto =
         NamespaceSecurityPolicyProtoMapper.toDto(
             io.taktx.proto.NamespaceSecurityPolicyMessage.newBuilder()
-                .setMode(io.taktx.proto.SecurityModeMessage.COMMUNITY_OPEN)
+                .setMode(io.taktx.proto.SecurityModeMessage.OPEN)
                 .setActivationState(io.taktx.proto.SecurityActivationStateMessage.REQUESTED)
                 .setDesiredPolicyVersion(1L)
                 .build());

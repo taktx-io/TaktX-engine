@@ -87,7 +87,7 @@ class NamespaceSecurityPolicyProcessorTest {
   void policyKey_updatesStoreWithValidatedNormalizedPolicy() {
     NamespaceSecurityPolicyDTO input =
         NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.COMMUNITY_SECURED)
+            .mode(SecurityMode.SECURED)
             .activationState(SecurityActivationState.ACTIVE)
             .desiredPolicyVersion(42L)
             .requiredSigning(RequiredSigningDTO.builder().engineOutbound(true).build())
@@ -110,7 +110,7 @@ class NamespaceSecurityPolicyProcessorTest {
   void tombstone_clearsStore() {
     NamespaceSecurityPolicyDTO input =
         NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.COMMUNITY_OPEN)
+            .mode(SecurityMode.OPEN)
             .activationState(SecurityActivationState.REQUESTED)
             .desiredPolicyVersion(1L)
             .build();
@@ -129,7 +129,7 @@ class NamespaceSecurityPolicyProcessorTest {
   void invalidPolicy_doesNotReplacePreviousStoreValue() {
     NamespaceSecurityPolicyDTO valid =
         NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.COMMUNITY_SECURED)
+            .mode(SecurityMode.SECURED)
             .activationState(SecurityActivationState.REQUESTED)
             .desiredPolicyVersion(7L)
             .build();
@@ -157,7 +157,7 @@ class NamespaceSecurityPolicyProcessorTest {
   void invalidActivePolicyWithoutActiveIdentity_doesNotReplacePreviousStoreValue() {
     NamespaceSecurityPolicyDTO valid =
         NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.COMMUNITY_SECURED)
+            .mode(SecurityMode.SECURED)
             .activationState(SecurityActivationState.REQUESTED)
             .desiredPolicyVersion(7L)
             .build();
@@ -169,7 +169,7 @@ class NamespaceSecurityPolicyProcessorTest {
 
     NamespaceSecurityPolicyDTO invalid =
         NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.COMMUNITY_SECURED)
+            .mode(SecurityMode.SECURED)
             .activationState(SecurityActivationState.ACTIVE)
             .desiredPolicyVersion(8L)
             .desiredPolicyHash("requested-hash")
@@ -186,7 +186,7 @@ class NamespaceSecurityPolicyProcessorTest {
   void conflictingDesiredAndLegacyAliases_failClosed() {
     NamespaceSecurityPolicyDTO valid =
         NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.COMMUNITY_SECURED)
+            .mode(SecurityMode.SECURED)
             .activationState(SecurityActivationState.REQUESTED)
             .desiredPolicyVersion(7L)
             .build();
@@ -198,7 +198,7 @@ class NamespaceSecurityPolicyProcessorTest {
 
     NamespaceSecurityPolicyDTO invalid =
         NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.COMMUNITY_SECURED)
+            .mode(SecurityMode.SECURED)
             .activationState(SecurityActivationState.REQUESTED)
             .desiredPolicyVersion(9L)
             .policyVersion(10L)
@@ -258,7 +258,7 @@ class NamespaceSecurityPolicyProcessorTest {
               POLICY_TOPIC, Serdes.String().serializer(), Serdes.ByteArray().serializer());
       NamespaceSecurityPolicyDTO input =
           NamespaceSecurityPolicyDTO.builder()
-              .mode(SecurityMode.COMMUNITY_SECURED)
+              .mode(SecurityMode.SECURED)
               .activationState(SecurityActivationState.REQUESTED)
               .desiredPolicyVersion(52L)
               .requiredSigning(RequiredSigningDTO.builder().engineOutbound(true).build())
@@ -377,7 +377,7 @@ class NamespaceSecurityPolicyProcessorTest {
               POLICY_TOPIC, Serdes.String().serializer(), Serdes.ByteArray().serializer());
       NamespaceSecurityPolicyDTO firstRequested =
           NamespaceSecurityPolicyDTO.builder()
-              .mode(SecurityMode.COMMUNITY_SECURED)
+              .mode(SecurityMode.SECURED)
               .activationState(SecurityActivationState.REQUESTED)
               .desiredPolicyVersion(52L)
               .requiredSigning(RequiredSigningDTO.builder().engineOutbound(true).build())
@@ -385,7 +385,7 @@ class NamespaceSecurityPolicyProcessorTest {
               .build();
       NamespaceSecurityPolicyDTO replacementRequested =
           NamespaceSecurityPolicyDTO.builder()
-              .mode(SecurityMode.COMMUNITY_SECURED)
+              .mode(SecurityMode.SECURED)
               .activationState(SecurityActivationState.REQUESTED)
               .desiredPolicyVersion(53L)
               .requiredSigning(RequiredSigningDTO.builder().workerResponses(true).build())
@@ -436,7 +436,7 @@ class NamespaceSecurityPolicyProcessorTest {
 
     lifecycleStore.update(
         NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.COMMUNITY_OPEN)
+            .mode(SecurityMode.OPEN)
             .activationState(SecurityActivationState.ACTIVE)
             .desiredPolicyVersion(7L)
             .activePolicyVersion(7L)
@@ -467,7 +467,7 @@ class NamespaceSecurityPolicyProcessorTest {
               POLICY_TOPIC, Serdes.String().serializer(), Serdes.ByteArray().serializer());
       NamespaceSecurityPolicyDTO requested =
           NamespaceSecurityPolicyDTO.builder()
-              .mode(SecurityMode.COMMUNITY_SECURED)
+              .mode(SecurityMode.SECURED)
               .activationState(SecurityActivationState.REQUESTED)
               .desiredPolicyVersion(52L)
               .requiredSigning(RequiredSigningDTO.builder().engineOutbound(true).build())
@@ -503,7 +503,7 @@ class NamespaceSecurityPolicyProcessorTest {
         Mockito.mock(EngineAuthorizationService.class);
     lifecycleStore.update(
         NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.COMMUNITY_OPEN)
+            .mode(SecurityMode.OPEN)
             .activationState(SecurityActivationState.ACTIVE)
             .desiredPolicyVersion(7L)
             .activePolicyVersion(7L)

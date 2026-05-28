@@ -505,8 +505,8 @@ public class NamespaceSecurityPolicyActivationService {
 
   private static int securityStrength(SecurityMode mode) {
     return switch (mode) {
-      case COMMUNITY_OPEN -> 0;
-      case COMMUNITY_SECURED -> 1;
+      case OPEN -> 0;
+      case SECURED -> 1;
       case ANCHORED_SECURED -> 2;
       case MISCONFIGURED_SECURITY -> -1;
     };

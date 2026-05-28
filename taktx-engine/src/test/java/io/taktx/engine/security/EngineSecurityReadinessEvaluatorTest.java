@@ -65,7 +65,7 @@ class EngineSecurityReadinessEvaluatorTest {
   void validatingPolicy_withoutPreviousActivePolicy_preservesCommunityOpenReadiness() {
     policyStore.update(
         NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.COMMUNITY_SECURED)
+            .mode(SecurityMode.SECURED)
             .activationState(SecurityActivationState.VALIDATING)
             .desiredPolicyVersion(42L)
             .build());
@@ -87,7 +87,7 @@ class EngineSecurityReadinessEvaluatorTest {
   void validatingPolicy_withPreviousActivePolicy_evaluatesAgainstPreviousActiveIdentity() {
     NamespaceSecurityPolicyDTO previousActive =
         NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.COMMUNITY_SECURED)
+            .mode(SecurityMode.SECURED)
             .activationState(SecurityActivationState.ACTIVE)
             .desiredPolicyVersion(41L)
             .requiredSigning(RequiredSigningDTO.builder().engineOutbound(true).build())
@@ -180,7 +180,7 @@ class EngineSecurityReadinessEvaluatorTest {
 
     policyStore.update(
         NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.COMMUNITY_SECURED)
+            .mode(SecurityMode.SECURED)
             .activationState(SecurityActivationState.ACTIVE)
             .desiredPolicyVersion(42L)
             .requiredSigning(RequiredSigningDTO.builder().engineOutbound(true).build())
@@ -204,7 +204,7 @@ class EngineSecurityReadinessEvaluatorTest {
   void activePolicy_statusIncludesAuthoritativeObservedIdentityAndTtlFields() {
     policyStore.update(
         NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.COMMUNITY_SECURED)
+            .mode(SecurityMode.SECURED)
             .activationState(SecurityActivationState.ACTIVE)
             .desiredPolicyVersion(42L)
             .requiredSigning(RequiredSigningDTO.builder().engineOutbound(true).build())

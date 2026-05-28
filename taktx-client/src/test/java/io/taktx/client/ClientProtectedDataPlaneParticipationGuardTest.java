@@ -245,7 +245,7 @@ class ClientProtectedDataPlaneParticipationGuardTest {
 
   private NamespaceSecurityPolicyDTO requestedPolicy() {
     return NamespaceSecurityPolicyDTO.builder()
-        .mode(SecurityMode.COMMUNITY_SECURED)
+        .mode(SecurityMode.SECURED)
         .activationState(SecurityActivationState.REQUESTED)
         .desiredPolicyVersion(7L)
         .desiredPolicyHash("desired-7")
@@ -262,7 +262,7 @@ class ClientProtectedDataPlaneParticipationGuardTest {
       boolean externalTaskAuthorization,
       boolean userTaskAuthorization) {
     return NamespaceSecurityPolicyDTO.builder()
-        .mode(trustAnchorRequired ? SecurityMode.ANCHORED_SECURED : SecurityMode.COMMUNITY_SECURED)
+        .mode(trustAnchorRequired ? SecurityMode.ANCHORED_SECURED : SecurityMode.SECURED)
         .activationState(SecurityActivationState.ACTIVE)
         .desiredPolicyVersion(9L)
         .desiredPolicyHash("policy-hash-9")

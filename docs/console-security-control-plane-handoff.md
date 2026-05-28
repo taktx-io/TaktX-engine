@@ -185,18 +185,18 @@ Console should not model control-plane mismatch visibility as a DLQ workflow. In
 
 The operator-facing policy modes are:
 
-- `COMMUNITY_OPEN`
-- `COMMUNITY_SECURED`
+- `OPEN`
+- `SECURED`
 - `ANCHORED_SECURED`
 - `MISCONFIGURED_SECURITY`
 
 ### Meaning
 
-- `COMMUNITY_OPEN`
+- `OPEN`
   - lightweight/default posture
   - no secured policy requirements are active
   - intended to preserve existing easy-start behavior
-- `COMMUNITY_SECURED`
+- `SECURED`
   - secured posture without anchored trust-anchor requirement
   - policy may require JWT and/or signing depending on policy fields
 - `ANCHORED_SECURED`
@@ -745,7 +745,7 @@ At minimum, Console should validate the following scenarios against the public c
 ### A. Open/default behavior
 
 - no active namespace policy => effective open posture
-- explicit `COMMUNITY_OPEN` publish is reflected publicly
+- explicit `OPEN` publish is reflected publicly
 - policy clear/tombstone returns namespace to open/default posture
 
 ### B. Community secured behavior

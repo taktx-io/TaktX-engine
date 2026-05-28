@@ -75,7 +75,7 @@ class NamespaceSecurityPolicyCapabilityRelevanceTest {
   void relevantPolicyForCapabilities_filtersProtectedDataPlaneFieldsForControlPlaneOnlyClient() {
     NamespaceSecurityPolicyDTO policy =
         NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.COMMUNITY_SECURED)
+            .mode(SecurityMode.SECURED)
             .activationState(SecurityActivationState.REQUESTED)
             .desiredPolicyVersion(42L)
             .requiredSigning(
@@ -95,7 +95,7 @@ class NamespaceSecurityPolicyCapabilityRelevanceTest {
                 ParticipantCapability.SECURITY_OBSERVER),
             policy);
 
-    assertThat(relevant.getMode()).isEqualTo(SecurityMode.COMMUNITY_SECURED);
+    assertThat(relevant.getMode()).isEqualTo(SecurityMode.SECURED);
     assertThat(relevant.isTrustAnchorRequired()).isTrue();
     assertThat(relevant.getRequiredSigning().isAnyRequired()).isFalse();
     assertThat(relevant.getRequiredAuthorization().isAnyRequired()).isFalse();
@@ -137,7 +137,7 @@ class NamespaceSecurityPolicyCapabilityRelevanceTest {
   void relevantPolicyForCapabilities_filtersProtectedDataPlaneFieldsForObserverOnlyClient() {
     NamespaceSecurityPolicyDTO policy =
         NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.COMMUNITY_SECURED)
+            .mode(SecurityMode.SECURED)
             .activationState(SecurityActivationState.REQUESTED)
             .desiredPolicyVersion(42L)
             .requiredSigning(
@@ -159,7 +159,7 @@ class NamespaceSecurityPolicyCapabilityRelevanceTest {
         NamespaceSecurityPolicyCapabilityRelevance.relevantPolicyForCapabilities(
             Set.of(ParticipantCapability.SECURITY_OBSERVER), policy);
 
-    assertThat(relevant.getMode()).isEqualTo(SecurityMode.COMMUNITY_SECURED);
+    assertThat(relevant.getMode()).isEqualTo(SecurityMode.SECURED);
     assertThat(relevant.isTrustAnchorRequired()).isTrue();
     assertThat(relevant.getRequiredSigning().isAnyRequired()).isFalse();
     assertThat(relevant.getRequiredAuthorization().isAnyRequired()).isFalse();

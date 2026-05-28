@@ -14,8 +14,8 @@ package io.taktx.dto;
  * the current {@link GlobalConfigurationDTO} rollout path.
  */
 public enum SecurityMode {
-  COMMUNITY_OPEN,
-  COMMUNITY_SECURED,
+  OPEN,
+  SECURED,
   ANCHORED_SECURED,
   MISCONFIGURED_SECURITY
 }
