@@ -24,7 +24,8 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Simplified operator-facing namespace posture view derived from the existing public posture surface.
+ * Simplified operator-facing namespace posture view derived from the existing public posture
+ * surface.
  *
  * <p>This model is intentionally additive: it clarifies requested-vs-effective posture without
  * changing runtime trust or activation authority semantics.
@@ -113,7 +114,9 @@ public record SimplifiedSecurityPostureSnapshot(
       SecurityPostureSnapshot snapshot, long nowMs) {
     Map<String, BlockingIssue> issues = new LinkedHashMap<>();
 
-    snapshot.participantStatuses().forEach((participantInstanceId, status) -> addStatusIssues(issues, status, nowMs));
+    snapshot
+        .participantStatuses()
+        .forEach((participantInstanceId, status) -> addStatusIssues(issues, status, nowMs));
     for (ParticipantPostureMismatch mismatch : snapshot.mismatchReasons()) {
       if (mismatch == null || mismatch.mismatchReason() == null) {
         continue;
@@ -253,7 +256,9 @@ public record SimplifiedSecurityPostureSnapshot(
       List<BlockingIssue> currentBlockingIssues,
       long nowMs) {
     Map<String, BlockingIssue> blockers = new LinkedHashMap<>();
-    if (mutationAvailability != null && mutationAvailability.observed() && !mutationAvailability.available()) {
+    if (mutationAvailability != null
+        && mutationAvailability.observed()
+        && !mutationAvailability.available()) {
       addIssue(
           blockers,
           new BlockingIssue(
@@ -391,8 +396,3 @@ public record SimplifiedSecurityPostureSnapshot(
     return mode != null ? mode : SecurityMode.OPEN;
   }
 }
-
-
-
-
-

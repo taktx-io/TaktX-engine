@@ -14,4 +14,3 @@ public enum SecurityRequestStatus {
   VALIDATING,
   BLOCKED
 }
-

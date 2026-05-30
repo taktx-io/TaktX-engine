@@ -39,8 +39,8 @@ public record ObservedPolicySnapshot(
   /**
    * Returns the currently requested / operator-visible policy state if one is present.
    *
-   * <p>This intentionally prefers the current observed policy so callers can distinguish
-   * requested posture from authoritative active posture.
+   * <p>This intentionally prefers the current observed policy so callers can distinguish requested
+   * posture from authoritative active posture.
    */
   public @Nullable NamespaceSecurityPolicyDTO requestedPolicy() {
     return currentPolicy != null ? currentPolicy : activePolicy();
@@ -51,7 +51,8 @@ public record ObservedPolicySnapshot(
     if (authoritativePolicy != null) {
       return authoritativePolicy;
     }
-    if (currentPolicy != null && currentPolicy.getActivationState() == SecurityActivationState.ACTIVE) {
+    if (currentPolicy != null
+        && currentPolicy.getActivationState() == SecurityActivationState.ACTIVE) {
       return currentPolicy;
     }
     return null;

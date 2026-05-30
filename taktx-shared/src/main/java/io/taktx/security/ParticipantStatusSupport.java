@@ -47,7 +47,8 @@ public final class ParticipantStatusSupport {
                 .toList();
 
     Set<ParticipantCapability> capabilities = normalizeSet(status.getCapabilities());
-    Set<SecurityMode> supportedModes = normalizeSupportedModes(status.getSupportedModes(), capabilities);
+    Set<SecurityMode> supportedModes =
+        normalizeSupportedModes(status.getSupportedModes(), capabilities);
     String componentType = normalizeOptionalString(status.getComponentType());
 
     return status.toBuilder()
@@ -213,7 +214,8 @@ public final class ParticipantStatusSupport {
   }
 
   /** Derives support-in-principle modes from coarse participant capabilities. */
-  public static Set<SecurityMode> supportedModesForCapabilities(Set<ParticipantCapability> capabilities) {
+  public static Set<SecurityMode> supportedModesForCapabilities(
+      Set<ParticipantCapability> capabilities) {
     EnumSet<SecurityMode> supportedModes = EnumSet.of(SecurityMode.OPEN);
     if (capabilities == null || capabilities.isEmpty()) {
       return Set.copyOf(supportedModes);

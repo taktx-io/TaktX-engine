@@ -21,10 +21,8 @@ public final class SecurityPostureIssueCodes {
   public static final String PARTICIPANT_NOT_READY = "PARTICIPANT_NOT_READY";
   public static final String AUTHORITATIVE_WRITER_UNCONFIGURED =
       "AUTHORITATIVE_WRITER_UNCONFIGURED";
-  public static final String AUTHORITATIVE_WRITER_UNAVAILABLE =
-      "AUTHORITATIVE_WRITER_UNAVAILABLE";
+  public static final String AUTHORITATIVE_WRITER_UNAVAILABLE = "AUTHORITATIVE_WRITER_UNAVAILABLE";
   public static final String TARGET_MODE_UNSUPPORTED = "TARGET_MODE_UNSUPPORTED";
 
   private SecurityPostureIssueCodes() {}
 }
-

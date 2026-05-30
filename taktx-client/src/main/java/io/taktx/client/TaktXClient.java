@@ -34,8 +34,8 @@ import io.taktx.dto.ProcessDefinitionDTO;
 import io.taktx.dto.ProcessDefinitionKey;
 import io.taktx.dto.ProcessInstanceTriggerDTO;
 import io.taktx.dto.SecurityEventDTO;
-import io.taktx.dto.SecurityPostureIssueCodes;
 import io.taktx.dto.SecurityParticipantDescriptor;
+import io.taktx.dto.SecurityPostureIssueCodes;
 import io.taktx.dto.SignalDTO;
 import io.taktx.dto.UserTaskTriggerDTO;
 import io.taktx.dto.VariablesDTO;
@@ -642,7 +642,8 @@ public class TaktXClient {
         "publish authoritative namespace security policy");
     try {
       publishNamespaceSecurityPolicy(taktPropertiesHelper.getTaktProperties(), policy);
-      authoritativePolicyMutationAvailability = AuthoritativePolicyMutationAvailability.availableNow();
+      authoritativePolicyMutationAvailability =
+          AuthoritativePolicyMutationAvailability.availableNow();
     } catch (SecurityControlPlaneMutationException e) {
       authoritativePolicyMutationAvailability =
           AuthoritativePolicyMutationAvailability.blockedNow(
@@ -690,7 +691,11 @@ public class TaktXClient {
       throw mutationUnavailable(
           "publish authoritative namespace security policy",
           e,
-          Map.of("topic", topic, "desiredPolicyVersion", String.valueOf(validated.getDesiredPolicyVersion())));
+          Map.of(
+              "topic",
+              topic,
+              "desiredPolicyVersion",
+              String.valueOf(validated.getDesiredPolicyVersion())));
     }
   }
 
@@ -704,7 +709,8 @@ public class TaktXClient {
         "clear authoritative namespace security policy");
     try {
       clearNamespaceSecurityPolicy(taktPropertiesHelper.getTaktProperties());
-      authoritativePolicyMutationAvailability = AuthoritativePolicyMutationAvailability.availableNow();
+      authoritativePolicyMutationAvailability =
+          AuthoritativePolicyMutationAvailability.availableNow();
     } catch (SecurityControlPlaneMutationException e) {
       authoritativePolicyMutationAvailability =
           AuthoritativePolicyMutationAvailability.blockedNow(

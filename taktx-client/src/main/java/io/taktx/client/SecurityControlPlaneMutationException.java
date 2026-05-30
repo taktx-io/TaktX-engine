@@ -36,4 +36,3 @@ public final class SecurityControlPlaneMutationException extends IllegalStateExc
     return metadata;
   }
 }
-
