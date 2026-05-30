@@ -36,6 +36,7 @@ public class SecurityObservabilityClient {
   private final Supplier<ObservedPolicySnapshot> observedPolicySnapshotSupplier;
   private final Supplier<Map<String, ParticipantStatusDTO>> participantStatusSnapshotSupplier;
   private final Supplier<List<SecurityEventDTO>> recentSecurityEventsSupplier;
+  private final Supplier<AuthoritativePolicyMutationAvailability> mutationAvailabilitySupplier;
   private final ConsumerRegistrars consumerRegistrars;
   private final Runnable initializer;
   private final Duration pollInterval;
@@ -44,12 +45,14 @@ public class SecurityObservabilityClient {
       Supplier<ObservedPolicySnapshot> observedPolicySnapshotSupplier,
       Supplier<Map<String, ParticipantStatusDTO>> participantStatusSnapshotSupplier,
       Supplier<List<SecurityEventDTO>> recentSecurityEventsSupplier,
+      Supplier<AuthoritativePolicyMutationAvailability> mutationAvailabilitySupplier,
       ConsumerRegistrars consumerRegistrars,
       Runnable initializer) {
     this(
         observedPolicySnapshotSupplier,
         participantStatusSnapshotSupplier,
         recentSecurityEventsSupplier,
+        mutationAvailabilitySupplier,
         consumerRegistrars,
         initializer,
         DEFAULT_POLL_INTERVAL);
@@ -59,6 +62,7 @@ public class SecurityObservabilityClient {
       Supplier<ObservedPolicySnapshot> observedPolicySnapshotSupplier,
       Supplier<Map<String, ParticipantStatusDTO>> participantStatusSnapshotSupplier,
       Supplier<List<SecurityEventDTO>> recentSecurityEventsSupplier,
+      Supplier<AuthoritativePolicyMutationAvailability> mutationAvailabilitySupplier,
       ConsumerRegistrars consumerRegistrars,
       Runnable initializer,
       Duration pollInterval) {
@@ -69,6 +73,8 @@ public class SecurityObservabilityClient {
             participantStatusSnapshotSupplier, "participantStatusSnapshotSupplier");
     this.recentSecurityEventsSupplier =
         Objects.requireNonNull(recentSecurityEventsSupplier, "recentSecurityEventsSupplier");
+    this.mutationAvailabilitySupplier =
+        Objects.requireNonNull(mutationAvailabilitySupplier, "mutationAvailabilitySupplier");
     this.consumerRegistrars = Objects.requireNonNull(consumerRegistrars, "consumerRegistrars");
     this.initializer = Objects.requireNonNull(initializer, "initializer");
     if (pollInterval == null || pollInterval.isZero() || pollInterval.isNegative()) {
@@ -108,6 +114,15 @@ public class SecurityObservabilityClient {
   public SecurityPostureSnapshot getPostureSnapshot() {
     return SecurityPostureSnapshot.from(
         getObservedPolicySnapshot(), getParticipantStatusSnapshot(), getRecentSecurityEvents());
+  }
+
+  /**
+   * Returns a simplified operator-facing posture view that separates requested posture from
+   * effective active posture.
+   */
+  public SimplifiedSecurityPostureSnapshot getSimplifiedPostureSnapshot() {
+    return SimplifiedSecurityPostureSnapshot.from(
+        getPostureSnapshot(), mutationAvailabilitySupplier.get());
   }
 
   /** Registers a callback and immediately replays the current policy snapshot. */
@@ -162,6 +177,17 @@ public class SecurityObservabilityClient {
       Predicate<SecurityPostureSnapshot> predicate, Duration timeout) {
     Objects.requireNonNull(predicate, PREDICATE_ARGUMENT);
     return awaitSnapshot("security posture snapshot", this::getPostureSnapshot, predicate, timeout);
+  }
+
+  /** Polls until the simplified posture snapshot satisfies the supplied predicate. */
+  public SimplifiedSecurityPostureSnapshot awaitSimplifiedPostureSnapshot(
+      Predicate<SimplifiedSecurityPostureSnapshot> predicate, Duration timeout) {
+    Objects.requireNonNull(predicate, PREDICATE_ARGUMENT);
+    return awaitSnapshot(
+        "simplified security posture snapshot",
+        this::getSimplifiedPostureSnapshot,
+        predicate,
+        timeout);
   }
 
   /** Polls until a matching security event appears in the bounded recent event history. */

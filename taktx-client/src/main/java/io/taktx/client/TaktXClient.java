@@ -34,6 +34,7 @@ import io.taktx.dto.ProcessDefinitionDTO;
 import io.taktx.dto.ProcessDefinitionKey;
 import io.taktx.dto.ProcessInstanceTriggerDTO;
 import io.taktx.dto.SecurityEventDTO;
+import io.taktx.dto.SecurityPostureIssueCodes;
 import io.taktx.dto.SecurityParticipantDescriptor;
 import io.taktx.dto.SignalDTO;
 import io.taktx.dto.UserTaskTriggerDTO;
@@ -154,6 +155,7 @@ public class TaktXClient {
   private WorkersClient workersClient;
   private DlqClient dlqClient;
   private SecurityObservabilityClient securityObservabilityClient;
+  private volatile AuthoritativePolicyMutationAvailability authoritativePolicyMutationAvailability;
   private final CopyOnWriteArrayList<NamespaceSecurityPolicyConsumer>
       namespaceSecurityPolicyConsumers = new CopyOnWriteArrayList<>();
   private final CopyOnWriteArrayList<ParticipantStatusConsumer> participantStatusConsumers =
@@ -638,7 +640,15 @@ public class TaktXClient {
     ensureParticipantCapability(
         ParticipantCapability.AUTHORITATIVE_POLICY_PUBLISHER,
         "publish authoritative namespace security policy");
-    publishNamespaceSecurityPolicy(taktPropertiesHelper.getTaktProperties(), policy);
+    try {
+      publishNamespaceSecurityPolicy(taktPropertiesHelper.getTaktProperties(), policy);
+      authoritativePolicyMutationAvailability = AuthoritativePolicyMutationAvailability.availableNow();
+    } catch (SecurityControlPlaneMutationException e) {
+      authoritativePolicyMutationAvailability =
+          AuthoritativePolicyMutationAvailability.blockedNow(
+              e.code(), e.getMessage(), e.metadata());
+      throw e;
+    }
   }
 
   /**
@@ -674,8 +684,13 @@ public class TaktXClient {
           validated.getDesiredPolicyVersion(),
           validated.getActivationState(),
           signingIdentity.getKeyId());
+    } catch (SecurityControlPlaneMutationException e) {
+      throw e;
     } catch (Exception e) {
-      throw new IllegalStateException("Failed to publish namespace security policy", e);
+      throw mutationUnavailable(
+          "publish authoritative namespace security policy",
+          e,
+          Map.of("topic", topic, "desiredPolicyVersion", String.valueOf(validated.getDesiredPolicyVersion())));
     }
   }
 
@@ -687,7 +702,15 @@ public class TaktXClient {
     ensureParticipantCapability(
         ParticipantCapability.AUTHORITATIVE_POLICY_PUBLISHER,
         "clear authoritative namespace security policy");
-    clearNamespaceSecurityPolicy(taktPropertiesHelper.getTaktProperties());
+    try {
+      clearNamespaceSecurityPolicy(taktPropertiesHelper.getTaktProperties());
+      authoritativePolicyMutationAvailability = AuthoritativePolicyMutationAvailability.availableNow();
+    } catch (SecurityControlPlaneMutationException e) {
+      authoritativePolicyMutationAvailability =
+          AuthoritativePolicyMutationAvailability.blockedNow(
+              e.code(), e.getMessage(), e.metadata());
+      throw e;
+    }
   }
 
   /** Static convenience overload for clearing the authoritative namespace security policy. */
@@ -716,8 +739,48 @@ public class TaktXClient {
           "✅ Namespace security policy tombstone published to security policy topic: topic={} signerKeyId={}",
           topic,
           signingIdentity.getKeyId());
+    } catch (SecurityControlPlaneMutationException e) {
+      throw e;
     } catch (Exception e) {
-      throw new IllegalStateException("Failed to clear namespace security policy", e);
+      throw mutationUnavailable(
+          "clear authoritative namespace security policy", e, Map.of("topic", topic));
+    }
+  }
+
+  /** Returns structured local availability for authoritative namespace security-policy mutation. */
+  public AuthoritativePolicyMutationAvailability authoritativePolicyMutationAvailability() {
+    if (!participantDescriptor
+        .capabilities()
+        .contains(ParticipantCapability.AUTHORITATIVE_POLICY_PUBLISHER)) {
+      return AuthoritativePolicyMutationAvailability.notObserved();
+    }
+    AuthoritativePolicyMutationAvailability configuredAvailability =
+        authoritativePolicyMutationAvailability(taktPropertiesHelper.getTaktProperties());
+    if (!configuredAvailability.available()) {
+      return configuredAvailability;
+    }
+    AuthoritativePolicyMutationAvailability current = authoritativePolicyMutationAvailability;
+    if (current != null
+        && current.observed()
+        && !current.available()
+        && SecurityPostureIssueCodes.AUTHORITATIVE_WRITER_UNAVAILABLE.equals(current.code())) {
+      return current;
+    }
+    return configuredAvailability;
+  }
+
+  /** Returns structured authoritative mutation availability for the supplied properties. */
+  public static AuthoritativePolicyMutationAvailability authoritativePolicyMutationAvailability(
+      Properties properties) {
+    try {
+      return resolveAuthoritativeControlPlaneSigningIdentity(properties) != null
+          ? AuthoritativePolicyMutationAvailability.availableNow()
+          : mutationUnconfiguredAvailability();
+    } catch (IllegalArgumentException e) {
+      return AuthoritativePolicyMutationAvailability.blockedNow(
+          SecurityPostureIssueCodes.AUTHORITATIVE_WRITER_UNCONFIGURED,
+          e.getMessage(),
+          Map.of("reason", "identity-source-invalid"));
     }
   }
 
@@ -808,14 +871,35 @@ public class TaktXClient {
       Properties properties, String operationDescription) {
     SigningIdentity signingIdentity = resolveAuthoritativeControlPlaneSigningIdentity(properties);
     if (signingIdentity == null) {
-      throw new IllegalStateException(
+      throw new SecurityControlPlaneMutationException(
+          SecurityPostureIssueCodes.AUTHORITATIVE_WRITER_UNCONFIGURED,
           "Cannot "
               + operationDescription
               + " without an explicit signing identity. Configure taktx.signing.private-key +"
               + " taktx.signing.key-id (or taktx.signing.file.* equivalents) for the trusted"
-              + " authoritative writer.");
+              + " authoritative writer.",
+          Map.of("reason", "signing-identity-missing"));
     }
     return signingIdentity;
+  }
+
+  private static SecurityControlPlaneMutationException mutationUnavailable(
+      String operationDescription, Exception cause, Map<String, String> metadata) {
+    return new SecurityControlPlaneMutationException(
+        SecurityPostureIssueCodes.AUTHORITATIVE_WRITER_UNAVAILABLE,
+        "Cannot "
+            + operationDescription
+            + " because the authoritative writer path is currently unavailable: "
+            + cause.getMessage(),
+        metadata,
+        cause);
+  }
+
+  private static AuthoritativePolicyMutationAvailability mutationUnconfiguredAvailability() {
+    return AuthoritativePolicyMutationAvailability.blockedNow(
+        SecurityPostureIssueCodes.AUTHORITATIVE_WRITER_UNCONFIGURED,
+        "No explicit authoritative signing identity is configured for namespace security-policy mutation.",
+        Map.of("reason", "signing-identity-missing"));
   }
 
   private static SigningIdentity resolveAuthoritativeControlPlaneSigningIdentity(
@@ -2308,6 +2392,7 @@ public class TaktXClient {
               this::currentObservedPolicySnapshot,
               this::currentParticipantStatusSnapshot,
               this::currentSecurityEventSnapshot,
+              this::authoritativePolicyMutationAvailability,
               new SecurityObservabilityClient.ConsumerRegistrars(
                   this::registerNamespaceSecurityPolicyConsumer,
                   this::registerParticipantStatusConsumer,

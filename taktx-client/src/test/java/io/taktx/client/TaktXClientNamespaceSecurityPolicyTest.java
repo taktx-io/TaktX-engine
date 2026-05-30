@@ -17,6 +17,7 @@ import io.taktx.dto.RequiredAuthorizationDTO;
 import io.taktx.dto.RequiredSigningDTO;
 import io.taktx.dto.SecurityActivationState;
 import io.taktx.dto.SecurityMode;
+import io.taktx.dto.SecurityPostureIssueCodes;
 import io.taktx.security.AuthoritativeControlPlaneSecurityProperty;
 import io.taktx.security.Ed25519Service;
 import io.taktx.security.NamespaceSecurityPolicyActivationAuthority;
@@ -241,7 +242,11 @@ class TaktXClientNamespaceSecurityPolicyTest {
     properties.setProperty("taktx.engine.namespace", "bank.payments");
 
     assertThatThrownBy(() -> TaktXClient.publishNamespaceSecurityPolicy(properties, input))
-        .isInstanceOf(IllegalStateException.class)
+        .isInstanceOf(SecurityControlPlaneMutationException.class)
+        .extracting("code")
+        .isEqualTo(SecurityPostureIssueCodes.AUTHORITATIVE_WRITER_UNCONFIGURED);
+    assertThatThrownBy(() -> TaktXClient.publishNamespaceSecurityPolicy(properties, input))
+        .isInstanceOf(SecurityControlPlaneMutationException.class)
         .hasMessageContaining("explicit signing identity")
         .hasMessageContaining("authoritative writer");
   }

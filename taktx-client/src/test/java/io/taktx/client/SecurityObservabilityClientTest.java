@@ -22,6 +22,7 @@ import io.taktx.dto.SecurityEventDTO;
 import io.taktx.dto.SecurityEventSeverity;
 import io.taktx.dto.SecurityEventType;
 import io.taktx.dto.SecurityMode;
+import io.taktx.dto.SecurityPostureIssueCodes;
 import io.taktx.dto.StatusVerificationLevel;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -44,9 +45,121 @@ class SecurityObservabilityClientTest {
     assertThat(snapshot.hasCurrentPolicy()).isTrue();
     assertThat(snapshot.hasAuthoritativePolicy()).isTrue();
     assertThat(snapshot.currentActivationState()).isEqualTo(SecurityActivationState.REQUESTED);
+    assertThat(snapshot.requestedMode()).isEqualTo(SecurityMode.SECURED);
+    assertThat(snapshot.requestedPolicyVersion()).isEqualTo(11L);
+    assertThat(snapshot.requestedPolicyHash()).isEqualTo("desired-11");
+    assertThat(snapshot.activeMode()).isEqualTo(SecurityMode.ANCHORED_SECURED);
+    assertThat(snapshot.activePolicyVersion()).isEqualTo(7L);
+    assertThat(snapshot.activePolicyHash()).isEqualTo("active-7");
     assertThat(snapshot.effectiveMode()).isEqualTo(SecurityMode.ANCHORED_SECURED);
     assertThat(snapshot.effectivePolicyVersion()).isEqualTo(7L);
     assertThat(snapshot.effectivePolicyHash()).isEqualTo("active-7");
+  }
+
+  @Test
+  void getSimplifiedPostureSnapshot_keepsRequestedSecurePostureSeparateFromEffectiveOpen() {
+    TestHarness harness = new TestHarness();
+    harness.observedPolicySnapshot.set(new ObservedPolicySnapshot(requestedPolicy(12L), null));
+
+    SimplifiedSecurityPostureSnapshot snapshot = harness.client.getSimplifiedPostureSnapshot();
+
+    assertThat(snapshot.requestedPosture()).isEqualTo(SecurityMode.SECURED);
+    assertThat(snapshot.effectivePosture()).isEqualTo(SecurityMode.OPEN);
+    assertThat(snapshot.requestStatus()).isEqualTo(SecurityRequestStatus.REQUESTED);
+    assertThat(snapshot.protectedRuntimeAllowed()).isTrue();
+    assertThat(snapshot.blockingIssues()).isEmpty();
+  }
+
+  @Test
+  void getSimplifiedPostureSnapshot_surfacesBlockingIssuesAndParticipantSummary() {
+    TestHarness harness = new TestHarness();
+    harness.observedPolicySnapshot.set(
+        new ObservedPolicySnapshot(activePolicy(7L, SecurityMode.ANCHORED_SECURED), activePolicy(7L, SecurityMode.ANCHORED_SECURED)));
+    harness.participantStatuses.set(
+        Map.of(
+            "client#7",
+            participantStatus(
+                "client#7",
+                Set.of(ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT),
+                List.of(mismatchReason("TRUST_ANCHOR_MISSING", "Platform trust anchor missing"))),
+            "engine#1",
+            participantStatus("engine#1", Set.of(ParticipantCapability.ENFORCER))));
+    harness.securityEvents.set(
+        List.of(
+            SecurityEventDTO.builder()
+                .eventType(SecurityEventType.DATA_PLANE_BLOCKED)
+                .severity(SecurityEventSeverity.WARNING)
+                .occurredAtMs(7L)
+                .namespace("tenant.default")
+                .participantId("tenant.default.client")
+                .participantInstanceId("client#7")
+                .activePolicyVersion(7L)
+                .activePolicyHash("active-7")
+                .code("TRUST_ANCHOR_MISSING")
+                .message("Platform trust anchor missing")
+                .build()));
+
+    SimplifiedSecurityPostureSnapshot snapshot = harness.client.getSimplifiedPostureSnapshot();
+
+    assertThat(snapshot.requestedPosture()).isEqualTo(SecurityMode.ANCHORED_SECURED);
+    assertThat(snapshot.effectivePosture()).isEqualTo(SecurityMode.ANCHORED_SECURED);
+    assertThat(snapshot.requestStatus()).isEqualTo(SecurityRequestStatus.IN_SYNC);
+    assertThat(snapshot.protectedRuntimeAllowed()).isFalse();
+    assertThat(snapshot.participantSummary().totalParticipants()).isEqualTo(2);
+    assertThat(snapshot.participantSummary().activationRelevantParticipants()).isEqualTo(1);
+    assertThat(snapshot.participantSummary().protectedRuntimeParticipants()).isEqualTo(2);
+    assertThat(snapshot.participantSummary().protectedRuntimeBlockingParticipants()).isEqualTo(1);
+    assertThat(snapshot.blockingIssues())
+        .extracting(BlockingIssue::code)
+        .contains(SecurityPostureIssueCodes.TRUST_ANCHOR_MISSING);
+    assertThat(snapshot.targetModeFeasibility(SecurityMode.ANCHORED_SECURED).feasibleNow()).isFalse();
+    assertThat(snapshot.targetModeFeasibility(SecurityMode.ANCHORED_SECURED).blockers())
+        .extracting(BlockingIssue::code)
+        .contains(SecurityPostureIssueCodes.TRUST_ANCHOR_MISSING);
+  }
+
+  @Test
+  void targetModeFeasibility_surfacesExplicitAuthoritativeWriterBlockerWithoutAffectingOpenRuntime() {
+    TestHarness harness = new TestHarness();
+    harness.observedPolicySnapshot.set(new ObservedPolicySnapshot(requestedPolicy(15L), null));
+    harness.mutationAvailability.set(
+        AuthoritativePolicyMutationAvailability.blockedNow(
+            SecurityPostureIssueCodes.AUTHORITATIVE_WRITER_UNCONFIGURED,
+            "No explicit authoritative signing identity is configured for namespace security-policy mutation.",
+            Map.of("reason", "signing-identity-missing")));
+
+    SimplifiedSecurityPostureSnapshot snapshot = harness.client.getSimplifiedPostureSnapshot();
+
+    assertThat(snapshot.requestedPosture()).isEqualTo(SecurityMode.SECURED);
+    assertThat(snapshot.effectivePosture()).isEqualTo(SecurityMode.OPEN);
+    assertThat(snapshot.protectedRuntimeAllowed()).isTrue();
+    assertThat(snapshot.targetModeFeasibility(SecurityMode.SECURED).feasibleNow()).isFalse();
+    assertThat(snapshot.targetModeFeasibility(SecurityMode.SECURED).blockers())
+        .extracting(BlockingIssue::code)
+        .containsExactly(SecurityPostureIssueCodes.AUTHORITATIVE_WRITER_UNCONFIGURED);
+  }
+
+  @Test
+  void targetModeFeasibility_usesSupportedModesInsteadOfCurrentReadiness() {
+    TestHarness harness = new TestHarness();
+    harness.observedPolicySnapshot.set(
+        new ObservedPolicySnapshot(requestedPolicy(21L), activePolicy(21L, SecurityMode.OPEN)));
+    harness.participantStatuses.set(
+        Map.of(
+            "client#7",
+            participantStatus(
+                "client#7",
+                Set.of(ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT),
+                Set.of(SecurityMode.OPEN, SecurityMode.SECURED),
+                List.of())));
+
+    SimplifiedSecurityPostureSnapshot snapshot = harness.client.getSimplifiedPostureSnapshot();
+
+    assertThat(snapshot.targetModeFeasibility(SecurityMode.SECURED).feasibleNow()).isTrue();
+    assertThat(snapshot.targetModeFeasibility(SecurityMode.ANCHORED_SECURED).feasibleNow()).isFalse();
+    assertThat(snapshot.targetModeFeasibility(SecurityMode.ANCHORED_SECURED).blockers())
+        .extracting(BlockingIssue::code)
+        .contains(SecurityPostureIssueCodes.TARGET_MODE_UNSUPPORTED);
   }
 
   @Test
@@ -179,13 +292,19 @@ class SecurityObservabilityClientTest {
   void snapshotHelpers_defaultToEmptyStateWhenNothingHasBeenObserved() {
     TestHarness harness = new TestHarness();
     SecurityPostureSnapshot postureSnapshot = harness.client.getPostureSnapshot();
+    SimplifiedSecurityPostureSnapshot simplifiedSnapshot =
+        harness.client.getSimplifiedPostureSnapshot();
 
     assertThat(harness.client.getObservedPolicySnapshot())
         .isEqualTo(ObservedPolicySnapshot.empty());
     assertThat(harness.client.getParticipantStatusSnapshot()).isEmpty();
     assertThat(harness.client.getRecentSecurityEvents()).isEmpty();
     assertThat(postureSnapshot).isEqualTo(SecurityPostureSnapshot.empty());
-    assertThat(harness.initializerCalls.get()).isGreaterThanOrEqualTo(4);
+    assertThat(simplifiedSnapshot.requestedPosture()).isEqualTo(SecurityMode.OPEN);
+    assertThat(simplifiedSnapshot.effectivePosture()).isEqualTo(SecurityMode.OPEN);
+    assertThat(simplifiedSnapshot.requestStatus()).isEqualTo(SecurityRequestStatus.IN_SYNC);
+    assertThat(simplifiedSnapshot.protectedRuntimeAllowed()).isTrue();
+    assertThat(harness.initializerCalls.get()).isGreaterThanOrEqualTo(5);
   }
 
   @Test
@@ -203,7 +322,7 @@ class SecurityObservabilityClientTest {
                     throw new RuntimeException(e);
                   }
                   harness.observedPolicySnapshot.set(
-                      new ObservedPolicySnapshot(requestedPolicy(9L), activePolicy(9L)));
+                      new ObservedPolicySnapshot(activePolicy(9L), activePolicy(9L)));
                   harness.participantStatuses.set(
                       Map.of(
                           "engine#1",
@@ -230,6 +349,9 @@ class SecurityObservabilityClientTest {
                 snapshot.hasMismatchReasons()
                     && snapshot.participantStatuses().containsKey("engine#1"),
             Duration.ofSeconds(1));
+    SimplifiedSecurityPostureSnapshot simplifiedSnapshot =
+        harness.client.awaitSimplifiedPostureSnapshot(
+            snapshot -> snapshot.hasBlockingIssues(), Duration.ofSeconds(1));
 
     updater.join();
 
@@ -239,6 +361,10 @@ class SecurityObservabilityClientTest {
     assertThat(postureSnapshot.mismatchReasons())
         .extracting(mismatch -> mismatch.mismatchReason().getCode())
         .containsExactly("ENGINE_SYNC_PENDING");
+    assertThat(simplifiedSnapshot.requestStatus()).isEqualTo(SecurityRequestStatus.IN_SYNC);
+    assertThat(simplifiedSnapshot.blockingIssues())
+        .extracting(BlockingIssue::code)
+        .contains("ENGINE_SYNC_PENDING");
   }
 
   private static NamespaceSecurityPolicyDTO requestedPolicy(long version) {
@@ -271,12 +397,20 @@ class SecurityObservabilityClientTest {
 
   private static ParticipantStatusDTO participantStatus(
       String participantInstanceId, Set<ParticipantCapability> capabilities) {
-    return participantStatus(participantInstanceId, capabilities, List.of());
+    return participantStatus(participantInstanceId, capabilities, null, List.of());
   }
 
   private static ParticipantStatusDTO participantStatus(
       String participantInstanceId,
       Set<ParticipantCapability> capabilities,
+      List<PolicyMismatchReasonDTO> mismatchReasons) {
+    return participantStatus(participantInstanceId, capabilities, null, mismatchReasons);
+  }
+
+  private static ParticipantStatusDTO participantStatus(
+      String participantInstanceId,
+      Set<ParticipantCapability> capabilities,
+      Set<SecurityMode> supportedModes,
       List<PolicyMismatchReasonDTO> mismatchReasons) {
     return ParticipantStatusDTO.builder()
         .participantId(participantInstanceId.substring(0, participantInstanceId.indexOf('#')))
@@ -284,6 +418,7 @@ class SecurityObservabilityClientTest {
         .participantKind(ParticipantKind.CLIENT)
         .componentType("test-component")
         .capabilities(capabilities)
+        .supportedModes(supportedModes)
         .namespace("tenant.default")
         .startedAt(1L)
         .lastSeenAt(System.currentTimeMillis())
@@ -327,6 +462,8 @@ class SecurityObservabilityClientTest {
         new AtomicReference<>(Map.of());
     private final AtomicReference<List<SecurityEventDTO>> securityEvents =
         new AtomicReference<>(List.of());
+    private final AtomicReference<AuthoritativePolicyMutationAvailability> mutationAvailability =
+        new AtomicReference<>(AuthoritativePolicyMutationAvailability.notObserved());
     private final List<NamespaceSecurityPolicyConsumer> policyConsumers = new ArrayList<>();
     private final List<ParticipantStatusConsumer> participantStatusConsumers = new ArrayList<>();
     private final List<SecurityEventConsumer> securityEventConsumers = new ArrayList<>();
@@ -336,6 +473,7 @@ class SecurityObservabilityClientTest {
             observedPolicySnapshot::get,
             participantStatuses::get,
             securityEvents::get,
+            mutationAvailability::get,
             new SecurityObservabilityClient.ConsumerRegistrars(
                 policyConsumers::add, participantStatusConsumers::add, securityEventConsumers::add),
             initializerCalls::incrementAndGet,

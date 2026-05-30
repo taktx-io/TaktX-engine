@@ -17,6 +17,7 @@ import io.taktx.dto.RequiredSigningDTO;
 import io.taktx.dto.SecurityActivationState;
 import io.taktx.dto.SecurityMode;
 import io.taktx.dto.SecurityParticipantDescriptor;
+import io.taktx.dto.SecurityPostureIssueCodes;
 import io.taktx.dto.StatusVerificationLevel;
 import io.taktx.security.ParticipantStatusSupport;
 import io.taktx.security.SecurityParticipantDescriptorSupport;
@@ -38,7 +39,7 @@ final class ClientProtectedDataPlaneParticipationGuard {
   static final String POLICY_NOT_ACTIVE_HINT = "POLICY_NOT_ACTIVE";
   static final String POLICY_NOT_READY_HINT = "SECURITY_POLICY_NOT_READY";
   static final String POLICY_MARKED_MISCONFIGURED = "POLICY_MARKED_MISCONFIGURED";
-  static final String TRUST_ANCHOR_MISSING = "TRUST_ANCHOR_MISSING";
+  static final String TRUST_ANCHOR_MISSING = SecurityPostureIssueCodes.TRUST_ANCHOR_MISSING;
   static final String CLIENT_COMMAND_SIGNING_UNAVAILABLE = "CLIENT_COMMAND_SIGNING_UNAVAILABLE";
   static final String WORKER_RESPONSE_SIGNING_UNAVAILABLE = "WORKER_RESPONSE_SIGNING_UNAVAILABLE";
   static final String START_COMMAND_AUTHORIZATION_UNAVAILABLE =

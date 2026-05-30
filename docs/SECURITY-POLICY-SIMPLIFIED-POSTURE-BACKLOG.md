@@ -90,11 +90,11 @@ effective posture and does not imply that requested secure posture is already ac
 
 ### Tasks
 
-- [ ] Standardize shared blocker/event codes for failed authoritative mutation and readiness blockers.
-- [ ] Add client-side advisory `targetModeFeasibility` helpers for `OPEN`, `SECURED`, and
+- [x] Standardize shared blocker/event codes for failed authoritative mutation and readiness blockers.
+- [x] Add client-side advisory `targetModeFeasibility` helpers for `OPEN`, `SECURED`, and
       `ANCHORED_SECURED`.
-- [ ] Distinguish writer unavailability/unconfiguration from generic mutation rejection.
-- [ ] Add tests for the canonical failure scenario:
+- [x] Distinguish writer unavailability/unconfiguration from generic mutation rejection.
+- [x] Add tests for the canonical failure scenario:
   1. effective posture `OPEN`
   2. requested `OPEN -> SECURED`
   3. authoritative mutation fails
@@ -119,6 +119,9 @@ value with the smallest contract risk.
 - 2026-05-30: `SSP-02` completed by adding explicit participant `supportedModes` support metadata,
   normalizing it from coarse capabilities when omitted, and validating it with focused shared,
   client, and engine tests.
+- 2026-05-30: `SSP-03` completed by adding structured authoritative-writer mutation availability,
+  shared blocker codes, and advisory `targetModeFeasibility` helpers validated with focused
+  client/engine/shared tests.
 
 ### Initial SSP-01 target files
 
@@ -142,6 +145,7 @@ This backlog item is complete only when:
 - code is merged
 - tests covering the stated acceptance criteria pass
 - the document is updated to reflect the final status of each task
+
 
 
 
