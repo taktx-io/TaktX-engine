@@ -183,7 +183,7 @@ class NamespaceSecurityPolicySupportTest {
 
   @Test
   void parseSecurityMode_acceptsCommonOperatorFormats() {
-    assertThat(NamespaceSecurityPolicySupport.parseSecurityMode("community-secured"))
+    assertThat(NamespaceSecurityPolicySupport.parseSecurityMode("secured"))
         .isEqualTo(SecurityMode.SECURED);
     assertThat(NamespaceSecurityPolicySupport.parseSecurityMode("anchored secured"))
         .isEqualTo(SecurityMode.ANCHORED_SECURED);
@@ -215,6 +215,9 @@ class NamespaceSecurityPolicySupportTest {
 
   @Test
   void parseHelpers_rejectUnsupportedTokens() {
+    assertThatThrownBy(() -> NamespaceSecurityPolicySupport.parseSecurityMode("community-secured"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Unsupported security mode");
     assertThatThrownBy(() -> NamespaceSecurityPolicySupport.parseSecurityMode("unknown-mode"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("Unsupported security mode");

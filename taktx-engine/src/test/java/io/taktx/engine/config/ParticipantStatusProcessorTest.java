@@ -16,6 +16,7 @@ import io.taktx.dto.ParticipantStatusDTO;
 import io.taktx.dto.PolicyMismatchReasonDTO;
 import io.taktx.dto.StatusVerificationLevel;
 import io.taktx.engine.security.NamespaceSecurityPolicyActivationService;
+import io.taktx.security.ParticipantStatusSupport;
 import io.taktx.serdes.ParticipantStatusProtoMapper;
 import java.util.List;
 import java.util.Properties;
@@ -234,6 +235,7 @@ class ParticipantStatusProcessorTest {
         .participantKind(ParticipantKind.ENGINE)
         .componentType("engine")
         .capabilities(ENGINE_CAPABILITIES)
+        .supportedModes(ParticipantStatusSupport.supportedModesForCapabilities(ENGINE_CAPABILITIES))
         .namespace("bank.payments")
         .startedAt(1716450000000L)
         .lastSeenAt(1716450060000L)
@@ -251,6 +253,9 @@ class ParticipantStatusProcessorTest {
         .participantKind(ParticipantKind.CLIENT)
         .componentType("console")
         .capabilities(CONTROL_PLANE_CLIENT_CAPABILITIES)
+        .supportedModes(
+            ParticipantStatusSupport.supportedModesForCapabilities(
+                CONTROL_PLANE_CLIENT_CAPABILITIES))
         .namespace("bank.payments")
         .startedAt(1716450000000L)
         .lastSeenAt(1716450060000L)
