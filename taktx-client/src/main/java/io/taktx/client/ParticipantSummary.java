@@ -115,5 +115,3 @@ public record ParticipantSummary(
     return totalParticipants > 0;
   }
 }
-
-

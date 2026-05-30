@@ -13,4 +13,3 @@ public enum BlockingIssueSource {
   SECURITY_EVENT,
   DERIVED
 }
-

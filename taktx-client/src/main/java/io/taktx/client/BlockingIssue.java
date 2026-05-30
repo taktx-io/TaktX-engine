@@ -30,4 +30,3 @@ public record BlockingIssue(
     metadata = metadata == null || metadata.isEmpty() ? Map.of() : Map.copyOf(metadata);
   }
 }
-

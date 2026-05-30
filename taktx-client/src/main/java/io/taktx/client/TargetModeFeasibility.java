@@ -20,7 +20,10 @@ public record TargetModeFeasibility(
   public TargetModeFeasibility {
     blockers = blockers == null ? List.of() : List.copyOf(blockers);
     if (status == null) {
-      status = blockers.isEmpty() ? TargetModeFeasibilityStatus.FEASIBLE : TargetModeFeasibilityStatus.BLOCKED;
+      status =
+          blockers.isEmpty()
+              ? TargetModeFeasibilityStatus.FEASIBLE
+              : TargetModeFeasibilityStatus.BLOCKED;
     }
   }
 
@@ -29,9 +32,9 @@ public record TargetModeFeasibility(
         targetMode, TargetModeFeasibilityStatus.FEASIBLE, true, List.of());
   }
 
-  public static TargetModeFeasibility blocked(SecurityMode targetMode, List<BlockingIssue> blockers) {
+  public static TargetModeFeasibility blocked(
+      SecurityMode targetMode, List<BlockingIssue> blockers) {
     return new TargetModeFeasibility(
         targetMode, TargetModeFeasibilityStatus.BLOCKED, false, blockers);
   }
 }
-

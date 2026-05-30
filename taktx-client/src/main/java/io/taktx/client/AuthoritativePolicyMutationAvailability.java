@@ -35,6 +35,3 @@ public record AuthoritativePolicyMutationAvailability(
     return new AuthoritativePolicyMutationAvailability(true, false, code, message, metadata);
   }
 }
-
-
-
