@@ -224,6 +224,9 @@ class ClientProtectedDataPlaneParticipationGuardTest {
     assertThat(status.getComponentType()).isEqualTo("admin-console");
     assertThat(status.getCapabilities())
         .containsExactlyInAnyOrderElementsOf(descriptor.capabilities());
+    assertThat(status.getSupportedModes())
+        .containsExactlyInAnyOrder(
+            SecurityMode.OPEN, SecurityMode.SECURED, SecurityMode.ANCHORED_SECURED);
     assertThat(status.isReadyForDataPlane()).isTrue();
   }
 

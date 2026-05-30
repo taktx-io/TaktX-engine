@@ -12,12 +12,14 @@ import io.taktx.dto.ParticipantEffectiveState;
 import io.taktx.dto.ParticipantKind;
 import io.taktx.dto.ParticipantStatusDTO;
 import io.taktx.dto.PolicyMismatchReasonDTO;
+import io.taktx.dto.SecurityMode;
 import io.taktx.dto.StatusVerificationLevel;
 import io.taktx.proto.ParticipantCapabilityMessage;
 import io.taktx.proto.ParticipantEffectiveStateMessage;
 import io.taktx.proto.ParticipantKindMessage;
 import io.taktx.proto.ParticipantStatusMessage;
 import io.taktx.proto.PolicyMismatchReasonMessage;
+import io.taktx.proto.SecurityModeMessage;
 import io.taktx.proto.StatusVerificationLevelMessage;
 import java.util.LinkedHashSet;
 import java.util.Map;
@@ -47,6 +49,10 @@ public final class ParticipantStatusProtoMapper {
     if (dto.getCapabilities() != null) {
       builder.addAllCapabilities(
           dto.getCapabilities().stream().map(ParticipantStatusProtoMapper::toProto).toList());
+    }
+    if (dto.getSupportedModes() != null) {
+      builder.addAllSupportedModes(
+          dto.getSupportedModes().stream().map(ParticipantStatusProtoMapper::toProto).toList());
     }
     if (dto.getNamespace() != null) {
       builder.setNamespace(dto.getNamespace());
@@ -85,6 +91,11 @@ public final class ParticipantStatusProtoMapper {
         .componentType(emptyToNull(message.getComponentType()))
         .capabilities(
             message.getCapabilitiesList().stream()
+                .map(ParticipantStatusProtoMapper::toDto)
+                .filter(java.util.Objects::nonNull)
+                .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new)))
+        .supportedModes(
+            message.getSupportedModesList().stream()
                 .map(ParticipantStatusProtoMapper::toDto)
                 .filter(java.util.Objects::nonNull)
                 .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new)))
@@ -164,6 +175,25 @@ public final class ParticipantStatusProtoMapper {
       case PROTECTED_RUNTIME_PARTICIPANT -> ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT;
       case SECURITY_OBSERVER -> ParticipantCapability.SECURITY_OBSERVER;
       case PARTICIPANT_CAPABILITY_UNSPECIFIED, UNRECOGNIZED -> null;
+    };
+  }
+
+  private static SecurityModeMessage toProto(SecurityMode mode) {
+    return switch (mode) {
+      case OPEN -> SecurityModeMessage.OPEN;
+      case SECURED -> SecurityModeMessage.SECURED;
+      case ANCHORED_SECURED -> SecurityModeMessage.ANCHORED_SECURED;
+      case MISCONFIGURED_SECURITY -> SecurityModeMessage.MISCONFIGURED_SECURITY;
+    };
+  }
+
+  private static SecurityMode toDto(SecurityModeMessage mode) {
+    return switch (mode) {
+      case OPEN -> SecurityMode.OPEN;
+      case SECURED -> SecurityMode.SECURED;
+      case ANCHORED_SECURED -> SecurityMode.ANCHORED_SECURED;
+      case MISCONFIGURED_SECURITY -> SecurityMode.MISCONFIGURED_SECURITY;
+      case SECURITY_MODE_UNSPECIFIED, UNRECOGNIZED -> null;
     };
   }
 

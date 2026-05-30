@@ -271,6 +271,8 @@ final class ClientProtectedDataPlaneParticipationGuard {
         .participantKind(participantDescriptor.kind())
         .componentType(participantDescriptor.componentType())
         .capabilities(participantDescriptor.capabilities())
+        .supportedModes(
+            ParticipantStatusSupport.supportedModesForCapabilities(participantDescriptor.capabilities()))
         .namespace(taktPropertiesHelper.getNamespace())
         .startedAt(startedAtMs)
         .lastSeenAt(nowMs)

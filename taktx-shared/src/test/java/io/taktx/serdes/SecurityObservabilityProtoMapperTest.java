@@ -17,6 +17,7 @@ import io.taktx.dto.PolicyMismatchReasonDTO;
 import io.taktx.dto.SecurityEventDTO;
 import io.taktx.dto.SecurityEventSeverity;
 import io.taktx.dto.SecurityEventType;
+import io.taktx.dto.SecurityMode;
 import io.taktx.dto.StatusVerificationLevel;
 import java.util.List;
 import java.util.Map;
@@ -35,6 +36,8 @@ class SecurityObservabilityProtoMapperTest {
             .componentType("engine")
             .capabilities(
                 Set.of(ParticipantCapability.ENFORCER, ParticipantCapability.SECURITY_OBSERVER))
+            .supportedModes(
+                Set.of(SecurityMode.OPEN, SecurityMode.SECURED, SecurityMode.ANCHORED_SECURED))
             .namespace("bank.payments")
             .startedAt(1716450000000L)
             .lastSeenAt(1716450060000L)

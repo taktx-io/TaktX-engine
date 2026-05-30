@@ -58,6 +58,9 @@ class EngineSecurityReadinessEvaluatorTest {
     assertThat(status.getEffectiveState()).isEqualTo(io.taktx.dto.ParticipantEffectiveState.READY);
     assertThat(status.isReadyForDataPlane()).isTrue();
     assertThat(status.getObservedPolicyVersion()).isNull();
+    assertThat(status.getSupportedModes())
+        .containsExactlyInAnyOrder(
+            SecurityMode.OPEN, SecurityMode.SECURED, SecurityMode.ANCHORED_SECURED);
     assertThat(status.getMismatchReasons()).isEmpty();
   }
 

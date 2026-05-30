@@ -31,6 +31,7 @@ public class ParticipantStatusDTO {
   private ParticipantKind participantKind;
   private String componentType;
   @Builder.Default private Set<ParticipantCapability> capabilities = Set.of();
+  @Builder.Default private Set<SecurityMode> supportedModes = Set.of();
   private String namespace;
   private long startedAt;
   private long lastSeenAt;
