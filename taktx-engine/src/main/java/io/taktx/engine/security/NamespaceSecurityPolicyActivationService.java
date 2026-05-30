@@ -16,6 +16,7 @@ import io.taktx.dto.SecurityEventDTO;
 import io.taktx.dto.SecurityEventSeverity;
 import io.taktx.dto.SecurityEventType;
 import io.taktx.dto.SecurityMode;
+import io.taktx.dto.SecurityPostureIssueCodes;
 import io.taktx.engine.config.NamespaceSecurityPolicyStore;
 import io.taktx.engine.config.ParticipantStatusStore;
 import io.taktx.engine.config.TaktConfiguration;
@@ -39,12 +40,14 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class NamespaceSecurityPolicyActivationService {
 
-  static final String ACTIVATION_TIMEOUT_CODE = "ACTIVATION_TIMEOUT";
-  static final String POLICY_REJECTION_CODE = "POLICY_REJECTION";
-  static final String READINESS_MISMATCH_CODE = "READINESS_MISMATCH";
-  static final String BREAK_GLASS_DOWNGRADE_CODE = "BREAK_GLASS_DOWNGRADE";
-  static final String BREAK_GLASS_DOWNGRADE_REJECTED_CODE = "BREAK_GLASS_DOWNGRADE_REJECTED";
-  public static final String INVALID_POLICY_MUTATION_CODE = "INVALID_POLICY_MUTATION";
+  static final String ACTIVATION_TIMEOUT_CODE = SecurityPostureIssueCodes.ACTIVATION_TIMEOUT;
+  static final String POLICY_REJECTION_CODE = SecurityPostureIssueCodes.POLICY_REJECTION;
+  static final String READINESS_MISMATCH_CODE = SecurityPostureIssueCodes.READINESS_MISMATCH;
+  static final String BREAK_GLASS_DOWNGRADE_CODE = SecurityPostureIssueCodes.BREAK_GLASS_DOWNGRADE;
+  static final String BREAK_GLASS_DOWNGRADE_REJECTED_CODE =
+      SecurityPostureIssueCodes.BREAK_GLASS_DOWNGRADE_REJECTED;
+  public static final String INVALID_POLICY_MUTATION_CODE =
+      SecurityPostureIssueCodes.INVALID_POLICY_MUTATION;
 
   private static final Set<ParticipantCapability> REQUIRED_ACTIVATION_CAPABILITIES =
       EnumSet.of(ParticipantCapability.ENFORCER);

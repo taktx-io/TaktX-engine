@@ -15,6 +15,7 @@ import io.taktx.dto.ParticipantStatusDTO;
 import io.taktx.dto.PolicyMismatchReasonDTO;
 import io.taktx.dto.SecurityActivationState;
 import io.taktx.dto.SecurityMode;
+import io.taktx.dto.SecurityPostureIssueCodes;
 import io.taktx.dto.StatusVerificationLevel;
 import io.taktx.engine.config.NamespaceSecurityPolicyStore;
 import io.taktx.engine.config.TaktConfiguration;
@@ -36,7 +37,7 @@ import lombok.extern.slf4j.Slf4j;
 public class EngineSecurityReadinessEvaluator {
 
   static final String POLICY_NOT_ACTIVE = "POLICY_NOT_ACTIVE";
-  static final String TRUST_ANCHOR_MISSING = "TRUST_ANCHOR_MISSING";
+  static final String TRUST_ANCHOR_MISSING = SecurityPostureIssueCodes.TRUST_ANCHOR_MISSING;
   static final String ENGINE_SIGNING_UNAVAILABLE = "ENGINE_SIGNING_UNAVAILABLE";
   static final String POLICY_MARKED_MISCONFIGURED = "POLICY_MARKED_MISCONFIGURED";
   static final long STATUS_TTL_MS = 30_000L;

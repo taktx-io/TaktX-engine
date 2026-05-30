@@ -28,4 +28,9 @@ public final class SecurityClient {
   public void clearNamespaceSecurityPolicy() {
     client.clearNamespaceSecurityPolicy();
   }
+
+  /** Returns structured local availability for authoritative namespace security-policy mutation. */
+  public AuthoritativePolicyMutationAvailability authoritativePolicyMutationAvailability() {
+    return client.authoritativePolicyMutationAvailability();
+  }
 }
