@@ -11,8 +11,10 @@ import io.taktx.dto.ParticipantCapability;
 import io.taktx.dto.ParticipantEffectiveState;
 import io.taktx.dto.ParticipantStatusDTO;
 import io.taktx.dto.PolicyMismatchReasonDTO;
+import io.taktx.dto.SecurityMode;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -45,11 +47,13 @@ public final class ParticipantStatusSupport {
                 .toList();
 
     Set<ParticipantCapability> capabilities = normalizeSet(status.getCapabilities());
+    Set<SecurityMode> supportedModes = normalizeSupportedModes(status.getSupportedModes(), capabilities);
     String componentType = normalizeOptionalString(status.getComponentType());
 
     return status.toBuilder()
         .componentType(componentType)
         .capabilities(capabilities)
+        .supportedModes(supportedModes)
         .mismatchReasons(mismatchReasons)
         .build();
   }
@@ -77,6 +81,16 @@ public final class ParticipantStatusSupport {
     }
     if (normalized.getCapabilities().isEmpty()) {
       errors.add("capabilities must not be empty");
+    }
+    if (containsNull(normalized.getSupportedModes())) {
+      errors.add("supportedModes must not contain null values");
+    }
+    if (!normalized.getSupportedModes().contains(SecurityMode.OPEN)) {
+      errors.add("supportedModes must include OPEN");
+    }
+    if (normalized.getSupportedModes().contains(SecurityMode.ANCHORED_SECURED)
+        && !normalized.getSupportedModes().contains(SecurityMode.SECURED)) {
+      errors.add("supportedModes containing ANCHORED_SECURED must also include SECURED");
     }
     if (isBlank(normalized.getNamespace())) {
       errors.add("namespace must not be blank");
@@ -164,6 +178,55 @@ public final class ParticipantStatusSupport {
         && java.util.Objects.equals(activePolicyHash, normalized.getObservedPolicyHash());
   }
 
+  /** Returns the explicit support-in-principle modes for the participant. */
+  public static Set<SecurityMode> supportedModes(ParticipantStatusDTO status) {
+    if (status == null) {
+      return Set.of();
+    }
+    return normalize(status).getSupportedModes();
+  }
+
+  /** Returns whether the participant can support the supplied security mode in principle. */
+  public static boolean supportsMode(ParticipantStatusDTO status, SecurityMode mode) {
+    return mode != null && supportedModes(status).contains(mode);
+  }
+
+  /** Returns whether the participant can participate in protected runtime traffic in principle. */
+  public static boolean supportsProtectedRuntimeParticipation(ParticipantStatusDTO status) {
+    if (status == null || status.getCapabilities() == null) {
+      return false;
+    }
+    return status.getCapabilities().contains(ParticipantCapability.ENFORCER)
+        || status.getCapabilities().contains(ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT);
+  }
+
+  /** Returns whether the participant can publish authoritative policy mutations in principle. */
+  public static boolean supportsAuthoritativePolicyPublication(ParticipantStatusDTO status) {
+    return status != null
+        && status.getCapabilities() != null
+        && status.getCapabilities().contains(ParticipantCapability.AUTHORITATIVE_POLICY_PUBLISHER);
+  }
+
+  /** Returns whether the participant can validate anchored trust requirements in principle. */
+  public static boolean supportsTrustAnchorValidation(ParticipantStatusDTO status) {
+    return supportsMode(status, SecurityMode.ANCHORED_SECURED);
+  }
+
+  /** Derives support-in-principle modes from coarse participant capabilities. */
+  public static Set<SecurityMode> supportedModesForCapabilities(Set<ParticipantCapability> capabilities) {
+    EnumSet<SecurityMode> supportedModes = EnumSet.of(SecurityMode.OPEN);
+    if (capabilities == null || capabilities.isEmpty()) {
+      return Set.copyOf(supportedModes);
+    }
+    if (capabilities.contains(ParticipantCapability.ENFORCER)
+        || capabilities.contains(ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT)
+        || capabilities.contains(ParticipantCapability.AUTHORITATIVE_POLICY_PUBLISHER)) {
+      supportedModes.add(SecurityMode.SECURED);
+      supportedModes.add(SecurityMode.ANCHORED_SECURED);
+    }
+    return Set.copyOf(supportedModes);
+  }
+
   private static boolean isBlank(String value) {
     return value == null || value.isBlank();
   }
@@ -177,6 +240,14 @@ public final class ParticipantStatusSupport {
       return Set.of();
     }
     return Collections.unmodifiableSet(new LinkedHashSet<>(values));
+  }
+
+  private static Set<SecurityMode> normalizeSupportedModes(
+      Set<SecurityMode> supportedModes, Set<ParticipantCapability> capabilities) {
+    if (supportedModes == null || supportedModes.isEmpty()) {
+      return supportedModesForCapabilities(capabilities);
+    }
+    return Collections.unmodifiableSet(new LinkedHashSet<>(supportedModes));
   }
 
   private static boolean containsNull(Set<?> values) {

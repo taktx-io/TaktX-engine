@@ -18,6 +18,7 @@ import io.taktx.dto.SecurityMode;
 import io.taktx.dto.StatusVerificationLevel;
 import io.taktx.engine.config.NamespaceSecurityPolicyStore;
 import io.taktx.engine.config.TaktConfiguration;
+import io.taktx.security.ParticipantStatusSupport;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.time.Clock;
 import java.util.ArrayList;
@@ -121,6 +122,7 @@ public class EngineSecurityReadinessEvaluator {
         .participantKind(ParticipantKind.ENGINE)
         .componentType("engine")
         .capabilities(ENGINE_CAPABILITIES)
+        .supportedModes(ParticipantStatusSupport.supportedModesForCapabilities(ENGINE_CAPABILITIES))
         .namespace(configuration.getNamespace())
         .startedAt(startedAtMs)
         .lastSeenAt(nowMs)

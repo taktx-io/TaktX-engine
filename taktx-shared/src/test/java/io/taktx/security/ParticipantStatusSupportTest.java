@@ -15,6 +15,7 @@ import io.taktx.dto.ParticipantEffectiveState;
 import io.taktx.dto.ParticipantKind;
 import io.taktx.dto.ParticipantStatusDTO;
 import io.taktx.dto.PolicyMismatchReasonDTO;
+import io.taktx.dto.SecurityMode;
 import io.taktx.dto.StatusVerificationLevel;
 import java.util.LinkedHashSet;
 import java.util.Map;
@@ -98,6 +99,56 @@ class ParticipantStatusSupportTest {
 
     assertThat(validated.isReadyForDataPlane()).isTrue();
     assertThat(validated.getObservedPolicyVersion()).isEqualTo(42L);
+    assertThat(validated.getSupportedModes())
+        .containsExactlyInAnyOrder(
+            SecurityMode.OPEN, SecurityMode.SECURED, SecurityMode.ANCHORED_SECURED);
+  }
+
+  @Test
+  void normalize_derivesSupportedModesFromCapabilitiesWhenMissing() {
+    ParticipantStatusDTO normalized =
+        ParticipantStatusSupport.normalize(
+            ParticipantStatusDTO.builder()
+                .participantId("engine-1")
+                .participantInstanceId("engine-1-pod")
+                .participantKind(ParticipantKind.ENGINE)
+                .componentType("engine")
+                .capabilities(Set.of(ParticipantCapability.ENFORCER))
+                .namespace("bank.payments")
+                .startedAt(100L)
+                .lastSeenAt(150L)
+                .statusExpiresAt(200L)
+                .statusVerificationLevel(StatusVerificationLevel.UNVERIFIED_STATUS)
+                .effectiveState(ParticipantEffectiveState.READY)
+                .build());
+
+    assertThat(normalized.getSupportedModes())
+        .containsExactlyInAnyOrder(
+            SecurityMode.OPEN, SecurityMode.SECURED, SecurityMode.ANCHORED_SECURED);
+  }
+
+  @Test
+  void requireValid_rejectsAnchoredSupportWithoutSecuredSupport() {
+    ParticipantStatusDTO status =
+        ParticipantStatusDTO.builder()
+            .participantId("engine-1")
+            .participantInstanceId("engine-1-pod")
+            .participantKind(ParticipantKind.ENGINE)
+            .componentType("engine")
+            .capabilities(Set.of(ParticipantCapability.ENFORCER))
+            .supportedModes(Set.of(SecurityMode.OPEN, SecurityMode.ANCHORED_SECURED))
+            .namespace("bank.payments")
+            .startedAt(100L)
+            .lastSeenAt(150L)
+            .statusExpiresAt(200L)
+            .statusVerificationLevel(StatusVerificationLevel.UNVERIFIED_STATUS)
+            .effectiveState(ParticipantEffectiveState.NOT_READY)
+            .build();
+
+    assertThatThrownBy(() -> ParticipantStatusSupport.requireValid(status))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining(
+            "supportedModes containing ANCHORED_SECURED must also include SECURED");
   }
 
   @Test
@@ -306,6 +357,42 @@ class ParticipantStatusSupportTest {
     assertThat(
             ParticipantStatusSupport.allowsProtectedDataPlaneParticipation(
                 verifiedNotReady, 42L, "abc123", 199L))
+        .isFalse();
+  }
+
+  @Test
+  void supportHelpers_distinguishSupportInPrincipleFromCurrentReadiness() {
+    ParticipantStatusDTO status =
+        ParticipantStatusDTO.builder()
+            .participantId("console-1")
+            .participantInstanceId("console-1#1")
+            .participantKind(ParticipantKind.CLIENT)
+            .componentType("console")
+            .capabilities(
+                Set.of(
+                    ParticipantCapability.AUTHORITATIVE_POLICY_PUBLISHER,
+                    ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT,
+                    ParticipantCapability.SECURITY_OBSERVER))
+            .namespace("bank.payments")
+            .startedAt(100L)
+            .lastSeenAt(150L)
+            .statusExpiresAt(200L)
+            .statusVerificationLevel(StatusVerificationLevel.LOCALLY_VERIFIED_STATUS)
+            .effectiveState(ParticipantEffectiveState.MISMATCH)
+            .readyForDataPlane(false)
+            .supportedModes(
+                Set.of(SecurityMode.OPEN, SecurityMode.SECURED, SecurityMode.ANCHORED_SECURED))
+            .build();
+
+    assertThat(ParticipantStatusSupport.supportsMode(status, SecurityMode.SECURED)).isTrue();
+    assertThat(ParticipantStatusSupport.supportsMode(status, SecurityMode.ANCHORED_SECURED))
+        .isTrue();
+    assertThat(ParticipantStatusSupport.supportsProtectedRuntimeParticipation(status)).isTrue();
+    assertThat(ParticipantStatusSupport.supportsAuthoritativePolicyPublication(status)).isTrue();
+    assertThat(ParticipantStatusSupport.supportsTrustAnchorValidation(status)).isTrue();
+    assertThat(
+            ParticipantStatusSupport.allowsProtectedDataPlaneParticipation(
+                status, 42L, "abc123", 199L))
         .isFalse();
   }
 }
