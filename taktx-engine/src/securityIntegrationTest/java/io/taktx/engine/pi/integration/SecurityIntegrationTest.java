@@ -296,7 +296,7 @@ class SecurityIntegrationTest {
           .until(() -> configStore.get() != null && configStore.get().isSigningEnabled());
     }
 
-    // 2. Wait for both the worker AND platform signing keys to appear in the engine's KTable.
+    // 2. Wait for the worker, platform, and engine signing keys to appear in the engine's KTable.
     // EngineSigningKeysHolder holds the lambda registered by EngineAuthorizationService that
     // delegates to the Kafka Streams state store — returning null for unknown keys.
     EngineSigningKeysHolder.KeyResolver keyResolver = EngineSigningKeysHolder.get();
@@ -311,6 +311,10 @@ class SecurityIntegrationTest {
           .atMost(Duration.ofSeconds(30))
           .pollInterval(Duration.ofMillis(200))
           .until(() -> keyResolver.resolvePublicKey(PLATFORM_KID) != null);
+      await()
+          .atMost(Duration.ofSeconds(30))
+          .pollInterval(Duration.ofMillis(200))
+          .until(() -> keyResolver.resolvePublicKey(SecurityTestConfigResource.engineKeyId) != null);
     }
   }
 

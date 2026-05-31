@@ -4,7 +4,8 @@
 
 The plain Java `taktx-client` library is the core client for interacting with a TaktX BPMN engine over Kafka. It is framework-agnostic and works in any JVM environment. Framework-specific wrappers with zero-boilerplate auto-configuration are available:
 
-- [`taktx-client-spring`](../taktx-client-spring/README.md) — Spring Boot auto-configuration
+- [`taktx-client-spring-boot-3`](../taktx-client-spring-boot-3/README.md) — Spring Boot 3 auto-configuration
+- [`taktx-client-spring-boot-4`](../taktx-client-spring-boot-4/README.md) — Spring Boot 4 auto-configuration
 - [`taktx-client-quarkus`](../taktx-client-quarkus/README.md) — Quarkus / CDI wiring
 
 ---
@@ -79,7 +80,7 @@ TaktXClient client = TaktXClient.newClientBuilder()
     .withProperties(props)
     .build();
 
-client.start();   // initialises stores, publishes worker key if configured, starts consumers
+client.start();   // initialises stores, prepares/publishes worker key only when posture or runtime security requires it, starts consumers
 
 UUID instanceId = client.startProcess("invoice-process", -1, VariablesDTO.empty(), null);
 ```
@@ -273,7 +274,9 @@ client.sendSignal("GlobalShutdown");
 
 ## Worker signing
 
-Workers can sign their responses with an Ed25519 key. The engine verifies signatures when `signingEnabled=true` in the runtime configuration topic.
+Workers can sign their responses with an Ed25519 key. The engine verifies signatures when `signingEnabled=true` in the runtime configuration topic, or when an active authoritative namespace policy requires signed client/worker traffic.
+
+Default `OPEN` posture remains steady-state unsigned. A requested protected posture may still pre-publish the worker public key as bootstrap preparation, but outbound client traffic stays unsigned until signing is actually active.
 
 ### Source 1 — Environment variables (default)
 
@@ -347,7 +350,18 @@ rm /tmp/worker-key.pem
 
 ### Behaviour on `start()`
 
-When a signing identity is available, `client.start()` automatically publishes the worker's public key to `taktx-signing-keys`. The client re-publishes whenever the key changes (live rotation). If `TAKTX_SIGNING_PUBLIC_KEY` is absent, only private-key signing is active and no auto-publication occurs.
+When a signing identity is available, `client.start()` automatically publishes the worker's public key to `taktx-signing-keys` only when legacy runtime security toggles are active or the namespace is preparing for / operating under `SECURED` or `ANCHORED_SECURED`. The client re-publishes whenever the key changes (live rotation). If `TAKTX_SIGNING_PUBLIC_KEY` is absent, only private-key signing is active and no auto-publication occurs.
+
+Actual outbound client signing becomes active when either:
+
+- `signingEnabled=true` is present in runtime configuration (legacy/global path), or
+- the authoritative active namespace policy requires `clientCommands` and/or `workerResponses` signing.
+
+So the steady-state behavior is:
+
+- **no active policy / `OPEN`** → unsigned, no steady-state key publication
+- **requested `SECURED` / `ANCHORED_SECURED`** → optional preparation/public-key publication, but outbound messages remain unsigned
+- **active `SECURED` / `ANCHORED_SECURED` requiring signing** → client messages are signed and publishable worker keys are kept current
 
 ---
 

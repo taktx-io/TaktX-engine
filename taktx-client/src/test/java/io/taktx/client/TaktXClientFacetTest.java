@@ -84,8 +84,7 @@ class TaktXClientFacetTest {
                 "publishNamespaceSecurityPolicy", NamespaceSecurityPolicyDTO.class))
         .isNotNull();
     assertThat(SecurityClient.class.getMethod("clearNamespaceSecurityPolicy")).isNotNull();
-    assertThat(SecurityClient.class.getMethod("authoritativePolicyMutationAvailability"))
-        .isNotNull();
+    assertThat(SecurityClient.class.getMethod("authoritativePolicyMutationAvailability")).isNotNull();
     assertThat(RuntimeClient.class.getMethod("startProcess", String.class, VariablesDTO.class))
         .isNotNull();
     assertThat(

@@ -182,8 +182,9 @@ public class BpmnTestEngine {
     kakaProperties.put("taktx.engine.tenant-id", "test-tenant");
     kakaProperties.put("taktx.engine.namespace", "default");
     kakaProperties.put("taktx.external.task.consumer.threads", 2);
-    // BpmnTestEngine is a test harness — use no signing identity so it doesn't
-    // overwrite the engine's SigningServiceHolder registration.
+    // BpmnTestEngine signs its own client commands with a dedicated CLIENT-role key. The
+    // TaktXClient producer now uses a client-local signer, so this no longer overwrites the
+    // engine's process-wide signing registration when both run in the same JVM.
     if (enginePublicKeyBase64 != null) {
       kakaProperties.put(
           io.taktx.serdes.ProtoDtoDeserializer.ENGINE_PUBLIC_KEY_CONFIG, enginePublicKeyBase64);
@@ -202,7 +203,7 @@ public class BpmnTestEngine {
     taktClient =
         TaktXClient.newClientBuilder()
             .withProperties(kakaProperties)
-            .withSigningIdentitySource(() -> null)
+            .withSigningIdentitySource(() -> topicRequestSigningIdentity)
             .build();
     taktClient.registerInstanceUpdateConsumer("bpmntestengine", BpmnTestEngine.this::consume);
     taktClient.registerUserTaskConsumer(BpmnTestEngine.this::consumeUserTaskTrigger);

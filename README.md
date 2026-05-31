@@ -20,7 +20,7 @@ TaktX Engine is an open-source, high-performance **BPMN 2.0 process automation e
 
 Key differentiators from alternatives (Camunda, Zeebe, Flowable):
 - **No dedicated database** — state lives in Kafka-backed stores, fully replayable from the Kafka log
-- **Ed25519 message signing** — every worker interaction can be cryptographically authenticated
+- **Ed25519 message signing** — engine/client traffic can be cryptographically authenticated when secured posture or legacy runtime signing is enabled
 - **RS256 JWT command authorization** — fine-grained, token-based command control out of the box
 - **Single deployable JAR / OCI image** — no separate engine cluster to operate
 
@@ -127,6 +127,8 @@ Coverage badges are automatically generated from JaCoCo test reports and include
 TaktX Engine can be configured using application properties or environment variables:
 
 > **Security note:** the default/community trust mode is intended for local development. Production deployments should enable anchored trust (`TAKTX_PLATFORM_PUBLIC_KEY`, stable signing identities, and registration signatures), restrict writes to `taktx-signing-keys` with Kafka ACLs, and protect Kafka itself with TLS / SASL, quotas, and least-privilege producer access. See [`docs/security.md`](./docs/security.md) for the threat assumptions and production checklist.
+
+In the namespace security model, default `OPEN` posture remains steady-state unsigned. Signing identity publication/signing become active through legacy runtime security flags or when the namespace is preparing for / operating under `SECURED` or `ANCHORED_SECURED`.
 
 ```properties
 # Core Engine Configuration
