@@ -37,12 +37,17 @@ class EngineSecurityReadinessEvaluatorTest {
     when(configuration.getNamespace()).thenReturn("bank.payments");
     when(configuration.getHost()).thenReturn("engine-host");
     when(configuration.getPort()).thenReturn(8080);
+    when(configuration.getSigningIdentitySourceType()).thenReturn("generated");
     when(configuration.getPlatformPublicKey()).thenReturn(null);
+    when(configuration.getEngineKeyRegistrationSignature()).thenReturn(null);
 
     policyStore = new NamespaceSecurityPolicyStore();
     messageSigningService = Mockito.mock(MessageSigningService.class);
     when(messageSigningService.getKeyId()).thenReturn("engine-key-1");
+    when(messageSigningService.getPublicKeyBase64()).thenReturn("engine-public-key-1");
     when(messageSigningService.isPublicKeyPublished()).thenReturn(true);
+    when(messageSigningService.hasPublishableSigningIdentity()).thenReturn(false);
+    when(messageSigningService.hasLegacyProtectedRuntimeRequirement()).thenReturn(false);
 
     clock = Clock.fixed(Instant.ofEpochMilli(1_716_450_000_000L), ZoneOffset.UTC);
   }
@@ -58,10 +63,42 @@ class EngineSecurityReadinessEvaluatorTest {
     assertThat(status.getEffectiveState()).isEqualTo(io.taktx.dto.ParticipantEffectiveState.READY);
     assertThat(status.isReadyForDataPlane()).isTrue();
     assertThat(status.getObservedPolicyVersion()).isNull();
-    assertThat(status.getSupportedModes())
-        .containsExactlyInAnyOrder(
-            SecurityMode.OPEN, SecurityMode.SECURED, SecurityMode.ANCHORED_SECURED);
+    assertThat(status.getSupportedModes()).containsExactly(SecurityMode.OPEN);
     assertThat(status.getMismatchReasons()).isEmpty();
+  }
+
+  @Test
+  void requestedProtectedPreparation_withGeneratedDefaultIdentity_keepsSupportedModesOpenOnly() {
+    policyStore.setCurrentPolicy(
+        NamespaceSecurityPolicyDTO.builder()
+            .mode(SecurityMode.SECURED)
+            .activationState(SecurityActivationState.REQUESTED)
+            .desiredPolicyVersion(42L)
+            .requiredSigning(RequiredSigningDTO.builder().engineOutbound(true).build())
+            .build());
+
+    EngineSecurityReadinessEvaluator evaluator =
+        new EngineSecurityReadinessEvaluator(
+            configuration, policyStore, messageSigningService, clock);
+
+    var status = evaluator.evaluateCurrentStatus();
+
+    assertThat(status.getSupportedModes()).containsExactly(SecurityMode.OPEN);
+  }
+
+  @Test
+  void stableSigningRuntime_reportsSecuredAsSupportedMode() {
+    when(configuration.getSigningIdentitySourceType()).thenReturn("file");
+    when(messageSigningService.hasPublishableSigningIdentity()).thenReturn(true);
+
+    EngineSecurityReadinessEvaluator evaluator =
+        new EngineSecurityReadinessEvaluator(
+            configuration, policyStore, messageSigningService, clock);
+
+    var status = evaluator.evaluateCurrentStatus();
+
+    assertThat(status.getSupportedModes())
+        .containsExactlyInAnyOrder(SecurityMode.OPEN, SecurityMode.SECURED);
   }
 
   @Test
@@ -124,6 +161,9 @@ class EngineSecurityReadinessEvaluatorTest {
 
   @Test
   void anchoredActivePolicy_withoutTrustAnchor_reportsMismatch() {
+    when(configuration.getSigningIdentitySourceType()).thenReturn("file");
+    when(messageSigningService.hasPublishableSigningIdentity()).thenReturn(true);
+
     policyStore.update(
         NamespaceSecurityPolicyDTO.builder()
             .mode(SecurityMode.ANCHORED_SECURED)
@@ -143,6 +183,8 @@ class EngineSecurityReadinessEvaluatorTest {
     assertThat(status.getEffectiveState())
         .isEqualTo(io.taktx.dto.ParticipantEffectiveState.MISMATCH);
     assertThat(status.isReadyForDataPlane()).isFalse();
+    assertThat(status.getSupportedModes())
+        .containsExactlyInAnyOrder(SecurityMode.OPEN, SecurityMode.SECURED);
     assertThat(status.getMismatchReasons())
         .extracting(io.taktx.dto.PolicyMismatchReasonDTO::getCode)
         .contains(EngineSecurityReadinessEvaluator.TRUST_ANCHOR_MISSING);
@@ -150,7 +192,10 @@ class EngineSecurityReadinessEvaluatorTest {
 
   @Test
   void anchoredActivePolicy_withTrustAnchorAndSigningAvailable_reportsReady() {
+    when(configuration.getSigningIdentitySourceType()).thenReturn("file");
     when(configuration.getPlatformPublicKey()).thenReturn("platform-public-key");
+    when(configuration.getEngineKeyRegistrationSignature()).thenReturn("engine-registration-signature");
+    when(messageSigningService.hasPublishableSigningIdentity()).thenReturn(true);
 
     policyStore.update(
         NamespaceSecurityPolicyDTO.builder()
@@ -173,7 +218,38 @@ class EngineSecurityReadinessEvaluatorTest {
     assertThat(status.getObservedPolicyVersion()).isEqualTo(42L);
     assertThat(status.getObservedPolicyHash())
         .isEqualTo(policyStore.getActivePolicy().getActivePolicyHash());
+    assertThat(status.getSupportedModes())
+        .containsExactlyInAnyOrder(
+            SecurityMode.OPEN, SecurityMode.SECURED, SecurityMode.ANCHORED_SECURED);
     assertThat(status.getMismatchReasons()).isEmpty();
+  }
+
+  @Test
+  void anchoredPolicy_withTrustAnchorButGeneratedSigningRuntime_reportsAnchoredUnavailable() {
+    when(configuration.getPlatformPublicKey()).thenReturn("platform-public-key");
+    when(messageSigningService.hasPublishableSigningIdentity()).thenReturn(true);
+
+    policyStore.update(
+        NamespaceSecurityPolicyDTO.builder()
+            .mode(SecurityMode.ANCHORED_SECURED)
+            .activationState(SecurityActivationState.ACTIVE)
+            .desiredPolicyVersion(42L)
+            .requiredSigning(RequiredSigningDTO.builder().engineOutbound(true).build())
+            .trustAnchorRequired(true)
+            .activePolicyVersion(42L)
+            .build());
+
+    EngineSecurityReadinessEvaluator evaluator =
+        new EngineSecurityReadinessEvaluator(
+            configuration, policyStore, messageSigningService, clock);
+
+    var status = evaluator.evaluateCurrentStatus();
+
+    assertThat(status.getSupportedModes())
+        .containsExactlyInAnyOrder(SecurityMode.OPEN, SecurityMode.SECURED);
+    assertThat(status.getMismatchReasons())
+        .extracting(io.taktx.dto.PolicyMismatchReasonDTO::getCode)
+        .contains(EngineSecurityReadinessEvaluator.ENGINE_ANCHORED_TRUST_UNAVAILABLE);
   }
 
   @Test

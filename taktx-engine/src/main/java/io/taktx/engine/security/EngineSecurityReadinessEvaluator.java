@@ -23,7 +23,9 @@ import io.taktx.security.ParticipantStatusSupport;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.time.Clock;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -39,6 +41,7 @@ public class EngineSecurityReadinessEvaluator {
   static final String POLICY_NOT_ACTIVE = "POLICY_NOT_ACTIVE";
   static final String TRUST_ANCHOR_MISSING = SecurityPostureIssueCodes.TRUST_ANCHOR_MISSING;
   static final String ENGINE_SIGNING_UNAVAILABLE = "ENGINE_SIGNING_UNAVAILABLE";
+  static final String ENGINE_ANCHORED_TRUST_UNAVAILABLE = "ENGINE_ANCHORED_TRUST_UNAVAILABLE";
   static final String POLICY_MARKED_MISCONFIGURED = "POLICY_MARKED_MISCONFIGURED";
   static final long STATUS_TTL_MS = 30_000L;
   private static final java.util.Set<ParticipantCapability> ENGINE_CAPABILITIES =
@@ -66,6 +69,8 @@ public class EngineSecurityReadinessEvaluator {
     NamespaceSecurityPolicyDTO currentPolicy = namespaceSecurityPolicyStore.get();
     NamespaceSecurityPolicyDTO policy = namespaceSecurityPolicyStore.getAuthoritativePolicy();
     messageSigningService.ensureSigningPreparationIfNeeded();
+    boolean securedModeSupported = supportsSecuredModeNow(policy);
+    boolean anchoredModeSupported = supportsAnchoredModeNow(policy, securedModeSupported);
     long nowMs = clock.millis();
     List<PolicyMismatchReasonDTO> mismatchReasons = new ArrayList<>();
 
@@ -87,15 +92,26 @@ public class EngineSecurityReadinessEvaluator {
                 "Policy mode is MISCONFIGURED_SECURITY and therefore cannot be treated as ready"));
       }
 
-      if (policy.isTrustAnchorRequired()
-          && (configuration.getPlatformPublicKey() == null
-              || configuration.getPlatformPublicKey().isBlank())) {
+      if (policy.isTrustAnchorRequired() && !hasPlatformTrustAnchorConfigured()) {
         effectiveState = ParticipantEffectiveState.MISMATCH;
         readyForDataPlane = false;
         mismatchReasons.add(
             mismatchReason(
                 TRUST_ANCHOR_MISSING,
                 "Namespace requires anchored trust but no platform public key is configured"));
+      }
+
+      if (policy.isTrustAnchorRequired()
+          && hasPlatformTrustAnchorConfigured()
+          && !anchoredModeSupported) {
+        effectiveState = ParticipantEffectiveState.MISMATCH;
+        readyForDataPlane = false;
+        mismatchReasons.add(
+            mismatchReason(
+                ENGINE_ANCHORED_TRUST_UNAVAILABLE,
+                "Namespace requires anchored trust but the engine is not currently configured"
+                    + " with anchored-capable signing material (publishable signing identity,"
+                    + " stable file/env signing source, and engine key registration signature)"));
       }
 
       if (policy.getRequiredSigning() != null
@@ -124,7 +140,7 @@ public class EngineSecurityReadinessEvaluator {
         .participantKind(ParticipantKind.ENGINE)
         .componentType("engine")
         .capabilities(ENGINE_CAPABILITIES)
-        .supportedModes(ParticipantStatusSupport.supportedModesForCapabilities(ENGINE_CAPABILITIES))
+        .supportedModes(runtimeSupportedModes(securedModeSupported, anchoredModeSupported))
         .namespace(configuration.getNamespace())
         .startedAt(startedAtMs)
         .lastSeenAt(nowMs)
@@ -152,6 +168,75 @@ public class EngineSecurityReadinessEvaluator {
         + configuration.getPort()
         + "#"
         + ProcessHandle.current().pid();
+  }
+
+  private Set<SecurityMode> runtimeSupportedModes(
+      boolean securedModeSupported, boolean anchoredModeSupported) {
+    EnumSet<SecurityMode> supportedModes = EnumSet.of(SecurityMode.OPEN);
+    if (securedModeSupported) {
+      supportedModes.add(SecurityMode.SECURED);
+      if (anchoredModeSupported) {
+        supportedModes.add(SecurityMode.ANCHORED_SECURED);
+      }
+    }
+    return Set.copyOf(supportedModes);
+  }
+
+  private boolean supportsSecuredModeNow(NamespaceSecurityPolicyDTO authoritativePolicy) {
+    if (messageSigningService.hasLegacyProtectedRuntimeRequirement()) {
+      return messageSigningService.hasPublishableSigningIdentity();
+    }
+    if (isProtectedPosture(authoritativePolicy)) {
+      return !requiresEngineOutboundSigning(authoritativePolicy)
+          || messageSigningService.hasPublishableSigningIdentity();
+    }
+    return hasStableSigningSourceConfigured() && messageSigningService.hasPublishableSigningIdentity();
+  }
+
+  private boolean supportsAnchoredModeNow(
+      NamespaceSecurityPolicyDTO authoritativePolicy, boolean securedModeSupported) {
+    if (!securedModeSupported || !messageSigningService.hasPublishableSigningIdentity()) {
+      return false;
+    }
+    return hasStableSigningSourceConfigured()
+        && hasPlatformTrustAnchorConfigured()
+        && hasEngineKeyRegistrationSignatureConfigured();
+  }
+
+  private boolean hasStableSigningSourceConfigured() {
+    String sourceType = configuration.getSigningIdentitySourceType();
+    if (isBlank(sourceType)) {
+      return false;
+    }
+    return "env".equalsIgnoreCase(sourceType)
+        || "environment".equalsIgnoreCase(sourceType)
+        || "file".equalsIgnoreCase(sourceType);
+  }
+
+  private boolean hasPlatformTrustAnchorConfigured() {
+    return !isBlank(configuration.getPlatformPublicKey());
+  }
+
+  private boolean hasEngineKeyRegistrationSignatureConfigured() {
+    return !isBlank(configuration.getEngineKeyRegistrationSignature());
+  }
+
+  private static boolean requiresEngineOutboundSigning(NamespaceSecurityPolicyDTO policy) {
+    return policy != null
+        && policy.getRequiredSigning() != null
+        && policy.getRequiredSigning().isEngineOutbound();
+  }
+
+  private static boolean isProtectedPosture(NamespaceSecurityPolicyDTO policy) {
+    if (policy == null || policy.getMode() == null) {
+      return false;
+    }
+    return policy.getMode() == SecurityMode.SECURED
+        || policy.getMode() == SecurityMode.ANCHORED_SECURED;
+  }
+
+  private static boolean isBlank(String value) {
+    return value == null || value.isBlank();
   }
 
   private static PolicyMismatchReasonDTO mismatchReason(String code, String message) {

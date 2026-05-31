@@ -261,6 +261,17 @@ public class MessageSigningService {
     return publicKeyPublished.get();
   }
 
+  boolean hasPublishableSigningIdentity() {
+    refreshActiveIdentity();
+    return !isBlank(keyId)
+        && !isBlank(cachedPrivateKeyBase64)
+        && !isBlank(cachedPublicKeyBase64);
+  }
+
+  boolean hasLegacyProtectedRuntimeRequirement() {
+    return hasLegacySecurityToggle();
+  }
+
   void ensureSigningPreparationIfNeeded() {
     refreshActiveIdentity();
     schedulePublicKeyPublication(0L);
@@ -385,5 +396,9 @@ public class MessageSigningService {
     }
     return policy.getMode() == SecurityMode.SECURED
         || policy.getMode() == SecurityMode.ANCHORED_SECURED;
+  }
+
+  private static boolean isBlank(String value) {
+    return value == null || value.isBlank();
   }
 }
