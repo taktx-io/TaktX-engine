@@ -11,9 +11,12 @@ import io.quarkus.runtime.Startup;
 import io.taktx.Topics;
 import io.taktx.dto.GlobalConfigurationDTO;
 import io.taktx.dto.KeyRole;
+import io.taktx.dto.NamespaceSecurityPolicyDTO;
+import io.taktx.dto.SecurityMode;
 import io.taktx.dto.SigningKeyDTO;
 import io.taktx.dto.SigningKeyDTO.KeyStatus;
 import io.taktx.engine.config.GlobalConfigStore;
+import io.taktx.engine.config.NamespaceSecurityPolicyStore;
 import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.security.Ed25519Service;
 import io.taktx.security.SigningException;
@@ -32,7 +35,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Signs engine-internal Kafka messages with Ed25519.
+ * Signs engine-internal Kafka messages with Ed25519 when secured posture is active (or when legacy
+ * runtime security toggles still require signing semantics).
  *
  * <p>Registers itself as a {@link SigningServiceHolder.SigningFunction} at startup so that {@link
  * io.taktx.serdes.ProtoSigningSerializer} can sign records in a single serialisation pass — no
@@ -47,6 +51,7 @@ public class MessageSigningService {
 
   private final TaktConfiguration config;
   private final GlobalConfigStore globalConfigStore;
+  private final NamespaceSecurityPolicyStore namespaceSecurityPolicyStore;
   private final SigningIdentitySource signingIdentitySource;
   private final ScheduledExecutorService keyPublicationExecutor;
 
@@ -65,18 +70,21 @@ public class MessageSigningService {
   public MessageSigningService(
       TaktConfiguration config,
       GlobalConfigStore globalConfigStore,
+      NamespaceSecurityPolicyStore namespaceSecurityPolicyStore,
       SigningIdentitySource signingIdentitySource) {
-    this(config, globalConfigStore, signingIdentitySource, true);
+    this(config, globalConfigStore, namespaceSecurityPolicyStore, signingIdentitySource, true);
   }
 
-  /** Test constructor with a pre-built identity source and publication disabled. */
+   /** Test constructor with a pre-built identity source and publication scheduler disabled. */
   MessageSigningService(
       TaktConfiguration config,
       GlobalConfigStore globalConfigStore,
+      NamespaceSecurityPolicyStore namespaceSecurityPolicyStore,
       SigningIdentitySource signingIdentitySource,
       boolean startPublicationScheduler) {
     this.config = config;
     this.globalConfigStore = globalConfigStore;
+    this.namespaceSecurityPolicyStore = namespaceSecurityPolicyStore;
     this.signingIdentitySource = signingIdentitySource;
     this.keyPublicationExecutor =
         startPublicationScheduler
@@ -114,7 +122,9 @@ public class MessageSigningService {
    * simply overwrites the same key record.
    */
   private void schedulePublicKeyPublication(long delaySeconds) {
-    if (keyPublicationExecutor == null || publicKeyPublished.get()) {
+    if (keyPublicationExecutor == null
+        || publicKeyPublished.get()
+        || !shouldPrepareSigningInfrastructure()) {
       return;
     }
     keyPublicationExecutor.schedule(this::publishEnginePublicKey, delaySeconds, TimeUnit.SECONDS);
@@ -122,7 +132,7 @@ public class MessageSigningService {
 
   private void publishEnginePublicKey() {
     SigningIdentity identity = refreshActiveIdentity();
-    if (identity == null || publicKeyPublished.get()) {
+    if (identity == null || publicKeyPublished.get() || !shouldPrepareSigningInfrastructure()) {
       return;
     }
     boolean countersigned =
@@ -173,22 +183,29 @@ public class MessageSigningService {
   }
 
   /**
-   * Returns the {@code tx-sig} header value for the given payload bytes, or {@code null} if no
-   * active engine signing identity is available yet.
+   * Returns the {@code tx-sig} header value for the given payload bytes, or {@code null} when
+   * engine signing is inactive for the current posture/runtime state.
    *
-   * <p>Engine-emitted Kafka records are signed independently of runtime authorization toggles once
-   * the engine key has been published. This keeps internal control-plane topics such as {@code
-   * schedule-commands} compatible with strict consumers that always require an engine signature,
-   * while still delaying outbound signatures until the public key is resolvable by consumers.
-   * Called by {@link io.taktx.serdes.ProtoSigningSerializer} via {@link SigningServiceHolder}.
+   * <p>Default/open posture now remains unsigned unless a legacy runtime security toggle is still
+   * active. A requested secured posture may still trigger public-key publication as preparation, but
+   * actual message signing stays tied to authoritative secured posture (or legacy secure runtime
+   * configuration). Called by {@link io.taktx.serdes.ProtoSigningSerializer} via {@link
+   * SigningServiceHolder}.
    */
   public String signToHeaderValue(byte[] payloadBytes) {
+    if (!shouldSignEngineMessages()) {
+      log.debug("Engine signing inactive under default/open posture");
+      return null;
+    }
     SigningIdentity identity = refreshActiveIdentity();
     if (identity == null) {
       log.debug(
           "No active signing identity available from source={}",
           signingIdentitySource.getSourceType());
       return null;
+    }
+    if (!publicKeyPublished.get()) {
+      publishEnginePublicKey();
     }
     if (!publicKeyPublished.get()) {
       log.debug("Signing enabled but engine public key has not been published yet — skipping sign");
@@ -242,6 +259,11 @@ public class MessageSigningService {
   public boolean isPublicKeyPublished() {
     refreshActiveIdentity();
     return publicKeyPublished.get();
+  }
+
+  void ensureSigningPreparationIfNeeded() {
+    refreshActiveIdentity();
+    schedulePublicKeyPublication(0L);
   }
 
   private SigningIdentity refreshActiveIdentity() {
@@ -326,5 +348,42 @@ public class MessageSigningService {
       return GlobalConfigurationDTO.builder().build();
     }
     return globalConfigStore.get();
+  }
+
+  private boolean shouldPrepareSigningInfrastructure() {
+    if (hasLegacySecurityToggle()) {
+      return true;
+    }
+    return isProtectedPosture(namespaceSecurityPolicyStore != null ? namespaceSecurityPolicyStore.get() : null)
+        || isProtectedPosture(
+            namespaceSecurityPolicyStore != null
+                ? namespaceSecurityPolicyStore.getAuthoritativePolicy()
+                : null);
+  }
+
+  private boolean shouldSignEngineMessages() {
+    if (hasLegacySecurityToggle()) {
+      return true;
+    }
+    return isProtectedPosture(
+        namespaceSecurityPolicyStore != null
+            ? namespaceSecurityPolicyStore.getAuthoritativePolicy()
+            : null);
+  }
+
+  private boolean hasLegacySecurityToggle() {
+    GlobalConfigurationDTO cfg = effectiveConfig();
+    return cfg.isSigningEnabled()
+        || cfg.isEngineRequiresAuthorization()
+        || cfg.isEngineRequiresExternalTaskAuthorization()
+        || cfg.isEngineRequiresUserTaskAuthorization();
+  }
+
+  private static boolean isProtectedPosture(NamespaceSecurityPolicyDTO policy) {
+    if (policy == null || policy.getMode() == null) {
+      return false;
+    }
+    return policy.getMode() == SecurityMode.SECURED
+        || policy.getMode() == SecurityMode.ANCHORED_SECURED;
   }
 }

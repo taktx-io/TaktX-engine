@@ -84,6 +84,23 @@ class ProtoSigningSerializerTest {
   }
 
   @Test
+  void serializeWithHeaders_prefersLocalSigningFunctionOverGlobalHolder() {
+    SigningServiceHolder.set(payload -> "global-key.AABB");
+
+    RecordHeaders headers = new RecordHeaders();
+    try (ProtoSigningSerializer<ExternalTaskTriggerDTO> serializer =
+        new ProtoSigningSerializer<>(
+            WorkerTriggerProtoMapper::toProto, () -> payload -> "local-key.CCDD")) {
+      serializer.serialize(TOPIC, headers, sampleExternalTaskTrigger());
+    }
+
+    String headerValue =
+        new String(
+            headers.lastHeader(Constants.HEADER_ENGINE_SIGNATURE).value(), StandardCharsets.UTF_8);
+    assertThat(headerValue).isEqualTo("local-key.CCDD");
+  }
+
+  @Test
   void nullPayload_signsEmptyByteArrayAndKeepsTombstoneValueNull() {
     byte[][] signedPayload = new byte[1][];
     SigningServiceHolder.set(

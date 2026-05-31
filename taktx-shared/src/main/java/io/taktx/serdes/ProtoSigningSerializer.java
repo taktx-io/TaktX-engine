@@ -15,6 +15,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import org.apache.kafka.common.header.Headers;
 import org.apache.kafka.common.serialization.Serializer;
 import org.slf4j.Logger;
@@ -32,9 +33,16 @@ public class ProtoSigningSerializer<T> implements Serializer<T> {
   private static final Logger log = LoggerFactory.getLogger(ProtoSigningSerializer.class);
 
   private final Function<T, ? extends MessageLite> protoMapper;
+  private final Supplier<SigningFunction> signingFunctionSupplier;
 
   public ProtoSigningSerializer(Function<T, ? extends MessageLite> protoMapper) {
+    this(protoMapper, null);
+  }
+
+  public ProtoSigningSerializer(
+      Function<T, ? extends MessageLite> protoMapper, Supplier<SigningFunction> signingFunctionSupplier) {
     this.protoMapper = Objects.requireNonNull(protoMapper, "protoMapper must not be null");
+    this.signingFunctionSupplier = signingFunctionSupplier;
   }
 
   @Override
@@ -51,7 +59,7 @@ public class ProtoSigningSerializer<T> implements Serializer<T> {
   public byte[] serialize(String topic, Headers headers, T data) {
     byte[] bytes = toBytes(data);
     if (headers != null) {
-      SigningFunction fn = SigningServiceHolder.get();
+      SigningFunction fn = resolveSigningFunction();
       if (fn != null) {
         byte[] payloadToSign = bytes != null ? bytes : new byte[0];
         String headerValue = fn.sign(payloadToSign);
@@ -64,6 +72,16 @@ public class ProtoSigningSerializer<T> implements Serializer<T> {
       }
     }
     return bytes;
+  }
+
+  private SigningFunction resolveSigningFunction() {
+    if (signingFunctionSupplier != null) {
+      SigningFunction localSigningFunction = signingFunctionSupplier.get();
+      if (localSigningFunction != null) {
+        return localSigningFunction;
+      }
+    }
+    return SigningServiceHolder.get();
   }
 
   @SuppressWarnings("java:S1168")

@@ -33,9 +33,10 @@ import io.taktx.dto.ParticipantStatusDTO;
 import io.taktx.dto.ProcessDefinitionDTO;
 import io.taktx.dto.ProcessDefinitionKey;
 import io.taktx.dto.ProcessInstanceTriggerDTO;
+import io.taktx.dto.SecurityMode;
 import io.taktx.dto.SecurityEventDTO;
-import io.taktx.dto.SecurityParticipantDescriptor;
 import io.taktx.dto.SecurityPostureIssueCodes;
+import io.taktx.dto.SecurityParticipantDescriptor;
 import io.taktx.dto.SignalDTO;
 import io.taktx.dto.UserTaskTriggerDTO;
 import io.taktx.dto.VariablesDTO;
@@ -78,6 +79,7 @@ import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import org.apache.kafka.clients.producer.KafkaProducer;
@@ -164,6 +166,8 @@ public class TaktXClient {
       new CopyOnWriteArrayList<>();
   private volatile String publishedWorkerKeyId;
   private volatile String workerSigningRegistrationState = "uninitialized";
+  private volatile boolean globalWorkerSigningFunctionRegistered;
+  private final SigningServiceHolder.SigningFunction globalWorkerSigningFunction;
 
   private TaktXClient(
       TaktPropertiesHelper taktPropertiesHelper,
@@ -182,6 +186,7 @@ public class TaktXClient {
     this.signingIdentitySource = signingIdentitySource;
     this.authorizationTokenProvider = authorizationTokenProvider;
     this.workerKeyRegistrationSignature = workerKeyRegistrationSignature;
+    this.globalWorkerSigningFunction = this::signWorkerPayload;
     this.externalTaskTopicRequester = new ExternalTaskTopicRequester(taktPropertiesHelper);
     this.parameterResolverFactory = parameterResolverFactory;
     this.resultProcessorFactory = resultProcessorFactory;
@@ -642,8 +647,7 @@ public class TaktXClient {
         "publish authoritative namespace security policy");
     try {
       publishNamespaceSecurityPolicy(taktPropertiesHelper.getTaktProperties(), policy);
-      authoritativePolicyMutationAvailability =
-          AuthoritativePolicyMutationAvailability.availableNow();
+      authoritativePolicyMutationAvailability = AuthoritativePolicyMutationAvailability.availableNow();
     } catch (SecurityControlPlaneMutationException e) {
       authoritativePolicyMutationAvailability =
           AuthoritativePolicyMutationAvailability.blockedNow(
@@ -691,11 +695,7 @@ public class TaktXClient {
       throw mutationUnavailable(
           "publish authoritative namespace security policy",
           e,
-          Map.of(
-              "topic",
-              topic,
-              "desiredPolicyVersion",
-              String.valueOf(validated.getDesiredPolicyVersion())));
+          Map.of("topic", topic, "desiredPolicyVersion", String.valueOf(validated.getDesiredPolicyVersion())));
     }
   }
 
@@ -709,8 +709,7 @@ public class TaktXClient {
         "clear authoritative namespace security policy");
     try {
       clearNamespaceSecurityPolicy(taktPropertiesHelper.getTaktProperties());
-      authoritativePolicyMutationAvailability =
-          AuthoritativePolicyMutationAvailability.availableNow();
+      authoritativePolicyMutationAvailability = AuthoritativePolicyMutationAvailability.availableNow();
     } catch (SecurityControlPlaneMutationException e) {
       authoritativePolicyMutationAvailability =
           AuthoritativePolicyMutationAvailability.blockedNow(
@@ -1263,7 +1262,8 @@ public class TaktXClient {
       return;
     }
 
-    boolean signingEnabled = isEffectiveSigningEnabled();
+    boolean signingPrepared = shouldPrepareSigningInfrastructure();
+    boolean signingEnabled = shouldSignClientMessages();
     boolean commandAuthRequired = isStartCommandAuthorizationRequired();
     boolean externalTaskAuthRequired = isExternalTaskAuthorizationRequired();
     boolean userTaskAuthRequired = isUserTaskAuthorizationRequired();
@@ -1286,9 +1286,32 @@ public class TaktXClient {
 
     // ── Signing gate check ────────────────────────────────────────────────
     if (!signingEnabled) {
-      logWorkerSigningRegistrationState(
-          "runtime-disabled",
-          "Worker response signing inactive — runtime configuration and authoritative policy do not require signing");
+      if (signingPrepared) {
+        SigningIdentity identity = currentSigningIdentity();
+        if (identity == null) {
+          String sourceType =
+              signingIdentitySource != null ? signingIdentitySource.getSourceType() : "none";
+          logWorkerSigningRegistrationState(
+              "preparing-waiting-for-identity:" + sourceType,
+              "Worker signing preparation active for requested/protected posture but no signing"
+                  + " identity is available yet from source={}",
+              sourceType);
+        } else {
+          ensureWorkerKeyPublished(identity);
+          logWorkerSigningRegistrationState(
+              "prepared:" + identity.getKeyId(),
+              "Worker signing prepared for requested/protected posture — public key publication"
+                  + " may proceed while outbound client traffic remains unsigned until signing"
+                  + " becomes active. source={} keyId={}",
+              signingIdentitySource.getSourceType(),
+              identity.getKeyId());
+        }
+      } else {
+        logWorkerSigningRegistrationState(
+            "runtime-disabled",
+            "Worker response signing inactive — runtime configuration and namespace posture do"
+                + " not require signing");
+      }
       if (commandAuthRequired) {
         log.info(
             "engineRequiresAuthorization=true — entry commands require JWT"
@@ -1319,7 +1342,22 @@ public class TaktXClient {
       return;
     }
 
-    SigningServiceHolder.set(this::signWorkerPayload);
+    SigningServiceHolder.SigningFunction existingGlobalSigningFunction = SigningServiceHolder.get();
+    if (existingGlobalSigningFunction == null) {
+      SigningServiceHolder.set(globalWorkerSigningFunction);
+      globalWorkerSigningFunctionRegistered = true;
+    } else if (existingGlobalSigningFunction == globalWorkerSigningFunction) {
+      globalWorkerSigningFunctionRegistered = true;
+    } else {
+      globalWorkerSigningFunctionRegistered = false;
+      logWorkerSigningRegistrationState(
+          "local-only:" + identity.getKeyId(),
+          "Worker response signing active for this client only — source={} keyId={} while an"
+              + " existing process-wide signing function remains registered",
+          signingIdentitySource.getSourceType(),
+          identity.getKeyId());
+      return;
+    }
     if (commandAuthRequired) {
       // AND mode: entry commands need BOTH JWT (auth gate) AND Ed25519 (signing gate).
       // ENGINE-role keys satisfy both gates without JWT.
@@ -1349,6 +1387,9 @@ public class TaktXClient {
 
   private boolean ensureWorkerKeyPublished(SigningIdentity identity) {
     if (identity == null) {
+      return false;
+    }
+    if (!shouldPrepareSigningInfrastructure()) {
       return false;
     }
     if (!identity.hasPublicKey()) {
@@ -1394,7 +1435,8 @@ public class TaktXClient {
   }
 
   private String signWorkerPayload(byte[] payload) {
-    if (!isEffectiveSigningEnabled()) {
+    if (!declaresCapability(ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT)
+        || !shouldSignClientMessages()) {
       return null;
     }
     SigningIdentity identity = currentSigningIdentity();
@@ -1439,7 +1481,7 @@ public class TaktXClient {
     if (!declaresCapability(ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT)) {
       return false;
     }
-    if (!isEffectiveSigningEnabled()) {
+    if (!shouldPrepareSigningInfrastructure()) {
       return false;
     }
     SigningIdentity identity = currentSigningIdentity();
@@ -1449,7 +1491,15 @@ public class TaktXClient {
     return ensureWorkerKeyPublished(identity);
   }
 
-  private boolean isEffectiveSigningEnabled() {
+  boolean shouldPrepareSigningInfrastructure() {
+    if (hasLegacySecurityToggle()) {
+      return true;
+    }
+    return isProtectedPosture(currentNamespaceSecurityPolicy())
+        || isProtectedPosture(authoritativeNamespaceSecurityPolicy());
+  }
+
+  boolean shouldSignClientMessages() {
     if (RuntimeConfigurationHolder.isSigningEnabled()) {
       return true;
     }
@@ -1458,6 +1508,13 @@ public class TaktXClient {
         && policy.getRequiredSigning() != null
         && (policy.getRequiredSigning().isClientCommands()
             || policy.getRequiredSigning().isWorkerResponses());
+  }
+
+  private boolean hasLegacySecurityToggle() {
+    return RuntimeConfigurationHolder.isSigningEnabled()
+        || RuntimeConfigurationHolder.isEngineRequiresAuthorization()
+        || RuntimeConfigurationHolder.isEngineRequiresExternalTaskAuthorization()
+        || RuntimeConfigurationHolder.isEngineRequiresUserTaskAuthorization();
   }
 
   private boolean isStartCommandAuthorizationRequired() {
@@ -1494,6 +1551,18 @@ public class TaktXClient {
     return namespaceSecurityPolicyStore != null
         ? namespaceSecurityPolicyStore.getAuthoritativePolicy()
         : null;
+  }
+
+  private @Nullable NamespaceSecurityPolicyDTO currentNamespaceSecurityPolicy() {
+    return namespaceSecurityPolicyStore != null ? namespaceSecurityPolicyStore.get() : null;
+  }
+
+  private static boolean isProtectedPosture(@Nullable NamespaceSecurityPolicyDTO policy) {
+    if (policy == null || policy.getMode() == null) {
+      return false;
+    }
+    return policy.getMode() == SecurityMode.SECURED
+        || policy.getMode() == SecurityMode.ANCHORED_SECURED;
   }
 
   private @Nullable String resolvePlatformPublicKey() {
@@ -1567,7 +1636,11 @@ public class TaktXClient {
     publishedWorkerKeyId = null;
     workerSigningRegistrationState = "uninitialized";
     RuntimeConfigurationHolder.clear();
-    SigningServiceHolder.clear();
+    if (globalWorkerSigningFunctionRegistered
+        && SigningServiceHolder.get() == globalWorkerSigningFunction) {
+      SigningServiceHolder.clear();
+    }
+    globalWorkerSigningFunctionRegistered = false;
   }
 
   private ObservedPolicySnapshot currentObservedPolicySnapshot() {
@@ -2486,13 +2559,16 @@ public class TaktXClient {
       SecurityParticipantDescriptor effectiveParticipantDescriptor =
           resolveParticipantDescriptor(properties);
       String effectiveRegistrationSignature = resolveWorkerKeyRegistrationSignature(properties);
+      AtomicReference<SigningServiceHolder.SigningFunction> localSigningFunction =
+          new AtomicReference<>();
 
       // Wrap the value serializer with ProtoSigningSerializer so signing happens in one pass.
       KafkaProducer<UUID, ProcessInstanceTriggerDTO> processInstanceTriggerEmitter =
           new KafkaProducer<>(
               taktPropertiesHelper.getKafkaProducerProperties(),
               new io.taktx.util.TaktUUIDSerializer(),
-              new ProtoSigningSerializer<>(ProcessInstanceTriggerProtoMapper::toProto));
+              new ProtoSigningSerializer<>(
+                  ProcessInstanceTriggerProtoMapper::toProto, localSigningFunction::get));
 
       ProcessInstanceResponder externalTaskResponder =
           new ProcessInstanceResponder(
@@ -2519,6 +2595,7 @@ public class TaktXClient {
               effectiveSigningIdentitySource,
               effectiveAuthorizationTokenProvider,
               effectiveRegistrationSignature);
+      localSigningFunction.set(client::signWorkerPayload);
       externalTaskResponder.setBeforeSendHook(client::refreshWorkerSigningFunctionRegistration);
       SigningIdentity identity = client.currentSigningIdentity();
       if (identity != null) {

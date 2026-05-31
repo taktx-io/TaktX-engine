@@ -224,6 +224,143 @@ frontend can reliably derive:
 If any part of that is currently underspecified in the shared/client surface, it should be tightened
 here.
 
+## 5.7 Cross-team proposal: keep `OPEN` fully unsigned
+
+Recent posture-model review surfaced a possible simplification worth explicit platform-team review:
+
+- `OPEN` should mean **no runtime signing model at all**
+- self-generated signing keys should **not** be introduced as part of `OPEN`
+- signing identity/public-key publication should begin only once the namespace is operating in or
+  preparing for `SECURED` / `ANCHORED_SECURED`
+
+### Why this alternative is being suggested
+
+This appears cleaner from an operator and contract-semantics perspective than a model where keys are
+always generated/published but only become enforced in stricter modes.
+
+Potential benefits:
+
+- keeps `OPEN` semantics extremely clear: unsigned operation, no crypto-readiness interpretation
+- avoids UI/operator confusion where a published self-generated key in `OPEN` could be misread as a
+  trust signal or as evidence of secure readiness
+- preserves a sharper distinction between:
+  - infrastructure/open operation
+  - community secured operation
+  - anchored secured operation
+- reduces the chance that downstream systems accidentally start treating key presence in `OPEN` as a
+  meaningful posture indicator
+
+### Trade-off acknowledged
+
+This may give up some implementation uniformity and some warm-up convenience for `OPEN -> SECURED`
+transitions, because participants would not already be publishing keys before secured posture becomes
+relevant.
+
+However, from the Console-side review, the semantic clarity may be worth that cost.
+
+### Requested platform-team evaluation
+
+Please evaluate whether the overall namespace-security model should standardize on the following
+posture ladder instead:
+
+- `OPEN`
+  - no signing
+  - no signing-key publication requirement
+  - no signing readiness interpretation
+- `SECURED`
+  - signing and/or authorization may be required by policy
+  - community/open trust semantics
+- `ANCHORED_SECURED`
+  - signing and/or authorization required under anchored trust semantics
+  - stable countersigned keys required where applicable
+
+### Review questions for platform + engine alignment
+
+1. Would making `OPEN` explicitly unsigned simplify the engine/client/shared contracts overall, or
+   would it create more migration and bootstrap complexity than it removes?
+2. Are there current code paths that already assume signing identity exists independently of posture,
+   such that this change would be disproportionately expensive?
+3. Would this simplification make readiness semantics easier to keep aligned with the active posture,
+   especially for Console and ingester/control-plane adopters?
+4. If upstream prefers the current/alternative direction instead, what problem is solved by keeping
+   signing identity present in `OPEN` that cannot be solved just as well when entering `SECURED`?
+
+### Initial platform-team feedback
+
+Initial platform feedback is directionally supportive of the simplification:
+
+- standardizing `OPEN` as fully unsigned is semantically stronger than the current model
+- it would simplify Console/readiness/runtime posture semantics
+- it would likely make readiness reporting easier to keep honest because signing identity lifecycle
+  would no longer appear partially decoupled from active posture in the steady-state `OPEN` case
+
+However, platform also called out an important implementation constraint:
+
+- current engine startup and client bootstrap behavior still assume signing identity may exist
+  independently of active posture
+- adopting fully unsigned `OPEN` therefore requires upstream changes rather than being only a UI or
+  documentation clarification
+
+### Architectural direction suggested by platform feedback
+
+If platform still wants pre-warmed signing material for `OPEN -> SECURED` transition convenience,
+that should likely be modeled as **transition/bootstrap behavior**, not as part of the steady-state
+`OPEN` posture contract.
+
+In other words, the likely cleaner split is:
+
+- steady-state `OPEN`
+  - unsigned
+  - no posture-level implication that signing identity is active or required
+- optional transition/bootstrap preparation
+  - pre-provision keys if desired for an upcoming secured transition
+  - treat that as preparatory/runtime bootstrap state rather than as the meaning of `OPEN`
+
+### Proposed follow-up: separate steady-state posture from transition/bootstrap preparation
+
+The next cross-team design step should be to make an explicit architectural decision on whether
+signing identity lifecycle belongs to:
+
+- the **steady-state posture contract**, or
+- a separate **transition/bootstrap preparation** model used only when moving toward `SECURED` /
+  `ANCHORED_SECURED`
+
+#### Proposed working direction
+
+Use the following split unless a stronger counterargument emerges during upstream review:
+
+- `OPEN` remains a steady-state unsigned posture
+- signing identity readiness is not reported as part of normal `OPEN` posture
+- if pre-warmed keys are operationally useful, expose that as preparation/bootstrap state rather than
+  as evidence that `OPEN` itself has a signing model
+
+#### Concrete design questions for the follow-up
+
+1. Should engine/client startup continue to initialize signing identity unconditionally, or should
+   signing bootstrap become posture-aware?
+2. If pre-provisioning remains desirable, where should that state live:
+   - internal bootstrap/runtime state only
+   - participant status metadata
+   - a separate transition/preflight surface
+3. How should Console distinguish:
+   - current active posture semantics
+   - advisory readiness for a future secured transition
+   without implying that secure runtime behavior is already active?
+4. Do any existing public/shared DTOs need additive fields or clearer semantics so bootstrap
+   preparation can be surfaced without overloading `OPEN`?
+
+#### Expected outcome of the follow-up
+
+This follow-up should result in one of:
+
+- confirmation that `OPEN` becomes explicitly unsigned and signing bootstrap moves behind a separate
+  preparation model, **or**
+- an agreed alternative that preserves pre-warmed signing while still preventing readiness and UI
+  semantics from implying that `OPEN` itself is a signed posture
+
+Until that follow-up is resolved, downstream consumers should avoid treating signing-key presence in
+default/open scenarios as equivalent to active secure posture.
+
 ## 6. Non-goals / what this delta is *not* asking for
 
 This delta is **not** asking upstream to:

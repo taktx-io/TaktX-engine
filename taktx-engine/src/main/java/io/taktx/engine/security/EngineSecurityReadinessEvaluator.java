@@ -65,6 +65,7 @@ public class EngineSecurityReadinessEvaluator {
   public ParticipantStatusDTO evaluateCurrentStatus() {
     NamespaceSecurityPolicyDTO currentPolicy = namespaceSecurityPolicyStore.get();
     NamespaceSecurityPolicyDTO policy = namespaceSecurityPolicyStore.getAuthoritativePolicy();
+    messageSigningService.ensureSigningPreparationIfNeeded();
     long nowMs = clock.millis();
     List<PolicyMismatchReasonDTO> mismatchReasons = new ArrayList<>();
 

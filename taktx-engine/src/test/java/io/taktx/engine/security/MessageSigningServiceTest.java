@@ -11,9 +11,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
 import io.taktx.dto.GlobalConfigurationDTO;
+import io.taktx.dto.NamespaceSecurityPolicyDTO;
+import io.taktx.dto.RequiredSigningDTO;
+import io.taktx.dto.SecurityActivationState;
+import io.taktx.dto.SecurityMode;
 import io.taktx.engine.config.GlobalConfigStore;
+import io.taktx.engine.config.NamespaceSecurityPolicyStore;
 import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.security.Ed25519Service;
+import io.taktx.security.NamespaceSecurityPolicySupport;
 import io.taktx.security.SigningIdentity;
 import io.taktx.security.SigningIdentitySource;
 import io.taktx.security.SigningKeyGenerator;
@@ -31,6 +37,7 @@ class MessageSigningServiceTest {
 
   private TaktConfiguration config;
   private GlobalConfigStore globalConfigStore;
+  private NamespaceSecurityPolicyStore namespaceSecurityPolicyStore;
   private MessageSigningService service;
   private SigningIdentitySource signingIdentitySource;
 
@@ -49,32 +56,34 @@ class MessageSigningServiceTest {
 
     config = mock(TaktConfiguration.class);
     globalConfigStore = new GlobalConfigStore();
-    service = new MessageSigningService(config, null, signingIdentitySource, false);
+    namespaceSecurityPolicyStore = new NamespaceSecurityPolicyStore();
+    service = new MessageSigningService(config, null, namespaceSecurityPolicyStore, signingIdentitySource, false);
   }
 
   /**
    * Helper: build a service that reads from globalConfigStore and uses the static identity source.
    */
   private MessageSigningService serviceWithConfigStore(GlobalConfigStore store) {
-    return new MessageSigningService(config, store, signingIdentitySource, false);
+    return new MessageSigningService(
+        config, store, namespaceSecurityPolicyStore, signingIdentitySource, false);
   }
 
   @Test
-  void engineSigningWithIdentity_returnsHeaderValueWithoutRuntimeConfig() {
-    assertThat(service.signToHeaderValue(PAYLOAD)).isNotNull();
+  void engineSigningWithIdentity_isInactiveUnderDefaultOpenSemantics() {
+    assertThat(service.signToHeaderValue(PAYLOAD)).isNull();
   }
 
   @Test
-  void globalConfigNull_stillReturnsHeaderValueForEngineMessages() {
+  void globalConfigNull_keepsOpenEngineMessagesUnsigned() {
     MessageSigningService svc = serviceWithConfigStore(globalConfigStore);
-    assertThat(svc.signToHeaderValue(PAYLOAD)).isNotNull();
+    assertThat(svc.signToHeaderValue(PAYLOAD)).isNull();
   }
 
   @Test
-  void globalConfigDisabled_stillReturnsHeaderValueForEngineMessages() {
+  void globalConfigDisabled_keepsOpenEngineMessagesUnsigned() {
     MessageSigningService svc = serviceWithConfigStore(globalConfigStore);
     globalConfigStore.update(globalConfig(false, false));
-    assertThat(svc.signToHeaderValue(PAYLOAD)).isNotNull();
+    assertThat(svc.signToHeaderValue(PAYLOAD)).isNull();
   }
 
   @Test
@@ -88,6 +97,24 @@ class MessageSigningServiceTest {
   void authorizationEnabled_evenWhenSigningDisabled_returnsHeaderValue() {
     MessageSigningService svc = serviceWithConfigStore(globalConfigStore);
     globalConfigStore.update(globalConfig(false, true));
+    assertThat(svc.signToHeaderValue(PAYLOAD)).isNotNull();
+  }
+
+  @Test
+  void requestedSecuredPolicy_preparesButDoesNotSignBeforeActivation() {
+    namespaceSecurityPolicyStore.setCurrentPolicy(requestedPolicy(42L));
+
+    MessageSigningService svc = serviceWithConfigStore(globalConfigStore);
+
+    assertThat(svc.signToHeaderValue(PAYLOAD)).isNull();
+  }
+
+  @Test
+  void activeSecuredPolicy_signsWithoutLegacyRuntimeToggle() {
+    namespaceSecurityPolicyStore.update(activePolicy(42L));
+
+    MessageSigningService svc = serviceWithConfigStore(globalConfigStore);
+
     assertThat(svc.signToHeaderValue(PAYLOAD)).isNotNull();
   }
 
@@ -151,7 +178,8 @@ class MessageSigningServiceTest {
                 newPublicKeyBase64));
 
     MessageSigningService rotatedSvc =
-        new MessageSigningService(config, globalConfigStore, newSource, false);
+        new MessageSigningService(
+            config, globalConfigStore, namespaceSecurityPolicyStore, newSource, false);
 
     String headerAfter = rotatedSvc.signToHeaderValue(PAYLOAD);
     assertThat(headerAfter).isNotNull().startsWith(newKeyId + ".");
@@ -178,7 +206,8 @@ class MessageSigningServiceTest {
                 key1Id, SigningKeyGenerator.encodePrivateKey(key1.getPrivate()), key1Pub));
 
     MessageSigningService svc =
-        new MessageSigningService(config, globalConfigStore, srcKey1, false);
+        new MessageSigningService(
+            config, globalConfigStore, namespaceSecurityPolicyStore, srcKey1, false);
 
     globalConfigStore.update(globalConfig(true, false));
 
@@ -193,7 +222,8 @@ class MessageSigningServiceTest {
                 key2Id, SigningKeyGenerator.encodePrivateKey(key2.getPrivate()), key2Pub));
 
     MessageSigningService svc2 =
-        new MessageSigningService(config, globalConfigStore, srcKey2, false);
+        new MessageSigningService(
+            config, globalConfigStore, namespaceSecurityPolicyStore, srcKey2, false);
 
     // New service immediately uses key2
     String h2 = svc2.signToHeaderValue(PAYLOAD);
@@ -227,5 +257,29 @@ class MessageSigningServiceTest {
         .engineRequiresAuthorization(engineRequiresAuthorization)
         .trustedKeyIds(List.of(KEY_ID))
         .build();
+  }
+
+  private static NamespaceSecurityPolicyDTO requestedPolicy(long version) {
+    return NamespaceSecurityPolicySupport.requireValid(
+        NamespaceSecurityPolicyDTO.builder()
+            .mode(SecurityMode.SECURED)
+            .activationState(SecurityActivationState.REQUESTED)
+            .desiredPolicyVersion(version)
+            .requiredSigning(RequiredSigningDTO.builder().engineOutbound(true).build())
+            .build());
+  }
+
+  private static NamespaceSecurityPolicyDTO activePolicy(long version) {
+    NamespaceSecurityPolicyDTO requested = requestedPolicy(version);
+    return NamespaceSecurityPolicySupport.requireValid(
+        NamespaceSecurityPolicyDTO.builder()
+            .mode(requested.getMode())
+            .activationState(SecurityActivationState.ACTIVE)
+            .desiredPolicyVersion(version)
+            .desiredPolicyHash(requested.getDesiredPolicyHash())
+            .requiredSigning(requested.getRequiredSigning())
+            .activePolicyVersion(version)
+            .activePolicyHash(requested.getDesiredPolicyHash())
+            .build());
   }
 }

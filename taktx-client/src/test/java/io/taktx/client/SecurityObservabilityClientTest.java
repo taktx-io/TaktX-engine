@@ -74,9 +74,7 @@ class SecurityObservabilityClientTest {
   void getSimplifiedPostureSnapshot_surfacesBlockingIssuesAndParticipantSummary() {
     TestHarness harness = new TestHarness();
     harness.observedPolicySnapshot.set(
-        new ObservedPolicySnapshot(
-            activePolicy(7L, SecurityMode.ANCHORED_SECURED),
-            activePolicy(7L, SecurityMode.ANCHORED_SECURED)));
+        new ObservedPolicySnapshot(activePolicy(7L, SecurityMode.ANCHORED_SECURED), activePolicy(7L, SecurityMode.ANCHORED_SECURED)));
     harness.participantStatuses.set(
         Map.of(
             "client#7",
@@ -114,16 +112,14 @@ class SecurityObservabilityClientTest {
     assertThat(snapshot.blockingIssues())
         .extracting(BlockingIssue::code)
         .contains(SecurityPostureIssueCodes.TRUST_ANCHOR_MISSING);
-    assertThat(snapshot.targetModeFeasibility(SecurityMode.ANCHORED_SECURED).feasibleNow())
-        .isFalse();
+    assertThat(snapshot.targetModeFeasibility(SecurityMode.ANCHORED_SECURED).feasibleNow()).isFalse();
     assertThat(snapshot.targetModeFeasibility(SecurityMode.ANCHORED_SECURED).blockers())
         .extracting(BlockingIssue::code)
         .contains(SecurityPostureIssueCodes.TRUST_ANCHOR_MISSING);
   }
 
   @Test
-  void
-      targetModeFeasibility_surfacesExplicitAuthoritativeWriterBlockerWithoutAffectingOpenRuntime() {
+  void targetModeFeasibility_surfacesExplicitAuthoritativeWriterBlockerWithoutAffectingOpenRuntime() {
     TestHarness harness = new TestHarness();
     harness.observedPolicySnapshot.set(new ObservedPolicySnapshot(requestedPolicy(15L), null));
     harness.mutationAvailability.set(
@@ -160,8 +156,7 @@ class SecurityObservabilityClientTest {
     SimplifiedSecurityPostureSnapshot snapshot = harness.client.getSimplifiedPostureSnapshot();
 
     assertThat(snapshot.targetModeFeasibility(SecurityMode.SECURED).feasibleNow()).isTrue();
-    assertThat(snapshot.targetModeFeasibility(SecurityMode.ANCHORED_SECURED).feasibleNow())
-        .isFalse();
+    assertThat(snapshot.targetModeFeasibility(SecurityMode.ANCHORED_SECURED).feasibleNow()).isFalse();
     assertThat(snapshot.targetModeFeasibility(SecurityMode.ANCHORED_SECURED).blockers())
         .extracting(BlockingIssue::code)
         .contains(SecurityPostureIssueCodes.TARGET_MODE_UNSUPPORTED);
