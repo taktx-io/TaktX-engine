@@ -119,6 +119,22 @@ class MessageSigningServiceTest {
   }
 
   @Test
+  void hasPublishableSigningIdentity_trueWhenIdentityIncludesPublicKey() {
+    assertThat(service.hasPublishableSigningIdentity()).isTrue();
+  }
+
+  @Test
+  void hasLegacyProtectedRuntimeRequirement_reflectsLegacyGlobalConfigToggles() {
+    MessageSigningService svc = serviceWithConfigStore(globalConfigStore);
+
+    assertThat(svc.hasLegacyProtectedRuntimeRequirement()).isFalse();
+
+    globalConfigStore.update(globalConfig(true, false));
+
+    assertThat(svc.hasLegacyProtectedRuntimeRequirement()).isTrue();
+  }
+
+  @Test
   void headerValue_hasCorrectFormat_keyIdDotBase64() {
     MessageSigningService svc = serviceWithConfigStore(globalConfigStore);
     globalConfigStore.update(globalConfig(true, false));
