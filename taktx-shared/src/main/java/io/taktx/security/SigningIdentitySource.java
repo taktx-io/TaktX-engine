@@ -7,7 +7,12 @@
  */
 package io.taktx.security;
 
-/** Supplies the currently active signing identity. Implementations may change over time. */
+/**
+ * Supplies the currently active signing identity.
+ *
+ * <p>Implementations may be static, externally managed (for example mounted-file based), or
+ * application-managed local persistence sources.
+ */
 public interface SigningIdentitySource {
 
   /** Returns the currently active identity, or {@code null} when signing is unavailable. */
