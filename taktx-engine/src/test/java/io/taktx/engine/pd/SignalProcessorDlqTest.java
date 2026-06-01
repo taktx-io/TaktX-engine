@@ -21,8 +21,6 @@ import static org.mockito.Mockito.when;
 import io.taktx.dto.NamespaceSecurityPolicyDTO;
 import io.taktx.dto.NewDefinitionSignalSubscriptionDTO;
 import io.taktx.dto.ProcessDefinitionKey;
-import io.taktx.dto.RequiredSigningDTO;
-import io.taktx.dto.SecurityActivationState;
 import io.taktx.dto.SecurityMode;
 import io.taktx.dto.SignalDTO;
 import io.taktx.dto.SignalDlqEntryDTO;
@@ -140,8 +138,8 @@ class SignalProcessorDlqTest {
   }
 
   @Test
-  void process_signalTriggerUnderPendingPolicy_emitsDlqWithPolicyNotActiveHint() {
-    SignalProcessor guardedProcessor = guardedProcessorWithPolicy(requestedPolicy(42L), null);
+  void process_signalTriggerUnderAnchoredPolicyWithoutTrustAnchor_emitsDlq() {
+    SignalProcessor guardedProcessor = guardedProcessorWithPolicy(anchoredPolicy(42L));
     SignalDTO signal = new SignalDTO("order-placed");
 
     guardedProcessor.process(new Record<>("order-placed", signal, 300L, new RecordHeaders()));
@@ -156,8 +154,8 @@ class SignalProcessorDlqTest {
   }
 
   @Test
-  void process_subscriptionMutationUnderPendingPolicy_remainsAllowed() {
-    SignalProcessor guardedProcessor = guardedProcessorWithPolicy(requestedPolicy(42L), null);
+  void process_subscriptionMutationUnderAnchoredPolicy_remainsAllowed() {
+    SignalProcessor guardedProcessor = guardedProcessorWithPolicy(anchoredPolicy(42L));
     NewDefinitionSignalSubscriptionDTO subscription =
         new NewDefinitionSignalSubscriptionDTO(
             new ProcessDefinitionKey("proc", 1), "start", "order-placed");
@@ -168,11 +166,9 @@ class SignalProcessorDlqTest {
     verify(context, never()).forward(any());
   }
 
-  private SignalProcessor guardedProcessorWithPolicy(
-      NamespaceSecurityPolicyDTO currentPolicy, NamespaceSecurityPolicyDTO activePolicy) {
+  private SignalProcessor guardedProcessorWithPolicy(NamespaceSecurityPolicyDTO authoritativePolicy) {
     NamespaceSecurityPolicyStore policyStore = new NamespaceSecurityPolicyStore();
-    policyStore.setCurrentPolicy(currentPolicy);
-    policyStore.setActivePolicy(activePolicy);
+    policyStore.update(authoritativePolicy);
     MessageSigningService messageSigningService = mock(MessageSigningService.class);
     when(messageSigningService.getKeyId()).thenReturn("engine-key-1");
     when(messageSigningService.isPublicKeyPublished()).thenReturn(true);
@@ -190,7 +186,7 @@ class SignalProcessorDlqTest {
     return guardedProcessor;
   }
 
-  private static NamespaceSecurityPolicyDTO requestedPolicy(long version) {
+  private static NamespaceSecurityPolicyDTO anchoredPolicy(long version) {
     return NamespaceSecurityPolicySupport.requireValid(
         NamespaceSecurityPolicyDTO.builder()
             .mode(SecurityMode.ANCHORED)

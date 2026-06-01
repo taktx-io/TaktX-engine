@@ -13,7 +13,6 @@ import io.taktx.dto.SecurityEventSeverity;
 import io.taktx.dto.SecurityEventType;
 import io.taktx.dto.SecurityPostureIssueCodes;
 import io.taktx.engine.config.NamespaceSecurityPolicyStore;
-import io.taktx.engine.config.ParticipantStatusStore;
 import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.security.NamespaceSecurityPolicySupport;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -28,53 +27,24 @@ import java.util.Map;
 @ApplicationScoped
 public class NamespaceSecurityPolicyActivationService {
 
-  static final String ACTIVATION_TIMEOUT_CODE = SecurityPostureIssueCodes.ACTIVATION_TIMEOUT;
-  static final String POLICY_REJECTION_CODE = SecurityPostureIssueCodes.POLICY_REJECTION;
-  static final String READINESS_MISMATCH_CODE = SecurityPostureIssueCodes.READINESS_MISMATCH;
-  static final String BREAK_GLASS_DOWNGRADE_CODE = SecurityPostureIssueCodes.BREAK_GLASS_DOWNGRADE;
-  static final String BREAK_GLASS_DOWNGRADE_REJECTED_CODE =
-      SecurityPostureIssueCodes.BREAK_GLASS_DOWNGRADE_REJECTED;
   public static final String INVALID_POLICY_MUTATION_CODE =
       SecurityPostureIssueCodes.INVALID_POLICY_MUTATION;
 
   private final TaktConfiguration configuration;
   private final NamespaceSecurityPolicyStore namespaceSecurityPolicyStore;
-  @SuppressWarnings("unused")
-  private final ParticipantStatusStore participantStatusStore;
   private final SecurityEventPublisher securityEventPublisher;
   private final Clock clock;
-  @SuppressWarnings("unused")
-  private final long activationTimeoutMs;
 
   @Inject
   public NamespaceSecurityPolicyActivationService(
       TaktConfiguration configuration,
       NamespaceSecurityPolicyStore namespaceSecurityPolicyStore,
-      ParticipantStatusStore participantStatusStore,
       SecurityEventPublisher securityEventPublisher,
       Clock clock) {
-    this(
-        configuration,
-        namespaceSecurityPolicyStore,
-        participantStatusStore,
-        securityEventPublisher,
-        clock,
-        configuration.getSecurityPolicyActivationTimeoutMs());
-  }
-
-  NamespaceSecurityPolicyActivationService(
-      TaktConfiguration configuration,
-      NamespaceSecurityPolicyStore namespaceSecurityPolicyStore,
-      ParticipantStatusStore participantStatusStore,
-      SecurityEventPublisher securityEventPublisher,
-      Clock clock,
-      long activationTimeoutMs) {
     this.configuration = configuration;
     this.namespaceSecurityPolicyStore = namespaceSecurityPolicyStore;
-    this.participantStatusStore = participantStatusStore;
     this.securityEventPublisher = securityEventPublisher;
     this.clock = clock;
-    this.activationTimeoutMs = activationTimeoutMs;
   }
 
   public synchronized void onPolicyUpdated(NamespaceSecurityPolicyDTO policy) {
@@ -83,10 +53,6 @@ public class NamespaceSecurityPolicyActivationService {
 
   public synchronized void onPolicyCleared() {
     namespaceSecurityPolicyStore.clear();
-  }
-
-  public synchronized void onParticipantStatusesChanged() {
-    // Activation convergence is no longer modeled in the reduced policy contract.
   }
 
   public synchronized void onRejectedPolicyMutation(String reason, String recordKey) {
@@ -117,9 +83,6 @@ public class NamespaceSecurityPolicyActivationService {
             .build());
   }
 
-  public synchronized void reevaluate() {
-    // No-op: there is no multi-stage activation lifecycle in the simplified model.
-  }
 
   private String participantId() {
     return configuration.getTenantId() + "." + configuration.getNamespace() + ".engine";

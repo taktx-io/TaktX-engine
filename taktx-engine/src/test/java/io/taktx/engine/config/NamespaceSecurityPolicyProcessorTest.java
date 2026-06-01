@@ -135,10 +135,8 @@ class NamespaceSecurityPolicyProcessorTest {
   @Test
   void invalidPolicy_emitsControlPlaneMutationRejectedEventWhenActivationServicePresent() {
     NamespaceSecurityPolicyStore lifecycleStore = new NamespaceSecurityPolicyStore();
-    ParticipantStatusStore participantStatusStore = new ParticipantStatusStore();
     TaktConfiguration configuration = Mockito.mock(TaktConfiguration.class);
     SecurityEventPublisher securityEventPublisher = Mockito.mock(SecurityEventPublisher.class);
-    Mockito.when(configuration.getSecurityPolicyActivationTimeoutMs()).thenReturn(30_000L);
     Mockito.when(configuration.getTenantId()).thenReturn("tenant");
     Mockito.when(configuration.getNamespace()).thenReturn("bank.payments");
     Mockito.when(configuration.getHost()).thenReturn("engine-host");
@@ -147,7 +145,6 @@ class NamespaceSecurityPolicyProcessorTest {
         new NamespaceSecurityPolicyActivationService(
             configuration,
             lifecycleStore,
-            participantStatusStore,
             securityEventPublisher,
             Clock.fixed(Instant.ofEpochMilli(1_716_450_000_000L), ZoneOffset.UTC));
 
@@ -192,12 +189,10 @@ class NamespaceSecurityPolicyProcessorTest {
   @Test
   void unauthorizedPolicyMutation_doesNotReplacePreviousStoreValueAndEmitsRejectedEvent() {
     NamespaceSecurityPolicyStore lifecycleStore = new NamespaceSecurityPolicyStore();
-    ParticipantStatusStore participantStatusStore = new ParticipantStatusStore();
     TaktConfiguration configuration = Mockito.mock(TaktConfiguration.class);
     SecurityEventPublisher securityEventPublisher = Mockito.mock(SecurityEventPublisher.class);
     EngineAuthorizationService authorizationService =
         Mockito.mock(EngineAuthorizationService.class);
-    Mockito.when(configuration.getSecurityPolicyActivationTimeoutMs()).thenReturn(30_000L);
     Mockito.when(configuration.getTenantId()).thenReturn("tenant");
     Mockito.when(configuration.getNamespace()).thenReturn("bank.payments");
     Mockito.when(configuration.getHost()).thenReturn("engine-host");
@@ -206,7 +201,6 @@ class NamespaceSecurityPolicyProcessorTest {
         new NamespaceSecurityPolicyActivationService(
             configuration,
             lifecycleStore,
-            participantStatusStore,
             securityEventPublisher,
             Clock.fixed(Instant.ofEpochMilli(1_716_450_000_000L), ZoneOffset.UTC));
 

@@ -18,7 +18,6 @@ import io.taktx.client.SecurityPostureSnapshot;
 import io.taktx.client.TaktXClient;
 import io.taktx.dto.ExternalTaskTriggerDTO;
 import io.taktx.dto.ParticipantCapability;
-import io.taktx.dto.SecurityActivationState;
 import io.taktx.dto.SecurityMode;
 import io.taktx.dto.VariablesDTO;
 import java.time.Duration;
@@ -113,7 +112,7 @@ class PublicClientOpenModeDogfoodIntegrationTest extends PublicClientDogfoodInte
     assertThat(observedPolicy.hasAuthoritativePolicy()).isTrue();
     assertThat(observedPolicy.effectiveMode()).isEqualTo(SecurityMode.OPEN);
     assertThat(observedPolicy.effectivePolicyVersion()).isEqualTo(openPolicyVersion);
-    assertThat(posture.currentActivationState()).isEqualTo(SecurityActivationState.ACTIVE);
+    assertThat(posture.currentActivationState()).isNull();
 
     publisher.security().clearNamespaceSecurityPolicy();
     awaitNoPolicy(observer);
@@ -198,7 +197,7 @@ class PublicClientOpenModeDogfoodIntegrationTest extends PublicClientDogfoodInte
                 Duration.ofSeconds(30));
 
     assertThat(observedPolicy.effectiveMode()).isEqualTo(SecurityMode.OPEN);
-    assertThat(posture.currentActivationState()).isEqualTo(SecurityActivationState.ACTIVE);
+    assertThat(posture.currentActivationState()).isNull();
 
     UUID instanceId =
         runtimeClient.runtime().startProcess(SERVICE_PROCESS_ID, VariablesDTO.empty());

@@ -24,13 +24,11 @@ import io.taktx.dto.ParticipantEffectiveState;
 import io.taktx.dto.ParticipantKind;
 import io.taktx.dto.ParticipantStatusDTO;
 import io.taktx.dto.ProcessInstanceUpdateDTO;
-import io.taktx.dto.RequiredAuthorizationDTO;
-import io.taktx.dto.RequiredSigningDTO;
-import io.taktx.dto.SecurityActivationState;
 import io.taktx.dto.SecurityMode;
 import io.taktx.dto.SecurityParticipantDescriptor;
 import io.taktx.engine.generic.ClockProducer;
 import io.taktx.engine.generic.MutableClock;
+import io.taktx.security.NamespaceSecurityPolicySupport;
 import io.taktx.security.SigningKeyGenerator;
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
@@ -438,6 +436,21 @@ abstract class PublicClientDogfoodIntegrationTestSupport {
             Duration.ofSeconds(30));
   }
 
+  protected static void primeAuthoritativePolicyMutationPath(
+      TaktXClient publisher, TaktXClient observer, Duration timeout) {
+    publishPolicyAndAwaitObserved(
+        publisher, observer, activeCommunityOpenPolicy(nextPolicyVersion()), timeout);
+    await()
+        .atMost(timeout)
+        .pollInterval(Duration.ofMillis(200))
+        .ignoreExceptions()
+        .until(
+            () -> {
+              publisher.security().clearNamespaceSecurityPolicy();
+              return !observer.observability().getObservedPolicySnapshot().hasAuthoritativePolicy();
+            });
+  }
+
   protected static ObservedPolicySnapshot publishPolicyAndAwaitObserved(
       TaktXClient publisher,
       TaktXClient observer,
@@ -454,7 +467,7 @@ abstract class PublicClientDogfoodIntegrationTestSupport {
               ObservedPolicySnapshot snapshot =
                   observer.observability().getObservedPolicySnapshot();
               if (snapshot.hasAuthoritativePolicy()
-                  && policy.getDesiredPolicyVersion().equals(snapshot.effectivePolicyVersion())) {
+                  && policy.getPolicyVersion().equals(snapshot.effectivePolicyVersion())) {
                 observedPolicy.set(snapshot);
                 return true;
               }
@@ -496,7 +509,7 @@ abstract class PublicClientDogfoodIntegrationTestSupport {
         .map(ProcessInstanceUpdateDTO.class::cast)
         .filter(update -> update.getScope() != null)
         .map(update -> update.getScope().getState())
-        .reduce((previousState, state) -> state)
+        .reduce((ignoredPreviousState, state) -> state)
         .orElseThrow();
   }
 
@@ -535,71 +548,26 @@ abstract class PublicClientDogfoodIntegrationTestSupport {
   }
 
   protected static NamespaceSecurityPolicyDTO requestedSecuredPolicy(long version) {
-    return NamespaceSecurityPolicyDTO.builder()
-        .mode(SecurityMode.SECURED)
-        .activationState(SecurityActivationState.REQUESTED)
-        .desiredPolicyVersion(version)
-        .requiredSigning(
-            RequiredSigningDTO.builder().clientCommands(true).workerResponses(true).build())
-        .requiredAuthorization(
-            RequiredAuthorizationDTO.builder()
-                .startCommands(true)
-                .externalTaskCompletion(true)
-                .build())
-        .build();
+    return NamespaceSecurityPolicySupport.requireValid(
+        NamespaceSecurityPolicyDTO.builder().mode(SecurityMode.ANCHORED).policyVersion(version).build());
   }
 
   protected static NamespaceSecurityPolicyDTO activeCommunityOpenPolicy(long version) {
-    NamespaceSecurityPolicyDTO requestedPolicy =
-        NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.OPEN)
-            .activationState(SecurityActivationState.REQUESTED)
-            .desiredPolicyVersion(version)
-            .build();
-    return requestedPolicy.toBuilder()
-        .activationState(SecurityActivationState.ACTIVE)
-        .activePolicyVersion(version)
-        .activePolicyHash(requestedPolicy.getDesiredPolicyHash())
-        .build();
+    return NamespaceSecurityPolicySupport.requireValid(
+        NamespaceSecurityPolicyDTO.builder().mode(SecurityMode.OPEN).policyVersion(version).build());
   }
 
   protected static NamespaceSecurityPolicyDTO activeSigningRequiredPolicy(long version) {
-    NamespaceSecurityPolicyDTO requestedPolicy =
-        NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.SECURED)
-            .activationState(SecurityActivationState.REQUESTED)
-            .desiredPolicyVersion(version)
-            .requiredSigning(RequiredSigningDTO.builder().clientCommands(true).build())
-            .build();
-    return requestedPolicy.toBuilder()
-        .activationState(SecurityActivationState.ACTIVE)
-        .activePolicyVersion(version)
-        .activePolicyHash(requestedPolicy.getDesiredPolicyHash())
-        .build();
+    return activeAnchoredPolicy(version);
   }
 
   protected static NamespaceSecurityPolicyDTO activeAnchoredPolicy(long version) {
-    NamespaceSecurityPolicyDTO requestedPolicy =
-        NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.ANCHORED_SECURED)
-            .activationState(SecurityActivationState.REQUESTED)
-            .desiredPolicyVersion(version)
-            .trustAnchorRequired(true)
-            .build();
-    return requestedPolicy.toBuilder()
-        .activationState(SecurityActivationState.ACTIVE)
-        .activePolicyVersion(version)
-        .activePolicyHash(requestedPolicy.getDesiredPolicyHash())
-        .build();
+    return NamespaceSecurityPolicySupport.requireValid(
+        NamespaceSecurityPolicyDTO.builder().mode(SecurityMode.ANCHORED).policyVersion(version).build());
   }
 
   protected static NamespaceSecurityPolicyDTO activeSecuredPolicy(long version) {
-    NamespaceSecurityPolicyDTO requestedPolicy = requestedSecuredPolicy(version);
-    return requestedPolicy.toBuilder()
-        .activationState(SecurityActivationState.ACTIVE)
-        .activePolicyVersion(version)
-        .activePolicyHash(requestedPolicy.getDesiredPolicyHash())
-        .build();
+    return activeAnchoredPolicy(version);
   }
 
   protected static long nextPolicyVersion() {

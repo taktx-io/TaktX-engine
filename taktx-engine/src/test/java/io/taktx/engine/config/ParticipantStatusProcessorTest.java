@@ -15,7 +15,6 @@ import io.taktx.dto.ParticipantKind;
 import io.taktx.dto.ParticipantStatusDTO;
 import io.taktx.dto.PolicyMismatchReasonDTO;
 import io.taktx.dto.StatusVerificationLevel;
-import io.taktx.engine.security.NamespaceSecurityPolicyActivationService;
 import io.taktx.security.ParticipantStatusSupport;
 import io.taktx.serdes.ParticipantStatusProtoMapper;
 import java.util.List;
@@ -32,7 +31,6 @@ import org.apache.kafka.streams.state.Stores;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 
 class ParticipantStatusProcessorTest {
 
@@ -40,10 +38,6 @@ class ParticipantStatusProcessorTest {
   private static final String STORE_NAME = "participant-status-store";
   private static final Set<ParticipantCapability> ENGINE_CAPABILITIES =
       Set.of(ParticipantCapability.ENFORCER, ParticipantCapability.SECURITY_OBSERVER);
-  private static final Set<ParticipantCapability> CONTROL_PLANE_CLIENT_CAPABILITIES =
-      Set.of(
-          ParticipantCapability.AUTHORITATIVE_POLICY_PUBLISHER,
-          ParticipantCapability.SECURITY_OBSERVER);
 
   private TopologyTestDriver driver;
   private TestInputTopic<String, byte[]> statusTopic;
@@ -180,53 +174,6 @@ class ParticipantStatusProcessorTest {
     assertThat(participantStatusStore.snapshot()).isEmpty();
   }
 
-  @Test
-  void statusRecord_withLifecycleSupport_updatesStoreAndTriggersActivationReevaluation() {
-    ParticipantStatusStore lifecycleStore = new ParticipantStatusStore();
-    NamespaceSecurityPolicyActivationService activationService =
-        Mockito.mock(NamespaceSecurityPolicyActivationService.class);
-
-    StreamsBuilder builder = new StreamsBuilder();
-    builder.addGlobalStore(
-        Stores.keyValueStoreBuilder(
-                Stores.inMemoryKeyValueStore(STORE_NAME), Serdes.String(), Serdes.ByteArray())
-            .withLoggingDisabled(),
-        STATUS_TOPIC,
-        Consumed.with(Serdes.String(), Serdes.ByteArray()),
-        () -> new ParticipantStatusProcessor(lifecycleStore, activationService));
-
-    Properties config = new Properties();
-    config.put(StreamsConfig.APPLICATION_ID_CONFIG, "participant-status-lifecycle-test");
-    config.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "dummy:9092");
-    config.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
-    config.put(
-        StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.ByteArray().getClass().getName());
-
-    try (TopologyTestDriver lifecycleDriver = new TopologyTestDriver(builder.build(), config)) {
-      TestInputTopic<String, byte[]> lifecycleTopic =
-          lifecycleDriver.createInputTopic(
-              STATUS_TOPIC, Serdes.String().serializer(), Serdes.ByteArray().serializer());
-      ParticipantStatusDTO status =
-          controlPlaneClientStatus("tenant.bank.payments.console", "console-1").toBuilder()
-              .observedPolicyVersion(42L)
-              .observedPolicyHash("abc123")
-              .mismatchReasons(
-                  List.of(
-                      PolicyMismatchReasonDTO.builder()
-                          .code("POLICY_NOT_ACTIVE")
-                          .message("policy still converging")
-                          .build()))
-              .build();
-
-      lifecycleTopic.pipeInput(
-          status.getParticipantInstanceId(),
-          ParticipantStatusProtoMapper.toProto(status).toByteArray());
-
-      assertThat(lifecycleStore.get(status.getParticipantInstanceId())).isEqualTo(status);
-      Mockito.verify(activationService).onParticipantStatusesChanged();
-    }
-  }
-
   private static ParticipantStatusDTO engineStatus(
       String participantInstanceId, ParticipantEffectiveState effectiveState) {
     return ParticipantStatusDTO.builder()
@@ -242,27 +189,6 @@ class ParticipantStatusProcessorTest {
         .statusExpiresAt(1716450120000L)
         .statusVerificationLevel(StatusVerificationLevel.UNVERIFIED_STATUS)
         .effectiveState(effectiveState)
-        .build();
-  }
-
-  private static ParticipantStatusDTO controlPlaneClientStatus(
-      String participantId, String participantInstanceId) {
-    return ParticipantStatusDTO.builder()
-        .participantId(participantId)
-        .participantInstanceId(participantInstanceId)
-        .participantKind(ParticipantKind.CLIENT)
-        .componentType("console")
-        .capabilities(CONTROL_PLANE_CLIENT_CAPABILITIES)
-        .supportedModes(
-            ParticipantStatusSupport.supportedModesForCapabilities(
-                CONTROL_PLANE_CLIENT_CAPABILITIES))
-        .namespace("bank.payments")
-        .startedAt(1716450000000L)
-        .lastSeenAt(1716450060000L)
-        .statusExpiresAt(1716450120000L)
-        .statusVerificationLevel(StatusVerificationLevel.UNVERIFIED_STATUS)
-        .effectiveState(ParticipantEffectiveState.MISMATCH)
-        .readyForDataPlane(false)
         .build();
   }
 }

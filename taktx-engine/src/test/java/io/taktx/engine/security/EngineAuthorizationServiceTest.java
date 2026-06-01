@@ -1053,8 +1053,8 @@ class EngineAuthorizationServiceTest {
   }
 
   @Test
-  void pendingPolicyWithoutAuthoritativeActiveState_doesNotPrematurelyEnableAuthorization() {
-    namespaceSecurityPolicyStore.setCurrentPolicy(
+  void openAuthoritativePolicy_doesNotEnableAuthorization() {
+    namespaceSecurityPolicyStore.update(
         NamespaceSecurityPolicyDTO.builder()
             .mode(io.taktx.dto.SecurityMode.OPEN)
             .policyVersion(55L)
