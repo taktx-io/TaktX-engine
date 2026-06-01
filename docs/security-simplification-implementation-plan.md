@@ -29,6 +29,13 @@
 - Public-client security integration tests have been rewritten away from legacy activation-state / `SECURED` assumptions and now target `OPEN` / `ANCHORED` semantics.
 - Dead engine activation-monitor plumbing has been removed from the policy/status path, including the obsolete policy activation timeout configuration and participant-status reevaluation hook.
 - The engine namespace-policy store now carries a single authoritative policy view; remaining Phase 2 work is focused on readiness/enforcement cleanup rather than activation rollback state.
+- Engine readiness now reports concrete anchored enforceability prerequisites (stable signing source, trust anchor, published signing identity, registration signature) instead of lifecycle-style aggregate mismatch state.
+- Process-instance authorization no longer treats authoritative `ANCHORED` mode as a JWT requirement; policy-driven posture now requires trusted signatures while JWT remains tied to legacy runtime gates / optional context.
+- Engine process-instance security policy metadata has been flattened further: legacy JWT/authorization-shape flags were removed from `MessageSecurityPolicy`, and trigger-type helpers now drive the remaining legacy auth toggles in `EngineAuthorizationService`.
+- Presented process-instance JWTs are now validated as optional context even when the legacy task-completion/entry auth gate is off, and replay protection follows presented entry JWTs instead of the legacy entry-auth toggle.
+- Process-instance authorization no longer enforces the legacy runtime JWT gates at all: unsigned `OPEN` ingress is accepted, `ANCHORED`/signing-enabled ingress requires trusted signatures, and presented JWTs remain validated as optional context only.
+- External message correlation and signal publication ingress now flow through signed ingress envelopes so `ANCHORED`/signing-enabled mode requires verified trusted signatures for externally published records while engine-internal subscription mutations remain allowed.
+- Process-instance ingress security rejections now short-circuit to `security-events` instead of creating DLQ entries; DLQ remains reserved for payload/engine-processing failures while readiness gating still fails closed.
 - The remaining work is concentrated in finishing Phase 2 production cleanup, Phase 3/4 identity + trust-registry behavior, and broadening Phase 5 coverage beyond the current engine/integration adaptations.
 
 ---
@@ -259,10 +266,10 @@ Make namespace mode immediately authoritative and enforce a single ingress rule.
 - `taktx-engine/src/main/java/io/taktx/engine/security/ProtectedDataPlaneParticipationGuard.java`
 
 **Work**
-- [ ] Support `OPEN`
-- [ ] Support `ANCHORED` only when enforcement prerequisites are met
-- [ ] Remove readiness checks based on policy activation identity mismatch
-- [ ] Keep fail-closed readiness behavior for `ANCHORED`
+- [x] Support `OPEN`
+- [x] Support `ANCHORED` only when enforcement prerequisites are met
+- [x] Remove readiness checks based on policy activation identity mismatch
+- [x] Keep fail-closed readiness behavior for `ANCHORED`
 
 **Acceptance criteria**
 - Readiness reflects enforceability, not negotiation
@@ -279,14 +286,19 @@ Make namespace mode immediately authoritative and enforce a single ingress rule.
 - `taktx-engine/src/main/java/io/taktx/engine/pi/ProcessInstanceTriggerEnvelopeDeserializer.java`
 
 **Work**
-- [ ] Remove policy dependence on `requiredSigning.*`
-- [ ] Remove policy dependence on `requiredAuthorization.*`
-- [ ] Remove JWT as a posture mechanism
+- [x] Remove policy dependence on `requiredSigning.*`
+- [x] Remove policy dependence on `requiredAuthorization.*`
+- [x] Remove JWT as a posture mechanism
 - [ ] Keep JWT only as optional business/user context
 - [ ] Implement uniform rule:
-  - [ ] `OPEN`: accept unsigned ingress
-  - [ ] `ANCHORED`: require verified trusted signature
-- [ ] Ensure unknown / revoked / unanchored signers are rejected cleanly
+  - [x] `OPEN`: process-instance ingress accepts unsigned records when no legacy runtime gate is active
+  - [x] `ANCHORED`: process-instance ingress requires a verified trusted signature
+- [x] Ensure unknown / revoked / unanchored signers are rejected cleanly
+
+**Remaining for completion**
+- [x] Validate presented JWTs as optional process-instance context even when legacy auth gates are off
+- [x] Remove the remaining legacy runtime JWT gates so namespace mode becomes the only process-instance ingress posture driver
+- [ ] Apply the same mode-only rule consistently beyond process-instance ingress
 
 **Acceptance criteria**
 - Enforcement is driven solely by namespace mode
@@ -303,14 +315,14 @@ Make namespace mode immediately authoritative and enforce a single ingress rule.
 - `taktx-engine/src/main/java/io/taktx/engine/pi/ProcessInstanceProcessor.java`
 
 **Work**
-- [ ] Split security rejection from processing failure handling
-- [ ] Do not emit DLQ entries for:
-  - [ ] missing signature in `ANCHORED`
-  - [ ] invalid signature
-  - [ ] unknown key
-  - [ ] revoked key
-  - [ ] unanchored key
-- [ ] Emit security events instead
+- [x] Split security rejection from processing failure handling
+- [x] Do not emit DLQ entries for:
+  - [x] missing signature in `ANCHORED`
+  - [x] invalid signature
+  - [x] unknown key
+  - [x] revoked key
+  - [x] unanchored key
+- [x] Emit security events instead
 
 **Acceptance criteria**
 - Security rejection does not create DLQ entries
@@ -327,11 +339,11 @@ Make namespace mode immediately authoritative and enforce a single ingress rule.
 
 **Work**
 - [ ] Verify coverage for:
-  - [ ] process start
-  - [ ] message correlation
-  - [ ] signal publication
-  - [ ] external task completion
-  - [ ] user task completion
+  - [x] process start
+  - [x] message correlation
+  - [x] signal publication
+  - [x] external task completion
+  - [x] user task completion
   - [ ] future external runtime commands
 - [ ] Remove special-case posture handling where possible
 
@@ -725,10 +737,10 @@ Start with this bounded slice:
 | A4 | Simplify proto + mapper | Done | A2,A3 | Regenerate protobufs |
 | A5 | Simplify participant supported modes | Done | A1 | Remove posture ladder |
 | C1 | Remove activation workflow | Done | A2,A4 | Engine policy store/processor now keep only one authoritative policy; rejected mutations remain the only control-plane failure path |
-| C2 | Simplify engine readiness | In progress | C1 | Fail-closed anchored behavior is covered in current engine/integration tests, but final cleanup is still pending |
-| C3 | Rewrite ingress enforcement | Todo | C1,C2 | `OPEN => accept`, `ANCHORED => verify` |
-| C4 | Prevent security rejection DLQ | Todo | C3 | Emit events instead |
-| C5 | Apply same rule to all ingress | Todo | C3 | Uniform external ingress |
+| C2 | Simplify engine readiness | Done | C1 | Readiness now reflects concrete anchored enforceability prerequisites and remains fail-closed for protected runtime work |
+| C3 | Rewrite ingress enforcement | In progress | C1,C2 | Process-instance ingress is now signature/mode driven with JWT retained as optional context only; remaining work is broader ingress coverage and final message-policy cleanup |
+| C4 | Prevent security rejection DLQ | Done | C3 | Process-instance ingress now emits security events for authorization/readiness rejection while reserving DLQ for decode/processing failures |
+| C5 | Apply same rule to all ingress | In progress | C3 | Process-instance, message-event, and signal external ingress now enforce mode/signature rules; remaining work is future ingress paths and lingering topic-specific special cases |
 | D1 | Add managed local file-backed identity source | Todo |  | Persistent identity |
 | D2 | Make persistent identity default | Todo | D1 | Stable restarts |
 | D3 | Simplify client policy interpretation | Todo | A2,C1,D2 | Mode-only client logic |

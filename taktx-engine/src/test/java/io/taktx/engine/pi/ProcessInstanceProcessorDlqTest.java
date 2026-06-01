@@ -27,8 +27,11 @@ import io.taktx.dto.NamespaceSecurityPolicyDTO;
 import io.taktx.dto.ProcessDefinitionKey;
 import io.taktx.dto.ProcessInstanceDTO;
 import io.taktx.dto.ProcessInstanceDlqEntryDTO;
+import io.taktx.dto.SecurityEventDTO;
+import io.taktx.dto.SecurityEventType;
 import io.taktx.dto.SecurityMode;
 import io.taktx.dto.StartCommandDTO;
+import io.taktx.dto.TokenClaims;
 import io.taktx.dto.UserTaskResponseResultDTO;
 import io.taktx.dto.UserTaskResponseTriggerDTO;
 import io.taktx.dto.UserTaskResponseType;
@@ -40,6 +43,7 @@ import io.taktx.engine.security.EngineAuthorizationService;
 import io.taktx.engine.security.EngineSecurityReadinessEvaluator;
 import io.taktx.engine.security.MessageSigningService;
 import io.taktx.engine.security.ProtectedDataPlaneParticipationGuard;
+import io.taktx.engine.security.SecurityEventPublisher;
 import io.taktx.engine.topicmanagement.DynamicTopicManager;
 import io.taktx.security.AuthorizationTokenException;
 import io.taktx.security.NamespaceSecurityPolicySupport;
@@ -65,6 +69,7 @@ class ProcessInstanceProcessorDlqTest {
 
   private ProcessorContext<Object, Object> context;
   private EngineAuthorizationService engineAuthorizationService;
+  private SecurityEventPublisher securityEventPublisher;
   private DefinitionsCache definitionsCache;
   private TaktConfiguration taktConfiguration;
   private Clock clock;
@@ -89,6 +94,7 @@ class ProcessInstanceProcessorDlqTest {
     ProcessingStatistics processingStatistics = mock(ProcessingStatistics.class);
     DynamicTopicManager topicManager = mock(DynamicTopicManager.class);
     engineAuthorizationService = mock(EngineAuthorizationService.class);
+    securityEventPublisher = mock(SecurityEventPublisher.class);
 
     context = mock(ProcessorContext.class);
     KeyValueStore<UUID, ProcessInstanceDTO> processInstanceStore = mock(KeyValueStore.class);
@@ -115,7 +121,9 @@ class ProcessInstanceProcessorDlqTest {
             dtoMapper,
             processingStatistics,
             topicManager,
-            engineAuthorizationService);
+            engineAuthorizationService,
+            null,
+            securityEventPublisher);
     setField(processor, "context", context);
     setField(processor, "processInstanceStore", processInstanceStore);
   }
@@ -131,7 +139,7 @@ class ProcessInstanceProcessorDlqTest {
   }
 
   @Test
-  void process_authorizationFailure_emitsDlqEntryWithAuthorizationHint() {
+  void process_authorizationFailure_emitsSecurityEventWithoutDlq() {
     UUID processInstanceId = UUID.randomUUID();
     byte[] payload = new byte[] {1, 2, 3};
     RecordHeaders headers = new RecordHeaders();
@@ -150,24 +158,16 @@ class ProcessInstanceProcessorDlqTest {
 
     processor.process(new Record<>(processInstanceId, envelope, 42L, headers));
 
-    ArgumentCaptor<Record> recordCaptor = ArgumentCaptor.forClass(Record.class);
-    verify(context).forward(recordCaptor.capture());
-    Record forwarded = recordCaptor.getValue();
-    assertThat(forwarded.key()).isNull();
-    assertThat(forwarded.value()).isInstanceOf(ProcessInstanceDlqEntryDTO.class);
-
-    ProcessInstanceDlqEntryDTO dlqEntry = (ProcessInstanceDlqEntryDTO) forwarded.value();
-    assertThat(dlqEntry.getProcessInstanceId()).isEqualTo(processInstanceId);
-    assertThat(dlqEntry.getData()).containsExactly(payload);
-    assertThat(dlqEntry.getHeaders())
-        .containsKey("tx-auth")
-        .containsKey(REASON_HINT)
-        .containsKey(REASON_TEXT)
-        .containsKey(CAPTURE_STAGE);
-    assertThat(new String(dlqEntry.getHeaders().get(REASON_HINT), StandardCharsets.UTF_8))
-        .isEqualTo("AUTHORIZATION_FAILED");
-    assertThat(new String(dlqEntry.getHeaders().get(CAPTURE_STAGE), StandardCharsets.UTF_8))
-        .isEqualTo("PROCESSOR");
+    ArgumentCaptor<SecurityEventDTO> eventCaptor = ArgumentCaptor.forClass(SecurityEventDTO.class);
+    verify(securityEventPublisher).publish(eq(processInstanceId.toString()), eventCaptor.capture());
+    assertThat(eventCaptor.getValue().getEventType()).isEqualTo(SecurityEventType.DATA_PLANE_BLOCKED);
+    assertThat(eventCaptor.getValue().getCode()).isEqualTo("AUTHORIZATION_FAILED");
+    assertThat(eventCaptor.getValue().getMessage()).contains("JWT");
+    assertThat(eventCaptor.getValue().getMetadata())
+        .containsEntry("rejectionStage", "AUTHORIZATION")
+        .containsEntry("processInstanceId", processInstanceId.toString())
+        .containsEntry("triggerType", StartCommandDTO.class.getSimpleName());
+    verify(context, never()).forward(any());
   }
 
   @Test
@@ -223,7 +223,7 @@ class ProcessInstanceProcessorDlqTest {
   }
 
   @Test
-  void process_signatureFailure_emitsDlqEntryWithSignatureReasonHint() {
+  void process_signatureFailure_emitsSecurityEventWithoutDlq() {
     UUID processInstanceId = UUID.randomUUID();
     byte[] payload = new byte[] {4, 5, 6};
     RecordHeaders headers = new RecordHeaders();
@@ -247,19 +247,17 @@ class ProcessInstanceProcessorDlqTest {
 
     processor.process(new Record<>(processInstanceId, envelope, 77L, headers));
 
-    ArgumentCaptor<Record> recordCaptor = ArgumentCaptor.forClass(Record.class);
-    verify(context).forward(recordCaptor.capture());
-    ProcessInstanceDlqEntryDTO dlqEntry =
-        (ProcessInstanceDlqEntryDTO) recordCaptor.getValue().value();
-
-    assertThat(new String(dlqEntry.getHeaders().get(REASON_HINT), StandardCharsets.UTF_8))
-        .isEqualTo("SIGNATURE_KEY_UNKNOWN");
-    assertThat(new String(dlqEntry.getHeaders().get(CAPTURE_STAGE), StandardCharsets.UTF_8))
-        .isEqualTo("PROCESSOR");
+    ArgumentCaptor<SecurityEventDTO> eventCaptor = ArgumentCaptor.forClass(SecurityEventDTO.class);
+    verify(securityEventPublisher).publish(eq(processInstanceId.toString()), eventCaptor.capture());
+    assertThat(eventCaptor.getValue().getCode()).isEqualTo("SIGNATURE_KEY_UNKNOWN");
+    assertThat(eventCaptor.getValue().getMetadata())
+        .containsEntry("rejectionStage", "AUTHORIZATION")
+        .containsEntry("signerKeyId", "worker-key");
+    verify(context, never()).forward(any());
   }
 
   @Test
-  void process_authoritativeAnchoredPolicyWithoutTrustAnchor_emitsDlqEntry() {
+  void process_authoritativeAnchoredPolicyWithoutTrustAnchor_emitsSecurityEvent() {
     UUID processInstanceId = UUID.randomUUID();
     byte[] payload = new byte[] {10, 20, 30};
     RecordHeaders headers = new RecordHeaders();
@@ -279,19 +277,13 @@ class ProcessInstanceProcessorDlqTest {
 
     guardedProcessor.process(new Record<>(processInstanceId, envelope, 42L, headers));
 
-    ArgumentCaptor<Record> recordCaptor = ArgumentCaptor.forClass(Record.class);
-    verify(context).forward(recordCaptor.capture());
-    ProcessInstanceDlqEntryDTO dlqEntry =
-        (ProcessInstanceDlqEntryDTO) recordCaptor.getValue().value();
-    assertThat(new String(dlqEntry.getHeaders().get(REASON_HINT), StandardCharsets.UTF_8))
-        .isEqualTo("TRUST_ANCHOR_MISSING");
-    assertThat(new String(dlqEntry.getHeaders().get(REASON_TEXT), StandardCharsets.UTF_8))
-        .contains("platform public key");
+    assertSecurityEvent(processInstanceId, "TRUST_ANCHOR_MISSING", "READINESS");
     verifyNoInteractions(definitionsCache);
+    verify(context, never()).forward(any());
   }
 
   @Test
-  void process_activePolicyWhenEngineNotReady_emitsDlqEntryWithMismatchHint() {
+  void process_activePolicyWhenEngineNotReady_emitsSecurityEventWithMismatchHint() {
     UUID processInstanceId = UUID.randomUUID();
     byte[] payload = new byte[] {11, 21, 31};
     RecordHeaders headers = new RecordHeaders();
@@ -312,19 +304,13 @@ class ProcessInstanceProcessorDlqTest {
 
     guardedProcessor.process(new Record<>(processInstanceId, envelope, 42L, headers));
 
-    ArgumentCaptor<Record> recordCaptor = ArgumentCaptor.forClass(Record.class);
-    verify(context).forward(recordCaptor.capture());
-    ProcessInstanceDlqEntryDTO dlqEntry =
-        (ProcessInstanceDlqEntryDTO) recordCaptor.getValue().value();
-    assertThat(new String(dlqEntry.getHeaders().get(REASON_HINT), StandardCharsets.UTF_8))
-        .isEqualTo("TRUST_ANCHOR_MISSING");
-    assertThat(new String(dlqEntry.getHeaders().get(REASON_TEXT), StandardCharsets.UTF_8))
-        .contains("no platform public key");
+    assertSecurityEvent(processInstanceId, "TRUST_ANCHOR_MISSING", "READINESS");
     verifyNoInteractions(definitionsCache);
+    verify(context, never()).forward(any());
   }
 
   @Test
-  void process_authoritativePolicyMissingRequiredJwt_emitsDlqEntry() {
+  void process_authoritativePolicyMissingRequiredJwt_emitsSecurityEvent() {
     UUID processInstanceId = UUID.randomUUID();
     byte[] payload = new byte[] {12, 22, 32};
     RecordHeaders headers = new RecordHeaders();
@@ -344,11 +330,12 @@ class ProcessInstanceProcessorDlqTest {
 
     processor.process(new Record<>(processInstanceId, envelope, 43L, headers));
 
-    assertAuthorizationFailureDlq(processInstanceId, payload, "tx-auth");
+    assertSecurityEvent(processInstanceId, "AUTHORIZATION_FAILED", "AUTHORIZATION");
+    verify(context, never()).forward(any());
   }
 
   @Test
-  void process_authoritativePolicyMissingRequiredSignature_emitsDlqEntry() {
+  void process_authoritativePolicyMissingRequiredSignature_emitsSecurityEvent() {
     UUID processInstanceId = UUID.randomUUID();
     byte[] payload = new byte[] {13, 23, 33};
     RecordHeaders headers = new RecordHeaders();
@@ -368,11 +355,12 @@ class ProcessInstanceProcessorDlqTest {
 
     processor.process(new Record<>(processInstanceId, envelope, 44L, headers));
 
-    assertAuthorizationFailureDlq(processInstanceId, payload, "tx-sig");
+    assertSecurityEvent(processInstanceId, "SIGNATURE_MISSING", "AUTHORIZATION");
+    verify(context, never()).forward(any());
   }
 
   @Test
-  void process_authoritativeAnchoredPolicyMissingTrustAnchor_emitsDlqEntry() {
+  void process_authoritativeAnchoredPolicyMissingTrustAnchor_emitsSecurityEvent() {
     UUID processInstanceId = UUID.randomUUID();
     byte[] payload = new byte[] {14, 24, 34};
     RecordHeaders headers = new RecordHeaders();
@@ -395,11 +383,12 @@ class ProcessInstanceProcessorDlqTest {
 
     guardedProcessor.process(new Record<>(processInstanceId, envelope, 45L, headers));
 
-    assertAuthorizationFailureDlq(processInstanceId, payload, "platform public key");
+    assertSecurityEvent(processInstanceId, "TRUST_ANCHOR_MISSING", "AUTHORIZATION");
+    verify(context, never()).forward(any());
   }
 
   @Test
-  void process_taskCompletionWithStrayJwt_authDisabled_ignoresJwtAndDoesNotEmitDlq() {
+  void process_taskCompletionWithPresentedJwt_authDisabled_validatesJwtWithoutDlq() {
     UUID processInstanceId = UUID.randomUUID();
     byte[] payload = new byte[] {31, 32, 33};
     RecordHeaders headers = new RecordHeaders();
@@ -415,13 +404,13 @@ class ProcessInstanceProcessorDlqTest {
     ProcessInstanceTriggerEnvelope envelope =
         new ProcessInstanceTriggerEnvelope(payload, trigger, false, null);
     when(engineAuthorizationService.authorize(headers, envelope)).thenReturn(null);
-    when(engineAuthorizationService.isTaskCompletionAuthorizationActive(trigger)).thenReturn(false);
+    when(engineAuthorizationService.validateJwtClaims(any(), eq(trigger))).thenReturn(mock(TokenClaims.class));
 
     processor.process(new Record<>(processInstanceId, envelope, 77L, headers));
 
     verify(engineAuthorizationService).authorize(headers, envelope);
-    verify(engineAuthorizationService).isTaskCompletionAuthorizationActive(trigger);
-    verify(engineAuthorizationService, never()).validateJwtClaims(any(), eq(trigger));
+    verify(engineAuthorizationService).validateJwtClaims(any(), eq(trigger));
+    verifyNoInteractions(securityEventPublisher);
     verify(context, never()).forward(any());
   }
 
@@ -431,6 +420,7 @@ class ProcessInstanceProcessorDlqTest {
       boolean signingAvailable) {
     NamespaceSecurityPolicyStore policyStore = new NamespaceSecurityPolicyStore();
     policyStore.update(authoritativePolicy);
+    when(taktConfiguration.getSigningIdentitySourceType()).thenReturn("file");
     when(taktConfiguration.getPlatformPublicKey()).thenReturn(platformPublicKey);
 
     MessageSigningService messageSigningService = mock(MessageSigningService.class);
@@ -455,7 +445,8 @@ class ProcessInstanceProcessorDlqTest {
                 policyStore,
                 new EngineSecurityReadinessEvaluator(
                     taktConfiguration, policyStore, messageSigningService, clock),
-                clock));
+                clock),
+            securityEventPublisher);
     setField(guardedProcessor, "context", context);
     setField(guardedProcessor, "processInstanceStore", mock(KeyValueStore.class));
     return guardedProcessor;
@@ -469,26 +460,18 @@ class ProcessInstanceProcessorDlqTest {
             .build());
   }
 
-
-  private void assertAuthorizationFailureDlq(
-      UUID processInstanceId, byte[] payload, String reasonTextFragment) {
-    ArgumentCaptor<Record> recordCaptor = ArgumentCaptor.forClass(Record.class);
-    verify(context).forward(recordCaptor.capture());
-    ProcessInstanceDlqEntryDTO dlqEntry =
-        (ProcessInstanceDlqEntryDTO) recordCaptor.getValue().value();
-
-    assertThat(dlqEntry.getProcessInstanceId()).isEqualTo(processInstanceId);
-    assertThat(dlqEntry.getData()).containsExactly(payload);
-    assertThat(new String(dlqEntry.getHeaders().get(REASON_HINT), StandardCharsets.UTF_8))
-        .isEqualTo("AUTHORIZATION_FAILED");
-    assertThat(new String(dlqEntry.getHeaders().get(CAPTURE_STAGE), StandardCharsets.UTF_8))
-        .isEqualTo("PROCESSOR");
-    assertThat(new String(dlqEntry.getHeaders().get(REASON_TEXT), StandardCharsets.UTF_8))
-        .contains(reasonTextFragment);
+  private void assertSecurityEvent(UUID processInstanceId, String expectedCode, String stage) {
+    ArgumentCaptor<SecurityEventDTO> eventCaptor = ArgumentCaptor.forClass(SecurityEventDTO.class);
+    verify(securityEventPublisher).publish(eq(processInstanceId.toString()), eventCaptor.capture());
+    assertThat(eventCaptor.getValue().getEventType()).isEqualTo(SecurityEventType.DATA_PLANE_BLOCKED);
+    assertThat(eventCaptor.getValue().getCode()).isEqualTo(expectedCode);
+    assertThat(eventCaptor.getValue().getMetadata())
+        .containsEntry("rejectionStage", stage)
+        .containsEntry("processInstanceId", processInstanceId.toString());
   }
 
   @Test
-  void process_taskCompletionJwtValidationFailure_emitsDlqInsteadOfThrowing() {
+  void process_taskCompletionJwtValidationFailure_emitsSecurityEventInsteadOfDlq() {
     UUID processInstanceId = UUID.randomUUID();
     byte[] payload = new byte[] {41, 42, 43};
     RecordHeaders headers = new RecordHeaders();
@@ -503,7 +486,6 @@ class ProcessInstanceProcessorDlqTest {
     ProcessInstanceTriggerEnvelope envelope =
         new ProcessInstanceTriggerEnvelope(payload, trigger, false, null);
     when(engineAuthorizationService.authorize(headers, envelope)).thenReturn(null);
-    when(engineAuthorizationService.isTaskCompletionAuthorizationActive(trigger)).thenReturn(true);
     when(engineAuthorizationService.validateJwtClaims(any(), eq(trigger)))
         .thenThrow(
             new AuthorizationTokenException(
@@ -511,18 +493,12 @@ class ProcessInstanceProcessorDlqTest {
 
     processor.process(new Record<>(processInstanceId, envelope, 88L, headers));
 
-    ArgumentCaptor<Record> recordCaptor = ArgumentCaptor.forClass(Record.class);
-    verify(context).forward(recordCaptor.capture());
-    ProcessInstanceDlqEntryDTO dlqEntry =
-        (ProcessInstanceDlqEntryDTO) recordCaptor.getValue().value();
-
-    assertThat(dlqEntry.getProcessInstanceId()).isEqualTo(processInstanceId);
-    assertThat(new String(dlqEntry.getHeaders().get(REASON_HINT), StandardCharsets.UTF_8))
-        .isEqualTo("AUTHORIZATION_FAILED");
-    assertThat(new String(dlqEntry.getHeaders().get(CAPTURE_STAGE), StandardCharsets.UTF_8))
-        .isEqualTo("PROCESSOR");
-    assertThat(new String(dlqEntry.getHeaders().get(REASON_TEXT), StandardCharsets.UTF_8))
-        .contains("PLATFORM JWT issuer key");
+    ArgumentCaptor<SecurityEventDTO> eventCaptor = ArgumentCaptor.forClass(SecurityEventDTO.class);
+    verify(securityEventPublisher).publish(eq(processInstanceId.toString()), eventCaptor.capture());
+    assertThat(eventCaptor.getValue().getCode()).isEqualTo("AUTHORIZATION_FAILED");
+    assertThat(eventCaptor.getValue().getMetadata()).containsEntry("rejectionStage", "JWT_VALIDATION");
+    assertThat(eventCaptor.getValue().getMessage()).contains("PLATFORM JWT issuer key");
+    verify(context, never()).forward(any());
   }
 
   @Test

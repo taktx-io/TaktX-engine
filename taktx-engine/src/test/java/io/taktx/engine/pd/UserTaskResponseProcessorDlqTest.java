@@ -60,6 +60,8 @@ class UserTaskResponseProcessorDlqTest {
     when(configuration.getNamespace()).thenReturn("bank.payments");
     when(configuration.getHost()).thenReturn("engine-host");
     when(configuration.getPort()).thenReturn(8080);
+    when(configuration.getSigningIdentitySourceType()).thenReturn("file");
+    when(configuration.getEngineKeyRegistrationSignature()).thenReturn("engine-registration-signature");
     when(configuration.getPlatformPublicKey()).thenReturn(null);
     processor = new UserTaskResponseProcessor(clock);
     processor.init(context);

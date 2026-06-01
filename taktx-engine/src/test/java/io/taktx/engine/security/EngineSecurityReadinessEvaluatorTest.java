@@ -105,6 +105,27 @@ class EngineSecurityReadinessEvaluatorTest {
   }
 
   @Test
+  void anchoredPolicy_withoutStableSigningSource_reportsMismatch() {
+    when(configuration.getSigningIdentitySourceType()).thenReturn("generated");
+    when(configuration.getPlatformPublicKey()).thenReturn("platform-public-key");
+    when(configuration.getEngineKeyRegistrationSignature()).thenReturn("engine-registration-signature");
+    when(messageSigningService.hasPublishableSigningIdentity()).thenReturn(true);
+    policyStore.update(policy(SecurityMode.ANCHORED, 42L));
+
+    EngineSecurityReadinessEvaluator evaluator =
+        new EngineSecurityReadinessEvaluator(
+            configuration, policyStore, messageSigningService, clock);
+
+    var status = evaluator.evaluateCurrentStatus();
+
+    assertThat(status.getEffectiveState())
+        .isEqualTo(io.taktx.dto.ParticipantEffectiveState.MISMATCH);
+    assertThat(status.getMismatchReasons())
+        .extracting(io.taktx.dto.PolicyMismatchReasonDTO::getCode)
+        .contains(EngineSecurityReadinessEvaluator.STABLE_SIGNING_SOURCE_REQUIRED);
+  }
+
+  @Test
   void anchoredPolicy_withTrustAnchorButUnpublishedKey_reportsSigningUnavailable() {
     when(configuration.getSigningIdentitySourceType()).thenReturn("file");
     when(configuration.getPlatformPublicKey()).thenReturn("platform-public-key");

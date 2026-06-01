@@ -38,8 +38,9 @@ class ProtectedDataPlaneParticipationGuardTest {
     when(configuration.getHost()).thenReturn("engine-host");
     when(configuration.getPort()).thenReturn(8080);
     when(configuration.getPlatformPublicKey()).thenReturn(null);
-    when(configuration.getSigningIdentitySourceType()).thenReturn("generated");
-    when(configuration.getEngineKeyRegistrationSignature()).thenReturn(null);
+    when(configuration.getSigningIdentitySourceType()).thenReturn("file");
+    when(configuration.getEngineKeyRegistrationSignature())
+        .thenReturn("engine-registration-signature");
 
     policyStore = new NamespaceSecurityPolicyStore();
     messageSigningService = Mockito.mock(MessageSigningService.class);

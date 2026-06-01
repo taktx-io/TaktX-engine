@@ -10,6 +10,7 @@ package io.taktx.engine.pi;
 
 import static io.taktx.dto.Constants.MAX_LONG;
 
+import io.taktx.Topics;
 import io.taktx.dto.AbortTriggerDTO;
 import io.taktx.dto.CommandTrustMetadataDTO;
 import io.taktx.dto.CommandTrustVerificationResult;
@@ -30,6 +31,9 @@ import io.taktx.dto.ProcessInstanceDlqEntryDTO;
 import io.taktx.dto.ProcessInstanceTriggerDTO;
 import io.taktx.dto.ProcessInstanceUpdateDTO;
 import io.taktx.dto.ScopeDTO;
+import io.taktx.dto.SecurityEventDTO;
+import io.taktx.dto.SecurityEventSeverity;
+import io.taktx.dto.SecurityEventType;
 import io.taktx.dto.SetVariableTriggerDTO;
 import io.taktx.dto.StartCommandDTO;
 import io.taktx.dto.StartFlowElementTriggerDTO;
@@ -56,6 +60,7 @@ import io.taktx.engine.pi.model.WithScope;
 import io.taktx.engine.pi.processor.IoMappingProcessor;
 import io.taktx.engine.security.EngineAuthorizationService;
 import io.taktx.engine.security.ProtectedDataPlaneParticipationGuard;
+import io.taktx.engine.security.SecurityEventPublisher;
 import io.taktx.engine.topicmanagement.DynamicTopicManager;
 import io.taktx.proto.VariableValue;
 import io.taktx.security.AuthorizationTokenException;
@@ -105,6 +110,7 @@ public class ProcessInstanceProcessor
   private final DynamicTopicManager topicManager;
   private final EngineAuthorizationService engineAuthorizationService;
   private final ProtectedDataPlaneParticipationGuard protectedDataPlaneParticipationGuard;
+  private final SecurityEventPublisher securityEventPublisher;
   private final Map<ProcessDefinitionKey, FlowElements> flowElementsCache = new HashMap<>();
 
   private ReadOnlyKeyValueStore<ProcessDefinitionKey, ValueAndTimestamp<ProcessDefinitionDTO>>
@@ -146,6 +152,7 @@ public class ProcessInstanceProcessor
         processingStatistics,
         topicManager,
         engineAuthorizationService,
+        null,
         null);
   }
 
@@ -163,6 +170,38 @@ public class ProcessInstanceProcessor
       DynamicTopicManager topicManager,
       EngineAuthorizationService engineAuthorizationService,
       ProtectedDataPlaneParticipationGuard protectedDataPlaneParticipationGuard) {
+    this(
+        definitionsCache,
+        definitionMapper,
+        instanceMapper,
+        forwarder,
+        ioMappingProcessor,
+        taktConfiguration,
+        scopeProcessor,
+        clock,
+        dtoMapper,
+        processingStatistics,
+        topicManager,
+        engineAuthorizationService,
+        protectedDataPlaneParticipationGuard,
+        null);
+  }
+
+  public ProcessInstanceProcessor(
+      DefinitionsCache definitionsCache,
+      DefinitionMapper definitionMapper,
+      ProcessInstanceMapper instanceMapper,
+      Forwarder forwarder,
+      IoMappingProcessor ioMappingProcessor,
+      TaktConfiguration taktConfiguration,
+      ScopeProcessor scopeProcessor,
+      Clock clock,
+      DtoMapper dtoMapper,
+      ProcessingStatistics processingStatistics,
+      DynamicTopicManager topicManager,
+      EngineAuthorizationService engineAuthorizationService,
+      ProtectedDataPlaneParticipationGuard protectedDataPlaneParticipationGuard,
+      SecurityEventPublisher securityEventPublisher) {
     this.definitionsCache = definitionsCache;
     this.definitionMapper = definitionMapper;
     this.instanceMapper = instanceMapper;
@@ -176,6 +215,7 @@ public class ProcessInstanceProcessor
     this.topicManager = topicManager;
     this.engineAuthorizationService = engineAuthorizationService;
     this.protectedDataPlaneParticipationGuard = protectedDataPlaneParticipationGuard;
+    this.securityEventPublisher = securityEventPublisher;
   }
 
   @Override
@@ -207,14 +247,14 @@ public class ProcessInstanceProcessor
       currentTrustMetadata =
           engineAuthorizationService.authorize(triggerRecord.headers(), triggerEnvelope);
     } catch (AuthorizationTokenException e) {
-      log.error("⛔ Command rejected — authorization failed: {}", e.getMessage());
-      emitProcessInstanceDlq(
+      log.warn("⛔ Command rejected — authorization failed: {}", e.getMessage());
+      emitSecurityRejectionEvent(
           triggerRecord.key(),
           triggerRecord.headers(),
           triggerEnvelope,
           reasonHintForAuthorizationFailure(triggerEnvelope, e),
           e.getMessage(),
-          "PROCESSOR");
+          "AUTHORIZATION");
       return;
     }
 
@@ -227,14 +267,14 @@ public class ProcessInstanceProcessor
     try {
       validatedJwtClaims = resolveValidatedJwtClaims(triggerRecord.headers(), triggerEnvelope);
     } catch (AuthorizationTokenException e) {
-      log.error("⛔ Command rejected — task-completion JWT validation failed: {}", e.getMessage());
-      emitProcessInstanceDlq(
+      log.warn("⛔ Command rejected — task-completion JWT validation failed: {}", e.getMessage());
+      emitSecurityRejectionEvent(
           triggerRecord.key(),
           triggerRecord.headers(),
           triggerEnvelope,
           reasonHintForAuthorizationFailure(triggerEnvelope, e),
           e.getMessage(),
-          "PROCESSOR");
+          "JWT_VALIDATION");
       return;
     }
 
@@ -242,13 +282,16 @@ public class ProcessInstanceProcessor
       ProtectedDataPlaneParticipationGuard.Decision gateDecision =
           protectedDataPlaneParticipationGuard.evaluate();
       if (!gateDecision.permitted()) {
-        emitProcessInstanceDlq(
+        log.warn(
+            "⛔ Command rejected — protected data-plane participation blocked: {}",
+            gateDecision.reasonText());
+        emitSecurityRejectionEvent(
             triggerRecord.key(),
             triggerRecord.headers(),
             triggerEnvelope,
             gateDecision.reasonHint(),
             gateDecision.reasonText(),
-            "PROCESSOR");
+            "READINESS");
         return;
       }
     }
@@ -413,6 +456,52 @@ public class ProcessInstanceProcessor
     context.forward(new Record<>(null, dlqEntry, clock.millis()));
   }
 
+  private void emitSecurityRejectionEvent(
+      UUID processInstanceId,
+      Headers headers,
+      ProcessInstanceTriggerEnvelope triggerEnvelope,
+      String reasonHint,
+      String reasonText,
+      String rejectionStage) {
+    if (securityEventPublisher == null) {
+      return;
+    }
+
+    Map<String, String> metadata = new HashMap<>();
+    metadata.put("channel", Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName());
+    metadata.put("rejectionStage", rejectionStage);
+
+    if (processInstanceId != null) {
+      metadata.put("processInstanceId", processInstanceId.toString());
+    }
+    if (triggerEnvelope != null && triggerEnvelope.trigger() != null) {
+      metadata.put("triggerType", triggerEnvelope.trigger().getClass().getSimpleName());
+    }
+    String signerKeyId = signerKeyId(headers, triggerEnvelope);
+    if (signerKeyId != null && !signerKeyId.isBlank()) {
+      metadata.put("signerKeyId", signerKeyId);
+    }
+    if (triggerEnvelope != null
+        && triggerEnvelope.replayRoutingKeyHint() != null
+        && !triggerEnvelope.replayRoutingKeyHint().isBlank()) {
+      metadata.put("replayRoutingKeyHint", triggerEnvelope.replayRoutingKeyHint());
+    }
+
+    securityEventPublisher.publish(
+        processInstanceId != null ? processInstanceId.toString() : null,
+        SecurityEventDTO.builder()
+            .eventType(SecurityEventType.DATA_PLANE_BLOCKED)
+            .severity(SecurityEventSeverity.WARNING)
+            .occurredAtMs(clock.millis())
+            .namespace(taktConfiguration.getNamespace())
+            .participantId(participantId())
+            .participantInstanceId(participantInstanceId())
+            .code(reasonHint)
+            .message(reasonText)
+            .metadata(Map.copyOf(metadata))
+            .build());
+  }
+
   private static Map<String, byte[]> headersToMap(Headers headers) {
     if (headers == null) {
       return new HashMap<>();
@@ -425,20 +514,78 @@ public class ProcessInstanceProcessor
     String signatureError = triggerEnvelope.signatureError();
     if (signatureError != null && !signatureError.isBlank()) {
       String normalized = signatureError.toLowerCase();
-      if (normalized.contains("unknown") || normalized.contains("revoked")) {
+      if (normalized.contains("unknown or revoked")) {
+        return "SIGNATURE_KEY_UNKNOWN";
+      }
+      if (normalized.contains("revoked")) {
+        return "SIGNATURE_KEY_REVOKED";
+      }
+      if (normalized.contains("unknown")) {
         return "SIGNATURE_KEY_UNKNOWN";
       }
       if (normalized.contains("malformed")) {
         return "SIGNATURE_MALFORMED";
       }
+      if (normalized.contains("verification failed")) {
+        return "SIGNATURE_VERIFICATION_FAILED";
+      }
       return "SIGNATURE_VERIFICATION_FAILED";
     }
 
     String message = exception.getMessage() != null ? exception.getMessage().toLowerCase() : "";
+    if (message.contains("requires tx-sig") || message.startsWith("missing required tx-sig header")) {
+      return "SIGNATURE_MISSING";
+    }
+    if (message.startsWith("unknown ed25519 keyid")) {
+      return "SIGNATURE_KEY_UNKNOWN";
+    }
+    if (message.startsWith("revoked ed25519 keyid")) {
+      return "SIGNATURE_KEY_REVOKED";
+    }
+    if (message.startsWith("signing keyid")) {
+      return "SIGNATURE_UNTRUSTED";
+    }
+    if (message.contains("platform public key") || message.contains("anchored trust")) {
+      return "TRUST_ANCHOR_MISSING";
+    }
     if (message.contains("requires jwt") || message.contains("jwt")) {
       return "AUTHORIZATION_FAILED";
     }
     return "AUTHORIZATION_FAILED";
+  }
+
+  private String participantId() {
+    return taktConfiguration.getTenantId() + "." + taktConfiguration.getNamespace() + ".engine";
+  }
+
+  private String participantInstanceId() {
+    return taktConfiguration.getTenantId()
+        + "."
+        + taktConfiguration.getNamespace()
+        + "@"
+        + taktConfiguration.getHost()
+        + ":"
+        + taktConfiguration.getPort()
+        + "#"
+        + ProcessHandle.current().pid();
+  }
+
+  private static String signerKeyId(Headers headers, ProcessInstanceTriggerEnvelope triggerEnvelope) {
+    if (triggerEnvelope != null
+        && triggerEnvelope.signatureKeyId() != null
+        && !triggerEnvelope.signatureKeyId().isBlank()) {
+      return triggerEnvelope.signatureKeyId();
+    }
+    if (headers == null) {
+      return null;
+    }
+    Header signatureHeader = headers.lastHeader(Constants.HEADER_ENGINE_SIGNATURE);
+    if (signatureHeader == null || signatureHeader.value() == null) {
+      return null;
+    }
+    String headerValue = new String(signatureHeader.value(), StandardCharsets.UTF_8);
+    int dotIndex = headerValue.indexOf('.');
+    return dotIndex >= 0 ? headerValue.substring(0, dotIndex) : headerValue;
   }
 
   private void processStartCommandRecord(
@@ -831,10 +978,6 @@ public class ProcessInstanceProcessor
     }
     if (!(triggerEnvelope.trigger() instanceof UserTaskResponseTriggerDTO)
         && !(triggerEnvelope.trigger() instanceof ExternalTaskResponseTriggerDTO)) {
-      return null;
-    }
-    if (!engineAuthorizationService.isTaskCompletionAuthorizationActive(
-        triggerEnvelope.trigger())) {
       return null;
     }
     Header authHeader = headers != null ? headers.lastHeader(Constants.HEADER_AUTHORIZATION) : null;

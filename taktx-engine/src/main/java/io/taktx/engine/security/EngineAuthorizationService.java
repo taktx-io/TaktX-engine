@@ -13,9 +13,9 @@ import io.taktx.dto.AbortTriggerDTO;
 import io.taktx.dto.CommandAuthMethod;
 import io.taktx.dto.CommandTrustMetadataDTO;
 import io.taktx.dto.CommandTrustVerificationResult;
+import io.taktx.dto.CorrelationMessageEventTriggerDTO;
 import io.taktx.dto.Constants;
-import io.taktx.dto.ContinueFlowElementTriggerDTO;
-import io.taktx.dto.EventSignalTriggerDTO;
+import io.taktx.dto.DefinitionMessageEventTriggerDTO;
 import io.taktx.dto.ExternalTaskResponseTriggerDTO;
 import io.taktx.dto.GlobalConfigurationDTO;
 import io.taktx.dto.KeyRole;
@@ -28,13 +28,14 @@ import io.taktx.dto.SecurityMode;
 import io.taktx.dto.SetVariableTriggerDTO;
 import io.taktx.dto.SigningKeyDTO;
 import io.taktx.dto.StartCommandDTO;
-import io.taktx.dto.StartFlowElementTriggerDTO;
 import io.taktx.dto.TokenClaims;
 import io.taktx.dto.TopicMetaDTO;
 import io.taktx.dto.UserTaskResponseTriggerDTO;
 import io.taktx.engine.config.GlobalConfigStore;
 import io.taktx.engine.config.NamespaceSecurityPolicyStore;
 import io.taktx.engine.config.TaktConfiguration;
+import io.taktx.engine.pd.MessageEventIngressEnvelope;
+import io.taktx.engine.pd.SignalIngressEnvelope;
 import io.taktx.engine.pi.ProcessInstanceTriggerEnvelope;
 import io.taktx.security.AuthorizationTokenException;
 import io.taktx.security.AuthorizationTokenValidator;
@@ -67,8 +68,9 @@ import org.apache.kafka.streams.KafkaStreams;
  *       trust-policy evaluation are delegated to {@link VerificationCore}.
  * </ul>
  *
- * <p>When authorization is disabled in the latest {@link GlobalConfigurationDTO}, returns {@code
- * null} without validating anything.
+ * <p>When legacy authorization/signing gates are disabled in the latest {@link
+ * GlobalConfigurationDTO}, unsigned ingress is accepted. However, a presented {@code tx-auth} JWT
+ * is still validated and surfaced as optional trust/user context.
  */
 @ApplicationScoped
 @Startup
@@ -233,20 +235,19 @@ public class EngineAuthorizationService {
    * Authorises an incoming command on {@code process-instance-trigger} and returns structured trust
    * metadata to be attached to the command/update chain.
    *
-   * <p>Two independent security gates are evaluated and both must pass when both are active:
+   * <p>Two process-instance security inputs may apply:
    *
    * <ul>
-   *   <li><b>Authorization gate</b> ({@code engineRequiresAuthorization} config): applies to entry
-   *       commands; satisfied by a valid JWT <em>or</em> an ENGINE-role Ed25519 key. ENGINE-role
-   *       keys implicitly carry authorization because only the engine itself generates them (e.g.
-   *       sub-process / call-activity triggers).
-   *   <li><b>Signing gate</b> ({@code signingEnabled} config): applies to <em>all</em> commands
-   *       including entry; satisfied by any valid Ed25519 signature (CLIENT or ENGINE role).
+   *   <li><b>Optional JWT context</b> ({@code tx-auth}): when present on an entry or
+   *       task-completion command it is always validated and surfaced as trust/user context.
+   *   <li><b>Signature gate</b>: applies whenever legacy signing is enabled <em>or</em> the
+   *       authoritative namespace policy is {@code ANCHORED}. It is satisfied by a valid trusted
+   *       Ed25519 signature for the message type's minimum role.
    * </ul>
    *
-   * <p>When both gates are active an external entry command must carry <em>both</em> a JWT
-   * (authorization) and an Ed25519 signature (authenticity). An ENGINE-role Ed25519 alone satisfies
-   * both gates, so engine-internal entry commands continue to work without a JWT.
+   * <p>Under the simplified authoritative policy model, namespace mode no longer requires JWTs as a
+   * posture mechanism: {@code OPEN} accepts unsigned ingress, while {@code ANCHORED} requires a
+   * trusted signature. JWTs remain optional business/user context.
    */
   public CommandTrustMetadataDTO authorize(
       Headers headers, ProcessInstanceTriggerEnvelope triggerEnvelope) {
@@ -264,115 +265,43 @@ public class EngineAuthorizationService {
     Header authHeader = lastHeader(headers, AUTH_HEADER);
     Header sigHeader = lastHeader(headers, SIG_HEADER);
 
-    boolean isEntryCommand = policy.requireJwt();
-
-    // ── Entry commands: AND-logic across both gates
-    // ───────────────────────────────────────────────
-    if (isEntryCommand) {
-      boolean authActive = isAuthorizationGateActive(cfg, policy, authoritativePolicy);
-      boolean signingActive = isSignatureGateActive(cfg, policy, authoritativePolicy);
-
-      if (!authActive && !signingActive) {
-        return null;
-      }
-
-      // Verify JWT if present (throws on invalid token; a presented JWT must always be valid)
-      CommandTrustMetadataDTO jwtMeta = null;
-      if (authHeader != null && authHeader.value() != null) {
-        jwtMeta = authorizeViaJwt(authHeader, triggerEnvelope);
-      }
-
-      // Verify Ed25519 if present; accepts CLIENT- and ENGINE-role keys
-      CommandTrustMetadataDTO sigMeta = null;
-      boolean sigIsEngine = false;
-      if (sigHeader != null && sigHeader.value() != null) {
-        sigMeta = authorizeViaEd25519(sigHeader, triggerEnvelope, requiredRole(policy));
-        sigIsEngine =
-            CommandTrustVerificationResult.ENGINE_SIGNED == sigMeta.getVerificationResult();
-      }
-
-      // Auth gate: JWT or ENGINE-role Ed25519 satisfies it
-      if (authActive
-          && !policy.allowSignatureAsJwtEquivalent()
-          && policy.allowEngineSignatureAsJwtEquivalent()
-          && jwtMeta == null
-          && !sigIsEngine) {
-        throw new AuthorizationTokenException(
-            "Entry command "
-                + trigger.getClass().getSimpleName()
-                + " requires "
-                + AUTH_HEADER
-                + " (JWT) or "
-                + SIG_HEADER
-                + " from an ENGINE-role key");
-      }
-
-      if (authActive
-          && !policy.allowEngineSignatureAsJwtEquivalent()
-          && !policy.allowSignatureAsJwtEquivalent()
-          && jwtMeta == null) {
-        throw new AuthorizationTokenException(
-            "Entry command "
-                + trigger.getClass().getSimpleName()
-                + " requires "
-                + AUTH_HEADER
-                + " (JWT)");
-      }
-
-      if (authActive
-          && policy.allowSignatureAsJwtEquivalent()
-          && jwtMeta == null
-          && sigMeta == null) {
-        throw new AuthorizationTokenException(
-            "Entry command "
-                + trigger.getClass().getSimpleName()
-                + " requires "
-                + AUTH_HEADER
-                + " (JWT) or "
-                + SIG_HEADER
-                + " from a trusted key");
-      }
-
-      // Signing gate: any valid Ed25519 satisfies it
-      if (signingActive && policy.requireSignature() && sigMeta == null) {
-        throw new AuthorizationTokenException(
-            "Entry command "
-                + trigger.getClass().getSimpleName()
-                + " requires "
-                + SIG_HEADER
-                + " (signingEnabled=true)");
-      }
-
-      // Both JWT and Ed25519 verified — combine: JWT provides auth context, enrich with signer info
-      if (jwtMeta != null && sigMeta != null) {
-        return CommandTrustMetadataDTO.builder()
-            .authMethod(CommandAuthMethod.JWT_AND_ED25519)
-            .verificationResult(jwtMeta.getVerificationResult())
-            .trusted(true)
-            .userId(jwtMeta.getUserId())
-            .issuer(jwtMeta.getIssuer())
-            .signerKeyId(sigMeta.getSignerKeyId())
-            .signerOwner(sigMeta.getSignerOwner())
-            .signerAlgorithm(sigMeta.getSignerAlgorithm())
-            .build();
-      }
-      return jwtMeta != null ? jwtMeta : sigMeta;
-    }
+    boolean entryCommand = isEntryCommand(trigger);
+    boolean taskCompletionTrigger = isTaskCompletionTrigger(trigger);
+    boolean signingActive = isSignatureGateActive(cfg, authoritativePolicy);
 
     KeyRole requiredRole = requiredRole(policy);
 
-    // ── Gate 2: Non-entry command Ed25519 signing
-    // ─────────────────────────────────────────────────
-    boolean authActive = isAnyAuthorizationGateActive(cfg, authoritativePolicy);
-    boolean signingActive = isSignatureGateActive(cfg, policy, authoritativePolicy);
-
-    if (sigHeader != null && sigHeader.value() != null) {
-      if (authActive || signingActive) {
-        return authorizeViaEd25519(sigHeader, triggerEnvelope, requiredRole);
-      }
+    // Verify JWT if present (throws on invalid token; a presented JWT must always be valid).
+    // JWT remains optional business/user context even when no legacy runtime gate is active.
+    CommandTrustMetadataDTO jwtMeta = null;
+    if ((entryCommand || taskCompletionTrigger)
+        && authHeader != null
+        && authHeader.value() != null) {
+      jwtMeta = authorizeViaJwt(authHeader, triggerEnvelope);
     }
 
-    if (authActive || signingActive) {
+    if (!signingActive && jwtMeta == null) {
+      return null;
+    }
+
+    // Verify Ed25519 if present when any security mechanism is active.
+    CommandTrustMetadataDTO sigMeta = null;
+    boolean sigIsEngine = false;
+    if (sigHeader != null && sigHeader.value() != null) {
+      sigMeta = authorizeViaEd25519(sigHeader, triggerEnvelope, requiredRole);
+      sigIsEngine =
+          CommandTrustVerificationResult.ENGINE_SIGNED == sigMeta.getVerificationResult();
+    }
+
+    if (signingActive && policy.requireSignature() && sigMeta == null) {
+      if (entryCommand) {
+        throw new AuthorizationTokenException(
+            "Entry command "
+                + trigger.getClass().getSimpleName()
+                + " requires "
+                + SIG_HEADER
+                + " (trusted signature required)");
+      }
       throw new AuthorizationTokenException(
           "Missing required "
               + SIG_HEADER
@@ -383,7 +312,20 @@ public class EngineAuthorizationService {
               + " signature required when process-instance security is active");
     }
 
-    return null;
+    if (jwtMeta != null && sigMeta != null) {
+      return CommandTrustMetadataDTO.builder()
+          .authMethod(CommandAuthMethod.JWT_AND_ED25519)
+          .verificationResult(jwtMeta.getVerificationResult())
+          .trusted(true)
+          .userId(jwtMeta.getUserId())
+          .issuer(jwtMeta.getIssuer())
+          .signerKeyId(sigMeta.getSignerKeyId())
+          .signerOwner(sigMeta.getSignerOwner())
+          .signerAlgorithm(sigMeta.getSignerAlgorithm())
+          .build();
+    }
+
+    return jwtMeta != null ? jwtMeta : sigMeta;
   }
 
   /**
@@ -423,6 +365,25 @@ public class EngineAuthorizationService {
     return ctx.key();
   }
 
+  public SigningKeyDTO authorizeMessageEventIngress(
+      Headers headers, MessageEventIngressEnvelope ingressEnvelope) {
+    return authorizeSignedIngress(
+        headers,
+        ingressEnvelope == null ? null : ingressEnvelope.value(),
+        ingressEnvelope == null ? false : ingressEnvelope.signatureVerified(),
+        ingressEnvelope == null ? null : ingressEnvelope.signatureError(),
+        Topics.MESSAGE_EVENT_TOPIC.getTopicName());
+  }
+
+  public SigningKeyDTO authorizeSignalIngress(Headers headers, SignalIngressEnvelope ingressEnvelope) {
+    return authorizeSignedIngress(
+        headers,
+        ingressEnvelope == null ? null : ingressEnvelope.value(),
+        ingressEnvelope == null ? false : ingressEnvelope.signatureVerified(),
+        ingressEnvelope == null ? null : ingressEnvelope.signatureError(),
+        Topics.SIGNAL_TOPIC.getTopicName());
+  }
+
   /**
    * Authorizes a {@code schedule-commands} record after the deserializer has already verified the
    * Ed25519 signature cryptographically.
@@ -444,8 +405,7 @@ public class EngineAuthorizationService {
             Topics.SCHEDULE_COMMANDS.getTopicName(), MessageScheduleDTO.class);
     NamespaceSecurityPolicyDTO authoritativePolicy = authoritativePolicy();
     assertTrustAnchorRequirementSatisfied(authoritativePolicy);
-    if (!isSignatureGateActive(cfg, policy, authoritativePolicy)
-        && !isAnyAuthorizationGateActive(cfg, authoritativePolicy)) {
+    if (!isSignatureGateActive(cfg, authoritativePolicy)) {
       log.debug("Security gates disabled — skipping signature enforcement for schedule-commands");
       return null;
     }
@@ -538,6 +498,38 @@ public class EngineAuthorizationService {
     return key;
   }
 
+  private SigningKeyDTO authorizeSignedIngress(
+      Headers headers,
+      Object message,
+      boolean signatureVerified,
+      String signatureError,
+      String topicName) {
+    if (message == null) {
+      return null;
+    }
+
+    GlobalConfigurationDTO cfg = effectiveConfig();
+    NamespaceSecurityPolicyDTO authoritativePolicy = authoritativePolicy();
+    assertTrustAnchorRequirementSatisfied(authoritativePolicy);
+    if (!isSignatureGateActive(cfg, authoritativePolicy)) {
+      return null;
+    }
+
+    MessageSecurityPolicy policy = messageSecurityPolicyRegistry.resolve(topicName, message.getClass());
+    if (signatureError != null && !signatureError.isBlank()) {
+      throw new AuthorizationTokenException(signatureError);
+    }
+
+    VerifiedMessageContext ctx = verificationCore.verify(lastHeader(headers, SIG_HEADER), requiredRole(policy));
+    if (!signatureVerified) {
+      throw new AuthorizationTokenException(
+          "Ed25519 header present for ingress message "
+              + message.getClass().getSimpleName()
+              + " but the signature was not verified by the deserializer");
+    }
+    return ctx.key();
+  }
+
   // ── JWT path ────────────────────────────────────────────────────────────────
 
   public TokenClaims validateJwtClaims(Header authHeader, ProcessInstanceTriggerDTO trigger) {
@@ -559,46 +551,6 @@ public class EngineAuthorizationService {
 
   public boolean isReplayProtectionActive() {
     return replayProtectionMode() != ReplayProtectionMode.OFF;
-  }
-
-  public boolean isEntryAuthorizationGateActive() {
-    return isAuthorizationGateActive(
-        effectiveConfig(),
-        messageSecurityPolicyRegistry.resolve(
-            Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName(), StartCommandDTO.class),
-        authoritativePolicy());
-  }
-
-  /**
-   * Returns whether a presented task-completion JWT should be validated for the given trigger.
-   *
-   * <p>User-task and external-task response JWTs are optional unless their respective runtime
-   * authorization gates are active. This helper lets callers ignore stray {@code tx-auth} headers
-   * when those gates are disabled, while still fail-closing to a DLQ rejection once the relevant
-   * gate is enabled.
-   */
-  public boolean isTaskCompletionAuthorizationActive(ProcessInstanceTriggerDTO trigger) {
-    if (trigger == null) {
-      return false;
-    }
-    GlobalConfigurationDTO cfg = effectiveConfig();
-    if (trigger instanceof ExternalTaskResponseTriggerDTO) {
-      return isAuthorizationGateActive(
-          cfg,
-          messageSecurityPolicyRegistry.resolve(
-              Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName(),
-              ExternalTaskResponseTriggerDTO.class),
-          authoritativePolicy());
-    }
-    if (trigger instanceof UserTaskResponseTriggerDTO) {
-      return isAuthorizationGateActive(
-          cfg,
-          messageSecurityPolicyRegistry.resolve(
-              Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName(),
-              UserTaskResponseTriggerDTO.class),
-          authoritativePolicy());
-    }
-    return false;
   }
 
   public String canonicalReplayKey(TokenClaims claims) {
@@ -711,30 +663,6 @@ public class EngineAuthorizationService {
     return requiredRole;
   }
 
-  private static boolean isAuthorizationGateActive(
-      GlobalConfigurationDTO cfg,
-      MessageSecurityPolicy policy,
-      NamespaceSecurityPolicyDTO authoritativePolicy) {
-    return switch (policy.authorizationScope()) {
-      case COMMANDS ->
-          cfg.isEngineRequiresAuthorization() || requiresCommandAuthorization(authoritativePolicy);
-      case EXTERNAL_TASKS ->
-          cfg.isEngineRequiresExternalTaskAuthorization()
-              || requiresExternalTaskAuthorization(authoritativePolicy);
-      case USER_TASKS ->
-          cfg.isEngineRequiresUserTaskAuthorization()
-              || requiresUserTaskAuthorization(authoritativePolicy);
-      case NONE -> false;
-    };
-  }
-
-  private static boolean isAnyAuthorizationGateActive(
-      GlobalConfigurationDTO cfg, NamespaceSecurityPolicyDTO authoritativePolicy) {
-    return cfg.isEngineRequiresAuthorization()
-        || cfg.isEngineRequiresExternalTaskAuthorization()
-        || cfg.isEngineRequiresUserTaskAuthorization()
-        || requiresAnyAuthorization(authoritativePolicy);
-  }
 
   private static boolean isSecurityActive(GlobalConfigurationDTO cfg) {
     return cfg.isSigningEnabled()
@@ -744,37 +672,35 @@ public class EngineAuthorizationService {
   }
 
   private static boolean isSignatureGateActive(
-      GlobalConfigurationDTO cfg,
-      MessageSecurityPolicy policy,
-      NamespaceSecurityPolicyDTO authoritativePolicy) {
-    return cfg.isSigningEnabled() || isPolicyDrivenSignatureRequired(policy, authoritativePolicy);
+      GlobalConfigurationDTO cfg, NamespaceSecurityPolicyDTO authoritativePolicy) {
+    return cfg.isSigningEnabled() || isPolicyDrivenSignatureRequired(authoritativePolicy);
   }
 
   private static boolean isPolicyDrivenSignatureRequired(
-      MessageSecurityPolicy policy, NamespaceSecurityPolicyDTO authoritativePolicy) {
-    return isAnchoredPosture(authoritativePolicy);
-  }
-
-  private static boolean requiresCommandAuthorization(
       NamespaceSecurityPolicyDTO authoritativePolicy) {
     return isAnchoredPosture(authoritativePolicy);
   }
 
-  private static boolean requiresExternalTaskAuthorization(
-      NamespaceSecurityPolicyDTO authoritativePolicy) {
-    return isAnchoredPosture(authoritativePolicy);
+  private static boolean isEntryCommand(ProcessInstanceTriggerDTO trigger) {
+    return trigger instanceof StartCommandDTO
+        || trigger instanceof AbortTriggerDTO
+        || trigger instanceof SetVariableTriggerDTO;
   }
 
-  private static boolean requiresUserTaskAuthorization(
-      NamespaceSecurityPolicyDTO authoritativePolicy) {
-    return isAnchoredPosture(authoritativePolicy);
+  private static boolean isTaskCompletionTrigger(ProcessInstanceTriggerDTO trigger) {
+    return trigger instanceof ExternalTaskResponseTriggerDTO
+        || trigger instanceof UserTaskResponseTriggerDTO;
   }
 
-  private static boolean requiresAnyAuthorization(NamespaceSecurityPolicyDTO authoritativePolicy) {
-    return requiresCommandAuthorization(authoritativePolicy)
-        || requiresExternalTaskAuthorization(authoritativePolicy)
-        || requiresUserTaskAuthorization(authoritativePolicy);
+  public static boolean isExternallyPublishedMessageEvent(Object value) {
+    return value instanceof DefinitionMessageEventTriggerDTO
+        || value instanceof CorrelationMessageEventTriggerDTO;
   }
+
+  public static boolean isExternallyPublishedSignal(Object value) {
+    return value != null && value.getClass() == io.taktx.dto.SignalDTO.class;
+  }
+
 
   private void assertTrustAnchorRequirementSatisfied(
       NamespaceSecurityPolicyDTO authoritativePolicy) {

@@ -64,10 +64,14 @@ import io.taktx.engine.pd.CorrelationMessageSubscriptions;
 import io.taktx.engine.pd.DefinitionMessageSubscriptions;
 import io.taktx.engine.pd.DefinitionsProcessor;
 import io.taktx.engine.pd.DmnDefinitionsProcessor;
+import io.taktx.engine.pd.MessageEventIngressEnvelope;
+import io.taktx.engine.pd.MessageEventIngressEnvelopeDeserializer;
 import io.taktx.engine.pd.MessageEventProcessor;
 import io.taktx.engine.pd.MessageSchedulerFactory;
 import io.taktx.engine.pd.ScheduleCommandDeserializer;
 import io.taktx.engine.pd.ScheduleProcessor;
+import io.taktx.engine.pd.SignalIngressEnvelope;
+import io.taktx.engine.pd.SignalIngressEnvelopeDeserializer;
 import io.taktx.engine.pd.SignalProcessor;
 import io.taktx.engine.pd.Stores;
 import io.taktx.engine.pd.UserTaskResponseProcessor;
@@ -90,6 +94,7 @@ import io.taktx.engine.security.NamespaceSecurityPolicyActivationService;
 import io.taktx.engine.security.ProcessInstanceResponseDedupProcessor;
 import io.taktx.engine.security.ProtectedDataPlaneParticipationGuard;
 import io.taktx.engine.security.ReplayProtectionProcessor;
+import io.taktx.engine.security.SecurityEventPublisher;
 import io.taktx.engine.topicmanagement.DynamicTopicManager;
 import io.taktx.engine.topicmanagement.RequestedTopicValidator;
 import io.taktx.engine.topicmanagement.TopicMetaRequestIngressProcessor;
@@ -173,6 +178,15 @@ public class TopologyProducer {
       Serdes.serdeFrom(
           (_, data) -> data == null ? null : MessageEventProtoMapper.toProto(data).toByteArray(),
           new MessageEventDtoDeserializer());
+  public static final Serde<MessageEventIngressEnvelope> MESSAGE_EVENT_INGRESS_SERDE =
+      Serdes.serdeFrom(
+          (_, envelope) ->
+              envelope == null
+                  ? null
+                  : envelope.data() != null
+                      ? envelope.data()
+                      : MessageEventProtoMapper.toProto(envelope.value()).toByteArray(),
+          new MessageEventIngressEnvelopeDeserializer());
   public static final Serde<SignalInstanceSubscriptionKeyDTO>
       SIGNAL_INSTANCE_SUBSCRIPTION_KEY_SERDE = new SignalInstanceSubscriptionKeySerde();
   public static final Serde<SignalDefinitionSubscriptionKeyDTO>
@@ -181,6 +195,15 @@ public class TopologyProducer {
       Serdes.serdeFrom(
           (_, data) -> data == null ? null : SignalProtoMapper.toProto(data).toByteArray(),
           new SignalDtoDeserializer());
+  public static final Serde<SignalIngressEnvelope> SIGNAL_INGRESS_SERDE =
+      Serdes.serdeFrom(
+          (_, envelope) ->
+              envelope == null
+                  ? null
+                  : envelope.data() != null
+                      ? envelope.data()
+                      : SignalProtoMapper.toProto(envelope.value()).toByteArray(),
+          new SignalIngressEnvelopeDeserializer());
   public static final Serde<DefinitionMessageSubscriptions> DEFINITION_SUBSCRIPTIONS_SERDE =
       new DefinitionMessageSubscriptionsSerde();
   public static final Serde<CorrelationMessageSubscriptions> CORRELATION_SUBSCRIPTIONS_SERDE =
@@ -339,6 +362,7 @@ public class TopologyProducer {
   private final DlqPublisher dlqPublisher;
   private final MessageSigningService messageSigningService;
   private final DlqObservabilityService dlqObservabilityService;
+  private final SecurityEventPublisher securityEventPublisher;
 
   @Produces
   public Topology buildTopology() {
@@ -379,11 +403,14 @@ public class TopologyProducer {
 
     builder.stream(
             taktConfiguration.getPrefixed(Topics.SIGNAL_TOPIC.getTopicName()),
-            Consumed.with(Serdes.String(), SIGNAL_SERDE))
+            Consumed.with(Serdes.String(), SIGNAL_INGRESS_SERDE))
         .process(
             () ->
                 new SignalProcessor(
-                    taktConfiguration, clock, protectedDataPlaneParticipationGuard()),
+                    taktConfiguration,
+                    clock,
+                    protectedDataPlaneParticipationGuard(),
+                    engineAuthorizationService),
             taktConfiguration.getPrefixed(Stores.INSTANCE_SIGNAL_SUBSCRIPTIONS.getStorename()),
             taktConfiguration.getPrefixed(Stores.DEFINITION_SIGNAL_SUBSCRIPTIONS.getStorename()))
         .split()
@@ -769,7 +796,8 @@ public class TopologyProducer {
                     processingStatistics,
                     topicManager,
                     engineAuthorizationService,
-                    protectedDataPlaneParticipationGuard()),
+                    protectedDataPlaneParticipationGuard(),
+                    securityEventPublisher),
             taktConfiguration.getPrefixed(Stores.FLOW_NODE_INSTANCE.getStorename()),
             taktConfiguration.getPrefixed(Stores.PROCESS_INSTANCE.getStorename()),
             taktConfiguration.getPrefixed(Stores.VARIABLES.getStorename()))
@@ -937,14 +965,15 @@ public class TopologyProducer {
 
     builder.stream(
             taktConfiguration.getPrefixed(Topics.MESSAGE_EVENT_TOPIC.getTopicName()),
-            Consumed.with(MESSAGE_EVENT_KEY_SERDE, MESSAGE_EVENT_SERDE))
+            Consumed.with(MESSAGE_EVENT_KEY_SERDE, MESSAGE_EVENT_INGRESS_SERDE))
         .process(
             () ->
                 new MessageEventProcessor(
                     taktConfiguration,
                     clock,
                     processingStatistics,
-                    protectedDataPlaneParticipationGuard()),
+                    protectedDataPlaneParticipationGuard(),
+                    engineAuthorizationService),
             taktConfiguration.getPrefixed(Stores.DEFINITION_MESSAGE_SUBSCRIPTION.getStorename()),
             taktConfiguration.getPrefixed(Stores.CORRELATION_MESSAGE_SUBSCRIPTION.getStorename()))
         .split()

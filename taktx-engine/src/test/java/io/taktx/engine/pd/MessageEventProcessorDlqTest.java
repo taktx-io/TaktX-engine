@@ -30,9 +30,11 @@ import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.config.NamespaceSecurityPolicyStore;
 import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.pi.ProcessingStatistics;
+import io.taktx.engine.security.EngineAuthorizationService;
 import io.taktx.engine.security.EngineSecurityReadinessEvaluator;
 import io.taktx.engine.security.MessageSigningService;
 import io.taktx.engine.security.ProtectedDataPlaneParticipationGuard;
+import io.taktx.security.AuthorizationTokenException;
 import io.taktx.security.NamespaceSecurityPolicySupport;
 import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
@@ -57,6 +59,7 @@ class MessageEventProcessorDlqTest {
   private MessageEventProcessor processor;
   private KeyValueStore definitionStore;
   private KeyValueStore correlationStore;
+  private EngineAuthorizationService engineAuthorizationService;
 
   @BeforeEach
   void setUp() {
@@ -65,6 +68,8 @@ class MessageEventProcessorDlqTest {
     when(taktConfiguration.getNamespace()).thenReturn("bank.payments");
     when(taktConfiguration.getHost()).thenReturn("engine-host");
     when(taktConfiguration.getPort()).thenReturn(8080);
+    when(taktConfiguration.getSigningIdentitySourceType()).thenReturn("file");
+    when(taktConfiguration.getEngineKeyRegistrationSignature()).thenReturn("engine-registration-signature");
     when(taktConfiguration.getPlatformPublicKey()).thenReturn(null);
     when(taktConfiguration.getPrefixed(Stores.DEFINITION_MESSAGE_SUBSCRIPTION.getStorename()))
         .thenReturn(Stores.DEFINITION_MESSAGE_SUBSCRIPTION.getStorename());
@@ -73,6 +78,7 @@ class MessageEventProcessorDlqTest {
 
     clock = Clock.fixed(Instant.ofEpochMilli(1_700_000_000_000L), ZoneOffset.UTC);
     processingStatistics = mock(ProcessingStatistics.class);
+    engineAuthorizationService = mock(EngineAuthorizationService.class);
 
     processor = new MessageEventProcessor(taktConfiguration, clock, processingStatistics);
 
@@ -108,8 +114,8 @@ class MessageEventProcessorDlqTest {
     // For the unknown-type branch we test via null value.
     RecordHeaders headers = new RecordHeaders();
     headers.add("X-Test", "value".getBytes(StandardCharsets.UTF_8));
-    Record<MessageEventKeyDTO, io.taktx.dto.MessageEventDTO> messageEventRecord =
-        new Record<>(key, null, 100L, headers);
+    Record<MessageEventKeyDTO, MessageEventIngressEnvelope> messageEventRecord =
+        new Record<>(key, new MessageEventIngressEnvelope(null, null, false, null, null), 100L, headers);
 
     processor.process(messageEventRecord);
 
@@ -147,7 +153,7 @@ class MessageEventProcessorDlqTest {
     when(brokenStore.get(key)).thenThrow(new RuntimeException("simulated store failure"));
     setField(processor, "correlationMessageSubscriptionStore", brokenStore);
 
-    processor.process(new Record<>(key, trigger, 200L, headers));
+    processor.process(new Record<>(key, envelope(trigger), 200L, headers));
 
     ArgumentCaptor<Record> captor = ArgumentCaptor.forClass(Record.class);
     verify(context).forward(captor.capture());
@@ -170,7 +176,7 @@ class MessageEventProcessorDlqTest {
     DefinitionMessageEventTriggerDTO trigger =
         new DefinitionMessageEventTriggerDTO("pay", VariablesDTO.empty());
 
-    guardedProcessor.process(new Record<>(key, trigger, 300L, new RecordHeaders()));
+    guardedProcessor.process(new Record<>(key, envelope(trigger), 300L, new RecordHeaders()));
 
     ArgumentCaptor<Record> captor = ArgumentCaptor.forClass(Record.class);
     verify(context).forward(captor.capture());
@@ -188,10 +194,34 @@ class MessageEventProcessorDlqTest {
     DefinitionMessageSubscriptionDTO subscription =
         new DefinitionMessageSubscriptionDTO(new ProcessDefinitionKey("proc", 1), "start", "pay");
 
-    guardedProcessor.process(new Record<>(key, subscription, 300L, new RecordHeaders()));
+    guardedProcessor.process(new Record<>(key, envelope(subscription), 300L, new RecordHeaders()));
 
     verify(definitionStore).put(eq(key), any());
     verify(context, never()).forward(any());
+  }
+
+  @Test
+  void process_messageTriggerAuthorizationFailure_emitsDlqWithSignatureHint() {
+    MessageEventProcessor guardedProcessor =
+        new MessageEventProcessor(taktConfiguration, clock, processingStatistics, null, engineAuthorizationService);
+    guardedProcessor.init(context);
+    MessageEventKeyDTO key = new MessageEventKeyDTO("pay");
+    DefinitionMessageEventTriggerDTO trigger =
+        new DefinitionMessageEventTriggerDTO("pay", VariablesDTO.empty());
+    RecordHeaders headers = new RecordHeaders();
+    MessageEventIngressEnvelope ingressEnvelope = envelope(trigger);
+    when(engineAuthorizationService.authorizeMessageEventIngress(headers, ingressEnvelope))
+        .thenThrow(new AuthorizationTokenException("Missing required tx-sig header — required role: CLIENT"));
+
+    guardedProcessor.process(new Record<>(key, ingressEnvelope, 320L, headers));
+
+    ArgumentCaptor<Record> captor = ArgumentCaptor.forClass(Record.class);
+    verify(context).forward(captor.capture());
+    MessageEventDlqEntryDTO dlqEntry = (MessageEventDlqEntryDTO) captor.getValue().value();
+    assertThat(new String(dlqEntry.getHeaders().get(REASON_HINT), StandardCharsets.UTF_8))
+        .isEqualTo("SIGNATURE_MISSING");
+    assertThat(new String(dlqEntry.getHeaders().get(CAPTURE_STAGE), StandardCharsets.UTF_8))
+        .isEqualTo("AUTHORIZATION");
   }
 
   private MessageEventProcessor guardedProcessorWithPolicy(NamespaceSecurityPolicyDTO authoritativePolicy) {
@@ -210,9 +240,14 @@ class MessageEventProcessorDlqTest {
                 policyStore,
                 new EngineSecurityReadinessEvaluator(
                     taktConfiguration, policyStore, messageSigningService, clock),
-                clock));
+                clock),
+            null);
     guardedProcessor.init(context);
     return guardedProcessor;
+  }
+
+  private static MessageEventIngressEnvelope envelope(io.taktx.dto.MessageEventDTO value) {
+    return new MessageEventIngressEnvelope(new byte[0], value, false, null, null);
   }
 
   private static NamespaceSecurityPolicyDTO anchoredPolicy(long version) {

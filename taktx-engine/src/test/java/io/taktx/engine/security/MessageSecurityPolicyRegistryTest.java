@@ -12,12 +12,15 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.taktx.Topics;
 import io.taktx.dto.AbortTriggerDTO;
+import io.taktx.dto.CorrelationMessageEventTriggerDTO;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
+import io.taktx.dto.DefinitionMessageEventTriggerDTO;
 import io.taktx.dto.EventSignalTriggerDTO;
 import io.taktx.dto.ExternalTaskResponseTriggerDTO;
 import io.taktx.dto.KeyRole;
 import io.taktx.dto.MessageScheduleDTO;
 import io.taktx.dto.SetVariableTriggerDTO;
+import io.taktx.dto.SignalDTO;
 import io.taktx.dto.StartCommandDTO;
 import io.taktx.dto.StartFlowElementTriggerDTO;
 import io.taktx.dto.TopicMetaDTO;
@@ -54,7 +57,7 @@ class MessageSecurityPolicyRegistryTest {
   }
 
   @Test
-  void entryCommandPolicies_preserveJwtReplayAndEngineOverrideBehavior() {
+  void entryCommandPolicies_requireReplayAndTrustedClientOrHigherSignatures() {
     String processInstanceTopic = Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName();
 
     MessageSecurityPolicy startPolicy =
@@ -70,7 +73,7 @@ class MessageSecurityPolicyRegistryTest {
   }
 
   @Test
-  void taskCompletionPolicies_useDedicatedAuthorizationScopes() {
+  void taskCompletionPolicies_requireReplayAndTrustedClientOrHigherSignatures() {
     String processInstanceTopic = Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName();
 
     MessageSecurityPolicy externalTaskPolicy =
@@ -78,14 +81,8 @@ class MessageSecurityPolicyRegistryTest {
     MessageSecurityPolicy userTaskPolicy =
         registry.resolve(processInstanceTopic, UserTaskResponseTriggerDTO.class);
 
-    assertTaskCompletionPolicy(
-        externalTaskPolicy,
-        ExternalTaskResponseTriggerDTO.class,
-        MessageSecurityPolicy.AuthorizationScope.EXTERNAL_TASKS);
-    assertTaskCompletionPolicy(
-        userTaskPolicy,
-        UserTaskResponseTriggerDTO.class,
-        MessageSecurityPolicy.AuthorizationScope.USER_TASKS);
+    assertTaskCompletionPolicy(externalTaskPolicy, ExternalTaskResponseTriggerDTO.class);
+    assertTaskCompletionPolicy(userTaskPolicy, UserTaskResponseTriggerDTO.class);
   }
 
   @Test
@@ -93,18 +90,30 @@ class MessageSecurityPolicyRegistryTest {
     MessageSecurityPolicy schedulePolicy =
         registry.resolve(Topics.SCHEDULE_COMMANDS.getTopicName(), MessageScheduleDTO.class);
     assertThat(schedulePolicy.requireSignature()).isTrue();
-    assertThat(schedulePolicy.requireJwt()).isFalse();
     assertThat(schedulePolicy.requireReplay()).isFalse();
-    assertThat(schedulePolicy.allowEngineSignatureAsJwtEquivalent()).isFalse();
     assertThat(schedulePolicy.minimumAllowedRole()).isEqualTo(KeyRole.ENGINE);
 
     MessageSecurityPolicy topicMetaPolicy =
         registry.resolve(Topics.TOPIC_META_REQUESTED_TOPIC.getTopicName(), TopicMetaDTO.class);
     assertThat(topicMetaPolicy.requireSignature()).isTrue();
-    assertThat(topicMetaPolicy.requireJwt()).isFalse();
     assertThat(topicMetaPolicy.requireReplay()).isFalse();
-    assertThat(topicMetaPolicy.allowEngineSignatureAsJwtEquivalent()).isFalse();
     assertThat(topicMetaPolicy.minimumAllowedRole()).isEqualTo(KeyRole.CLIENT);
+  }
+
+  @Test
+  void externalMessageAndSignalIngressPolicies_requireTrustedClientSignatures() {
+    MessageSecurityPolicy definitionMessagePolicy =
+        registry.resolve(
+            Topics.MESSAGE_EVENT_TOPIC.getTopicName(), DefinitionMessageEventTriggerDTO.class);
+    MessageSecurityPolicy correlationMessagePolicy =
+        registry.resolve(
+            Topics.MESSAGE_EVENT_TOPIC.getTopicName(), CorrelationMessageEventTriggerDTO.class);
+    MessageSecurityPolicy signalPolicy =
+        registry.resolve(Topics.SIGNAL_TOPIC.getTopicName(), SignalDTO.class);
+
+    assertClientIngressPolicy(definitionMessagePolicy, DefinitionMessageEventTriggerDTO.class);
+    assertClientIngressPolicy(correlationMessagePolicy, CorrelationMessageEventTriggerDTO.class);
+    assertClientIngressPolicy(signalPolicy, SignalDTO.class);
   }
 
   @Test
@@ -122,26 +131,24 @@ class MessageSecurityPolicyRegistryTest {
   private static void assertEntryCommandPolicy(
       MessageSecurityPolicy policy, Class<?> expectedMessageClass) {
     assertThat(policy.messageClass()).isEqualTo(expectedMessageClass);
-    assertThat(policy.authorizationScope())
-        .isEqualTo(MessageSecurityPolicy.AuthorizationScope.COMMANDS);
     assertThat(policy.requireSignature()).isTrue();
     assertThat(policy.requireReplay()).isTrue();
-    assertThat(policy.requireJwt()).isTrue();
-    assertThat(policy.allowEngineSignatureAsJwtEquivalent()).isTrue();
     assertThat(policy.minimumAllowedRole()).isEqualTo(KeyRole.CLIENT);
   }
 
   private static void assertTaskCompletionPolicy(
-      MessageSecurityPolicy policy,
-      Class<?> expectedMessageClass,
-      MessageSecurityPolicy.AuthorizationScope expectedScope) {
+      MessageSecurityPolicy policy, Class<?> expectedMessageClass) {
     assertThat(policy.messageClass()).isEqualTo(expectedMessageClass);
-    assertThat(policy.authorizationScope()).isEqualTo(expectedScope);
     assertThat(policy.requireSignature()).isTrue();
     assertThat(policy.requireReplay()).isTrue();
-    assertThat(policy.requireJwt()).isTrue();
-    assertThat(policy.allowSignatureAsJwtEquivalent()).isTrue();
-    assertThat(policy.allowEngineSignatureAsJwtEquivalent()).isFalse();
+    assertThat(policy.minimumAllowedRole()).isEqualTo(KeyRole.CLIENT);
+  }
+
+  private static void assertClientIngressPolicy(
+      MessageSecurityPolicy policy, Class<?> expectedMessageClass) {
+    assertThat(policy.messageClass()).isEqualTo(expectedMessageClass);
+    assertThat(policy.requireSignature()).isTrue();
+    assertThat(policy.requireReplay()).isFalse();
     assertThat(policy.minimumAllowedRole()).isEqualTo(KeyRole.CLIENT);
   }
 

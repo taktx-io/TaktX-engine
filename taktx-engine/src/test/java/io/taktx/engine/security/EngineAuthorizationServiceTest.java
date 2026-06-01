@@ -17,6 +17,8 @@ import io.taktx.dto.AbortTriggerDTO;
 import io.taktx.dto.CommandAuthMethod;
 import io.taktx.dto.CommandTrustMetadataDTO;
 import io.taktx.dto.CommandTrustVerificationResult;
+import io.taktx.dto.CorrelationMessageEventTriggerDTO;
+import io.taktx.dto.DefinitionMessageEventTriggerDTO;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.dto.DefinitionScheduleKeyDTO;
 import io.taktx.dto.ExternalTaskResponseResultDTO;
@@ -32,6 +34,7 @@ import io.taktx.dto.RequiredAuthorizationDTO;
 import io.taktx.dto.RequiredSigningDTO;
 import io.taktx.dto.SecurityActivationState;
 import io.taktx.dto.SetVariableTriggerDTO;
+import io.taktx.dto.SignalDTO;
 import io.taktx.dto.SigningKeyDTO;
 import io.taktx.dto.SigningKeyDTO.KeyStatus;
 import io.taktx.dto.StartCommandDTO;
@@ -44,6 +47,8 @@ import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.config.GlobalConfigStore;
 import io.taktx.engine.config.NamespaceSecurityPolicyStore;
 import io.taktx.engine.config.TaktConfiguration;
+import io.taktx.engine.pd.MessageEventIngressEnvelope;
+import io.taktx.engine.pd.SignalIngressEnvelope;
 import io.taktx.engine.pi.ProcessInstanceTriggerEnvelope;
 import io.taktx.security.AuthorizationTokenException;
 import io.taktx.security.Ed25519Service;
@@ -108,6 +113,25 @@ class EngineAuthorizationServiceTest {
   @Test
   void disabled_returnsNull_forAnyCommand() {
     assertThat(service.authorize(new RecordHeaders(), envelope(startCommand("proc", -1)))).isNull();
+  }
+
+  @Test
+  void disabled_withPresentedJwt_returnsJwtMetadataAsOptionalContext() {
+    String auditId = UUID.randomUUID().toString();
+    String jwt = buildJwt("START", "my-proc", -1, auditId, futureExpiry());
+
+    CommandTrustMetadataDTO result =
+        service.authorize(headersWithAuth(jwt), envelope(startCommand("my-proc", -1)));
+
+    assertThat(result)
+        .isEqualTo(
+            CommandTrustMetadataDTO.builder()
+                .authMethod(CommandAuthMethod.JWT)
+                .verificationResult(CommandTrustVerificationResult.JWT_AUTHORIZED)
+                .trusted(true)
+                .userId("user-1")
+                .issuer(ISSUER)
+                .build());
   }
 
   // ── null trigger (payload deserialization failed) ─────────────────────────
@@ -430,6 +454,116 @@ class EngineAuthorizationServiceTest {
   }
 
   @Test
+  void messageEventIngress_securityDisabled_returnsNull() {
+    DefinitionMessageEventTriggerDTO messageEvent =
+        new DefinitionMessageEventTriggerDTO("payment-received", VariablesDTO.empty());
+
+    SigningKeyDTO result =
+        service.authorizeMessageEventIngress(
+            new RecordHeaders(), new MessageEventIngressEnvelope(new byte[0], messageEvent, false, null, null));
+
+    assertThat(result).isNull();
+  }
+
+  @Test
+  void messageEventIngress_signingEnabled_trustedClientKeyAccepted() {
+    globalConfigStore.update(signingConfig());
+
+    String keyId = "message-event-client-key";
+    SigningKeyDTO keyEntry =
+        SigningKeyDTO.builder()
+            .keyId(keyId)
+            .publicKeyBase64("dummy")
+            .algorithm("Ed25519")
+            .status(KeyStatus.ACTIVE)
+            .owner("console")
+            .role(KeyRole.CLIENT)
+            .build();
+    when(signingKeysStore.get(keyId)).thenReturn(keyEntry);
+
+    CorrelationMessageEventTriggerDTO messageEvent =
+        new CorrelationMessageEventTriggerDTO("payment-received", "invoice-1", VariablesDTO.empty());
+
+    SigningKeyDTO result =
+        service.authorizeMessageEventIngress(
+            headersWithSignature(keyId),
+            new MessageEventIngressEnvelope(new byte[0], messageEvent, true, keyId, null));
+
+    assertThat(result).isEqualTo(keyEntry);
+  }
+
+  @Test
+  void messageEventIngress_anchoredPolicy_missingSignatureRejected() {
+    when(config.getPlatformPublicKey()).thenReturn("platform-public-key");
+    namespaceSecurityPolicyStore.update(
+        NamespaceSecurityPolicyDTO.builder()
+            .mode(io.taktx.dto.SecurityMode.ANCHORED)
+            .policyVersion(66L)
+            .build());
+    DefinitionMessageEventTriggerDTO messageEvent =
+        new DefinitionMessageEventTriggerDTO("payment-received", VariablesDTO.empty());
+
+    assertThatThrownBy(
+            () ->
+                service.authorizeMessageEventIngress(
+                    new RecordHeaders(),
+                    new MessageEventIngressEnvelope(new byte[0], messageEvent, false, null, null)))
+        .isInstanceOf(AuthorizationTokenException.class)
+        .hasMessageContaining("tx-sig");
+  }
+
+  @Test
+  void signalIngress_securityDisabled_returnsNull() {
+    SigningKeyDTO result =
+        service.authorizeSignalIngress(
+            new RecordHeaders(), new SignalIngressEnvelope(new byte[0], new SignalDTO("order-placed"), false, null, null));
+
+    assertThat(result).isNull();
+  }
+
+  @Test
+  void signalIngress_signingEnabled_trustedClientKeyAccepted() {
+    globalConfigStore.update(signingConfig());
+
+    String keyId = "signal-client-key";
+    SigningKeyDTO keyEntry =
+        SigningKeyDTO.builder()
+            .keyId(keyId)
+            .publicKeyBase64("dummy")
+            .algorithm("Ed25519")
+            .status(KeyStatus.ACTIVE)
+            .owner("console")
+            .role(KeyRole.CLIENT)
+            .build();
+    when(signingKeysStore.get(keyId)).thenReturn(keyEntry);
+
+    SigningKeyDTO result =
+        service.authorizeSignalIngress(
+            headersWithSignature(keyId),
+            new SignalIngressEnvelope(new byte[0], new SignalDTO("order-placed"), true, keyId, null));
+
+    assertThat(result).isEqualTo(keyEntry);
+  }
+
+  @Test
+  void signalIngress_signatureErrorRejected() {
+    globalConfigStore.update(signingConfig());
+
+    assertThatThrownBy(
+            () ->
+                service.authorizeSignalIngress(
+                    headersWithSignature("signal-client-key"),
+                    new SignalIngressEnvelope(
+                        new byte[0],
+                        new SignalDTO("order-placed"),
+                        false,
+                        "signal-client-key",
+                        "Malformed base64 signature for keyId=signal-client-key")))
+        .isInstanceOf(AuthorizationTokenException.class)
+        .hasMessageContaining("Malformed base64 signature");
+  }
+
+  @Test
   void namespaceSecurityPolicyMutation_platformKeyAccepted() {
     java.security.KeyPair ed25519KeyPair = SigningKeyGenerator.generate();
     String privateKeyBase64 = SigningKeyGenerator.encodePrivateKey(ed25519KeyPair.getPrivate());
@@ -547,16 +681,15 @@ class EngineAuthorizationServiceTest {
   // ── missing header ─────────────────────────────────────────────────────────
 
   @Test
-  void missingHeader_throwsAuthorizationTokenException() {
+  void missingHeader_withLegacyAuthFlagsOnly_returnsNull() {
     globalConfigStore.update(authorizationConfig());
-    assertThatThrownBy(
-            () -> service.authorize(new RecordHeaders(), envelope(startCommand("proc", -1))))
-        .isInstanceOf(AuthorizationTokenException.class)
-        .hasMessageContaining("Entry command");
+
+    assertThat(service.authorize(new RecordHeaders(), envelope(startCommand("proc", -1))))
+        .isNull();
   }
 
   @Test
-  void startCommand_workerSignedEntryCommand_rejected() {
+  void startCommand_workerSignedEntryCommand_acceptedWhenSigningEnabled() {
     globalConfigStore.update(config(true));
 
     String keyId = "worker-test-001";
@@ -573,15 +706,17 @@ class EngineAuthorizationServiceTest {
     RecordHeaders headers = new RecordHeaders();
     headers.add("tx-sig", (keyId + ".AABB").getBytes(StandardCharsets.UTF_8));
 
-    // CLIENT-role key satisfies the signing gate but NOT the auth gate (no JWT, not ENGINE-role).
-    assertThatThrownBy(
-            () ->
-                service.authorize(
-                    headers,
-                    new ProcessInstanceTriggerEnvelope(
-                        new byte[0], startCommand("proc", -1), true, keyId)))
-        .isInstanceOf(AuthorizationTokenException.class)
-        .hasMessageContaining("JWT");
+    CommandTrustMetadataDTO result =
+        service.authorize(
+            headers,
+            new ProcessInstanceTriggerEnvelope(new byte[0], startCommand("proc", -1), true, keyId));
+
+    assertThat(result.getVerificationResult())
+        .isEqualTo(CommandTrustVerificationResult.SIGNATURE_VERIFIED);
+    assertThat(result.getAuthMethod()).isEqualTo(CommandAuthMethod.ED25519);
+    assertThat(result.getTrusted()).isTrue();
+    assertThat(result.getSignerKeyId()).isEqualTo(keyId);
+    assertThat(result.getSignerOwner()).isEqualTo("worker-billing");
   }
 
   @Test
@@ -615,7 +750,7 @@ class EngineAuthorizationServiceTest {
   }
 
   @Test
-  void startCommand_nullRoleSignedEntryCommand_rejected() {
+  void startCommand_nullRoleSignedEntryCommand_acceptedAsClientSignature() {
     globalConfigStore.update(config(true));
 
     String keyId = "legacy-key-001";
@@ -628,15 +763,17 @@ class EngineAuthorizationServiceTest {
     RecordHeaders headers = new RecordHeaders();
     headers.add("tx-sig", (keyId + ".AABB").getBytes(StandardCharsets.UTF_8));
 
-    // Null-role → effectiveRole()=CLIENT. Satisfies signing gate but not auth gate (no JWT).
-    assertThatThrownBy(
-            () ->
-                service.authorize(
-                    headers,
-                    new ProcessInstanceTriggerEnvelope(
-                        new byte[0], startCommand("proc", -1), true, keyId)))
-        .isInstanceOf(AuthorizationTokenException.class)
-        .hasMessageContaining("JWT");
+    CommandTrustMetadataDTO result =
+        service.authorize(
+            headers,
+            new ProcessInstanceTriggerEnvelope(new byte[0], startCommand("proc", -1), true, keyId));
+
+    assertThat(result.getVerificationResult())
+        .isEqualTo(CommandTrustVerificationResult.SIGNATURE_VERIFIED);
+    assertThat(result.getAuthMethod()).isEqualTo(CommandAuthMethod.ED25519);
+    assertThat(result.getTrusted()).isTrue();
+    assertThat(result.getSignerKeyId()).isEqualTo(keyId);
+    assertThat(result.getSignerOwner()).isEqualTo("legacy-worker");
   }
 
   @Test
@@ -714,7 +851,7 @@ class EngineAuthorizationServiceTest {
   // ── Ed25519 passthrough — non-entry (engine-internal continuations) ───────
 
   @Test
-  void nonEntryTrigger_clientSignedExternalTaskResponse_returnsSignerMetadata() {
+  void nonEntryTrigger_clientSignedExternalTaskResponse_authOnlyConfig_returnsNull() {
     globalConfigStore.update(externalTaskAuthorizationConfig(false));
 
     String keyId = "worker-test-001";
@@ -731,25 +868,17 @@ class EngineAuthorizationServiceTest {
     RecordHeaders headers = new RecordHeaders();
     headers.add("tx-sig", (keyId + ".AABB").getBytes(StandardCharsets.UTF_8));
 
-    CommandTrustMetadataDTO result =
-        service.authorize(
-            headers,
-            new ProcessInstanceTriggerEnvelope(
-                new byte[0], externalTaskResponseTrigger(), true, keyId));
-    assertThat(result)
-        .isEqualTo(
-            CommandTrustMetadataDTO.builder()
-                .authMethod(CommandAuthMethod.ED25519)
-                .verificationResult(CommandTrustVerificationResult.SIGNATURE_VERIFIED)
-                .trusted(true)
-                .signerKeyId(keyId)
-                .signerOwner("worker-billing")
-                .build());
+    assertThat(
+            service.authorize(
+                headers,
+                new ProcessInstanceTriggerEnvelope(
+                    new byte[0], externalTaskResponseTrigger(), true, keyId)))
+        .isNull();
   }
 
   @Test
   void nonEntryTrigger_engineSignedContinuation_returnsSignerMetadata() {
-    globalConfigStore.update(authorizationConfig());
+    globalConfigStore.update(signingConfig());
 
     String keyId = "engine-test-key-1";
     when(signingKeysStore.get(keyId))
@@ -783,7 +912,7 @@ class EngineAuthorizationServiceTest {
 
   @Test
   void nonEntryTrigger_clientSignedContinuation_rejectedForEngineOnlyMessageType() {
-    globalConfigStore.update(authorizationConfig());
+    globalConfigStore.update(signingConfig());
 
     String keyId = "worker-test-002";
     when(signingKeysStore.get(keyId))
@@ -810,17 +939,15 @@ class EngineAuthorizationServiceTest {
   }
 
   @Test
-  void nonEntryTrigger_withoutHeaders_authOnlyConfig_throws() {
+  void nonEntryTrigger_withoutHeaders_authOnlyConfig_returnsNull() {
     globalConfigStore.update(config(false));
 
-    assertThatThrownBy(
-            () -> service.authorize(new RecordHeaders(), envelope(continueFlowElementTrigger())))
-        .isInstanceOf(AuthorizationTokenException.class)
-        .hasMessageContaining("tx-sig");
+    assertThat(service.authorize(new RecordHeaders(), envelope(continueFlowElementTrigger())))
+        .isNull();
   }
 
   @Test
-  void nonEntryTrigger_withEmbeddedTrust_authOnlyConfig_throws() {
+  void nonEntryTrigger_withEmbeddedTrust_authOnlyConfig_returnsNull() {
     globalConfigStore.update(config(false));
 
     ContinueFlowElementTriggerDTO trigger = continueFlowElementTrigger();
@@ -835,14 +962,12 @@ class EngineAuthorizationServiceTest {
     trigger.setCurrentTrustMetadata(embeddedMetadata);
     trigger.setOriginTrustMetadata(embeddedMetadata);
 
-    assertThatThrownBy(() -> service.authorize(new RecordHeaders(), envelope(trigger)))
-        .isInstanceOf(AuthorizationTokenException.class)
-        .hasMessageContaining("tx-sig");
+    assertThat(service.authorize(new RecordHeaders(), envelope(trigger))).isNull();
   }
 
   @Test
   void nonEntryTrigger_signatureError_throwsAuthorizationTokenException() {
-    globalConfigStore.update(authorizationConfig());
+    globalConfigStore.update(signingConfig());
 
     String keyId = "worker-test-001";
     when(signingKeysStore.get(keyId))
@@ -874,12 +999,10 @@ class EngineAuthorizationServiceTest {
   // ── SetVariableTriggerDTO as external entry command ────────────────────────
 
   @Test
-  void setVariableCommand_noHeaders_authRequired_throws() {
+  void setVariableCommand_noHeaders_authOnlyConfig_returnsNull() {
     globalConfigStore.update(authorizationConfig());
 
-    assertThatThrownBy(() -> service.authorize(new RecordHeaders(), envelope(setVariableTrigger())))
-        .isInstanceOf(AuthorizationTokenException.class)
-        .hasMessageContaining("Entry command");
+    assertThat(service.authorize(new RecordHeaders(), envelope(setVariableTrigger()))).isNull();
   }
 
   @Test
@@ -893,7 +1016,7 @@ class EngineAuthorizationServiceTest {
 
   @Test
   void setVariableCommand_engineSigned_accepted() {
-    globalConfigStore.update(config(false));
+    globalConfigStore.update(config(true));
 
     String keyId = "engine-test-key-3";
     when(signingKeysStore.get(keyId))
@@ -945,14 +1068,10 @@ class EngineAuthorizationServiceTest {
   }
 
   @Test
-  void userTaskCompletion_missingJwt_authRequired_throws() {
+  void userTaskCompletion_missingJwt_authOnlyConfig_returnsNull() {
     globalConfigStore.update(userTaskAuthorizationConfig(false));
 
-    assertThatThrownBy(
-            () -> service.authorize(new RecordHeaders(), envelope(userTaskResponseTrigger())))
-        .isInstanceOf(AuthorizationTokenException.class)
-        .hasMessageContaining("tx-auth")
-        .hasMessageContaining("tx-sig");
+    assertThat(service.authorize(new RecordHeaders(), envelope(userTaskResponseTrigger()))).isNull();
   }
 
   @Test
@@ -969,7 +1088,7 @@ class EngineAuthorizationServiceTest {
   }
 
   @Test
-  void externalTaskCompletion_clientSignatureWithoutJwt_authRequired_isAccepted() {
+  void externalTaskCompletion_clientSignatureWithoutJwt_authOnlyConfig_isIgnored() {
     globalConfigStore.update(externalTaskAuthorizationConfig(false));
 
     String keyId = "worker-task-complete-key";
@@ -983,16 +1102,12 @@ class EngineAuthorizationServiceTest {
                 .role(KeyRole.CLIENT)
                 .build());
 
-    CommandTrustMetadataDTO result =
-        service.authorize(
-            headersWithSignature(keyId),
-            new ProcessInstanceTriggerEnvelope(
-                new byte[0], externalTaskResponseTrigger(), true, keyId));
-
-    assertThat(result.getAuthMethod()).isEqualTo(CommandAuthMethod.ED25519);
-    assertThat(result.getVerificationResult())
-        .isEqualTo(CommandTrustVerificationResult.SIGNATURE_VERIFIED);
-    assertThat(result.getSignerKeyId()).isEqualTo(keyId);
+    assertThat(
+            service.authorize(
+                headersWithSignature(keyId),
+                new ProcessInstanceTriggerEnvelope(
+                    new byte[0], externalTaskResponseTrigger(), true, keyId)))
+        .isNull();
   }
 
   @Test
@@ -1012,33 +1127,7 @@ class EngineAuthorizationServiceTest {
   }
 
   @Test
-  void taskCompletionAuthorizationHelper_externalTaskReflectsItsOwnGateOnly() {
-    globalConfigStore.update(externalTaskAuthorizationConfig(false));
-    assertThat(service.isTaskCompletionAuthorizationActive(externalTaskResponseTrigger())).isTrue();
-
-    globalConfigStore.update(commandAuthorizationOnlyConfig());
-    assertThat(service.isTaskCompletionAuthorizationActive(externalTaskResponseTrigger()))
-        .isFalse();
-  }
-
-  @Test
-  void taskCompletionAuthorizationHelper_userTaskReflectsItsOwnGateOnly() {
-    globalConfigStore.update(userTaskAuthorizationConfig(false));
-    assertThat(service.isTaskCompletionAuthorizationActive(userTaskResponseTrigger())).isTrue();
-
-    globalConfigStore.update(commandAuthorizationOnlyConfig());
-    assertThat(service.isTaskCompletionAuthorizationActive(userTaskResponseTrigger())).isFalse();
-  }
-
-  @Test
-  void taskCompletionAuthorizationHelper_nonTaskTriggerReturnsFalse() {
-    globalConfigStore.update(authorizationConfig());
-
-    assertThat(service.isTaskCompletionAuthorizationActive(startCommand("proc", -1))).isFalse();
-  }
-
-  @Test
-  void authoritativePolicy_startCommandAuthorizationAppliesWhenLegacyConfigDisabled() {
+  void authoritativeAnchoredPolicy_startCommandRequiresSignatureNotJwt() {
     when(config.getPlatformPublicKey()).thenReturn("platform-public-key");
     namespaceSecurityPolicyStore.update(
         activeAuthoritativePolicy(
@@ -1049,7 +1138,37 @@ class EngineAuthorizationServiceTest {
             () -> service.authorize(new RecordHeaders(), envelope(startCommand("proc", -1))))
         .isInstanceOf(AuthorizationTokenException.class)
         .hasMessageContaining("Entry command")
-        .hasMessageContaining("tx-auth");
+        .hasMessageContaining("tx-sig");
+  }
+
+  @Test
+  void authoritativeAnchoredPolicy_clientSignedStartCommandAcceptedWithoutJwt() {
+    when(config.getPlatformPublicKey()).thenReturn("platform-public-key");
+    namespaceSecurityPolicyStore.update(
+        activeAuthoritativePolicy(
+            RequiredAuthorizationDTO.builder().startCommands(true).build(),
+            RequiredSigningDTO.builder().build()));
+
+    String keyId = "anchored-client-key";
+    when(signingKeysStore.get(keyId))
+        .thenReturn(
+            SigningKeyDTO.builder()
+                .keyId(keyId)
+                .publicKeyBase64("dummy")
+                .status(KeyStatus.ACTIVE)
+                .owner("console")
+                .role(KeyRole.CLIENT)
+                .build());
+
+    CommandTrustMetadataDTO result =
+        service.authorize(
+            headersWithSignature(keyId),
+            new ProcessInstanceTriggerEnvelope(new byte[0], startCommand("proc", -1), true, keyId));
+
+    assertThat(result.getAuthMethod()).isEqualTo(CommandAuthMethod.ED25519);
+    assertThat(result.getVerificationResult())
+        .isEqualTo(CommandTrustVerificationResult.SIGNATURE_VERIFIED);
+    assertThat(result.getSignerKeyId()).isEqualTo(keyId);
   }
 
   @Test
@@ -1064,16 +1183,40 @@ class EngineAuthorizationServiceTest {
   }
 
   @Test
-  void authoritativePolicy_userTaskAuthorizationReflectsTaskCompletionHelper() {
+  void authoritativePolicy_doesNotEnableTaskCompletionJwtRequirement() {
     when(config.getPlatformPublicKey()).thenReturn("platform-public-key");
     namespaceSecurityPolicyStore.update(
         activeAuthoritativePolicy(
             RequiredAuthorizationDTO.builder().userTaskCompletion(true).build(),
             RequiredSigningDTO.builder().build()));
 
-    assertThat(service.isTaskCompletionAuthorizationActive(userTaskResponseTrigger())).isTrue();
-    assertThat(service.isTaskCompletionAuthorizationActive(externalTaskResponseTrigger()))
-        .isTrue();
+    String keyId = "anchored-task-key";
+    when(signingKeysStore.get(keyId))
+        .thenReturn(
+            SigningKeyDTO.builder()
+                .keyId(keyId)
+                .publicKeyBase64("dummy")
+                .status(KeyStatus.ACTIVE)
+                .owner("worker-billing")
+                .role(KeyRole.CLIENT)
+                .build());
+
+    CommandTrustMetadataDTO userTaskResult =
+        service.authorize(
+            headersWithSignature(keyId),
+            new ProcessInstanceTriggerEnvelope(new byte[0], userTaskResponseTrigger(), true, keyId));
+    CommandTrustMetadataDTO externalTaskResult =
+        service.authorize(
+            headersWithSignature(keyId),
+            new ProcessInstanceTriggerEnvelope(
+                new byte[0], externalTaskResponseTrigger(), true, keyId));
+
+    assertThat(userTaskResult.getAuthMethod()).isEqualTo(CommandAuthMethod.ED25519);
+    assertThat(userTaskResult.getVerificationResult())
+        .isEqualTo(CommandTrustVerificationResult.SIGNATURE_VERIFIED);
+    assertThat(externalTaskResult.getAuthMethod()).isEqualTo(CommandAuthMethod.ED25519);
+    assertThat(externalTaskResult.getVerificationResult())
+        .isEqualTo(CommandTrustVerificationResult.SIGNATURE_VERIFIED);
   }
 
   @Test
