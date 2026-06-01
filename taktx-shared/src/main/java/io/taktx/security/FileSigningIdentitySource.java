@@ -17,7 +17,13 @@ import java.util.function.LongSupplier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-/** Reads the signing identity from mounted files so key rotation can happen without restart. */
+/**
+ * Reads the signing identity from externally managed mounted files so key rotation can happen
+ * without restart.
+ *
+ * <p>This source expects key material to be provisioned outside the application. For
+ * application-managed local persistence, use {@link LocalPersistentSigningIdentitySource}.
+ */
 public class FileSigningIdentitySource implements SigningIdentitySource {
 
   public static final long DEFAULT_REFRESH_INTERVAL_MS = 1000L;

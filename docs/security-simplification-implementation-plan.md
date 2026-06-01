@@ -1,7 +1,7 @@
 # Security Simplification Implementation Plan
 
 **Status:** In progress  
-**Date:** 2026-06-01  
+**Date:** 2026-06-02  
 **Related docs:**
 - `docs/drastic-security-simplification.md`
 - `docs/drastic-security-simplification-engine.md`
@@ -39,6 +39,7 @@
 - `usertasks-response` now preserves the original process-instance trigger envelope and headers when handing user task completion into `process-instance`, so replay protection and process-instance authorization evaluate the original external ingress context instead of an engine-rewrapped DTO.
 - Final `C5` audit confirmed that the current topology's live external runtime ingress set is now covered (`process-instance`, `usertasks-response`, `topic-meta-requested`, externally published `message-event`, externally published `signals`). Remaining special cases are intentional non-`C5` exceptions: engine-internal `schedule-commands`, engine-internal non-entry `process-instance` continuations, and control-plane/operator topics such as authoritative namespace policy mutation and `dlq.replay`.
 - Process-instance ingress security rejections now short-circuit to `security-events` instead of creating DLQ entries; DLQ remains reserved for payload/engine-processing failures while readiness gating still fails closed.
+- `taktx-shared` now has a managed `LocalPersistentSigningIdentitySource` that persists a single `identity.properties` file under `~/.taktx/signing/` by default (or `taktx.signing.local.directory` / `TAKTX_SIGNING_LOCAL_DIRECTORY`), reuses the same Ed25519 keypair across restart, and fails closed on corrupt persisted state instead of silently churning identity; `FileSigningIdentitySource` remains the externally managed mounted-file reader.
 - The remaining work is concentrated in finishing Phase 2 production cleanup, Phase 3/4 identity + trust-registry behavior, and broadening Phase 5 coverage beyond the current engine/integration adaptations.
 
 ---
@@ -374,17 +375,21 @@ Make stable participant identity the default and ensure the client signs automat
 **Files**
 - `taktx-shared/src/main/java/io/taktx/security/SigningIdentitySource.java`
 - `taktx-shared/src/main/java/io/taktx/security/FileSigningIdentitySource.java`
-- new local persistence class(es)
+- `taktx-shared/src/main/java/io/taktx/security/LocalPersistentSigningIdentitySource.java`
 
 **Work**
-- [ ] Add a source that:
-  - [ ] loads an existing identity if present
-  - [ ] generates a new keypair if missing
-  - [ ] persists key material locally
-  - [ ] persists stable key id locally
-  - [ ] reuses the same identity across restart
-- [ ] Decide file layout and configuration properties
-- [ ] Keep current mounted-file source behavior for externally managed identities
+- [x] Add a source that:
+  - [x] loads an existing identity if present
+  - [x] generates a new keypair if missing
+  - [x] persists key material locally
+  - [x] persists stable key id locally
+  - [x] reuses the same identity across restart
+- [x] Decide file layout and configuration properties
+  - Managed local identity is stored as a single `identity.properties` file inside a local directory
+  - Default directory: `~/.taktx/signing/`
+  - Override directory: `taktx.signing.local.directory` / `TAKTX_SIGNING_LOCAL_DIRECTORY`
+  - Override key-id prefix: `taktx.signing.local.key-id-prefix` / `TAKTX_SIGNING_LOCAL_KEY_ID_PREFIX`
+- [x] Keep current mounted-file source behavior for externally managed identities
 
 **Acceptance criteria**
 - Local identity survives restart
@@ -749,7 +754,7 @@ Start with this bounded slice:
 | C3 | Rewrite ingress enforcement | In progress | C1,C2 | Process-instance ingress is now signature/mode driven with JWT retained as optional context only, and the mode-only rule now extends across the current external runtime ingress set; remaining work is final message-policy cleanup |
 | C4 | Prevent security rejection DLQ | Done | C3 | Process-instance ingress now emits security events for authorization/readiness rejection while reserving DLQ for decode/processing failures |
 | C5 | Apply same rule to all ingress | Done | C3 | Current external runtime ingress (`process-instance`, `usertasks-response`, `topic-meta-requested`, externally published `message-event`, externally published `signals`) now preserves/enforces the same mode/signature model; remaining special cases are intentional internal/control-plane exceptions |
-| D1 | Add managed local file-backed identity source | Todo |  | Persistent identity |
+| D1 | Add managed local file-backed identity source | Done |  | Managed local `identity.properties` persistence added in `taktx-shared`; mounted-file source remains externally managed |
 | D2 | Make persistent identity default | Todo | D1 | Stable restarts |
 | D3 | Simplify client policy interpretation | Todo | A2,C1,D2 | Mode-only client logic |
 | D4 | Auto-sign all anchored client traffic | Todo | D3 | No caller choice |
