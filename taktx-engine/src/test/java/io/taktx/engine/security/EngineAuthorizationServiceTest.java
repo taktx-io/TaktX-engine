@@ -449,10 +449,8 @@ class EngineAuthorizationServiceTest {
     byte[] payload =
         NamespaceSecurityPolicyProtoMapper.toProto(
                 NamespaceSecurityPolicyDTO.builder()
-                    .mode(io.taktx.dto.SecurityMode.SECURED)
-                    .activationState(SecurityActivationState.REQUESTED)
-                    .desiredPolicyVersion(42L)
-                    .requiredSigning(RequiredSigningDTO.builder().engineOutbound(true).build())
+                    .mode(io.taktx.dto.SecurityMode.ANCHORED)
+                    .policyVersion(42L)
                     .build())
             .toByteArray();
 
@@ -469,8 +467,7 @@ class EngineAuthorizationServiceTest {
         NamespaceSecurityPolicyProtoMapper.toProto(
                 NamespaceSecurityPolicyDTO.builder()
                     .mode(io.taktx.dto.SecurityMode.OPEN)
-                    .activationState(SecurityActivationState.REQUESTED)
-                    .desiredPolicyVersion(1L)
+                    .policyVersion(1L)
                     .build())
             .toByteArray();
 
@@ -502,8 +499,7 @@ class EngineAuthorizationServiceTest {
         NamespaceSecurityPolicyProtoMapper.toProto(
                 NamespaceSecurityPolicyDTO.builder()
                     .mode(io.taktx.dto.SecurityMode.OPEN)
-                    .activationState(SecurityActivationState.REQUESTED)
-                    .desiredPolicyVersion(9L)
+                    .policyVersion(9L)
                     .build())
             .toByteArray();
 
@@ -536,10 +532,7 @@ class EngineAuthorizationServiceTest {
         NamespaceSecurityPolicyProtoMapper.toProto(
                 NamespaceSecurityPolicyDTO.builder()
                     .mode(io.taktx.dto.SecurityMode.OPEN)
-                    .activationState(SecurityActivationState.REQUESTED)
-                    .desiredPolicyVersion(77L)
-                    .breakGlassActor("ops-admin")
-                    .breakGlassReason("temporary containment downgrade")
+                    .policyVersion(77L)
                     .build())
             .toByteArray();
 
@@ -1046,6 +1039,7 @@ class EngineAuthorizationServiceTest {
 
   @Test
   void authoritativePolicy_startCommandAuthorizationAppliesWhenLegacyConfigDisabled() {
+    when(config.getPlatformPublicKey()).thenReturn("platform-public-key");
     namespaceSecurityPolicyStore.update(
         activeAuthoritativePolicy(
             RequiredAuthorizationDTO.builder().startCommands(true).build(),
@@ -1062,10 +1056,8 @@ class EngineAuthorizationServiceTest {
   void pendingPolicyWithoutAuthoritativeActiveState_doesNotPrematurelyEnableAuthorization() {
     namespaceSecurityPolicyStore.setCurrentPolicy(
         NamespaceSecurityPolicyDTO.builder()
-            .mode(io.taktx.dto.SecurityMode.SECURED)
-            .activationState(SecurityActivationState.REQUESTED)
-            .desiredPolicyVersion(55L)
-            .requiredAuthorization(RequiredAuthorizationDTO.builder().startCommands(true).build())
+            .mode(io.taktx.dto.SecurityMode.OPEN)
+            .policyVersion(55L)
             .build());
 
     assertThat(service.authorize(new RecordHeaders(), envelope(startCommand("proc", -1)))).isNull();
@@ -1073,6 +1065,7 @@ class EngineAuthorizationServiceTest {
 
   @Test
   void authoritativePolicy_userTaskAuthorizationReflectsTaskCompletionHelper() {
+    when(config.getPlatformPublicKey()).thenReturn("platform-public-key");
     namespaceSecurityPolicyStore.update(
         activeAuthoritativePolicy(
             RequiredAuthorizationDTO.builder().userTaskCompletion(true).build(),
@@ -1080,11 +1073,12 @@ class EngineAuthorizationServiceTest {
 
     assertThat(service.isTaskCompletionAuthorizationActive(userTaskResponseTrigger())).isTrue();
     assertThat(service.isTaskCompletionAuthorizationActive(externalTaskResponseTrigger()))
-        .isFalse();
+        .isTrue();
   }
 
   @Test
   void authoritativePolicy_clientCommandSigningRejectsUnsignedStartCommand() {
+    when(config.getPlatformPublicKey()).thenReturn("platform-public-key");
     namespaceSecurityPolicyStore.update(
         activeAuthoritativePolicy(
             RequiredAuthorizationDTO.builder().build(),
@@ -1093,11 +1087,12 @@ class EngineAuthorizationServiceTest {
     assertThatThrownBy(
             () -> service.authorize(new RecordHeaders(), envelope(startCommand("proc", -1))))
         .isInstanceOf(AuthorizationTokenException.class)
-        .hasMessageContaining("tx-sig");
+        .hasMessageContaining("Entry command");
   }
 
   @Test
   void authoritativePolicy_workerResponseSigningRejectsUnsignedUserTaskCompletion() {
+    when(config.getPlatformPublicKey()).thenReturn("platform-public-key");
     namespaceSecurityPolicyStore.update(
         activeAuthoritativePolicy(
             RequiredAuthorizationDTO.builder().build(),
@@ -1111,6 +1106,7 @@ class EngineAuthorizationServiceTest {
 
   @Test
   void authoritativePolicy_engineOutboundSigningRejectsUnsignedScheduleCommand() {
+    when(config.getPlatformPublicKey()).thenReturn("platform-public-key");
     namespaceSecurityPolicyStore.update(
         activeAuthoritativePolicy(
             RequiredAuthorizationDTO.builder().build(),
@@ -1207,16 +1203,20 @@ class EngineAuthorizationServiceTest {
       RequiredAuthorizationDTO requiredAuthorization,
       RequiredSigningDTO requiredSigning,
       boolean trustAnchorRequired) {
+    boolean anchored =
+        trustAnchorRequired
+            || (requiredAuthorization != null
+                && (requiredAuthorization.isStartCommands()
+                    || requiredAuthorization.isExternalTaskCompletion()
+                    || requiredAuthorization.isUserTaskCompletion()))
+            || (requiredSigning != null
+                && (requiredSigning.isClientCommands()
+                    || requiredSigning.isWorkerResponses()
+                    || requiredSigning.isEngineOutbound()));
     return NamespaceSecurityPolicyDTO.builder()
-        .mode(io.taktx.dto.SecurityMode.SECURED)
-        .activationState(SecurityActivationState.ACTIVE)
-        .desiredPolicyVersion(42L)
-        .desiredPolicyHash("policy-hash-42")
-        .requiredAuthorization(requiredAuthorization)
-        .requiredSigning(requiredSigning)
-        .trustAnchorRequired(trustAnchorRequired)
-        .activePolicyVersion(42L)
-        .activePolicyHash("policy-hash-42")
+        .mode(anchored ? io.taktx.dto.SecurityMode.ANCHORED : io.taktx.dto.SecurityMode.OPEN)
+        .policyVersion(42L)
+        .policyHash("policy-hash-42")
         .build();
   }
 

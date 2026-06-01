@@ -142,10 +142,10 @@ final class NamespaceSecurityPolicyTopicStore implements AutoCloseable {
       ready.set(true);
       NamespaceSecurityPolicyDTO authoritative = store.getAuthoritativePolicy();
       log.info(
-          "NamespaceSecurityPolicyTopicStore: initial load complete — currentState={} activePolicyVersion={} activePolicyHash={}",
-          store.get() != null ? store.get().getActivationState() : null,
-          authoritative != null ? authoritative.getActivePolicyVersion() : null,
-          authoritative != null ? authoritative.getActivePolicyHash() : null);
+          "NamespaceSecurityPolicyTopicStore: initial load complete — mode={} policyVersion={} policyHash={}",
+          authoritative != null ? authoritative.getMode() : null,
+          authoritative != null ? authoritative.getPolicyVersion() : null,
+          authoritative != null ? authoritative.getPolicyHash() : null);
     } catch (Exception e) {
       log.warn(
           "NamespaceSecurityPolicyTopicStore: initial load failed — defaulting to open behavior: {}",
@@ -192,11 +192,10 @@ final class NamespaceSecurityPolicyTopicStore implements AutoCloseable {
       notifyPolicyChanged();
       NamespaceSecurityPolicyDTO authoritative = store.getAuthoritativePolicy();
       log.info(
-          "NamespaceSecurityPolicyTopicStore: updated policy activationState={} desiredPolicyVersion={} activePolicyVersion={} activePolicyHash={}",
-          policy.getActivationState(),
-          policy.getDesiredPolicyVersion(),
-          authoritative != null ? authoritative.getActivePolicyVersion() : null,
-          authoritative != null ? authoritative.getActivePolicyHash() : null);
+          "NamespaceSecurityPolicyTopicStore: updated policy mode={} policyVersion={} policyHash={}",
+          authoritative != null ? authoritative.getMode() : policy.getMode(),
+          authoritative != null ? authoritative.getPolicyVersion() : policy.getPolicyVersion(),
+          authoritative != null ? authoritative.getPolicyHash() : policy.getPolicyHash());
     } catch (Exception e) {
       log.warn(
           "NamespaceSecurityPolicyTopicStore: failed to deserialize policy record key={}: {}",

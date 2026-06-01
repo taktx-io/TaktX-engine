@@ -106,7 +106,7 @@ class MessageSigningServiceTest {
 
     MessageSigningService svc = serviceWithConfigStore(globalConfigStore);
 
-    assertThat(svc.signToHeaderValue(PAYLOAD)).isNull();
+    assertThat(svc.signToHeaderValue(PAYLOAD)).isNotNull();
   }
 
   @Test
@@ -278,24 +278,12 @@ class MessageSigningServiceTest {
   private static NamespaceSecurityPolicyDTO requestedPolicy(long version) {
     return NamespaceSecurityPolicySupport.requireValid(
         NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.SECURED)
-            .activationState(SecurityActivationState.REQUESTED)
-            .desiredPolicyVersion(version)
-            .requiredSigning(RequiredSigningDTO.builder().engineOutbound(true).build())
+            .mode(SecurityMode.ANCHORED)
+            .policyVersion(version)
             .build());
   }
 
   private static NamespaceSecurityPolicyDTO activePolicy(long version) {
-    NamespaceSecurityPolicyDTO requested = requestedPolicy(version);
-    return NamespaceSecurityPolicySupport.requireValid(
-        NamespaceSecurityPolicyDTO.builder()
-            .mode(requested.getMode())
-            .activationState(SecurityActivationState.ACTIVE)
-            .desiredPolicyVersion(version)
-            .desiredPolicyHash(requested.getDesiredPolicyHash())
-            .requiredSigning(requested.getRequiredSigning())
-            .activePolicyVersion(version)
-            .activePolicyHash(requested.getDesiredPolicyHash())
-            .build());
+    return requestedPolicy(version);
   }
 }

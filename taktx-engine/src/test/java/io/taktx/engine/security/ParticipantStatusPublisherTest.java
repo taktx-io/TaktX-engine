@@ -20,8 +20,6 @@ import io.taktx.dto.ParticipantEffectiveState;
 import io.taktx.dto.ParticipantKind;
 import io.taktx.dto.ParticipantStatusDTO;
 import io.taktx.dto.PolicyMismatchReasonDTO;
-import io.taktx.dto.RequiredSigningDTO;
-import io.taktx.dto.SecurityActivationState;
 import io.taktx.dto.SecurityEventDTO;
 import io.taktx.dto.SecurityEventType;
 import io.taktx.dto.SecurityMode;
@@ -124,18 +122,28 @@ class ParticipantStatusPublisherTest {
   }
 
   @Test
-  void publishCurrentStatus_emitsDataPlaneBlockedEventForPendingPolicy() {
+  void publishCurrentStatus_emitsDataPlaneBlockedEventForBlockedAnchoredPolicy() {
     NamespaceSecurityPolicyDTO requested =
         NamespaceSecurityPolicySupport.requireValid(
             NamespaceSecurityPolicyDTO.builder()
-                .mode(SecurityMode.SECURED)
-                .activationState(SecurityActivationState.VALIDATING)
-                .desiredPolicyVersion(42L)
-                .requiredSigning(RequiredSigningDTO.builder().engineOutbound(true).build())
+                .mode(SecurityMode.ANCHORED)
+                .policyVersion(42L)
                 .build());
-    namespaceSecurityPolicyStore.setCurrentPolicy(requested);
+    namespaceSecurityPolicyStore.update(requested);
 
-    ParticipantStatusDTO status = readyEngineStatus();
+    ParticipantStatusDTO status =
+        readyEngineStatus().toBuilder()
+            .effectiveState(ParticipantEffectiveState.MISMATCH)
+            .readyForDataPlane(false)
+            .observedPolicyVersion(42L)
+            .observedPolicyHash(requested.getPolicyHash())
+            .mismatchReasons(
+                java.util.List.of(
+                    PolicyMismatchReasonDTO.builder()
+                        .code("TRUST_ANCHOR_MISSING")
+                        .message("trust anchor missing")
+                        .build()))
+            .build();
     when(readinessEvaluator.evaluateCurrentStatus()).thenReturn(status);
 
     ParticipantStatusPublisher publisher =
@@ -153,7 +161,7 @@ class ParticipantStatusPublisherTest {
     assertThat(eventCaptor.getValue().getEventType())
         .isEqualTo(SecurityEventType.DATA_PLANE_BLOCKED);
     assertThat(eventCaptor.getValue().getCode())
-        .isEqualTo(ParticipantStatusPublisher.POLICY_NOT_ACTIVE_CODE);
+        .isEqualTo("TRUST_ANCHOR_MISSING");
     assertThat(eventCaptor.getValue().getDesiredPolicyVersion()).isEqualTo(42L);
   }
 

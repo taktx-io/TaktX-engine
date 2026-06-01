@@ -394,8 +394,7 @@ public class MessageSigningService {
     if (policy == null || policy.getMode() == null) {
       return false;
     }
-    return policy.getMode() == SecurityMode.SECURED
-        || policy.getMode() == SecurityMode.ANCHORED_SECURED;
+    return policy.getMode() == SecurityMode.ANCHORED;
   }
 
   private static boolean isBlank(String value) {

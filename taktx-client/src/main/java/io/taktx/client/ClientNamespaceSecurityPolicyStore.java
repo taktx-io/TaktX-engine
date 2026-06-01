@@ -8,7 +8,6 @@
 package io.taktx.client;
 
 import io.taktx.dto.NamespaceSecurityPolicyDTO;
-import io.taktx.dto.SecurityActivationState;
 import io.taktx.security.NamespaceSecurityPolicySupport;
 import jakarta.annotation.Nullable;
 import java.util.concurrent.atomic.AtomicReference;
@@ -27,9 +26,7 @@ final class ClientNamespaceSecurityPolicyStore {
     NamespaceSecurityPolicyDTO validated =
         dto == null ? null : NamespaceSecurityPolicySupport.requireValid(dto);
     currentPolicy.set(validated);
-    if (validated != null && validated.getActivationState() == SecurityActivationState.ACTIVE) {
-      activePolicy.set(validated);
-    }
+    activePolicy.set(validated);
   }
 
   synchronized void clear() {
@@ -43,10 +40,7 @@ final class ClientNamespaceSecurityPolicyStore {
 
   synchronized @Nullable NamespaceSecurityPolicyDTO getAuthoritativePolicy() {
     NamespaceSecurityPolicyDTO current = currentPolicy.get();
-    if (current != null && current.getActivationState() == SecurityActivationState.ACTIVE) {
-      return current;
-    }
-    return activePolicy.get();
+    return current != null ? current : activePolicy.get();
   }
 
   synchronized void setCurrentPolicy(@Nullable NamespaceSecurityPolicyDTO dto) {

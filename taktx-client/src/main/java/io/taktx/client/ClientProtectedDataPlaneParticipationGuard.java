@@ -12,9 +12,6 @@ import io.taktx.dto.ParticipantCapability;
 import io.taktx.dto.ParticipantEffectiveState;
 import io.taktx.dto.ParticipantStatusDTO;
 import io.taktx.dto.PolicyMismatchReasonDTO;
-import io.taktx.dto.RequiredAuthorizationDTO;
-import io.taktx.dto.RequiredSigningDTO;
-import io.taktx.dto.SecurityActivationState;
 import io.taktx.dto.SecurityMode;
 import io.taktx.dto.SecurityParticipantDescriptor;
 import io.taktx.dto.SecurityPostureIssueCodes;
@@ -36,9 +33,7 @@ import java.util.function.Supplier;
  */
 final class ClientProtectedDataPlaneParticipationGuard {
 
-  static final String POLICY_NOT_ACTIVE_HINT = "POLICY_NOT_ACTIVE";
   static final String POLICY_NOT_READY_HINT = "SECURITY_POLICY_NOT_READY";
-  static final String POLICY_MARKED_MISCONFIGURED = "POLICY_MARKED_MISCONFIGURED";
   static final String TRUST_ANCHOR_MISSING = SecurityPostureIssueCodes.TRUST_ANCHOR_MISSING;
   static final String CLIENT_COMMAND_SIGNING_UNAVAILABLE = "CLIENT_COMMAND_SIGNING_UNAVAILABLE";
   static final String WORKER_RESPONSE_SIGNING_UNAVAILABLE = "WORKER_RESPONSE_SIGNING_UNAVAILABLE";
@@ -87,16 +82,8 @@ final class ClientProtectedDataPlaneParticipationGuard {
       return Decision.permit();
     }
 
-    NamespaceSecurityPolicyDTO currentPolicy = policyStore.get();
     NamespaceSecurityPolicyDTO authoritativePolicy = policyStore.getAuthoritativePolicy();
     if (authoritativePolicy == null) {
-      if (currentPolicy != null
-          && currentPolicy.getActivationState() != SecurityActivationState.ACTIVE) {
-        return Decision.blocked(
-            POLICY_NOT_ACTIVE_HINT,
-            "Protected data-plane participation is blocked until the requested namespace"
-                + " security policy becomes ACTIVE");
-      }
       return Decision.permit();
     }
 
@@ -104,8 +91,8 @@ final class ClientProtectedDataPlaneParticipationGuard {
         evaluateCurrentStatus(authoritativePolicy, operation, explicitAuthorizationToken);
     if (ParticipantStatusSupport.allowsProtectedDataPlaneParticipation(
         status,
-        authoritativePolicy.getActivePolicyVersion(),
-        authoritativePolicy.getActivePolicyHash(),
+        authoritativePolicy.getPolicyVersion(),
+        authoritativePolicy.getPolicyHash(),
         clock.millis())) {
       return Decision.permit();
     }
@@ -156,113 +143,94 @@ final class ClientProtectedDataPlaneParticipationGuard {
                   + operation.name()));
     }
 
-    if (policy.getMode() == SecurityMode.MISCONFIGURED_SECURITY) {
-      effectiveState = ParticipantEffectiveState.MISMATCH;
-      readyForDataPlane = false;
-      mismatchReasons.add(
-          mismatchReason(
-              POLICY_MARKED_MISCONFIGURED,
-              "Policy mode is MISCONFIGURED_SECURITY and therefore cannot be treated as ready"));
-    }
-
-    if (policy.isTrustAnchorRequired() && isBlank(platformPublicKeySupplier.get())) {
-      effectiveState = ParticipantEffectiveState.MISMATCH;
-      readyForDataPlane = false;
-      mismatchReasons.add(
-          mismatchReason(
-              TRUST_ANCHOR_MISSING,
-              "Namespace requires anchored trust but no platform public key is configured"));
-    }
-
-    RequiredSigningDTO requiredSigning =
-        policy.getRequiredSigning() != null
-            ? policy.getRequiredSigning()
-            : RequiredSigningDTO.builder().build();
-    RequiredAuthorizationDTO requiredAuthorization =
-        policy.getRequiredAuthorization() != null
-            ? policy.getRequiredAuthorization()
-            : RequiredAuthorizationDTO.builder().build();
-
-    boolean signingReady = hasSigningReadyCapability();
-    boolean authorizationAvailable = hasAuthorization(explicitAuthorizationToken);
-    boolean taskCompletionAuthorizationAvailable = authorizationAvailable || signingReady;
-
-    switch (operation) {
-      case START_COMMAND -> {
-        if (requiredSigning.isClientCommands() && !signingReady) {
-          effectiveState = ParticipantEffectiveState.MISMATCH;
-          readyForDataPlane = false;
-          mismatchReasons.add(
-              mismatchReason(
-                  CLIENT_COMMAND_SIGNING_UNAVAILABLE,
-                  "Namespace requires signed client commands but no publishable client signing"
-                      + " identity is ready"));
-        }
-        if (requiredAuthorization.isStartCommands() && !authorizationAvailable) {
-          effectiveState = ParticipantEffectiveState.MISMATCH;
-          readyForDataPlane = false;
-          mismatchReasons.add(
-              mismatchReason(
-                  START_COMMAND_AUTHORIZATION_UNAVAILABLE,
-                  "Namespace requires JWT authorization for start commands but no explicit token"
-                      + " or AuthorizationTokenProvider is available"));
-        }
+    if (policy.getMode() == SecurityMode.ANCHORED) {
+      if (isBlank(platformPublicKeySupplier.get())) {
+        effectiveState = ParticipantEffectiveState.MISMATCH;
+        readyForDataPlane = false;
+        mismatchReasons.add(
+            mismatchReason(
+                TRUST_ANCHOR_MISSING,
+                "Namespace requires anchored trust but no platform public key is configured"));
       }
-      case CLIENT_COMMAND -> {
-        if (requiredSigning.isClientCommands() && !signingReady) {
-          effectiveState = ParticipantEffectiveState.MISMATCH;
-          readyForDataPlane = false;
-          mismatchReasons.add(
-              mismatchReason(
-                  CLIENT_COMMAND_SIGNING_UNAVAILABLE,
-                  "Namespace requires signed client commands but no publishable client signing"
-                      + " identity is ready"));
+
+      boolean signingReady = hasSigningReadyCapability();
+      boolean authorizationAvailable = hasAuthorization(explicitAuthorizationToken);
+
+      switch (operation) {
+        case START_COMMAND -> {
+          if (!signingReady) {
+            effectiveState = ParticipantEffectiveState.MISMATCH;
+            readyForDataPlane = false;
+            mismatchReasons.add(
+                mismatchReason(
+                    CLIENT_COMMAND_SIGNING_UNAVAILABLE,
+                    "Namespace requires protected client commands but no publishable client signing"
+                        + " identity is ready"));
+          }
+          if (!authorizationAvailable) {
+            effectiveState = ParticipantEffectiveState.MISMATCH;
+            readyForDataPlane = false;
+            mismatchReasons.add(
+                mismatchReason(
+                    START_COMMAND_AUTHORIZATION_UNAVAILABLE,
+                    "Namespace requires authorization for protected start commands but no explicit"
+                        + " token or AuthorizationTokenProvider is available"));
+          }
         }
-      }
-      case EXTERNAL_TASK_RESPONSE, EXTERNAL_TASK_CONSUME -> {
-        if (requiredSigning.isWorkerResponses() && !signingReady) {
-          effectiveState = ParticipantEffectiveState.MISMATCH;
-          readyForDataPlane = false;
-          mismatchReasons.add(
-              mismatchReason(
-                  WORKER_RESPONSE_SIGNING_UNAVAILABLE,
-                  "Namespace requires signed worker responses but no publishable worker signing"
-                      + " identity is ready"));
+        case CLIENT_COMMAND -> {
+          if (!signingReady) {
+            effectiveState = ParticipantEffectiveState.MISMATCH;
+            readyForDataPlane = false;
+            mismatchReasons.add(
+                mismatchReason(
+                    CLIENT_COMMAND_SIGNING_UNAVAILABLE,
+                    "Namespace requires protected client commands but no publishable client signing"
+                        + " identity is ready"));
+          }
         }
-        if (requiredAuthorization.isExternalTaskCompletion()
-            && !taskCompletionAuthorizationAvailable) {
-          effectiveState = ParticipantEffectiveState.MISMATCH;
-          readyForDataPlane = false;
-          mismatchReasons.add(
-              mismatchReason(
-                  EXTERNAL_TASK_AUTHORIZATION_UNAVAILABLE,
-                  "Namespace requires authorized external-task completion but neither a JWT"
-                      + " source nor a signing-ready worker identity is available"));
+        case EXTERNAL_TASK_RESPONSE, EXTERNAL_TASK_CONSUME -> {
+          if (!signingReady) {
+            effectiveState = ParticipantEffectiveState.MISMATCH;
+            readyForDataPlane = false;
+            mismatchReasons.add(
+                mismatchReason(
+                    WORKER_RESPONSE_SIGNING_UNAVAILABLE,
+                    "Namespace requires protected worker responses but no publishable worker signing"
+                        + " identity is ready"));
+          }
+          if (!authorizationAvailable) {
+            effectiveState = ParticipantEffectiveState.MISMATCH;
+            readyForDataPlane = false;
+            mismatchReasons.add(
+                mismatchReason(
+                    EXTERNAL_TASK_AUTHORIZATION_UNAVAILABLE,
+                    "Namespace requires authorization for protected external-task completion but no"
+                        + " explicit token or AuthorizationTokenProvider is available"));
+          }
         }
-      }
-      case USER_TASK_RESPONSE, USER_TASK_CONSUME -> {
-        if (requiredSigning.isWorkerResponses() && !signingReady) {
-          effectiveState = ParticipantEffectiveState.MISMATCH;
-          readyForDataPlane = false;
-          mismatchReasons.add(
-              mismatchReason(
-                  WORKER_RESPONSE_SIGNING_UNAVAILABLE,
-                  "Namespace requires signed worker responses but no publishable worker signing"
-                      + " identity is ready"));
+        case USER_TASK_RESPONSE, USER_TASK_CONSUME -> {
+          if (!signingReady) {
+            effectiveState = ParticipantEffectiveState.MISMATCH;
+            readyForDataPlane = false;
+            mismatchReasons.add(
+                mismatchReason(
+                    WORKER_RESPONSE_SIGNING_UNAVAILABLE,
+                    "Namespace requires protected worker responses but no publishable worker signing"
+                        + " identity is ready"));
+          }
+          if (!authorizationAvailable) {
+            effectiveState = ParticipantEffectiveState.MISMATCH;
+            readyForDataPlane = false;
+            mismatchReasons.add(
+                mismatchReason(
+                    USER_TASK_AUTHORIZATION_UNAVAILABLE,
+                    "Namespace requires authorization for protected user-task completion but no"
+                        + " explicit token or AuthorizationTokenProvider is available"));
+          }
         }
-        if (requiredAuthorization.isUserTaskCompletion() && !taskCompletionAuthorizationAvailable) {
-          effectiveState = ParticipantEffectiveState.MISMATCH;
-          readyForDataPlane = false;
-          mismatchReasons.add(
-              mismatchReason(
-                  USER_TASK_AUTHORIZATION_UNAVAILABLE,
-                  "Namespace requires authorized user-task completion but neither a JWT source"
-                      + " nor a signing-ready worker identity is available"));
+        case MESSAGE_EVENT, SIGNAL_EVENT -> {
+          // Anchored trust posture is the only local precondition for ingress event paths here.
         }
-      }
-      case MESSAGE_EVENT, SIGNAL_EVENT -> {
-        // Pending/active policy state and shared trust-anchor readiness are the only current
-        // client-local preconditions for these ingress event paths.
       }
     }
 
@@ -281,8 +249,8 @@ final class ClientProtectedDataPlaneParticipationGuard {
         .statusVerificationLevel(StatusVerificationLevel.LOCALLY_VERIFIED_STATUS)
         .effectiveState(effectiveState)
         .readyForDataPlane(readyForDataPlane)
-        .observedPolicyVersion(policy.getActivePolicyVersion())
-        .observedPolicyHash(policy.getActivePolicyHash())
+        .observedPolicyVersion(policy.getPolicyVersion())
+        .observedPolicyHash(policy.getPolicyHash())
         .mismatchReasons(List.copyOf(mismatchReasons))
         .build();
   }

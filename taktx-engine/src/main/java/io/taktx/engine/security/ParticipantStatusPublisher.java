@@ -11,7 +11,6 @@ import io.quarkus.runtime.Startup;
 import io.taktx.Topics;
 import io.taktx.dto.NamespaceSecurityPolicyDTO;
 import io.taktx.dto.ParticipantStatusDTO;
-import io.taktx.dto.SecurityActivationState;
 import io.taktx.dto.SecurityEventDTO;
 import io.taktx.dto.SecurityEventSeverity;
 import io.taktx.dto.SecurityEventType;
@@ -39,7 +38,6 @@ import org.apache.kafka.common.serialization.StringSerializer;
 @Slf4j
 public class ParticipantStatusPublisher {
 
-  static final String POLICY_NOT_ACTIVE_CODE = "POLICY_NOT_ACTIVE";
   static final String DATA_PLANE_BLOCKED_CODE = "DATA_PLANE_BLOCKED";
 
   private final TaktConfiguration configuration;
@@ -137,15 +135,7 @@ public class ParticipantStatusPublisher {
     String message = null;
     Map<String, String> metadata = new LinkedHashMap<>();
 
-    if (currentPolicy != null
-        && currentPolicy.getActivationState() != SecurityActivationState.ACTIVE) {
-      code = POLICY_NOT_ACTIVE_CODE;
-      message =
-          "Protected data-plane participation for the requested policy remains blocked until the policy becomes ACTIVE";
-      metadata.put("activationState", currentPolicy.getActivationState().name());
-      metadata.put("desiredPolicyVersion", String.valueOf(currentPolicy.getDesiredPolicyVersion()));
-      metadata.put("desiredPolicyHash", String.valueOf(currentPolicy.getDesiredPolicyHash()));
-    } else if (status != null && !status.isReadyForDataPlane()) {
+    if (status != null && !status.isReadyForDataPlane()) {
       code =
           status.getMismatchReasons().isEmpty()
               ? DATA_PLANE_BLOCKED_CODE
@@ -163,6 +153,10 @@ public class ParticipantStatusPublisher {
               .distinct()
               .reduce((left, right) -> left + "," + right)
               .orElse(""));
+      if (currentPolicy != null) {
+        metadata.put("policyVersion", String.valueOf(currentPolicy.getPolicyVersion()));
+        metadata.put("policyHash", String.valueOf(currentPolicy.getPolicyHash()));
+      }
     }
 
     if (code == null || securityEventPublisher == null || status == null) {
@@ -183,13 +177,11 @@ public class ParticipantStatusPublisher {
     String fingerprint =
         code
             + "|"
-            + metadata.getOrDefault("activationState", "")
-            + "|"
             + metadata.getOrDefault("effectiveState", "")
             + "|"
-            + metadata.getOrDefault("desiredPolicyVersion", "")
+            + metadata.getOrDefault("policyVersion", "")
             + "|"
-            + metadata.getOrDefault("desiredPolicyHash", "")
+            + metadata.getOrDefault("policyHash", "")
             + "|"
             + metadata.getOrDefault("observedPolicyVersion", "")
             + "|"
@@ -210,19 +202,19 @@ public class ParticipantStatusPublisher {
             .participantInstanceId(status.getParticipantInstanceId())
             .desiredPolicyVersion(
                 currentPolicy != null
-                    ? currentPolicy.getDesiredPolicyVersion()
+                    ? currentPolicy.getPolicyVersion()
                     : status.getObservedPolicyVersion())
             .desiredPolicyHash(
                 currentPolicy != null
-                    ? currentPolicy.getDesiredPolicyHash()
+                    ? currentPolicy.getPolicyHash()
                     : status.getObservedPolicyHash())
             .activePolicyVersion(
                 authoritativePolicy != null
-                    ? authoritativePolicy.getActivePolicyVersion()
+                    ? authoritativePolicy.getPolicyVersion()
                     : status.getObservedPolicyVersion())
             .activePolicyHash(
                 authoritativePolicy != null
-                    ? authoritativePolicy.getActivePolicyHash()
+                    ? authoritativePolicy.getPolicyHash()
                     : status.getObservedPolicyHash())
             .code(code)
             .message(message)

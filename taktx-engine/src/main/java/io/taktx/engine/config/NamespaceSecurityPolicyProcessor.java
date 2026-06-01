@@ -96,22 +96,13 @@ public class NamespaceSecurityPolicyProcessor implements Processor<String, byte[
         namespaceSecurityPolicyStore.update(validated);
       }
       log.info(
-          "Namespace security policy updated: activationState={} desiredPolicyVersion={} desiredPolicyHash={} activePolicyVersion={} activePolicyHash={} mode={}",
+          "Namespace security policy updated: policyVersion={} policyHash={} mode={}",
           namespaceSecurityPolicyStore.get() != null
-              ? namespaceSecurityPolicyStore.get().getActivationState()
-              : null,
+              ? namespaceSecurityPolicyStore.get().getPolicyVersion()
+              : validated.getPolicyVersion(),
           namespaceSecurityPolicyStore.get() != null
-              ? namespaceSecurityPolicyStore.get().getDesiredPolicyVersion()
-              : validated.getDesiredPolicyVersion(),
-          namespaceSecurityPolicyStore.get() != null
-              ? namespaceSecurityPolicyStore.get().getDesiredPolicyHash()
-              : validated.getDesiredPolicyHash(),
-          namespaceSecurityPolicyStore.get() != null
-              ? namespaceSecurityPolicyStore.get().getActivePolicyVersion()
-              : validated.getActivePolicyVersion(),
-          namespaceSecurityPolicyStore.get() != null
-              ? namespaceSecurityPolicyStore.get().getActivePolicyHash()
-              : validated.getActivePolicyHash(),
+              ? namespaceSecurityPolicyStore.get().getPolicyHash()
+              : validated.getPolicyHash(),
           namespaceSecurityPolicyStore.get() != null
               ? namespaceSecurityPolicyStore.get().getMode()
               : validated.getMode());

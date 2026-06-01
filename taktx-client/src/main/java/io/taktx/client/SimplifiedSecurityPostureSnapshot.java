@@ -232,13 +232,9 @@ public record SimplifiedSecurityPostureSnapshot(
     Map<SecurityMode, TargetModeFeasibility> feasibility = new EnumMap<>(SecurityMode.class);
     feasibility.put(SecurityMode.OPEN, TargetModeFeasibility.feasible(SecurityMode.OPEN));
     feasibility.put(
-        SecurityMode.SECURED,
+        SecurityMode.ANCHORED,
         feasibilityFor(
-            SecurityMode.SECURED, snapshot, mutationAvailability, currentBlockingIssues, nowMs));
-    feasibility.put(
-        SecurityMode.ANCHORED_SECURED,
-        feasibilityFor(
-            SecurityMode.ANCHORED_SECURED,
+            SecurityMode.ANCHORED,
             snapshot,
             mutationAvailability,
             currentBlockingIssues,

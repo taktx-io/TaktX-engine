@@ -33,28 +33,15 @@ public record ObservedPolicySnapshot(
   }
 
   public @Nullable SecurityActivationState currentActivationState() {
-    return currentPolicy != null ? currentPolicy.getActivationState() : null;
+    return null;
   }
 
-  /**
-   * Returns the currently requested / operator-visible policy state if one is present.
-   *
-   * <p>This intentionally prefers the current observed policy so callers can distinguish
-   * requested posture from authoritative active posture.
-   */
   public @Nullable NamespaceSecurityPolicyDTO requestedPolicy() {
     return currentPolicy != null ? currentPolicy : activePolicy();
   }
 
-  /** Returns the currently authoritative active policy, if any. */
   public @Nullable NamespaceSecurityPolicyDTO activePolicy() {
-    if (authoritativePolicy != null) {
-      return authoritativePolicy;
-    }
-    if (currentPolicy != null && currentPolicy.getActivationState() == SecurityActivationState.ACTIVE) {
-      return currentPolicy;
-    }
-    return null;
+    return authoritativePolicy != null ? authoritativePolicy : currentPolicy;
   }
 
   public @Nullable SecurityMode requestedMode() {
@@ -64,12 +51,12 @@ public record ObservedPolicySnapshot(
 
   public @Nullable Long requestedPolicyVersion() {
     NamespaceSecurityPolicyDTO requestedPolicy = requestedPolicy();
-    return requestedPolicy != null ? requestedPolicy.getDesiredPolicyVersion() : null;
+    return requestedPolicy != null ? requestedPolicy.getPolicyVersion() : null;
   }
 
   public @Nullable String requestedPolicyHash() {
     NamespaceSecurityPolicyDTO requestedPolicy = requestedPolicy();
-    return requestedPolicy != null ? requestedPolicy.getDesiredPolicyHash() : null;
+    return requestedPolicy != null ? requestedPolicy.getPolicyHash() : null;
   }
 
   public @Nullable SecurityMode activeMode() {
@@ -79,20 +66,12 @@ public record ObservedPolicySnapshot(
 
   public @Nullable Long activePolicyVersion() {
     NamespaceSecurityPolicyDTO activePolicy = activePolicy();
-    if (activePolicy != null && activePolicy.getActivePolicyVersion() != null) {
-      return activePolicy.getActivePolicyVersion();
-    }
-    return null;
+    return activePolicy != null ? activePolicy.getPolicyVersion() : null;
   }
 
   public @Nullable String activePolicyHash() {
     NamespaceSecurityPolicyDTO activePolicy = activePolicy();
-    if (activePolicy != null
-        && activePolicy.getActivePolicyHash() != null
-        && !activePolicy.getActivePolicyHash().isBlank()) {
-      return activePolicy.getActivePolicyHash();
-    }
-    return null;
+    return activePolicy != null ? activePolicy.getPolicyHash() : null;
   }
 
   public @Nullable NamespaceSecurityPolicyDTO effectivePolicy() {
@@ -105,18 +84,12 @@ public record ObservedPolicySnapshot(
   }
 
   public @Nullable Long effectivePolicyVersion() {
-    if (authoritativePolicy != null && authoritativePolicy.getActivePolicyVersion() != null) {
-      return authoritativePolicy.getActivePolicyVersion();
-    }
-    return currentPolicy != null ? currentPolicy.getDesiredPolicyVersion() : null;
+    NamespaceSecurityPolicyDTO effectivePolicy = effectivePolicy();
+    return effectivePolicy != null ? effectivePolicy.getPolicyVersion() : null;
   }
 
   public @Nullable String effectivePolicyHash() {
-    if (authoritativePolicy != null
-        && authoritativePolicy.getActivePolicyHash() != null
-        && !authoritativePolicy.getActivePolicyHash().isBlank()) {
-      return authoritativePolicy.getActivePolicyHash();
-    }
-    return currentPolicy != null ? currentPolicy.getDesiredPolicyHash() : null;
+    NamespaceSecurityPolicyDTO effectivePolicy = effectivePolicy();
+    return effectivePolicy != null ? effectivePolicy.getPolicyHash() : null;
   }
 }
