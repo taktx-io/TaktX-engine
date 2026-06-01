@@ -134,7 +134,7 @@ class ReplayProtectionProcessorTest {
   }
 
   @Test
-  void authGateDisabled_bypassesReplayProtectionEvenWhenModeIsStrict() throws Exception {
+  void authGateDisabled_presentedJwtStillUsesReplayProtectionWhenStrict() throws Exception {
     TestHarness harness = createHarness(ReplayProtectionMode.STRICT, 600_000L, false);
     UUID processInstanceId = UUID.randomUUID();
     String jwt = harness.buildJwt("audit-no-auth-gate");
@@ -142,7 +142,7 @@ class ReplayProtectionProcessorTest {
     harness.pipe(processInstanceId, jwt);
     harness.pipe(processInstanceId, jwt);
 
-    assertThat(harness.outputQueueSize()).isEqualTo(2);
+    assertThat(harness.outputQueueSize()).isEqualTo(1);
   }
 
   // ── SEC-007 tests ──────────────────────────────────────────────────────────

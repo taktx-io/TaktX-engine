@@ -10,11 +10,14 @@ package io.taktx.engine.security;
 import io.taktx.Topics;
 import io.taktx.dto.AbortTriggerDTO;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
+import io.taktx.dto.CorrelationMessageEventTriggerDTO;
+import io.taktx.dto.DefinitionMessageEventTriggerDTO;
 import io.taktx.dto.EventSignalTriggerDTO;
 import io.taktx.dto.ExternalTaskResponseTriggerDTO;
 import io.taktx.dto.KeyRole;
 import io.taktx.dto.MessageScheduleDTO;
 import io.taktx.dto.SetVariableTriggerDTO;
+import io.taktx.dto.SignalDTO;
 import io.taktx.dto.StartCommandDTO;
 import io.taktx.dto.StartFlowElementTriggerDTO;
 import io.taktx.dto.TopicMetaDTO;
@@ -29,6 +32,8 @@ public class MessageSecurityPolicyRegistry {
 
   private static final String PROCESS_INSTANCE_TOPIC =
       Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName();
+  private static final String MESSAGE_EVENT_TOPIC = Topics.MESSAGE_EVENT_TOPIC.getTopicName();
+  private static final String SIGNAL_TOPIC = Topics.SIGNAL_TOPIC.getTopicName();
   private static final String SCHEDULE_COMMANDS_TOPIC = Topics.SCHEDULE_COMMANDS.getTopicName();
   private static final String TOPIC_META_REQUESTED_TOPIC =
       Topics.TOPIC_META_REQUESTED_TOPIC.getTopicName();
@@ -60,6 +65,15 @@ public class MessageSecurityPolicyRegistry {
               new PolicyKey(PROCESS_INSTANCE_TOPIC, StartFlowElementTriggerDTO.class),
               signedProcessInstancePolicy(StartFlowElementTriggerDTO.class, KeyRole.ENGINE)),
           Map.entry(
+              new PolicyKey(MESSAGE_EVENT_TOPIC, DefinitionMessageEventTriggerDTO.class),
+              clientIngressPolicy(MESSAGE_EVENT_TOPIC, DefinitionMessageEventTriggerDTO.class)),
+          Map.entry(
+              new PolicyKey(MESSAGE_EVENT_TOPIC, CorrelationMessageEventTriggerDTO.class),
+              clientIngressPolicy(MESSAGE_EVENT_TOPIC, CorrelationMessageEventTriggerDTO.class)),
+          Map.entry(
+              new PolicyKey(SIGNAL_TOPIC, SignalDTO.class),
+              clientIngressPolicy(SIGNAL_TOPIC, SignalDTO.class)),
+          Map.entry(
               new PolicyKey(SCHEDULE_COMMANDS_TOPIC, MessageScheduleDTO.class),
               MessageSecurityPolicy.builder(SCHEDULE_COMMANDS_TOPIC, MessageScheduleDTO.class)
                   .allowedRoles(Set.of(KeyRole.ENGINE))
@@ -88,11 +102,8 @@ public class MessageSecurityPolicyRegistry {
   private static MessageSecurityPolicy entryCommandPolicy(Class<?> messageClass) {
     return MessageSecurityPolicy.builder(PROCESS_INSTANCE_TOPIC, messageClass)
         .allowedRoles(Set.of(KeyRole.CLIENT))
-        .authorizationScope(MessageSecurityPolicy.AuthorizationScope.COMMANDS)
         .requireSignature(true)
         .requireReplay(true)
-        .requireJwt(true)
-        .allowEngineSignatureAsJwtEquivalent(true)
         .build();
   }
 
@@ -105,17 +116,17 @@ public class MessageSecurityPolicyRegistry {
   }
 
   private static MessageSecurityPolicy taskCompletionPolicy(Class<?> messageClass) {
-    MessageSecurityPolicy.AuthorizationScope authorizationScope =
-        ExternalTaskResponseTriggerDTO.class.equals(messageClass)
-            ? MessageSecurityPolicy.AuthorizationScope.EXTERNAL_TASKS
-            : MessageSecurityPolicy.AuthorizationScope.USER_TASKS;
     return MessageSecurityPolicy.builder(PROCESS_INSTANCE_TOPIC, messageClass)
         .allowedRoles(Set.of(KeyRole.CLIENT))
-        .authorizationScope(authorizationScope)
         .requireSignature(true)
         .requireReplay(true)
-        .requireJwt(true)
-        .allowSignatureAsJwtEquivalent(true)
+        .build();
+  }
+
+  private static MessageSecurityPolicy clientIngressPolicy(String topicName, Class<?> messageClass) {
+    return MessageSecurityPolicy.builder(topicName, messageClass)
+        .allowedRoles(Set.of(KeyRole.CLIENT))
+        .requireSignature(true)
         .build();
   }
 

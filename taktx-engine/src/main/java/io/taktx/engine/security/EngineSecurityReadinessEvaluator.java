@@ -31,7 +31,9 @@ public class EngineSecurityReadinessEvaluator {
 
   static final String TRUST_ANCHOR_MISSING = SecurityPostureIssueCodes.TRUST_ANCHOR_MISSING;
   static final String ENGINE_SIGNING_UNAVAILABLE = "ENGINE_SIGNING_UNAVAILABLE";
-  static final String ENGINE_ANCHORED_TRUST_UNAVAILABLE = "ENGINE_ANCHORED_TRUST_UNAVAILABLE";
+  static final String STABLE_SIGNING_SOURCE_REQUIRED = "ENGINE_STABLE_SIGNING_SOURCE_REQUIRED";
+  static final String ENGINE_KEY_REGISTRATION_SIGNATURE_MISSING =
+      "ENGINE_KEY_REGISTRATION_SIGNATURE_MISSING";
   static final long STATUS_TTL_MS = 30_000L;
   private static final Set<ParticipantCapability> ENGINE_CAPABILITIES =
       Set.of(ParticipantCapability.ENFORCER, ParticipantCapability.SECURITY_OBSERVER);
@@ -71,6 +73,15 @@ public class EngineSecurityReadinessEvaluator {
       observedPolicyHash = policy.getPolicyHash();
 
       if (policy.getMode() == SecurityMode.ANCHORED) {
+        if (!hasStableSigningSourceConfigured()) {
+          effectiveState = ParticipantEffectiveState.MISMATCH;
+          readyForDataPlane = false;
+          mismatchReasons.add(
+              mismatchReason(
+                  STABLE_SIGNING_SOURCE_REQUIRED,
+                  "Namespace requires anchored trust but the engine is not configured with a stable signing identity source (env/file)"));
+        }
+
         if (!hasPlatformTrustAnchorConfigured()) {
           effectiveState = ParticipantEffectiveState.MISMATCH;
           readyForDataPlane = false;
@@ -89,13 +100,13 @@ public class EngineSecurityReadinessEvaluator {
                   "Namespace requires anchored posture but the engine signing identity is not yet available and published"));
         }
 
-        if (!anchoredModeSupported) {
+        if (!hasEngineKeyRegistrationSignatureConfigured()) {
           effectiveState = ParticipantEffectiveState.MISMATCH;
           readyForDataPlane = false;
           mismatchReasons.add(
               mismatchReason(
-                  ENGINE_ANCHORED_TRUST_UNAVAILABLE,
-                  "Namespace requires anchored trust but the engine is not currently configured with stable signing material, a platform public key, and an engine key registration signature"));
+                  ENGINE_KEY_REGISTRATION_SIGNATURE_MISSING,
+                  "Namespace requires anchored trust but no engine key registration signature is configured"));
         }
       }
     }

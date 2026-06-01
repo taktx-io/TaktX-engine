@@ -15,23 +15,11 @@ public record MessageSecurityPolicy(
     String topicName,
     Class<?> messageClass,
     Set<KeyRole> allowedRoles,
-    AuthorizationScope authorizationScope,
     boolean requireSignature,
-    boolean requireReplay,
-    boolean requireJwt,
-    boolean allowSignatureAsJwtEquivalent,
-    boolean allowEngineSignatureAsJwtEquivalent) {
+    boolean requireReplay) {
 
   public MessageSecurityPolicy {
     allowedRoles = allowedRoles == null ? Set.of() : Set.copyOf(allowedRoles);
-    authorizationScope = authorizationScope == null ? AuthorizationScope.NONE : authorizationScope;
-  }
-
-  public enum AuthorizationScope {
-    NONE,
-    COMMANDS,
-    EXTERNAL_TASKS,
-    USER_TASKS
   }
 
   /**
@@ -62,12 +50,8 @@ public record MessageSecurityPolicy(
     private final String topicName;
     private final Class<?> messageClass;
     private Set<KeyRole> allowedRoles = Set.of();
-    private AuthorizationScope authorizationScope = AuthorizationScope.NONE;
     private boolean requireSignature;
     private boolean requireReplay;
-    private boolean requireJwt;
-    private boolean allowSignatureAsJwtEquivalent;
-    private boolean allowEngineSignatureAsJwtEquivalent;
 
     private Builder(String topicName, Class<?> messageClass) {
       this.topicName = topicName;
@@ -76,11 +60,6 @@ public record MessageSecurityPolicy(
 
     public Builder allowedRoles(Set<KeyRole> allowedRoles) {
       this.allowedRoles = allowedRoles;
-      return this;
-    }
-
-    public Builder authorizationScope(AuthorizationScope authorizationScope) {
-      this.authorizationScope = authorizationScope;
       return this;
     }
 
@@ -94,33 +73,9 @@ public record MessageSecurityPolicy(
       return this;
     }
 
-    public Builder requireJwt(boolean requireJwt) {
-      this.requireJwt = requireJwt;
-      return this;
-    }
-
-    public Builder allowSignatureAsJwtEquivalent(boolean allowSignatureAsJwtEquivalent) {
-      this.allowSignatureAsJwtEquivalent = allowSignatureAsJwtEquivalent;
-      return this;
-    }
-
-    public Builder allowEngineSignatureAsJwtEquivalent(
-        boolean allowEngineSignatureAsJwtEquivalent) {
-      this.allowEngineSignatureAsJwtEquivalent = allowEngineSignatureAsJwtEquivalent;
-      return this;
-    }
-
     public MessageSecurityPolicy build() {
       return new MessageSecurityPolicy(
-          topicName,
-          messageClass,
-          allowedRoles,
-          authorizationScope,
-          requireSignature,
-          requireReplay,
-          requireJwt,
-          allowSignatureAsJwtEquivalent,
-          allowEngineSignatureAsJwtEquivalent);
+          topicName, messageClass, allowedRoles, requireSignature, requireReplay);
     }
   }
 }

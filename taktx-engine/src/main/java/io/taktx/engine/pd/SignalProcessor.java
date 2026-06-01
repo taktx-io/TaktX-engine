@@ -13,6 +13,7 @@ import static io.taktx.dto.Constants.MAX_LONG;
 import io.taktx.dto.CancelDefinitionSignalSubscriptionDTO;
 import io.taktx.dto.CancelInstanceSignalSubscriptionDTO;
 import io.taktx.dto.Constants;
+import io.taktx.dto.DlqReasonCode;
 import io.taktx.dto.EventSignalTriggerDTO;
 import io.taktx.dto.NewDefinitionSignalSubscriptionDTO;
 import io.taktx.dto.NewInstanceSignalSubscriptionDTO;
@@ -26,7 +27,9 @@ import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.dlq.DlqHeaders;
 import io.taktx.engine.generic.SignalDefinitionSubscriptionKeyDTO;
 import io.taktx.engine.generic.SignalInstanceSubscriptionKeyDTO;
+import io.taktx.engine.security.EngineAuthorizationService;
 import io.taktx.engine.security.ProtectedDataPlaneParticipationGuard;
+import io.taktx.security.AuthorizationTokenException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -46,7 +49,7 @@ import org.apache.kafka.streams.state.KeyValueIterator;
 import org.apache.kafka.streams.state.KeyValueStore;
 
 @Slf4j
-public class SignalProcessor implements Processor<String, SignalDTO, Object, Object> {
+public class SignalProcessor implements Processor<String, SignalIngressEnvelope, Object, Object> {
 
   private static final String DLQ_REASON_HINT_HEADER = DlqHeaders.REASON_HINT;
   private static final String DLQ_REASON_TEXT_HEADER = DlqHeaders.REASON_TEXT;
@@ -55,6 +58,7 @@ public class SignalProcessor implements Processor<String, SignalDTO, Object, Obj
   private final TaktConfiguration taktConfiguration;
   private final Clock clock;
   private final ProtectedDataPlaneParticipationGuard protectedDataPlaneParticipationGuard;
+  private final EngineAuthorizationService engineAuthorizationService;
   private KeyValueStore<SignalInstanceSubscriptionKeyDTO, String> instanceSignalSubscriptionStore;
   private KeyValueStore<SignalDefinitionSubscriptionKeyDTO, String>
       definitionSignalSubscriptionStore;
@@ -71,16 +75,25 @@ public class SignalProcessor implements Processor<String, SignalDTO, Object, Obj
           });
 
   public SignalProcessor(TaktConfiguration taktConfiguration, Clock clock) {
-    this(taktConfiguration, clock, null);
+    this(taktConfiguration, clock, null, null);
   }
 
   public SignalProcessor(
       TaktConfiguration taktConfiguration,
       Clock clock,
       ProtectedDataPlaneParticipationGuard protectedDataPlaneParticipationGuard) {
+    this(taktConfiguration, clock, protectedDataPlaneParticipationGuard, null);
+  }
+
+  public SignalProcessor(
+      TaktConfiguration taktConfiguration,
+      Clock clock,
+      ProtectedDataPlaneParticipationGuard protectedDataPlaneParticipationGuard,
+      EngineAuthorizationService engineAuthorizationService) {
     this.taktConfiguration = taktConfiguration;
     this.clock = clock;
     this.protectedDataPlaneParticipationGuard = protectedDataPlaneParticipationGuard;
+    this.engineAuthorizationService = engineAuthorizationService;
   }
 
   @Override
@@ -95,8 +108,10 @@ public class SignalProcessor implements Processor<String, SignalDTO, Object, Obj
   }
 
   @Override
-  public void process(Record<String, SignalDTO> singalRecord) {
-    if (singalRecord.value() == null) {
+  public void process(Record<String, SignalIngressEnvelope> singalRecord) {
+    SignalIngressEnvelope ingressEnvelope = singalRecord.value();
+    SignalDTO value = ingressEnvelope != null ? ingressEnvelope.value() : null;
+    if (value == null) {
       emitSignalDlq(
           singalRecord,
           "PAYLOAD_DESERIALIZATION_ERROR",
@@ -105,7 +120,7 @@ public class SignalProcessor implements Processor<String, SignalDTO, Object, Obj
       return;
     }
     try {
-      if (singalRecord.value()
+      if (value
           instanceof NewInstanceSignalSubscriptionDTO newInstanceSignalSubscriptionDTO) {
         SignalInstanceSubscriptionKeyDTO key =
             new SignalInstanceSubscriptionKeyDTO(
@@ -113,7 +128,7 @@ public class SignalProcessor implements Processor<String, SignalDTO, Object, Obj
                 newInstanceSignalSubscriptionDTO.getProcessInstanceId(),
                 newInstanceSignalSubscriptionDTO.getElementInstanceIdPath());
         instanceSignalSubscriptionStore.put(key, newInstanceSignalSubscriptionDTO.getSignalName());
-      } else if (singalRecord.value()
+      } else if (value
           instanceof CancelInstanceSignalSubscriptionDTO cancelInstanceSignalSubscriptionDTO) {
         SignalInstanceSubscriptionKeyDTO key =
             new SignalInstanceSubscriptionKeyDTO(
@@ -121,7 +136,7 @@ public class SignalProcessor implements Processor<String, SignalDTO, Object, Obj
                 cancelInstanceSignalSubscriptionDTO.getProcessInstanceId(),
                 cancelInstanceSignalSubscriptionDTO.getElementInstanceIdPath());
         instanceSignalSubscriptionStore.delete(key);
-      } else if (singalRecord.value()
+      } else if (value
           instanceof NewDefinitionSignalSubscriptionDTO newDefinitionSignalSubscriptionDTO) {
         SignalDefinitionSubscriptionKeyDTO key =
             new SignalDefinitionSubscriptionKeyDTO(
@@ -130,7 +145,7 @@ public class SignalProcessor implements Processor<String, SignalDTO, Object, Obj
                 newDefinitionSignalSubscriptionDTO.getElementId());
         definitionSignalSubscriptionStore.put(
             key, newDefinitionSignalSubscriptionDTO.getSignalName());
-      } else if (singalRecord.value()
+      } else if (value
           instanceof CancelDefinitionSignalSubscriptionDTO cancelDefinitionSignalSubscriptionDTO) {
         SignalDefinitionSubscriptionKeyDTO key =
             new SignalDefinitionSubscriptionKeyDTO(
@@ -140,7 +155,10 @@ public class SignalProcessor implements Processor<String, SignalDTO, Object, Obj
         definitionSignalSubscriptionStore.delete(key);
       }
       // Handle this one last as all others are subclasses
-      else if (singalRecord.value() instanceof SignalDTO signalDTO) {
+      else if (value instanceof SignalDTO signalDTO) {
+        if (shouldRejectUnauthorizedExternalIngress(singalRecord, ingressEnvelope)) {
+          return;
+        }
         if (shouldBlockProtectedDataPlane(singalRecord)) {
           return;
         }
@@ -152,7 +170,7 @@ public class SignalProcessor implements Processor<String, SignalDTO, Object, Obj
     }
   }
 
-  private boolean shouldBlockProtectedDataPlane(Record<String, SignalDTO> signalRecord) {
+  private boolean shouldBlockProtectedDataPlane(Record<String, SignalIngressEnvelope> signalRecord) {
     if (protectedDataPlaneParticipationGuard == null) {
       return false;
     }
@@ -166,7 +184,7 @@ public class SignalProcessor implements Processor<String, SignalDTO, Object, Obj
   }
 
   private void emitSignalDlq(
-      Record<String, SignalDTO> signalRecord,
+      Record<String, SignalIngressEnvelope> signalRecord,
       String reasonHint,
       String reasonText,
       String captureStage) {
@@ -175,8 +193,64 @@ public class SignalProcessor implements Processor<String, SignalDTO, Object, Obj
     headersMap.put(DLQ_REASON_TEXT_HEADER, reasonText.getBytes(StandardCharsets.UTF_8));
     headersMap.put(DLQ_CAPTURE_STAGE_HEADER, captureStage.getBytes(StandardCharsets.UTF_8));
     SignalDlqEntryDTO dlqEntry =
-        new SignalDlqEntryDTO(signalRecord.key(), signalRecord.value(), headersMap);
+        new SignalDlqEntryDTO(
+            signalRecord.key(), signalRecord.value() == null ? null : signalRecord.value().value(), headersMap);
     context.forward(new Record<>(null, dlqEntry, clock.millis()));
+  }
+
+  private boolean shouldRejectUnauthorizedExternalIngress(
+      Record<String, SignalIngressEnvelope> signalRecord, SignalIngressEnvelope ingressEnvelope) {
+    if (engineAuthorizationService == null
+        || !EngineAuthorizationService.isExternallyPublishedSignal(
+            ingressEnvelope == null ? null : ingressEnvelope.value())) {
+      return false;
+    }
+    try {
+      engineAuthorizationService.authorizeSignalIngress(signalRecord.headers(), ingressEnvelope);
+      return false;
+    } catch (AuthorizationTokenException e) {
+      emitSignalDlq(
+          signalRecord,
+          reasonHintForAuthorizationFailure(ingressEnvelope, e),
+          e.getMessage(),
+          "AUTHORIZATION");
+      return true;
+    }
+  }
+
+  private static String reasonHintForAuthorizationFailure(
+      SignalIngressEnvelope ingressEnvelope, AuthorizationTokenException exception) {
+    String signatureError = ingressEnvelope != null ? ingressEnvelope.signatureError() : null;
+    if (signatureError != null && !signatureError.isBlank()) {
+      String normalized = signatureError.toLowerCase();
+      if (normalized.contains("unknown or revoked")) {
+        return DlqReasonCode.SIGNATURE_KEY_UNKNOWN.name();
+      }
+      if (normalized.contains("revoked")) {
+        return DlqReasonCode.SIGNATURE_KEY_REVOKED.name();
+      }
+      if (normalized.contains("unknown")) {
+        return DlqReasonCode.SIGNATURE_KEY_UNKNOWN.name();
+      }
+      if (normalized.contains("malformed")) {
+        return DlqReasonCode.SIGNATURE_MALFORMED.name();
+      }
+      return DlqReasonCode.SIGNATURE_VERIFICATION_FAILED.name();
+    }
+    String message = exception.getMessage() != null ? exception.getMessage().toLowerCase() : "";
+    if (message.contains("requires tx-sig") || message.startsWith("missing required tx-sig header")) {
+      return DlqReasonCode.SIGNATURE_MISSING.name();
+    }
+    if (message.startsWith("unknown ed25519 keyid")) {
+      return DlqReasonCode.SIGNATURE_KEY_UNKNOWN.name();
+    }
+    if (message.startsWith("revoked ed25519 keyid")) {
+      return DlqReasonCode.SIGNATURE_KEY_REVOKED.name();
+    }
+    if (message.contains("platform public key") || message.contains("anchored trust")) {
+      return "TRUST_ANCHOR_MISSING";
+    }
+    return DlqReasonCode.AUTHORIZATION_FAILED.name();
   }
 
   private static Map<String, byte[]> headersToMap(org.apache.kafka.common.header.Headers headers) {

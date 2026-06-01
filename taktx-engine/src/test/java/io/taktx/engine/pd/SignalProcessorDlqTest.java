@@ -28,9 +28,11 @@ import io.taktx.engine.config.NamespaceSecurityPolicyStore;
 import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.generic.SignalDefinitionSubscriptionKeyDTO;
 import io.taktx.engine.generic.SignalInstanceSubscriptionKeyDTO;
+import io.taktx.engine.security.EngineAuthorizationService;
 import io.taktx.engine.security.EngineSecurityReadinessEvaluator;
 import io.taktx.engine.security.MessageSigningService;
 import io.taktx.engine.security.ProtectedDataPlaneParticipationGuard;
+import io.taktx.security.AuthorizationTokenException;
 import io.taktx.security.NamespaceSecurityPolicySupport;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
@@ -54,6 +56,7 @@ class SignalProcessorDlqTest {
   private SignalProcessor processor;
   private KeyValueStore<SignalInstanceSubscriptionKeyDTO, String> instanceStore;
   private KeyValueStore<SignalDefinitionSubscriptionKeyDTO, String> definitionStore;
+  private EngineAuthorizationService engineAuthorizationService;
 
   @BeforeEach
   void setUp() {
@@ -62,6 +65,8 @@ class SignalProcessorDlqTest {
     when(taktConfiguration.getNamespace()).thenReturn("bank.payments");
     when(taktConfiguration.getHost()).thenReturn("engine-host");
     when(taktConfiguration.getPort()).thenReturn(8080);
+    when(taktConfiguration.getSigningIdentitySourceType()).thenReturn("file");
+    when(taktConfiguration.getEngineKeyRegistrationSignature()).thenReturn("engine-registration-signature");
     when(taktConfiguration.getPlatformPublicKey()).thenReturn(null);
     when(taktConfiguration.getPrefixed(Stores.INSTANCE_SIGNAL_SUBSCRIPTIONS.getStorename()))
         .thenReturn(Stores.INSTANCE_SIGNAL_SUBSCRIPTIONS.getStorename());
@@ -69,6 +74,7 @@ class SignalProcessorDlqTest {
         .thenReturn(Stores.DEFINITION_SIGNAL_SUBSCRIPTIONS.getStorename());
 
     clock = Clock.fixed(Instant.ofEpochMilli(1_700_000_000_000L), ZoneOffset.UTC);
+    engineAuthorizationService = mock(EngineAuthorizationService.class);
     processor = new SignalProcessor(taktConfiguration, clock);
 
     context = mock(ProcessorContext.class);
@@ -87,7 +93,8 @@ class SignalProcessorDlqTest {
   void process_nullValue_emitsDlqWithDecodeErrorHint() {
     RecordHeaders headers = new RecordHeaders();
     headers.add("X-Origin", "client".getBytes(StandardCharsets.UTF_8));
-    Record<String, SignalDTO> signalRecord = new Record<>("signal-key", null, 100L, headers);
+    Record<String, SignalIngressEnvelope> signalRecord =
+        new Record<>("signal-key", new SignalIngressEnvelope(null, null, false, null, null), 100L, headers);
 
     processor.process(signalRecord);
 
@@ -119,7 +126,8 @@ class SignalProcessorDlqTest {
 
     SignalDTO signal = new SignalDTO("order-placed");
     RecordHeaders headers = new RecordHeaders();
-    Record<String, SignalDTO> signalRecord = new Record<>("order-placed", signal, 200L, headers);
+    Record<String, SignalIngressEnvelope> signalRecord =
+        new Record<>("order-placed", envelope(signal), 200L, headers);
 
     processor.process(signalRecord);
 
@@ -142,7 +150,7 @@ class SignalProcessorDlqTest {
     SignalProcessor guardedProcessor = guardedProcessorWithPolicy(anchoredPolicy(42L));
     SignalDTO signal = new SignalDTO("order-placed");
 
-    guardedProcessor.process(new Record<>("order-placed", signal, 300L, new RecordHeaders()));
+    guardedProcessor.process(new Record<>("order-placed", envelope(signal), 300L, new RecordHeaders()));
 
     ArgumentCaptor<Record> captor = ArgumentCaptor.forClass(Record.class);
     verify(context).forward(captor.capture());
@@ -160,10 +168,31 @@ class SignalProcessorDlqTest {
         new NewDefinitionSignalSubscriptionDTO(
             new ProcessDefinitionKey("proc", 1), "start", "order-placed");
 
-    guardedProcessor.process(new Record<>("order-placed", subscription, 300L, new RecordHeaders()));
+    guardedProcessor.process(new Record<>("order-placed", envelope(subscription), 300L, new RecordHeaders()));
 
     verify(definitionStore).put(any(), eq("order-placed"));
     verify(context, never()).forward(any());
+  }
+
+  @Test
+  void process_signalAuthorizationFailure_emitsDlqWithSignatureHint() {
+    SignalProcessor guardedProcessor = new SignalProcessor(taktConfiguration, clock, null, engineAuthorizationService);
+    guardedProcessor.init(context);
+    SignalDTO signal = new SignalDTO("order-placed");
+    SignalIngressEnvelope ingressEnvelope = envelope(signal);
+    RecordHeaders headers = new RecordHeaders();
+    when(engineAuthorizationService.authorizeSignalIngress(headers, ingressEnvelope))
+        .thenThrow(new AuthorizationTokenException("Missing required tx-sig header — required role: CLIENT"));
+
+    guardedProcessor.process(new Record<>("order-placed", ingressEnvelope, 320L, headers));
+
+    ArgumentCaptor<Record> captor = ArgumentCaptor.forClass(Record.class);
+    verify(context).forward(captor.capture());
+    SignalDlqEntryDTO dlqEntry = (SignalDlqEntryDTO) captor.getValue().value();
+    assertThat(new String(dlqEntry.getHeaders().get(REASON_HINT), StandardCharsets.UTF_8))
+        .isEqualTo("SIGNATURE_MISSING");
+    assertThat(new String(dlqEntry.getHeaders().get(CAPTURE_STAGE), StandardCharsets.UTF_8))
+        .isEqualTo("AUTHORIZATION");
   }
 
   private SignalProcessor guardedProcessorWithPolicy(NamespaceSecurityPolicyDTO authoritativePolicy) {
@@ -181,9 +210,14 @@ class SignalProcessorDlqTest {
                 policyStore,
                 new EngineSecurityReadinessEvaluator(
                     taktConfiguration, policyStore, messageSigningService, clock),
-                clock));
+                clock),
+            null);
     guardedProcessor.init(context);
     return guardedProcessor;
+  }
+
+  private static SignalIngressEnvelope envelope(SignalDTO value) {
+    return new SignalIngressEnvelope(new byte[0], value, false, null, null);
   }
 
   private static NamespaceSecurityPolicyDTO anchoredPolicy(long version) {

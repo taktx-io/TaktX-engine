@@ -87,8 +87,7 @@ public class ReplayProtectionProcessor
       return;
     }
 
-    if (!engineAuthorizationService.isEntryAuthorizationGateActive()
-        || !engineAuthorizationService.isReplayProtectionActive()) {
+    if (!engineAuthorizationService.isReplayProtectionActive()) {
       forwardEnvelope(inputRecord, envelope);
       return;
     }

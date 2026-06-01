@@ -346,29 +346,23 @@ class EngineAuthorizationServiceMatrixTest {
 
   // ══════════════════════════════════════════════════════════════════════════
   // Row 10 — C-ERA=T, C-SE=F → auth active, signing off
-  //          non-entry, no sig → throw (signed non-entry required)
+  //          non-entry, no sig → accept (legacy auth gate does not apply)
   // ══════════════════════════════════════════════════════════════════════════
   @Test
-  void row10_authOnly_nonEntry_noSig_throws() {
+  void row10_authOnly_nonEntry_noSig_returnsNull() {
     EngineAuthorizationService svc = service(true, false);
-    assertThatThrownBy(() -> svc.authorize(noHeaders(), clientNonEntryEnvelope(false, null)))
-        .isInstanceOf(AuthorizationTokenException.class)
-        .hasMessageContaining("tx-sig");
+    assertThat(svc.authorize(noHeaders(), clientNonEntryEnvelope(false, null))).isNull();
   }
 
   // ══════════════════════════════════════════════════════════════════════════
   // Row 11 — C-ERA=T, C-SE=F → auth active, signing off
-  //          non-entry, sig present → verify Ed25519
+  //          non-entry, sig present → ignore signature (no security gate active)
   // ══════════════════════════════════════════════════════════════════════════
   @Test
-  void row11_authOnly_nonEntry_engineSigPresent_verifiesEd25519() {
+  void row11_authOnly_nonEntry_engineSigPresent_returnsNull() {
     EngineAuthorizationService svc = service(true, false);
-    CommandTrustMetadataDTO result =
-        svc.authorize(sigHeaders(ENGINE_KEY_ID), clientNonEntryEnvelope(true, ENGINE_KEY_ID));
-    assertThat(result.getAuthMethod()).isEqualTo(CommandAuthMethod.ED25519);
-    assertThat(result.getVerificationResult())
-        .isEqualTo(CommandTrustVerificationResult.ENGINE_SIGNED);
-    assertThat(result.getTrusted()).isTrue();
+    assertThat(svc.authorize(sigHeaders(ENGINE_KEY_ID), clientNonEntryEnvelope(true, ENGINE_KEY_ID)))
+        .isNull();
   }
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -457,54 +451,45 @@ class EngineAuthorizationServiceMatrixTest {
   }
 
   // ══════════════════════════════════════════════════════════════════════════
-  // Row 18 — C-ERA=T, C-SE=F → auth active
-  //          entry, no headers → throw (neither JWT nor ENGINE-sig present)
+  // Row 18 — C-ERA=T, C-SE=F → auth-only config no longer enforces entry posture
+  //          entry, no headers → null
   // ══════════════════════════════════════════════════════════════════════════
   @Test
-  void row18_authActive_entry_noHeaders_throws_missingAuthOrSig() {
+  void row18_authOnly_entry_noHeaders_returnsNull() {
     EngineAuthorizationService svc = service(true, false);
-    assertThatThrownBy(
-            () ->
-                svc.authorize(
-                    noHeaders(),
-                    new ProcessInstanceTriggerEnvelope(new byte[0], startCommand(), false, null)))
-        .isInstanceOf(AuthorizationTokenException.class)
-        .hasMessageContaining("Entry command");
+    assertThat(
+            svc.authorize(
+                noHeaders(),
+                new ProcessInstanceTriggerEnvelope(new byte[0], startCommand(), false, null)))
+        .isNull();
   }
 
   // ══════════════════════════════════════════════════════════════════════════
-  // Row 19 — C-ERA=T → auth active
-  //          entry, ENGINE-role Ed25519 sig → verify and accept
+  // Row 19 — C-ERA=T, C-SE=F → auth-only config ignores presented signatures
+  //          entry, ENGINE-role Ed25519 sig → null
   // ══════════════════════════════════════════════════════════════════════════
   @Test
-  void row19_authActive_entry_engineSig_accepted() {
+  void row19_authOnly_entry_engineSigIgnored_returnsNull() {
     EngineAuthorizationService svc = service(true, false);
-    CommandTrustMetadataDTO result =
-        svc.authorize(
-            sigHeaders(ENGINE_KEY_ID),
-            new ProcessInstanceTriggerEnvelope(new byte[0], startCommand(), true, ENGINE_KEY_ID));
-    assertThat(result.getVerificationResult())
-        .isEqualTo(CommandTrustVerificationResult.ENGINE_SIGNED);
-    assertThat(result.getAuthMethod()).isEqualTo(CommandAuthMethod.ED25519);
-    assertThat(result.getTrusted()).isTrue();
-    assertThat(result.getSignerKeyId()).isEqualTo(ENGINE_KEY_ID);
+    assertThat(
+            svc.authorize(
+                sigHeaders(ENGINE_KEY_ID),
+                new ProcessInstanceTriggerEnvelope(new byte[0], startCommand(), true, ENGINE_KEY_ID)))
+        .isNull();
   }
 
   // ══════════════════════════════════════════════════════════════════════════
-  // Row 20 — C-ERA=T, C-SE=F → auth active, signing off
-  //          entry, CLIENT-role sig, no JWT → throw (CLIENT satisfies signing but not auth gate)
+  // Row 20 — C-ERA=T, C-SE=F → auth-only config ignores presented signatures
+  //          entry, CLIENT-role sig, no JWT → null
   // ══════════════════════════════════════════════════════════════════════════
   @Test
-  void row20_authActive_entry_workerSig_rejected_jwtRequired() {
+  void row20_authOnly_entry_workerSigIgnored_returnsNull() {
     EngineAuthorizationService svc = service(true, false);
-    assertThatThrownBy(
-            () ->
-                svc.authorize(
-                    sigHeaders(WORKER_KEY_ID),
-                    new ProcessInstanceTriggerEnvelope(
-                        new byte[0], startCommand(), true, WORKER_KEY_ID)))
-        .isInstanceOf(AuthorizationTokenException.class)
-        .hasMessageContaining("JWT");
+    assertThat(
+            svc.authorize(
+                sigHeaders(WORKER_KEY_ID),
+                new ProcessInstanceTriggerEnvelope(new byte[0], startCommand(), true, WORKER_KEY_ID)))
+        .isNull();
   }
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -523,15 +508,13 @@ class EngineAuthorizationServiceMatrixTest {
   }
 
   @Test
-  void abort_authActive_entry_noHeaders_throws() {
+  void abort_authOnly_entry_noHeaders_returnsNull() {
     EngineAuthorizationService svc = service(true, false);
-    assertThatThrownBy(
-            () ->
-                svc.authorize(
-                    noHeaders(),
-                    new ProcessInstanceTriggerEnvelope(new byte[0], abortTrigger(), false, null)))
-        .isInstanceOf(AuthorizationTokenException.class)
-        .hasMessageContaining("Entry command");
+    assertThat(
+            svc.authorize(
+                noHeaders(),
+                new ProcessInstanceTriggerEnvelope(new byte[0], abortTrigger(), false, null)))
+        .isNull();
   }
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -554,7 +537,7 @@ class EngineAuthorizationServiceMatrixTest {
   }
 
   // Row 22 — C-ERA=T, C-SE=T
-  //          entry, JWT + CLIENT sig → BOTH verified; JWT_AND_ED25519 with signer info
+  //          entry, JWT + CLIENT sig → signature enforced; JWT retained as optional context
   @Test
   void row22_bothActive_entry_jwtAndClientSig_bothVerified_combinedMetadata() {
     EngineAuthorizationService svc = service(true, true);
@@ -574,7 +557,7 @@ class EngineAuthorizationServiceMatrixTest {
   }
 
   // Row 23 — C-ERA=T, C-SE=T
-  //          entry, ENGINE sig only → ENGINE_SIGNED (satisfies BOTH auth and signing gates)
+  //          entry, ENGINE sig only → ENGINE_SIGNED
   @Test
   void row23_bothActive_entry_engineSigOnly_satisfiesBothGates_engineSigned() {
     EngineAuthorizationService svc = service(true, true);
@@ -590,18 +573,19 @@ class EngineAuthorizationServiceMatrixTest {
   }
 
   // Row 24 — C-ERA=T, C-SE=T
-  //          entry, CLIENT sig only → throw (satisfies signing gate but not auth gate; JWT missing)
+  //          entry, CLIENT sig only → accepted (JWT optional)
   @Test
-  void row24_bothActive_entry_clientSigOnly_throws_jwtRequired() {
+  void row24_bothActive_entry_clientSigOnly_returnsSignatureMetadata() {
     EngineAuthorizationService svc = service(true, true);
-    assertThatThrownBy(
-            () ->
-                svc.authorize(
-                    sigHeaders(WORKER_KEY_ID),
-                    new ProcessInstanceTriggerEnvelope(
-                        new byte[0], startCommand(), true, WORKER_KEY_ID)))
-        .isInstanceOf(AuthorizationTokenException.class)
-        .hasMessageContaining("JWT");
+    CommandTrustMetadataDTO result =
+        svc.authorize(
+            sigHeaders(WORKER_KEY_ID),
+            new ProcessInstanceTriggerEnvelope(new byte[0], startCommand(), true, WORKER_KEY_ID));
+    assertThat(result.getAuthMethod()).isEqualTo(CommandAuthMethod.ED25519);
+    assertThat(result.getVerificationResult())
+        .isEqualTo(CommandTrustVerificationResult.SIGNATURE_VERIFIED);
+    assertThat(result.getTrusted()).isTrue();
+    assertThat(result.getSignerKeyId()).isEqualTo(WORKER_KEY_ID);
   }
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -670,38 +654,31 @@ class EngineAuthorizationServiceMatrixTest {
 
   // ══════════════════════════════════════════════════════════════════════════
   // Row S2 — C-ERA=T, C-SE=F → SetVariableTriggerDTO is an entry command
-  //          auth gate active, no JWT / no ENGINE-sig → throw
+  //          auth-only config, no headers → null
   // ══════════════════════════════════════════════════════════════════════════
   @Test
-  void rowS2_setVariable_authActive_noHeaders_throws() {
+  void rowS2_setVariable_authOnly_noHeaders_returnsNull() {
     EngineAuthorizationService svc = service(true, false);
-    assertThatThrownBy(
-            () ->
-                svc.authorize(
-                    noHeaders(),
-                    new ProcessInstanceTriggerEnvelope(
-                        new byte[0], setVariableTrigger(), false, null)))
-        .isInstanceOf(AuthorizationTokenException.class)
-        .hasMessageContaining("Entry command");
+    assertThat(
+            svc.authorize(
+                noHeaders(),
+                new ProcessInstanceTriggerEnvelope(new byte[0], setVariableTrigger(), false, null)))
+        .isNull();
   }
 
   // ══════════════════════════════════════════════════════════════════════════
   // Row S3 — C-ERA=T, C-SE=F → SetVariableTriggerDTO is an entry command
-  //          auth gate active, ENGINE-role sig → ENGINE_SIGNED (satisfies auth gate)
+  //          auth-only config ignores presented signature
   // ══════════════════════════════════════════════════════════════════════════
   @Test
-  void rowS3_setVariable_authActive_engineSig_accepted() {
+  void rowS3_setVariable_authOnly_engineSigIgnored_returnsNull() {
     EngineAuthorizationService svc = service(true, false);
-    CommandTrustMetadataDTO result =
-        svc.authorize(
-            sigHeaders(ENGINE_KEY_ID),
-            new ProcessInstanceTriggerEnvelope(
-                new byte[0], setVariableTrigger(), true, ENGINE_KEY_ID));
-    assertThat(result.getVerificationResult())
-        .isEqualTo(CommandTrustVerificationResult.ENGINE_SIGNED);
-    assertThat(result.getAuthMethod()).isEqualTo(CommandAuthMethod.ED25519);
-    assertThat(result.getTrusted()).isTrue();
-    assertThat(result.getSignerKeyId()).isEqualTo(ENGINE_KEY_ID);
+    assertThat(
+            svc.authorize(
+                sigHeaders(ENGINE_KEY_ID),
+                new ProcessInstanceTriggerEnvelope(
+                    new byte[0], setVariableTrigger(), true, ENGINE_KEY_ID)))
+        .isNull();
   }
 
   // ══════════════════════════════════════════════════════════════════════════
