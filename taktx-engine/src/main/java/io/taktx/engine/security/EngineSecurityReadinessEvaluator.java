@@ -13,39 +13,28 @@ import io.taktx.dto.ParticipantEffectiveState;
 import io.taktx.dto.ParticipantKind;
 import io.taktx.dto.ParticipantStatusDTO;
 import io.taktx.dto.PolicyMismatchReasonDTO;
-import io.taktx.dto.SecurityActivationState;
 import io.taktx.dto.SecurityMode;
 import io.taktx.dto.SecurityPostureIssueCodes;
 import io.taktx.dto.StatusVerificationLevel;
 import io.taktx.engine.config.NamespaceSecurityPolicyStore;
 import io.taktx.engine.config.TaktConfiguration;
-import io.taktx.security.ParticipantStatusSupport;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.time.Clock;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
-import lombok.extern.slf4j.Slf4j;
 
-/**
- * Evaluates the engine's current readiness against the explicit namespace security policy contract.
- *
- * <p>This first slice intentionally limits itself to local deployment/runtime facts that the engine
- * can assert without activation coordination.
- */
+/** Evaluates the engine's current readiness against the authoritative namespace security policy. */
 @ApplicationScoped
-@Slf4j
 public class EngineSecurityReadinessEvaluator {
 
-  static final String POLICY_NOT_ACTIVE = "POLICY_NOT_ACTIVE";
   static final String TRUST_ANCHOR_MISSING = SecurityPostureIssueCodes.TRUST_ANCHOR_MISSING;
   static final String ENGINE_SIGNING_UNAVAILABLE = "ENGINE_SIGNING_UNAVAILABLE";
   static final String ENGINE_ANCHORED_TRUST_UNAVAILABLE = "ENGINE_ANCHORED_TRUST_UNAVAILABLE";
-  static final String POLICY_MARKED_MISCONFIGURED = "POLICY_MARKED_MISCONFIGURED";
   static final long STATUS_TTL_MS = 30_000L;
-  private static final java.util.Set<ParticipantCapability> ENGINE_CAPABILITIES =
-      java.util.Set.of(ParticipantCapability.ENFORCER, ParticipantCapability.SECURITY_OBSERVER);
+  private static final Set<ParticipantCapability> ENGINE_CAPABILITIES =
+      Set.of(ParticipantCapability.ENFORCER, ParticipantCapability.SECURITY_OBSERVER);
 
   private final TaktConfiguration configuration;
   private final NamespaceSecurityPolicyStore namespaceSecurityPolicyStore;
@@ -66,11 +55,9 @@ public class EngineSecurityReadinessEvaluator {
   }
 
   public ParticipantStatusDTO evaluateCurrentStatus() {
-    NamespaceSecurityPolicyDTO currentPolicy = namespaceSecurityPolicyStore.get();
     NamespaceSecurityPolicyDTO policy = namespaceSecurityPolicyStore.getAuthoritativePolicy();
     messageSigningService.ensureSigningPreparationIfNeeded();
-    boolean securedModeSupported = supportsSecuredModeNow(policy);
-    boolean anchoredModeSupported = supportsAnchoredModeNow(policy, securedModeSupported);
+    boolean anchoredModeSupported = supportsAnchoredModeNow();
     long nowMs = clock.millis();
     List<PolicyMismatchReasonDTO> mismatchReasons = new ArrayList<>();
 
@@ -80,58 +67,37 @@ public class EngineSecurityReadinessEvaluator {
     String observedPolicyHash = null;
 
     if (policy != null) {
-      observedPolicyVersion = policy.getActivePolicyVersion();
-      observedPolicyHash = policy.getActivePolicyHash();
+      observedPolicyVersion = policy.getPolicyVersion();
+      observedPolicyHash = policy.getPolicyHash();
 
-      if (policy.getMode() == SecurityMode.MISCONFIGURED_SECURITY) {
-        effectiveState = ParticipantEffectiveState.MISMATCH;
-        readyForDataPlane = false;
-        mismatchReasons.add(
-            mismatchReason(
-                POLICY_MARKED_MISCONFIGURED,
-                "Policy mode is MISCONFIGURED_SECURITY and therefore cannot be treated as ready"));
-      }
+      if (policy.getMode() == SecurityMode.ANCHORED) {
+        if (!hasPlatformTrustAnchorConfigured()) {
+          effectiveState = ParticipantEffectiveState.MISMATCH;
+          readyForDataPlane = false;
+          mismatchReasons.add(
+              mismatchReason(
+                  TRUST_ANCHOR_MISSING,
+                  "Namespace requires anchored trust but no platform public key is configured"));
+        }
 
-      if (policy.isTrustAnchorRequired() && !hasPlatformTrustAnchorConfigured()) {
-        effectiveState = ParticipantEffectiveState.MISMATCH;
-        readyForDataPlane = false;
-        mismatchReasons.add(
-            mismatchReason(
-                TRUST_ANCHOR_MISSING,
-                "Namespace requires anchored trust but no platform public key is configured"));
-      }
+        if (messageSigningService.getKeyId() == null || !messageSigningService.isPublicKeyPublished()) {
+          effectiveState = ParticipantEffectiveState.MISMATCH;
+          readyForDataPlane = false;
+          mismatchReasons.add(
+              mismatchReason(
+                  ENGINE_SIGNING_UNAVAILABLE,
+                  "Namespace requires anchored posture but the engine signing identity is not yet available and published"));
+        }
 
-      if (policy.isTrustAnchorRequired()
-          && hasPlatformTrustAnchorConfigured()
-          && !anchoredModeSupported) {
-        effectiveState = ParticipantEffectiveState.MISMATCH;
-        readyForDataPlane = false;
-        mismatchReasons.add(
-            mismatchReason(
-                ENGINE_ANCHORED_TRUST_UNAVAILABLE,
-                "Namespace requires anchored trust but the engine is not currently configured"
-                    + " with anchored-capable signing material (publishable signing identity,"
-                    + " stable file/env signing source, and engine key registration signature)"));
+        if (!anchoredModeSupported) {
+          effectiveState = ParticipantEffectiveState.MISMATCH;
+          readyForDataPlane = false;
+          mismatchReasons.add(
+              mismatchReason(
+                  ENGINE_ANCHORED_TRUST_UNAVAILABLE,
+                  "Namespace requires anchored trust but the engine is not currently configured with stable signing material, a platform public key, and an engine key registration signature"));
+        }
       }
-
-      if (policy.getRequiredSigning() != null
-          && policy.getRequiredSigning().isEngineOutbound()
-          && (messageSigningService.getKeyId() == null
-              || !messageSigningService.isPublicKeyPublished())) {
-        effectiveState = ParticipantEffectiveState.MISMATCH;
-        readyForDataPlane = false;
-        mismatchReasons.add(
-            mismatchReason(
-                ENGINE_SIGNING_UNAVAILABLE,
-                "Namespace requires engine outbound signing but the engine signing key is not yet available and published"));
-      }
-    } else if (currentPolicy != null
-        && currentPolicy.getActivationState() != SecurityActivationState.ACTIVE) {
-      log.debug(
-          "Namespace security policy pending activation; continuing to evaluate readiness under current authoritative behavior: activationState={} desiredPolicyVersion={} desiredPolicyHash={}",
-          currentPolicy.getActivationState(),
-          currentPolicy.getDesiredPolicyVersion(),
-          currentPolicy.getDesiredPolicyHash());
     }
 
     return ParticipantStatusDTO.builder()
@@ -140,7 +106,7 @@ public class EngineSecurityReadinessEvaluator {
         .participantKind(ParticipantKind.ENGINE)
         .componentType("engine")
         .capabilities(ENGINE_CAPABILITIES)
-        .supportedModes(runtimeSupportedModes(securedModeSupported, anchoredModeSupported))
+        .supportedModes(runtimeSupportedModes(anchoredModeSupported))
         .namespace(configuration.getNamespace())
         .startedAt(startedAtMs)
         .lastSeenAt(nowMs)
@@ -170,32 +136,16 @@ public class EngineSecurityReadinessEvaluator {
         + ProcessHandle.current().pid();
   }
 
-  private Set<SecurityMode> runtimeSupportedModes(
-      boolean securedModeSupported, boolean anchoredModeSupported) {
+  private Set<SecurityMode> runtimeSupportedModes(boolean anchoredModeSupported) {
     EnumSet<SecurityMode> supportedModes = EnumSet.of(SecurityMode.OPEN);
-    if (securedModeSupported) {
-      supportedModes.add(SecurityMode.SECURED);
-      if (anchoredModeSupported) {
-        supportedModes.add(SecurityMode.ANCHORED_SECURED);
-      }
+    if (anchoredModeSupported) {
+      supportedModes.add(SecurityMode.ANCHORED);
     }
     return Set.copyOf(supportedModes);
   }
 
-  private boolean supportsSecuredModeNow(NamespaceSecurityPolicyDTO authoritativePolicy) {
-    if (messageSigningService.hasLegacyProtectedRuntimeRequirement()) {
-      return messageSigningService.hasPublishableSigningIdentity();
-    }
-    if (isProtectedPosture(authoritativePolicy)) {
-      return !requiresEngineOutboundSigning(authoritativePolicy)
-          || messageSigningService.hasPublishableSigningIdentity();
-    }
-    return hasStableSigningSourceConfigured() && messageSigningService.hasPublishableSigningIdentity();
-  }
-
-  private boolean supportsAnchoredModeNow(
-      NamespaceSecurityPolicyDTO authoritativePolicy, boolean securedModeSupported) {
-    if (!securedModeSupported || !messageSigningService.hasPublishableSigningIdentity()) {
+  private boolean supportsAnchoredModeNow() {
+    if (!messageSigningService.hasPublishableSigningIdentity()) {
       return false;
     }
     return hasStableSigningSourceConfigured()
@@ -219,20 +169,6 @@ public class EngineSecurityReadinessEvaluator {
 
   private boolean hasEngineKeyRegistrationSignatureConfigured() {
     return !isBlank(configuration.getEngineKeyRegistrationSignature());
-  }
-
-  private static boolean requiresEngineOutboundSigning(NamespaceSecurityPolicyDTO policy) {
-    return policy != null
-        && policy.getRequiredSigning() != null
-        && policy.getRequiredSigning().isEngineOutbound();
-  }
-
-  private static boolean isProtectedPosture(NamespaceSecurityPolicyDTO policy) {
-    if (policy == null || policy.getMode() == null) {
-      return false;
-    }
-    return policy.getMode() == SecurityMode.SECURED
-        || policy.getMode() == SecurityMode.ANCHORED_SECURED;
   }
 
   private static boolean isBlank(String value) {

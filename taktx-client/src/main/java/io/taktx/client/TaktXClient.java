@@ -405,10 +405,10 @@ public class TaktXClient {
       NamespaceSecurityPolicyDTO authoritativePolicy =
           namespaceSecurityPolicyStore.getAuthoritativePolicy();
       log.info(
-          "✅ NamespaceSecurityPolicyTopicStore ready — currentActivationState={} activePolicyVersion={} activePolicyHash={}",
-          currentPolicy != null ? currentPolicy.getActivationState() : null,
-          authoritativePolicy != null ? authoritativePolicy.getActivePolicyVersion() : null,
-          authoritativePolicy != null ? authoritativePolicy.getActivePolicyHash() : null);
+          "✅ NamespaceSecurityPolicyTopicStore ready — currentMode={} policyVersion={} policyHash={}",
+          currentPolicy != null ? currentPolicy.getMode() : null,
+          authoritativePolicy != null ? authoritativePolicy.getPolicyVersion() : null,
+          authoritativePolicy != null ? authoritativePolicy.getPolicyHash() : null);
     } catch (Exception e) {
       namespaceSecurityPolicyStore = null;
       if (namespaceSecurityPolicyTopicStore != null) {
@@ -684,10 +684,10 @@ public class TaktXClient {
       producer.send(buildNamespaceSecurityPolicyRecord(topic, validated, signingIdentity));
       producer.flush();
       log.info(
-          "✅ Namespace security policy published to security policy topic: topic={} desiredPolicyVersion={} activationState={} signerKeyId={}",
+          "✅ Namespace security policy published to security policy topic: topic={} policyVersion={} mode={} signerKeyId={}",
           topic,
-          validated.getDesiredPolicyVersion(),
-          validated.getActivationState(),
+          validated.getPolicyVersion(),
+          validated.getMode(),
           signingIdentity.getKeyId());
     } catch (SecurityControlPlaneMutationException e) {
       throw e;
@@ -695,7 +695,7 @@ public class TaktXClient {
       throw mutationUnavailable(
           "publish authoritative namespace security policy",
           e,
-          Map.of("topic", topic, "desiredPolicyVersion", String.valueOf(validated.getDesiredPolicyVersion())));
+          Map.of("topic", topic, "policyVersion", String.valueOf(validated.getPolicyVersion())));
     }
   }
 
@@ -1193,22 +1193,9 @@ public class TaktXClient {
         NamespaceSecurityPolicyDTO.builder()
             .mode(
                 anySecurityRequirement
-                    ? io.taktx.dto.SecurityMode.SECURED
+                    ? io.taktx.dto.SecurityMode.ANCHORED
                     : io.taktx.dto.SecurityMode.OPEN)
-            .activationState(activationState)
-            .desiredPolicyVersion(desiredPolicyVersion)
-            .requiredSigning(
-                io.taktx.dto.RequiredSigningDTO.builder()
-                    .engineOutbound(configuration.isSigningEnabled())
-                    .build())
-            .requiredAuthorization(
-                io.taktx.dto.RequiredAuthorizationDTO.builder()
-                    .startCommands(configuration.isEngineRequiresAuthorization())
-                    .externalTaskCompletion(
-                        configuration.isEngineRequiresExternalTaskAuthorization())
-                    .userTaskCompletion(configuration.isEngineRequiresUserTaskAuthorization())
-                    .build())
-            .trustAnchorRequired(false)
+            .policyVersion(desiredPolicyVersion)
             .build();
 
     return validateNamespaceSecurityPolicy(policy);
@@ -1504,10 +1491,7 @@ public class TaktXClient {
       return true;
     }
     NamespaceSecurityPolicyDTO policy = authoritativeNamespaceSecurityPolicy();
-    return policy != null
-        && policy.getRequiredSigning() != null
-        && (policy.getRequiredSigning().isClientCommands()
-            || policy.getRequiredSigning().isWorkerResponses());
+    return isProtectedPosture(policy);
   }
 
   private boolean hasLegacySecurityToggle() {
@@ -1521,30 +1505,21 @@ public class TaktXClient {
     if (RuntimeConfigurationHolder.isEngineRequiresAuthorization()) {
       return true;
     }
-    NamespaceSecurityPolicyDTO policy = authoritativeNamespaceSecurityPolicy();
-    return policy != null
-        && policy.getRequiredAuthorization() != null
-        && policy.getRequiredAuthorization().isStartCommands();
+    return isProtectedPosture(authoritativeNamespaceSecurityPolicy());
   }
 
   private boolean isExternalTaskAuthorizationRequired() {
     if (RuntimeConfigurationHolder.isEngineRequiresExternalTaskAuthorization()) {
       return true;
     }
-    NamespaceSecurityPolicyDTO policy = authoritativeNamespaceSecurityPolicy();
-    return policy != null
-        && policy.getRequiredAuthorization() != null
-        && policy.getRequiredAuthorization().isExternalTaskCompletion();
+    return isProtectedPosture(authoritativeNamespaceSecurityPolicy());
   }
 
   private boolean isUserTaskAuthorizationRequired() {
     if (RuntimeConfigurationHolder.isEngineRequiresUserTaskAuthorization()) {
       return true;
     }
-    NamespaceSecurityPolicyDTO policy = authoritativeNamespaceSecurityPolicy();
-    return policy != null
-        && policy.getRequiredAuthorization() != null
-        && policy.getRequiredAuthorization().isUserTaskCompletion();
+    return isProtectedPosture(authoritativeNamespaceSecurityPolicy());
   }
 
   private @Nullable NamespaceSecurityPolicyDTO authoritativeNamespaceSecurityPolicy() {
@@ -1561,8 +1536,7 @@ public class TaktXClient {
     if (policy == null || policy.getMode() == null) {
       return false;
     }
-    return policy.getMode() == SecurityMode.SECURED
-        || policy.getMode() == SecurityMode.ANCHORED_SECURED;
+    return policy.getMode() == SecurityMode.ANCHORED;
   }
 
   private @Nullable String resolvePlatformPublicKey() {

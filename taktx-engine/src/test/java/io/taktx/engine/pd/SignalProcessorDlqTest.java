@@ -150,9 +150,9 @@ class SignalProcessorDlqTest {
     verify(context).forward(captor.capture());
     SignalDlqEntryDTO dlqEntry = (SignalDlqEntryDTO) captor.getValue().value();
     assertThat(new String(dlqEntry.getHeaders().get(REASON_HINT), StandardCharsets.UTF_8))
-        .isEqualTo(ProtectedDataPlaneParticipationGuard.POLICY_NOT_ACTIVE_HINT);
+        .isEqualTo("TRUST_ANCHOR_MISSING");
     assertThat(new String(dlqEntry.getHeaders().get(REASON_TEXT), StandardCharsets.UTF_8))
-        .contains("becomes ACTIVE");
+        .contains("platform public key");
   }
 
   @Test
@@ -193,10 +193,8 @@ class SignalProcessorDlqTest {
   private static NamespaceSecurityPolicyDTO requestedPolicy(long version) {
     return NamespaceSecurityPolicySupport.requireValid(
         NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.SECURED)
-            .activationState(SecurityActivationState.REQUESTED)
-            .desiredPolicyVersion(version)
-            .requiredSigning(RequiredSigningDTO.builder().engineOutbound(true).build())
+            .mode(SecurityMode.ANCHORED)
+            .policyVersion(version)
             .build());
   }
 }

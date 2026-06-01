@@ -34,11 +34,8 @@ public class NamespaceSecurityPolicyStore {
     NamespaceSecurityPolicyDTO validated =
         dto == null ? null : NamespaceSecurityPolicySupport.requireValid(dto);
     currentPolicy.set(validated);
-    if (validated != null
-        && validated.getActivationState() == io.taktx.dto.SecurityActivationState.ACTIVE) {
-      activePolicy.set(validated);
-      validationStartedAtMs.set(null);
-    }
+    activePolicy.set(validated);
+    validationStartedAtMs.set(null);
   }
 
   /** Clears the latest explicit policy so callers fall back to legacy/default semantics. */
@@ -61,11 +58,7 @@ public class NamespaceSecurityPolicyStore {
    */
   public synchronized NamespaceSecurityPolicyDTO getAuthoritativePolicy() {
     NamespaceSecurityPolicyDTO current = currentPolicy.get();
-    if (current != null
-        && current.getActivationState() == io.taktx.dto.SecurityActivationState.ACTIVE) {
-      return current;
-    }
-    return activePolicy.get();
+    return current != null ? current : activePolicy.get();
   }
 
   /** Replaces only the current policy view used by runtime readers. */

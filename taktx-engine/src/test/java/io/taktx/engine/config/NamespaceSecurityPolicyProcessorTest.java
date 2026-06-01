@@ -10,9 +10,6 @@ package io.taktx.engine.config;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import io.taktx.dto.NamespaceSecurityPolicyDTO;
-import io.taktx.dto.RequiredAuthorizationDTO;
-import io.taktx.dto.RequiredSigningDTO;
-import io.taktx.dto.SecurityActivationState;
 import io.taktx.dto.SecurityEventDTO;
 import io.taktx.dto.SecurityEventType;
 import io.taktx.dto.SecurityMode;
@@ -86,14 +83,7 @@ class NamespaceSecurityPolicyProcessorTest {
   @Test
   void policyKey_updatesStoreWithValidatedNormalizedPolicy() {
     NamespaceSecurityPolicyDTO input =
-        NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.SECURED)
-            .activationState(SecurityActivationState.ACTIVE)
-            .desiredPolicyVersion(42L)
-            .requiredSigning(RequiredSigningDTO.builder().engineOutbound(true).build())
-            .requiredAuthorization(RequiredAuthorizationDTO.builder().startCommands(true).build())
-            .activePolicyVersion(42L)
-            .build();
+        NamespaceSecurityPolicyDTO.builder().mode(SecurityMode.ANCHORED).policyVersion(42L).build();
 
     policyTopic.pipeInput(
         NamespaceSecurityPolicyProcessor.POLICY_KEY,
@@ -101,19 +91,15 @@ class NamespaceSecurityPolicyProcessorTest {
 
     NamespaceSecurityPolicyDTO stored = namespaceSecurityPolicyStore.get();
     assertThat(stored).isNotNull();
-    assertThat(stored.getDesiredPolicyVersion()).isEqualTo(42L);
-    assertThat(stored.getDesiredPolicyHash()).isNotBlank();
-    assertThat(stored.getActivePolicyHash()).isEqualTo(stored.getDesiredPolicyHash());
+    assertThat(stored.getPolicyVersion()).isEqualTo(42L);
+    assertThat(stored.getPolicyHash()).isNotBlank();
+    assertThat(namespaceSecurityPolicyStore.getAuthoritativePolicy()).isEqualTo(stored);
   }
 
   @Test
   void tombstone_clearsStore() {
     NamespaceSecurityPolicyDTO input =
-        NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.OPEN)
-            .activationState(SecurityActivationState.REQUESTED)
-            .desiredPolicyVersion(1L)
-            .build();
+        NamespaceSecurityPolicyDTO.builder().mode(SecurityMode.OPEN).policyVersion(1L).build();
 
     policyTopic.pipeInput(
         NamespaceSecurityPolicyProcessor.POLICY_KEY,
@@ -123,16 +109,13 @@ class NamespaceSecurityPolicyProcessorTest {
     policyTopic.pipeInput(NamespaceSecurityPolicyProcessor.POLICY_KEY, null);
 
     assertThat(namespaceSecurityPolicyStore.get()).isNull();
+    assertThat(namespaceSecurityPolicyStore.getAuthoritativePolicy()).isNull();
   }
 
   @Test
   void invalidPolicy_doesNotReplacePreviousStoreValue() {
     NamespaceSecurityPolicyDTO valid =
-        NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.SECURED)
-            .activationState(SecurityActivationState.REQUESTED)
-            .desiredPolicyVersion(7L)
-            .build();
+        NamespaceSecurityPolicyDTO.builder().mode(SecurityMode.OPEN).policyVersion(7L).build();
     policyTopic.pipeInput(
         NamespaceSecurityPolicyProcessor.POLICY_KEY,
         NamespaceSecurityPolicyProtoMapper.toProto(valid).toByteArray());
@@ -140,11 +123,7 @@ class NamespaceSecurityPolicyProcessorTest {
     NamespaceSecurityPolicyDTO previous = namespaceSecurityPolicyStore.get();
 
     NamespaceSecurityPolicyDTO invalid =
-        NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.ANCHORED_SECURED)
-            .activationState(SecurityActivationState.REQUESTED)
-            .desiredPolicyVersion(8L)
-            .build();
+        NamespaceSecurityPolicyDTO.builder().mode(SecurityMode.ANCHORED).policyVersion(0L).build();
 
     policyTopic.pipeInput(
         NamespaceSecurityPolicyProcessor.POLICY_KEY,
@@ -154,130 +133,7 @@ class NamespaceSecurityPolicyProcessorTest {
   }
 
   @Test
-  void invalidActivePolicyWithoutActiveIdentity_doesNotReplacePreviousStoreValue() {
-    NamespaceSecurityPolicyDTO valid =
-        NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.SECURED)
-            .activationState(SecurityActivationState.REQUESTED)
-            .desiredPolicyVersion(7L)
-            .build();
-    policyTopic.pipeInput(
-        NamespaceSecurityPolicyProcessor.POLICY_KEY,
-        NamespaceSecurityPolicyProtoMapper.toProto(valid).toByteArray());
-
-    NamespaceSecurityPolicyDTO previous = namespaceSecurityPolicyStore.get();
-
-    NamespaceSecurityPolicyDTO invalid =
-        NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.SECURED)
-            .activationState(SecurityActivationState.ACTIVE)
-            .desiredPolicyVersion(8L)
-            .desiredPolicyHash("requested-hash")
-            .build();
-
-    policyTopic.pipeInput(
-        NamespaceSecurityPolicyProcessor.POLICY_KEY,
-        NamespaceSecurityPolicyProtoMapper.toProto(invalid).toByteArray());
-
-    assertThat(namespaceSecurityPolicyStore.get()).isEqualTo(previous);
-  }
-
-  @Test
-  void conflictingDesiredAndLegacyAliases_failClosed() {
-    NamespaceSecurityPolicyDTO valid =
-        NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.SECURED)
-            .activationState(SecurityActivationState.REQUESTED)
-            .desiredPolicyVersion(7L)
-            .build();
-    policyTopic.pipeInput(
-        NamespaceSecurityPolicyProcessor.POLICY_KEY,
-        NamespaceSecurityPolicyProtoMapper.toProto(valid).toByteArray());
-
-    NamespaceSecurityPolicyDTO previous = namespaceSecurityPolicyStore.get();
-
-    NamespaceSecurityPolicyDTO invalid =
-        NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.SECURED)
-            .activationState(SecurityActivationState.REQUESTED)
-            .desiredPolicyVersion(9L)
-            .policyVersion(10L)
-            .build();
-
-    policyTopic.pipeInput(
-        NamespaceSecurityPolicyProcessor.POLICY_KEY,
-        NamespaceSecurityPolicyProtoMapper.toProto(invalid).toByteArray());
-
-    assertThat(namespaceSecurityPolicyStore.get()).isEqualTo(previous);
-  }
-
-  @Test
-  void nonPolicyKey_isIgnored() {
-    policyTopic.pipeInput("other", new byte[] {1, 2, 3});
-
-    assertThat(namespaceSecurityPolicyStore.get()).isNull();
-  }
-
-  @Test
-  void requestedPolicy_entersValidatingWhenLifecycleSupportIsEnabled() {
-    NamespaceSecurityPolicyStore lifecycleStore = new NamespaceSecurityPolicyStore();
-    ParticipantStatusStore participantStatusStore = new ParticipantStatusStore();
-    TaktConfiguration configuration = Mockito.mock(TaktConfiguration.class);
-    Mockito.when(configuration.getSecurityPolicyActivationTimeoutMs()).thenReturn(30_000L);
-    Mockito.when(configuration.getTenantId()).thenReturn("tenant");
-    Mockito.when(configuration.getNamespace()).thenReturn("bank.payments");
-    Mockito.when(configuration.getHost()).thenReturn("engine-host");
-    Mockito.when(configuration.getPort()).thenReturn(8080);
-    NamespaceSecurityPolicyActivationService activationService =
-        new NamespaceSecurityPolicyActivationService(
-            configuration,
-            lifecycleStore,
-            participantStatusStore,
-            Mockito.mock(SecurityEventPublisher.class),
-            Clock.fixed(Instant.ofEpochMilli(1_716_450_000_000L), ZoneOffset.UTC));
-
-    StreamsBuilder builder = new StreamsBuilder();
-    builder.addGlobalStore(
-        Stores.keyValueStoreBuilder(
-                Stores.inMemoryKeyValueStore(STORE_NAME), Serdes.String(), Serdes.ByteArray())
-            .withLoggingDisabled(),
-        POLICY_TOPIC,
-        Consumed.with(Serdes.String(), Serdes.ByteArray()),
-        () -> new NamespaceSecurityPolicyProcessor(lifecycleStore, activationService));
-
-    Properties config = new Properties();
-    config.put(StreamsConfig.APPLICATION_ID_CONFIG, "namespace-security-policy-lifecycle-test");
-    config.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "dummy:9092");
-    config.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
-    config.put(
-        StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.ByteArray().getClass().getName());
-
-    try (TopologyTestDriver lifecycleDriver = new TopologyTestDriver(builder.build(), config)) {
-      TestInputTopic<String, byte[]> lifecycleTopic =
-          lifecycleDriver.createInputTopic(
-              POLICY_TOPIC, Serdes.String().serializer(), Serdes.ByteArray().serializer());
-      NamespaceSecurityPolicyDTO input =
-          NamespaceSecurityPolicyDTO.builder()
-              .mode(SecurityMode.SECURED)
-              .activationState(SecurityActivationState.REQUESTED)
-              .desiredPolicyVersion(52L)
-              .requiredSigning(RequiredSigningDTO.builder().engineOutbound(true).build())
-              .requiredAuthorization(RequiredAuthorizationDTO.builder().startCommands(true).build())
-              .build();
-
-      lifecycleTopic.pipeInput(
-          NamespaceSecurityPolicyProcessor.POLICY_KEY,
-          NamespaceSecurityPolicyProtoMapper.toProto(input).toByteArray());
-
-      assertThat(lifecycleStore.get()).isNotNull();
-      assertThat(lifecycleStore.get().getActivationState())
-          .isEqualTo(SecurityActivationState.VALIDATING);
-      assertThat(lifecycleStore.getValidationStartedAtMs()).isEqualTo(1_716_450_000_000L);
-    }
-  }
-
-  @Test
-  void invalidPolicy_emitsControlPlaneMutationRejectedEventWhenLifecycleSupportIsEnabled() {
+  void invalidPolicy_emitsControlPlaneMutationRejectedEventWhenActivationServicePresent() {
     NamespaceSecurityPolicyStore lifecycleStore = new NamespaceSecurityPolicyStore();
     ParticipantStatusStore participantStatusStore = new ParticipantStatusStore();
     TaktConfiguration configuration = Mockito.mock(TaktConfiguration.class);
@@ -316,11 +172,7 @@ class NamespaceSecurityPolicyProcessorTest {
           lifecycleDriver.createInputTopic(
               POLICY_TOPIC, Serdes.String().serializer(), Serdes.ByteArray().serializer());
       NamespaceSecurityPolicyDTO invalid =
-          NamespaceSecurityPolicyDTO.builder()
-              .mode(SecurityMode.ANCHORED_SECURED)
-              .activationState(SecurityActivationState.REQUESTED)
-              .desiredPolicyVersion(52L)
-              .build();
+          NamespaceSecurityPolicyDTO.builder().mode(SecurityMode.ANCHORED).policyVersion(0L).build();
 
       lifecycleTopic.pipeInput(
           NamespaceSecurityPolicyProcessor.POLICY_KEY,
@@ -334,82 +186,6 @@ class NamespaceSecurityPolicyProcessorTest {
       assertThat(captor.getValue().getCode())
           .isEqualTo(NamespaceSecurityPolicyActivationService.INVALID_POLICY_MUTATION_CODE);
       assertThat(captor.getValue().getMetadata()).containsEntry("recordKey", "policy");
-    }
-  }
-
-  @Test
-  void newRequestedPolicyDuringValidation_replacesDesiredIdentityAndRemainsValidating() {
-    NamespaceSecurityPolicyStore lifecycleStore = new NamespaceSecurityPolicyStore();
-    ParticipantStatusStore participantStatusStore = new ParticipantStatusStore();
-    TaktConfiguration configuration = Mockito.mock(TaktConfiguration.class);
-    Mockito.when(configuration.getSecurityPolicyActivationTimeoutMs()).thenReturn(30_000L);
-    Mockito.when(configuration.getTenantId()).thenReturn("tenant");
-    Mockito.when(configuration.getNamespace()).thenReturn("bank.payments");
-    Mockito.when(configuration.getHost()).thenReturn("engine-host");
-    Mockito.when(configuration.getPort()).thenReturn(8080);
-    NamespaceSecurityPolicyActivationService activationService =
-        new NamespaceSecurityPolicyActivationService(
-            configuration,
-            lifecycleStore,
-            participantStatusStore,
-            Mockito.mock(SecurityEventPublisher.class),
-            Clock.fixed(Instant.ofEpochMilli(1_716_450_000_000L), ZoneOffset.UTC));
-
-    StreamsBuilder builder = new StreamsBuilder();
-    builder.addGlobalStore(
-        Stores.keyValueStoreBuilder(
-                Stores.inMemoryKeyValueStore(STORE_NAME), Serdes.String(), Serdes.ByteArray())
-            .withLoggingDisabled(),
-        POLICY_TOPIC,
-        Consumed.with(Serdes.String(), Serdes.ByteArray()),
-        () -> new NamespaceSecurityPolicyProcessor(lifecycleStore, activationService));
-
-    Properties config = new Properties();
-    config.put(StreamsConfig.APPLICATION_ID_CONFIG, "namespace-security-policy-revalidation-test");
-    config.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "dummy:9092");
-    config.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
-    config.put(
-        StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.ByteArray().getClass().getName());
-
-    try (TopologyTestDriver lifecycleDriver = new TopologyTestDriver(builder.build(), config)) {
-      TestInputTopic<String, byte[]> lifecycleTopic =
-          lifecycleDriver.createInputTopic(
-              POLICY_TOPIC, Serdes.String().serializer(), Serdes.ByteArray().serializer());
-      NamespaceSecurityPolicyDTO firstRequested =
-          NamespaceSecurityPolicyDTO.builder()
-              .mode(SecurityMode.SECURED)
-              .activationState(SecurityActivationState.REQUESTED)
-              .desiredPolicyVersion(52L)
-              .requiredSigning(RequiredSigningDTO.builder().engineOutbound(true).build())
-              .requiredAuthorization(RequiredAuthorizationDTO.builder().startCommands(true).build())
-              .build();
-      NamespaceSecurityPolicyDTO replacementRequested =
-          NamespaceSecurityPolicyDTO.builder()
-              .mode(SecurityMode.SECURED)
-              .activationState(SecurityActivationState.REQUESTED)
-              .desiredPolicyVersion(53L)
-              .requiredSigning(RequiredSigningDTO.builder().workerResponses(true).build())
-              .requiredAuthorization(
-                  RequiredAuthorizationDTO.builder().userTaskCompletion(true).build())
-              .build();
-
-      lifecycleTopic.pipeInput(
-          NamespaceSecurityPolicyProcessor.POLICY_KEY,
-          NamespaceSecurityPolicyProtoMapper.toProto(firstRequested).toByteArray());
-      assertThat(lifecycleStore.get()).isNotNull();
-      assertThat(lifecycleStore.get().getActivationState())
-          .isEqualTo(SecurityActivationState.VALIDATING);
-
-      lifecycleTopic.pipeInput(
-          NamespaceSecurityPolicyProcessor.POLICY_KEY,
-          NamespaceSecurityPolicyProtoMapper.toProto(replacementRequested).toByteArray());
-
-      assertThat(lifecycleStore.get()).isNotNull();
-      assertThat(lifecycleStore.get().getActivationState())
-          .isEqualTo(SecurityActivationState.VALIDATING);
-      assertThat(lifecycleStore.get().getDesiredPolicyVersion()).isEqualTo(53L);
-      assertThat(lifecycleStore.get().getRequiredSigning().isWorkerResponses()).isTrue();
-      assertThat(lifecycleStore.get().getRequiredAuthorization().isUserTaskCompletion()).isTrue();
     }
   }
 
@@ -435,12 +211,7 @@ class NamespaceSecurityPolicyProcessorTest {
             Clock.fixed(Instant.ofEpochMilli(1_716_450_000_000L), ZoneOffset.UTC));
 
     lifecycleStore.update(
-        NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.OPEN)
-            .activationState(SecurityActivationState.ACTIVE)
-            .desiredPolicyVersion(7L)
-            .activePolicyVersion(7L)
-            .build());
+        NamespaceSecurityPolicyDTO.builder().mode(SecurityMode.OPEN).policyVersion(7L).build());
 
     StreamsBuilder builder = new StreamsBuilder();
     builder.addGlobalStore(
@@ -466,12 +237,7 @@ class NamespaceSecurityPolicyProcessorTest {
           lifecycleDriver.createInputTopic(
               POLICY_TOPIC, Serdes.String().serializer(), Serdes.ByteArray().serializer());
       NamespaceSecurityPolicyDTO requested =
-          NamespaceSecurityPolicyDTO.builder()
-              .mode(SecurityMode.SECURED)
-              .activationState(SecurityActivationState.REQUESTED)
-              .desiredPolicyVersion(52L)
-              .requiredSigning(RequiredSigningDTO.builder().engineOutbound(true).build())
-              .build();
+          NamespaceSecurityPolicyDTO.builder().mode(SecurityMode.ANCHORED).policyVersion(52L).build();
       byte[] payload = NamespaceSecurityPolicyProtoMapper.toProto(requested).toByteArray();
 
       Mockito.doThrow(
@@ -487,7 +253,7 @@ class NamespaceSecurityPolicyProcessorTest {
               new RecordHeaders(),
               Instant.ofEpochMilli(1_716_450_000_100L)));
 
-      assertThat(lifecycleStore.get().getDesiredPolicyVersion()).isEqualTo(7L);
+      assertThat(lifecycleStore.get().getPolicyVersion()).isEqualTo(7L);
       ArgumentCaptor<SecurityEventDTO> captor = ArgumentCaptor.forClass(SecurityEventDTO.class);
       Mockito.verify(securityEventPublisher).publish(captor.capture());
       assertThat(captor.getValue().getEventType())
@@ -502,12 +268,7 @@ class NamespaceSecurityPolicyProcessorTest {
     EngineAuthorizationService authorizationService =
         Mockito.mock(EngineAuthorizationService.class);
     lifecycleStore.update(
-        NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.OPEN)
-            .activationState(SecurityActivationState.ACTIVE)
-            .desiredPolicyVersion(7L)
-            .activePolicyVersion(7L)
-            .build());
+        NamespaceSecurityPolicyDTO.builder().mode(SecurityMode.OPEN).policyVersion(7L).build());
 
     StreamsBuilder builder = new StreamsBuilder();
     builder.addGlobalStore(

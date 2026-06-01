@@ -10,7 +10,6 @@ package io.taktx.engine.security;
 import io.taktx.dto.NamespaceSecurityPolicyDTO;
 import io.taktx.dto.ParticipantStatusDTO;
 import io.taktx.dto.PolicyMismatchReasonDTO;
-import io.taktx.dto.SecurityActivationState;
 import io.taktx.engine.config.NamespaceSecurityPolicyStore;
 import io.taktx.security.ParticipantStatusSupport;
 import java.time.Clock;
@@ -42,25 +41,18 @@ public class ProtectedDataPlaneParticipationGuard {
   }
 
   public Decision evaluate() {
-    NamespaceSecurityPolicyDTO currentPolicy = namespaceSecurityPolicyStore.get();
     NamespaceSecurityPolicyDTO authoritativePolicy =
         namespaceSecurityPolicyStore.getAuthoritativePolicy();
 
     if (authoritativePolicy == null) {
-      if (currentPolicy != null
-          && currentPolicy.getActivationState() != SecurityActivationState.ACTIVE) {
-        return Decision.blocked(
-            POLICY_NOT_ACTIVE_HINT,
-            "Protected data-plane participation is blocked until the requested namespace security policy becomes ACTIVE");
-      }
       return Decision.permit();
     }
 
     ParticipantStatusDTO status = readinessEvaluator.evaluateCurrentStatus();
     if (ParticipantStatusSupport.allowsProtectedDataPlaneParticipation(
         status,
-        authoritativePolicy.getActivePolicyVersion(),
-        authoritativePolicy.getActivePolicyHash(),
+        authoritativePolicy.getPolicyVersion(),
+        authoritativePolicy.getPolicyHash(),
         clock.millis())) {
       return Decision.permit();
     }

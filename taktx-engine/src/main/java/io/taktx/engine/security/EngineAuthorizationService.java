@@ -24,6 +24,7 @@ import io.taktx.dto.NamespaceSecurityPolicyDTO;
 import io.taktx.dto.ProcessInstanceTriggerDTO;
 import io.taktx.dto.ReplayProtectionMode;
 import io.taktx.dto.ScheduleKeyDTO;
+import io.taktx.dto.SecurityMode;
 import io.taktx.dto.SetVariableTriggerDTO;
 import io.taktx.dto.SigningKeyDTO;
 import io.taktx.dto.StartCommandDTO;
@@ -751,47 +752,22 @@ public class EngineAuthorizationService {
 
   private static boolean isPolicyDrivenSignatureRequired(
       MessageSecurityPolicy policy, NamespaceSecurityPolicyDTO authoritativePolicy) {
-    if (authoritativePolicy == null || authoritativePolicy.getRequiredSigning() == null) {
-      return false;
-    }
-    Class<?> messageClass = policy.messageClass();
-    if (StartCommandDTO.class.equals(messageClass)
-        || AbortTriggerDTO.class.equals(messageClass)
-        || SetVariableTriggerDTO.class.equals(messageClass)) {
-      return authoritativePolicy.getRequiredSigning().isClientCommands();
-    }
-    if (ExternalTaskResponseTriggerDTO.class.equals(messageClass)
-        || UserTaskResponseTriggerDTO.class.equals(messageClass)) {
-      return authoritativePolicy.getRequiredSigning().isWorkerResponses();
-    }
-    if (ContinueFlowElementTriggerDTO.class.equals(messageClass)
-        || EventSignalTriggerDTO.class.equals(messageClass)
-        || StartFlowElementTriggerDTO.class.equals(messageClass)
-        || MessageScheduleDTO.class.equals(messageClass)) {
-      return authoritativePolicy.getRequiredSigning().isEngineOutbound();
-    }
-    return false;
+    return isAnchoredPosture(authoritativePolicy);
   }
 
   private static boolean requiresCommandAuthorization(
       NamespaceSecurityPolicyDTO authoritativePolicy) {
-    return authoritativePolicy != null
-        && authoritativePolicy.getRequiredAuthorization() != null
-        && authoritativePolicy.getRequiredAuthorization().isStartCommands();
+    return isAnchoredPosture(authoritativePolicy);
   }
 
   private static boolean requiresExternalTaskAuthorization(
       NamespaceSecurityPolicyDTO authoritativePolicy) {
-    return authoritativePolicy != null
-        && authoritativePolicy.getRequiredAuthorization() != null
-        && authoritativePolicy.getRequiredAuthorization().isExternalTaskCompletion();
+    return isAnchoredPosture(authoritativePolicy);
   }
 
   private static boolean requiresUserTaskAuthorization(
       NamespaceSecurityPolicyDTO authoritativePolicy) {
-    return authoritativePolicy != null
-        && authoritativePolicy.getRequiredAuthorization() != null
-        && authoritativePolicy.getRequiredAuthorization().isUserTaskCompletion();
+    return isAnchoredPosture(authoritativePolicy);
   }
 
   private static boolean requiresAnyAuthorization(NamespaceSecurityPolicyDTO authoritativePolicy) {
@@ -802,7 +778,7 @@ public class EngineAuthorizationService {
 
   private void assertTrustAnchorRequirementSatisfied(
       NamespaceSecurityPolicyDTO authoritativePolicy) {
-    if (authoritativePolicy == null || !authoritativePolicy.isTrustAnchorRequired()) {
+    if (!isAnchoredPosture(authoritativePolicy)) {
       return;
     }
     if (config.getPlatformPublicKey() == null || config.getPlatformPublicKey().isBlank()) {
@@ -816,6 +792,10 @@ public class EngineAuthorizationService {
       return GlobalConfigurationDTO.builder().build();
     }
     return globalConfigStore.get();
+  }
+
+  private static boolean isAnchoredPosture(NamespaceSecurityPolicyDTO policy) {
+    return policy != null && policy.getMode() == SecurityMode.ANCHORED;
   }
 
   private NamespaceSecurityPolicyDTO authoritativePolicy() {
