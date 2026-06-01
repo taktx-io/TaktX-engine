@@ -19,7 +19,9 @@ import static org.mockito.Mockito.when;
 
 import io.taktx.dto.NamespaceSecurityPolicyDTO;
 import io.taktx.dto.ProcessInstanceTriggerDTO;
+import io.taktx.dto.ProcessDefinitionKey;
 import io.taktx.dto.SecurityMode;
+import io.taktx.dto.StartCommandDTO;
 import io.taktx.dto.UserTaskResponseDlqEntryDTO;
 import io.taktx.dto.UserTaskResponseResultDTO;
 import io.taktx.dto.UserTaskResponseTriggerDTO;
@@ -27,6 +29,7 @@ import io.taktx.dto.UserTaskResponseType;
 import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.config.NamespaceSecurityPolicyStore;
 import io.taktx.engine.config.TaktConfiguration;
+import io.taktx.engine.pi.ProcessInstanceTriggerEnvelope;
 import io.taktx.engine.security.EngineSecurityReadinessEvaluator;
 import io.taktx.engine.security.MessageSigningService;
 import io.taktx.engine.security.ProtectedDataPlaneParticipationGuard;
@@ -72,7 +75,7 @@ class UserTaskResponseProcessorDlqTest {
     UUID processInstanceId = UUID.randomUUID();
     RecordHeaders headers = new RecordHeaders();
     headers.add("X-Token", "tok".getBytes(StandardCharsets.UTF_8));
-    Record<UUID, UserTaskResponseTriggerDTO> userTaskResponseTriggerRecord =
+    Record<UUID, ProcessInstanceTriggerEnvelope> userTaskResponseTriggerRecord =
         new Record<>(processInstanceId, null, 100L, headers);
 
     processor.process(userTaskResponseTriggerRecord);
@@ -97,13 +100,15 @@ class UserTaskResponseProcessorDlqTest {
     UUID processInstanceId = UUID.randomUUID();
     UserTaskResponseResultDTO result =
         new UserTaskResponseResultDTO(UserTaskResponseType.COMPLETED, null, null);
-    UserTaskResponseTriggerDTO response =
-        new UserTaskResponseTriggerDTO(
-            processInstanceId, List.of(1L), result, VariablesDTO.empty());
+    UserTaskResponseTriggerDTO response = userTaskResponse(processInstanceId, List.of(1L), result);
 
     RecordHeaders headers = new RecordHeaders();
-    Record<UUID, UserTaskResponseTriggerDTO> userTaskResponseTriggerRecord =
-        new Record<>(processInstanceId, response, 200L, headers);
+    headers.add("tx-sig", "user-key.AABB".getBytes(StandardCharsets.UTF_8));
+    ProcessInstanceTriggerEnvelope envelope =
+        new ProcessInstanceTriggerEnvelope(new byte[] {1, 2, 3}, response, true, "user-key")
+            .withReplayRoutingKeyHint("issuer:audit-1");
+    Record<UUID, ProcessInstanceTriggerEnvelope> userTaskResponseTriggerRecord =
+        new Record<>(processInstanceId, envelope, 200L, headers);
 
     processor.process(userTaskResponseTriggerRecord);
 
@@ -111,8 +116,10 @@ class UserTaskResponseProcessorDlqTest {
     verify(context).forward(captor.capture());
     Record forwarded = captor.getValue();
     assertThat(forwarded.key()).isEqualTo(processInstanceId);
-    assertThat(forwarded.value()).isInstanceOf(ProcessInstanceTriggerDTO.class);
-    assertThat(forwarded.value()).isSameAs(response);
+    assertThat(forwarded.value()).isInstanceOf(ProcessInstanceTriggerEnvelope.class);
+    assertThat(forwarded.value()).isSameAs(envelope);
+    assertThat(new String(forwarded.headers().lastHeader("tx-sig").value(), StandardCharsets.UTF_8))
+        .isEqualTo("user-key.AABB");
   }
 
   @Test
@@ -120,19 +127,21 @@ class UserTaskResponseProcessorDlqTest {
     UUID processInstanceId = UUID.randomUUID();
     UserTaskResponseResultDTO result =
         new UserTaskResponseResultDTO(UserTaskResponseType.COMPLETED, null, null);
-    UserTaskResponseTriggerDTO response =
-        new UserTaskResponseTriggerDTO(
-            processInstanceId, List.of(2L), result, VariablesDTO.empty());
+    UserTaskResponseTriggerDTO response = userTaskResponse(processInstanceId, List.of(2L), result);
 
-    // The first forward call (with ProcessInstanceTriggerDTO) throws; the second (DLQ) succeeds.
+    // The first forward call (with ProcessInstanceTriggerEnvelope) throws; the second (DLQ) succeeds.
     doThrow(new RuntimeException("forward failed"))
         .doNothing()
         .when(context)
         .forward(org.mockito.ArgumentMatchers.any());
 
     RecordHeaders headers = new RecordHeaders();
-    Record<UUID, UserTaskResponseTriggerDTO> userTaskResponseTriggerRecord =
-        new Record<>(processInstanceId, response, 300L, headers);
+    Record<UUID, ProcessInstanceTriggerEnvelope> userTaskResponseTriggerRecord =
+        new Record<>(
+            processInstanceId,
+            new ProcessInstanceTriggerEnvelope(new byte[] {4, 5, 6}, response, false, null),
+            300L,
+            headers);
 
     processor.process(userTaskResponseTriggerRecord);
 
@@ -154,13 +163,16 @@ class UserTaskResponseProcessorDlqTest {
     UUID processInstanceId = UUID.randomUUID();
     UserTaskResponseResultDTO result =
         new UserTaskResponseResultDTO(UserTaskResponseType.COMPLETED, null, null);
-    UserTaskResponseTriggerDTO response =
-        new UserTaskResponseTriggerDTO(
-            processInstanceId, List.of(3L), result, VariablesDTO.empty());
+    UserTaskResponseTriggerDTO response = userTaskResponse(processInstanceId, List.of(3L), result);
     UserTaskResponseProcessor guardedProcessor =
         guardedProcessorWithPolicy(anchoredPolicy(42L));
 
-    guardedProcessor.process(new Record<>(processInstanceId, response, 400L, new RecordHeaders()));
+    guardedProcessor.process(
+        new Record<>(
+            processInstanceId,
+            new ProcessInstanceTriggerEnvelope(new byte[] {7, 8, 9}, response, false, null),
+            400L,
+            new RecordHeaders()));
 
     ArgumentCaptor<Record> captor = ArgumentCaptor.forClass(Record.class);
     verify(context).forward(captor.capture());
@@ -179,18 +191,46 @@ class UserTaskResponseProcessorDlqTest {
     UUID processInstanceId = UUID.randomUUID();
     UserTaskResponseResultDTO result =
         new UserTaskResponseResultDTO(UserTaskResponseType.COMPLETED, null, null);
-    UserTaskResponseTriggerDTO response =
-        new UserTaskResponseTriggerDTO(
-            processInstanceId, List.of(4L), result, VariablesDTO.empty());
+    UserTaskResponseTriggerDTO response = userTaskResponse(processInstanceId, List.of(4L), result);
     UserTaskResponseProcessor guardedProcessor = guardedProcessorWithPolicy(null);
+    ProcessInstanceTriggerEnvelope envelope =
+        new ProcessInstanceTriggerEnvelope(new byte[] {10, 11}, response, true, "user-key");
 
-    guardedProcessor.process(new Record<>(processInstanceId, response, 500L, new RecordHeaders()));
+    guardedProcessor.process(new Record<>(processInstanceId, envelope, 500L, new RecordHeaders()));
 
     ArgumentCaptor<Record> captor = ArgumentCaptor.forClass(Record.class);
     verify(context).forward(captor.capture());
     Record forwarded = captor.getValue();
     assertThat(forwarded.key()).isEqualTo(processInstanceId);
-    assertThat(forwarded.value()).isSameAs(response);
+    assertThat(forwarded.value()).isSameAs(envelope);
+  }
+
+  @Test
+  void process_wrongTriggerType_emitsPayloadTypeMismatchDlq() {
+    UUID processInstanceId = UUID.randomUUID();
+    StartCommandDTO wrongTrigger =
+        new StartCommandDTO(
+            processInstanceId, null, null, new ProcessDefinitionKey("proc", 1), VariablesDTO.empty());
+
+    processor.process(
+        new Record<>(
+            processInstanceId,
+            new ProcessInstanceTriggerEnvelope(new byte[] {12, 13}, wrongTrigger, false, null),
+            600L,
+            new RecordHeaders()));
+
+    ArgumentCaptor<Record> captor = ArgumentCaptor.forClass(Record.class);
+    verify(context).forward(captor.capture());
+    UserTaskResponseDlqEntryDTO dlqEntry = (UserTaskResponseDlqEntryDTO) captor.getValue().value();
+    assertThat(new String(dlqEntry.getHeaders().get(REASON_HINT), StandardCharsets.UTF_8))
+        .isEqualTo("PAYLOAD_TYPE_MISMATCH");
+    assertThat(new String(dlqEntry.getHeaders().get(REASON_TEXT), StandardCharsets.UTF_8))
+        .contains("Expected UserTaskResponseTriggerDTO but decoded StartCommandDTO");
+  }
+
+  private static UserTaskResponseTriggerDTO userTaskResponse(
+      UUID processInstanceId, List<Long> path, UserTaskResponseResultDTO result) {
+    return new UserTaskResponseTriggerDTO(processInstanceId, path, result, VariablesDTO.empty());
   }
 
   private UserTaskResponseProcessor guardedProcessorWithPolicy(

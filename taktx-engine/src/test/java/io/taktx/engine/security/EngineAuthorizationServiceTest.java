@@ -50,6 +50,7 @@ import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.pd.MessageEventIngressEnvelope;
 import io.taktx.engine.pd.SignalIngressEnvelope;
 import io.taktx.engine.pi.ProcessInstanceTriggerEnvelope;
+import io.taktx.engine.topicmanagement.TopicMetaIngressEnvelope;
 import io.taktx.security.AuthorizationTokenException;
 import io.taktx.security.Ed25519Service;
 import io.taktx.security.SigningKeyGenerator;
@@ -275,19 +276,21 @@ class EngineAuthorizationServiceTest {
   }
 
   @Test
-  void topicMetaRequest_securityDisabled_returnsNullWithoutCheckingSignature() {
+  void topicMetaIngress_securityDisabled_returnsNullWithoutCheckingSignature() {
     // globalConfigStore has no config: both signingEnabled and engineRequiresAuthorization default
     // to false.  No signature header is present — the method must return null, not throw.
     TopicMetaDTO request =
         new TopicMetaDTO("tenant.ns.external-task-trigger-billing", 3, null, (short) 1);
 
-    SigningKeyDTO result = service.authorizeTopicMetaRequest(new RecordHeaders(), request);
+    SigningKeyDTO result =
+        service.authorizeTopicMetaIngress(
+            new RecordHeaders(), new TopicMetaIngressEnvelope(new byte[0], request, false, null, null));
 
     assertThat(result).isNull();
   }
 
   @Test
-  void topicMetaRequest_trustedClientKeyAccepted() {
+  void topicMetaIngress_trustedClientKeyAccepted() {
     globalConfigStore.update(signingConfig());
 
     String keyId = "worker-topic-request-key";
@@ -305,25 +308,32 @@ class EngineAuthorizationServiceTest {
     TopicMetaDTO request =
         new TopicMetaDTO("tenant.ns.external-task-trigger-billing", 3, null, (short) 1);
 
-    SigningKeyDTO result = service.authorizeTopicMetaRequest(headersWithSignature(keyId), request);
+    SigningKeyDTO result =
+        service.authorizeTopicMetaIngress(
+            headersWithSignature(keyId),
+            new TopicMetaIngressEnvelope(new byte[0], request, true, keyId, null));
 
     assertThat(result).isEqualTo(keyEntry);
   }
 
   @Test
-  void topicMetaRequest_missingSignatureRejected() {
+  void topicMetaIngress_missingSignatureRejected() {
     globalConfigStore.update(signingConfig());
 
     TopicMetaDTO request =
         new TopicMetaDTO("tenant.ns.external-task-trigger-billing", 3, null, (short) 1);
 
-    assertThatThrownBy(() -> service.authorizeTopicMetaRequest(new RecordHeaders(), request))
+    assertThatThrownBy(
+            () ->
+                service.authorizeTopicMetaIngress(
+                    new RecordHeaders(),
+                    new TopicMetaIngressEnvelope(new byte[0], request, false, null, null)))
         .isInstanceOf(AuthorizationTokenException.class)
         .hasMessageContaining("tx-sig");
   }
 
   @Test
-  void topicMetaRequest_revokedKeyRejected() {
+  void topicMetaIngress_revokedKeyRejected() {
     globalConfigStore.update(signingConfig());
 
     String keyId = "revoked-topic-request-key";
@@ -342,13 +352,16 @@ class EngineAuthorizationServiceTest {
         new TopicMetaDTO("tenant.ns.external-task-trigger-billing", 3, null, (short) 1);
 
     assertThatThrownBy(
-            () -> service.authorizeTopicMetaRequest(headersWithSignature(keyId), request))
+            () ->
+                service.authorizeTopicMetaIngress(
+                    headersWithSignature(keyId),
+                    new TopicMetaIngressEnvelope(new byte[0], request, true, keyId, null)))
         .isInstanceOf(AuthorizationTokenException.class)
         .hasMessageContaining("Revoked Ed25519 keyId");
   }
 
   @Test
-  void topicMetaRequest_untrustedKeyRejected() {
+  void topicMetaIngress_untrustedKeyRejected() {
     globalConfigStore.update(signingConfig());
 
     service =
@@ -376,9 +389,33 @@ class EngineAuthorizationServiceTest {
         new TopicMetaDTO("tenant.ns.external-task-trigger-billing", 3, null, (short) 1);
 
     assertThatThrownBy(
-            () -> service.authorizeTopicMetaRequest(headersWithSignature(keyId), request))
+            () ->
+                service.authorizeTopicMetaIngress(
+                    headersWithSignature(keyId),
+                    new TopicMetaIngressEnvelope(new byte[0], request, true, keyId, null)))
         .isInstanceOf(AuthorizationTokenException.class)
         .hasMessageContaining("not trusted for required role CLIENT");
+  }
+
+  @Test
+  void topicMetaIngress_signatureErrorRejected() {
+    globalConfigStore.update(signingConfig());
+
+    TopicMetaDTO request =
+        new TopicMetaDTO("tenant.ns.external-task-trigger-billing", 3, null, (short) 1);
+
+    assertThatThrownBy(
+            () ->
+                service.authorizeTopicMetaIngress(
+                    headersWithSignature("broken-topic-request-key"),
+                    new TopicMetaIngressEnvelope(
+                        new byte[0],
+                        request,
+                        false,
+                        "broken-topic-request-key",
+                        "Malformed base64 signature for keyId=broken-topic-request-key: bad")))
+        .isInstanceOf(AuthorizationTokenException.class)
+        .hasMessageContaining("Malformed base64 signature");
   }
 
   @Test

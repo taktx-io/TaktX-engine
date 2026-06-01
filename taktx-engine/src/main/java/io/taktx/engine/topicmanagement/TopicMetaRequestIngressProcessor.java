@@ -40,7 +40,7 @@ import org.apache.kafka.streams.state.KeyValueStore;
  */
 @Slf4j
 public class TopicMetaRequestIngressProcessor
-    implements Processor<String, TopicMetaDTO, String, TopicMetaDlqEntryDTO> {
+    implements Processor<String, TopicMetaIngressEnvelope, String, TopicMetaDlqEntryDTO> {
 
   private static final Duration CLEANUP_INTERVAL = Duration.ofMinutes(1);
 
@@ -80,17 +80,28 @@ public class TopicMetaRequestIngressProcessor
   }
 
   @Override
-  public void process(Record<String, TopicMetaDTO> inputRecord) {
-    if (inputRecord == null || inputRecord.value() == null) {
+  public void process(Record<String, TopicMetaIngressEnvelope> inputRecord) {
+    if (inputRecord == null) {
       return;
     }
 
-    TopicMetaDTO topicMeta = inputRecord.value();
+    TopicMetaIngressEnvelope ingressEnvelope = inputRecord.value();
+    TopicMetaDTO topicMeta = ingressEnvelope != null ? ingressEnvelope.value() : null;
+    if (topicMeta == null) {
+      forwardDlq(
+          inputRecord,
+          ingressEnvelope,
+          "PAYLOAD_DESERIALIZATION_ERROR",
+          "Null payload for topic-meta-requested record",
+          DlqCaptureStage.DESERIALIZER.name());
+      return;
+    }
+
     String effectiveTopicName = effectiveTopicName(inputRecord.key(), topicMeta);
 
     try {
       var trustedSigner =
-          engineAuthorizationService.authorizeTopicMetaRequest(inputRecord.headers(), topicMeta);
+          engineAuthorizationService.authorizeTopicMetaIngress(inputRecord.headers(), ingressEnvelope);
       if (trustedSigner != null) {
         log.info(
             "Accepted topic meta ingress key='{}' topicName='{}' signerKeyId='{}' signerRole='{}' outcome='accepted'",
@@ -112,7 +123,12 @@ public class TopicMetaRequestIngressProcessor
           extractSignerKeyId(inputRecord.headers()),
           e.getMessage());
       topicManager.publishRejectedRequestedTopic(effectiveTopicName);
-      forwardDlq(inputRecord, topicMeta, e);
+      forwardDlq(
+          inputRecord,
+          ingressEnvelope,
+          reasonHintForAuthorizationFailure(ingressEnvelope, e),
+          e.getMessage(),
+          "AUTHORIZATION");
       return;
     }
 
@@ -128,7 +144,7 @@ public class TopicMetaRequestIngressProcessor
       return;
     }
 
-    String dedupKey = dedupKey(inputRecord, validation.topicName(), topicMeta);
+    String dedupKey = dedupKey(inputRecord, validation.topicName(), ingressEnvelope, topicMeta);
     long now = clock.millis();
     Long storedTs = store.get(dedupKey);
     if (storedTs != null && now - storedTs < retentionMs) {
@@ -150,56 +166,73 @@ public class TopicMetaRequestIngressProcessor
   }
 
   private void forwardDlq(
-      Record<String, TopicMetaDTO> inputRecord,
-      TopicMetaDTO topicMeta,
-      AuthorizationTokenException exception) {
+      Record<String, TopicMetaIngressEnvelope> inputRecord,
+      TopicMetaIngressEnvelope ingressEnvelope,
+      String reasonHint,
+      String reasonText,
+      String captureStage) {
     context.forward(
         new Record<>(
             inputRecord.key(),
-            topicMetaDlqEntry(inputRecord, topicMeta, exception),
+            topicMetaDlqEntry(inputRecord, ingressEnvelope, reasonHint, reasonText, captureStage),
             inputRecord.timestamp(),
             inputRecord.headers()));
   }
 
   private TopicMetaDlqEntryDTO topicMetaDlqEntry(
-      Record<String, TopicMetaDTO> inputRecord,
-      TopicMetaDTO topicMeta,
-      AuthorizationTokenException exception) {
-    DlqReasonCode reasonCode = reasonCodeForAuthorizationFailure(exception);
+      Record<String, TopicMetaIngressEnvelope> inputRecord,
+      TopicMetaIngressEnvelope ingressEnvelope,
+      String reasonHint,
+      String reasonText,
+      String captureStage) {
+    TopicMetaDTO topicMeta = ingressEnvelope != null ? ingressEnvelope.value() : null;
     Map<String, byte[]> headers = headersToMap(inputRecord.headers());
-    headers.put(DlqHeaders.REASON_HINT, reasonCode.name().getBytes(StandardCharsets.UTF_8));
-    headers.put(
-        DlqHeaders.REASON_TEXT,
-        String.valueOf(exception.getMessage()).getBytes(StandardCharsets.UTF_8));
-    headers.put(
-        DlqHeaders.CAPTURE_STAGE,
-        DlqCaptureStage.PROCESSOR.name().getBytes(StandardCharsets.UTF_8));
+    headers.put(DlqHeaders.REASON_HINT, reasonHint.getBytes(StandardCharsets.UTF_8));
+    headers.put(DlqHeaders.REASON_TEXT, String.valueOf(reasonText).getBytes(StandardCharsets.UTF_8));
+    headers.put(DlqHeaders.CAPTURE_STAGE, captureStage.getBytes(StandardCharsets.UTF_8));
 
     return new TopicMetaDlqEntryDTO(
         inputRecord.key(),
         topicMeta,
         headers,
-        TopologyProducer.TOPIC_META_SERDE.serializer().serialize(requestedTopicName, topicMeta));
+        serializeIngressPayload(ingressEnvelope, topicMeta));
   }
 
-  static DlqReasonCode reasonCodeForAuthorizationFailure(AuthorizationTokenException exception) {
-    String message =
-        exception == null || exception.getMessage() == null ? "" : exception.getMessage();
-    String normalized = message.toLowerCase();
+  static String reasonHintForAuthorizationFailure(
+      TopicMetaIngressEnvelope ingressEnvelope, AuthorizationTokenException exception) {
+    String signatureError = ingressEnvelope != null ? ingressEnvelope.signatureError() : null;
+    if (signatureError != null && !signatureError.isBlank()) {
+      String normalized = signatureError.toLowerCase();
+      if (normalized.contains("unknown or revoked")) {
+        return DlqReasonCode.SIGNATURE_KEY_UNKNOWN.name();
+      }
+      if (normalized.contains("revoked")) {
+        return DlqReasonCode.SIGNATURE_KEY_REVOKED.name();
+      }
+      if (normalized.contains("unknown")) {
+        return DlqReasonCode.SIGNATURE_KEY_UNKNOWN.name();
+      }
+      if (normalized.contains("malformed")) {
+        return DlqReasonCode.SIGNATURE_MALFORMED.name();
+      }
+      return DlqReasonCode.SIGNATURE_VERIFICATION_FAILED.name();
+    }
 
-    if (normalized.startsWith("missing required tx-sig header")) {
-      return DlqReasonCode.SIGNATURE_MISSING;
+    String message =
+        exception == null || exception.getMessage() == null ? "" : exception.getMessage().toLowerCase();
+    if (message.contains("requires tx-sig") || message.startsWith("missing required tx-sig header")) {
+      return DlqReasonCode.SIGNATURE_MISSING.name();
     }
-    if (normalized.startsWith("unknown ed25519 keyid")) {
-      return DlqReasonCode.SIGNATURE_KEY_UNKNOWN;
+    if (message.startsWith("unknown ed25519 keyid")) {
+      return DlqReasonCode.SIGNATURE_KEY_UNKNOWN.name();
     }
-    if (normalized.startsWith("revoked ed25519 keyid")) {
-      return DlqReasonCode.SIGNATURE_KEY_REVOKED;
+    if (message.startsWith("revoked ed25519 keyid")) {
+      return DlqReasonCode.SIGNATURE_KEY_REVOKED.name();
     }
-    if (normalized.startsWith("signing keyid")) {
-      return DlqReasonCode.AUTHORIZATION_FAILED;
+    if (message.contains("platform public key") || message.contains("anchored trust")) {
+      return "TRUST_ANCHOR_MISSING";
     }
-    return DlqReasonCode.AUTHORIZATION_FAILED;
+    return DlqReasonCode.AUTHORIZATION_FAILED.name();
   }
 
   private static Map<String, byte[]> headersToMap(Headers headers) {
@@ -226,19 +259,23 @@ public class TopicMetaRequestIngressProcessor
   }
 
   private static String dedupKey(
-      Record<String, TopicMetaDTO> inputRecord, String topicName, TopicMetaDTO topicMeta) {
+      Record<String, TopicMetaIngressEnvelope> inputRecord,
+      String topicName,
+      TopicMetaIngressEnvelope ingressEnvelope,
+      TopicMetaDTO topicMeta) {
     String messageId = topicMeta.getMessageId();
     String identity =
         messageId != null && !messageId.isBlank()
             ? "messageId:" + messageId
-            : "payloadHash:" + signedPayloadHash(inputRecord, topicMeta);
+            : "payloadHash:" + signedPayloadHash(inputRecord, ingressEnvelope, topicMeta);
     return TopicMetaDTO.class.getSimpleName() + ":" + topicName + ":" + identity;
   }
 
   private static String signedPayloadHash(
-      Record<String, TopicMetaDTO> inputRecord, TopicMetaDTO topicMeta) {
-    byte[] payload =
-        TopologyProducer.TOPIC_META_SERDE.serializer().serialize(inputRecord.key(), topicMeta);
+      Record<String, TopicMetaIngressEnvelope> inputRecord,
+      TopicMetaIngressEnvelope ingressEnvelope,
+      TopicMetaDTO topicMeta) {
+    byte[] payload = serializeIngressPayload(ingressEnvelope, topicMeta);
     Header signatureHeader =
         inputRecord.headers() != null
             ? inputRecord.headers().lastHeader(Constants.HEADER_ENGINE_SIGNATURE)
@@ -259,6 +296,16 @@ public class TopicMetaRequestIngressProcessor
     } catch (NoSuchAlgorithmException e) {
       throw new IllegalStateException("SHA-256 not available", e);
     }
+  }
+
+  private static byte[] serializeIngressPayload(
+      TopicMetaIngressEnvelope ingressEnvelope, TopicMetaDTO topicMeta) {
+    if (ingressEnvelope != null && ingressEnvelope.data() != null) {
+      return ingressEnvelope.data();
+    }
+    return topicMeta == null
+        ? null
+        : TopologyProducer.TOPIC_META_SERDE.serializer().serialize(null, topicMeta);
   }
 
   private static String toHex(byte[] bytes) {

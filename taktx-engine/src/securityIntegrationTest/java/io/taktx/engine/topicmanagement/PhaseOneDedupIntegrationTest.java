@@ -232,7 +232,7 @@ class PhaseOneDedupIntegrationTest {
 
     EngineAuthorizationService authz = mock(EngineAuthorizationService.class);
     DynamicTopicManager topicManager = mock(DynamicTopicManager.class);
-    when(authz.authorizeTopicMetaRequest(any(), any()))
+    when(authz.authorizeTopicMetaIngress(any(), any()))
         .thenReturn(activeKey("client-key-1", KeyRole.CLIENT));
 
     TaktConfiguration configuration = mock(TaktConfiguration.class);
@@ -341,7 +341,8 @@ class PhaseOneDedupIntegrationTest {
 
     builder.stream(
             inputTopic,
-            Consumed.with(TopologyProducer.TOPIC_META_KEY_SERDE, TopologyProducer.TOPIC_META_SERDE))
+            Consumed.with(
+                TopologyProducer.TOPIC_META_KEY_SERDE, TopologyProducer.TOPIC_META_INGRESS_SERDE))
         .process(
             () ->
                 new TopicMetaRequestIngressProcessor(

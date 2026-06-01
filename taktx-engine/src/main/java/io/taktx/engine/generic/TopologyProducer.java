@@ -97,6 +97,8 @@ import io.taktx.engine.security.ReplayProtectionProcessor;
 import io.taktx.engine.security.SecurityEventPublisher;
 import io.taktx.engine.topicmanagement.DynamicTopicManager;
 import io.taktx.engine.topicmanagement.RequestedTopicValidator;
+import io.taktx.engine.topicmanagement.TopicMetaIngressEnvelope;
+import io.taktx.engine.topicmanagement.TopicMetaIngressEnvelopeDeserializer;
 import io.taktx.engine.topicmanagement.TopicMetaRequestIngressProcessor;
 import io.taktx.proto.VariableValue;
 import io.taktx.serdes.DefinitionsProtoMapper;
@@ -109,7 +111,6 @@ import io.taktx.serdes.DmnDefinitionDtoDeserializer;
 import io.taktx.serdes.DmnDefinitionKeyDtoDeserializer;
 import io.taktx.serdes.DmnDefinitionKeyProtoMapper;
 import io.taktx.serdes.DmnDefinitionsProtoMapper;
-import io.taktx.serdes.ExternalTaskMetaDeserializer;
 import io.taktx.serdes.ExternalTaskTriggerProtoDeserializer;
 import io.taktx.serdes.FlowNodeInstanceDtoDeserializer;
 import io.taktx.serdes.FlowNodeInstanceProtoMapper;
@@ -307,8 +308,17 @@ public class TopologyProducer {
       Serdes.serdeFrom(
           (topic, data) -> data == null ? null : TopicMetaProtoMapper.toProto(data).toByteArray(),
           new TopicMetaDtoDeserializer());
-  public static final Serde<TopicMetaDTO> TOPIC_META_REQUEST_INPUT_SERDE =
-      Serdes.serdeFrom(TOPIC_META_SERDE.serializer(), new ExternalTaskMetaDeserializer());
+  public static final Serde<TopicMetaIngressEnvelope> TOPIC_META_INGRESS_SERDE =
+      Serdes.serdeFrom(
+          (_, envelope) ->
+              envelope == null
+                  ? null
+                  : envelope.data() != null
+                      ? envelope.data()
+                      : envelope.value() == null
+                          ? null
+                          : TopicMetaProtoMapper.toProto(envelope.value()).toByteArray(),
+          new TopicMetaIngressEnvelopeDeserializer());
   public static final Serde<TopicMetaDlqEntryDTO> TOPIC_META_DLQ_ENTRY_SERDE =
       Serdes.serdeFrom(new TopicMetaDlqEntrySerializer(), new TopicMetaDlqEntryDtoDeserializer());
   public static final Serde<DlqEnvelope> DLQ_ENVELOPE_SERDE =
@@ -900,7 +910,7 @@ public class TopologyProducer {
 
     builder.stream(
             taktConfiguration.getPrefixed(Topics.TOPIC_META_REQUESTED_TOPIC.getTopicName()),
-            Consumed.with(TOPIC_META_KEY_SERDE, TOPIC_META_REQUEST_INPUT_SERDE))
+            Consumed.with(TOPIC_META_KEY_SERDE, TOPIC_META_INGRESS_SERDE))
         .process(
             () ->
                 new TopicMetaRequestIngressProcessor(
@@ -1103,23 +1113,24 @@ public class TopologyProducer {
   private void setupUserTaskResponseStream(StreamsBuilder builder) {
     builder.stream(
             taktConfiguration.getPrefixed(Topics.USER_TASK_RESPONSE_TOPIC.getTopicName()),
-            Consumed.with(PROCESS_INSTANCE_KEY_SERDE, USER_TASK_RESPONSE_SERDE))
+            Consumed.with(PROCESS_INSTANCE_KEY_SERDE, PROCESS_INSTANCE_TRIGGER_ENVELOPE_SERDE))
         .process(() -> new UserTaskResponseProcessor(clock, protectedDataPlaneParticipationGuard()))
         .split()
         .branch(
-            (_, value) -> value instanceof ProcessInstanceTriggerDTO,
+            (_, value) -> value instanceof ProcessInstanceTriggerEnvelope,
             Branched.withConsumer(
                 ks ->
                     ks.map(
                             (key, value) ->
                                 KeyValue.pair(
-                                    ((ProcessInstanceTriggerDTO) value).getProcessInstanceId(),
-                                    (ProcessInstanceTriggerDTO) value))
+                                    ((ProcessInstanceTriggerEnvelope) value).trigger().getProcessInstanceId(),
+                                    (ProcessInstanceTriggerEnvelope) value))
                         .to(
                             taktConfiguration.getPrefixed(
                                 Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName()),
                             Produced.with(
-                                PROCESS_INSTANCE_KEY_SERDE, PROCESS_INSTANCE_TRIGGER_SERDE))))
+                                PROCESS_INSTANCE_KEY_SERDE,
+                                PROCESS_INSTANCE_TRIGGER_ENVELOPE_SERDE))))
         .branch(
             (_, value) -> value instanceof DlqEntryDTO,
             Branched.withConsumer(
