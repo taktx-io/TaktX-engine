@@ -60,13 +60,13 @@ class TopicMetaRequestIngressProcessorTest {
   void authorizedValidRequest_isHandedOffToDynamicTopicManager() {
     EngineAuthorizationService authz = mock(EngineAuthorizationService.class);
     DynamicTopicManager topicManager = mock(DynamicTopicManager.class);
-    when(authz.authorizeTopicMetaRequest(any(), any()))
+    when(authz.authorizeTopicMetaIngress(any(), any()))
         .thenReturn(activeKey("client-key-1", KeyRole.CLIENT));
 
     try (TestHarness harness = newHarness(authz, topicManager, 10_000L)) {
       TopicMetaDTO topicMeta = validTopicMeta("msg-1");
 
-      harness.pipe(topicMeta.getTopicName(), topicMeta, signedHeaders("client-key-1.sig-a"));
+      harness.pipe(topicMeta.getTopicName(), topicMeta, new RecordHeaders());
 
       verify(topicManager).processRequestedTopic(topicMeta.getTopicName(), topicMeta);
       verify(topicManager, never()).publishRejectedRequestedTopic(any());
@@ -78,7 +78,7 @@ class TopicMetaRequestIngressProcessorTest {
   void unauthorizedRequest_publishesNullContractAndForwardsDlqEntry() {
     EngineAuthorizationService authz = mock(EngineAuthorizationService.class);
     DynamicTopicManager topicManager = mock(DynamicTopicManager.class);
-    when(authz.authorizeTopicMetaRequest(any(), any()))
+    when(authz.authorizeTopicMetaIngress(any(), any()))
         .thenThrow(
             new AuthorizationTokenException(
                 "Unknown Ed25519 keyId 'client-key-1' — signer not found in taktx-signing-keys KTable"));
@@ -86,7 +86,7 @@ class TopicMetaRequestIngressProcessorTest {
     try (TestHarness harness = newHarness(authz, topicManager, 10_000L)) {
       TopicMetaDTO topicMeta = validTopicMeta("msg-2");
 
-      harness.pipe(topicMeta.getTopicName(), topicMeta, signedHeaders("client-key-1.sig-a"));
+      harness.pipe(topicMeta.getTopicName(), topicMeta, new RecordHeaders());
 
       verify(topicManager).publishRejectedRequestedTopic(topicMeta.getTopicName());
       verify(topicManager, never()).processRequestedTopic(any(), any());
@@ -96,6 +96,9 @@ class TopicMetaRequestIngressProcessorTest {
       assertThat(
               new String(dlqEntry.getHeaders().get(DlqHeaders.REASON_HINT), StandardCharsets.UTF_8))
           .isEqualTo(DlqReasonCode.SIGNATURE_KEY_UNKNOWN.name());
+      assertThat(
+              new String(dlqEntry.getHeaders().get(DlqHeaders.CAPTURE_STAGE), StandardCharsets.UTF_8))
+          .isEqualTo("AUTHORIZATION");
       assertThat(dlqEntry.getData()).isNotEmpty();
     }
   }
@@ -104,7 +107,7 @@ class TopicMetaRequestIngressProcessorTest {
   void validationFailure_preservesNullPublicationContractWithoutDlqForward() {
     EngineAuthorizationService authz = mock(EngineAuthorizationService.class);
     DynamicTopicManager topicManager = mock(DynamicTopicManager.class);
-    when(authz.authorizeTopicMetaRequest(any(), any()))
+    when(authz.authorizeTopicMetaIngress(any(), any()))
         .thenReturn(activeKey("client-key-1", KeyRole.CLIENT));
 
     try (TestHarness harness = newHarness(authz, topicManager, 10_000L)) {
@@ -125,7 +128,7 @@ class TopicMetaRequestIngressProcessorTest {
   void duplicateTopicMetaRequestWithinWindow_isSuppressed() {
     EngineAuthorizationService authz = mock(EngineAuthorizationService.class);
     DynamicTopicManager topicManager = mock(DynamicTopicManager.class);
-    when(authz.authorizeTopicMetaRequest(any(), any()))
+    when(authz.authorizeTopicMetaIngress(any(), any()))
         .thenReturn(activeKey("client-key-1", KeyRole.CLIENT));
 
     try (TestHarness harness = newHarness(authz, topicManager, 10_000L)) {
@@ -144,7 +147,7 @@ class TopicMetaRequestIngressProcessorTest {
   void duplicateTopicMetaRequestAfterExpiry_isAcceptedAgain() {
     EngineAuthorizationService authz = mock(EngineAuthorizationService.class);
     DynamicTopicManager topicManager = mock(DynamicTopicManager.class);
-    when(authz.authorizeTopicMetaRequest(any(), any()))
+    when(authz.authorizeTopicMetaIngress(any(), any()))
         .thenReturn(activeKey("client-key-1", KeyRole.CLIENT));
 
     try (TestHarness harness = newHarness(authz, topicManager, 1_000L)) {
@@ -164,7 +167,7 @@ class TopicMetaRequestIngressProcessorTest {
   void missingMessageId_fallsBackToSignatureAndPayloadHash() {
     EngineAuthorizationService authz = mock(EngineAuthorizationService.class);
     DynamicTopicManager topicManager = mock(DynamicTopicManager.class);
-    when(authz.authorizeTopicMetaRequest(any(), any()))
+    when(authz.authorizeTopicMetaIngress(any(), any()))
         .thenReturn(activeKey("client-key-1", KeyRole.CLIENT));
 
     try (TestHarness harness = newHarness(authz, topicManager, 10_000L)) {
@@ -182,27 +185,37 @@ class TopicMetaRequestIngressProcessorTest {
   }
 
   @Test
-  void reasonCodeForAuthorizationFailure_mapsKnownVerificationMessages() {
+  void reasonHintForAuthorizationFailure_mapsKnownVerificationMessages() {
     assertThat(
-            TopicMetaRequestIngressProcessor.reasonCodeForAuthorizationFailure(
+            TopicMetaRequestIngressProcessor.reasonHintForAuthorizationFailure(
+                null,
                 new AuthorizationTokenException(
                     "Missing required tx-sig header — required role: CLIENT")))
-        .isEqualTo(DlqReasonCode.SIGNATURE_MISSING);
+        .isEqualTo(DlqReasonCode.SIGNATURE_MISSING.name());
     assertThat(
-            TopicMetaRequestIngressProcessor.reasonCodeForAuthorizationFailure(
+            TopicMetaRequestIngressProcessor.reasonHintForAuthorizationFailure(
+                null,
                 new AuthorizationTokenException(
                     "Unknown Ed25519 keyId 'client-key-1' — signer not found in taktx-signing-keys KTable")))
-        .isEqualTo(DlqReasonCode.SIGNATURE_KEY_UNKNOWN);
+        .isEqualTo(DlqReasonCode.SIGNATURE_KEY_UNKNOWN.name());
     assertThat(
-            TopicMetaRequestIngressProcessor.reasonCodeForAuthorizationFailure(
+            TopicMetaRequestIngressProcessor.reasonHintForAuthorizationFailure(
+                null,
                 new AuthorizationTokenException(
                     "Revoked Ed25519 keyId 'client-key-1' — rejecting message")))
-        .isEqualTo(DlqReasonCode.SIGNATURE_KEY_REVOKED);
+        .isEqualTo(DlqReasonCode.SIGNATURE_KEY_REVOKED.name());
     assertThat(
-            TopicMetaRequestIngressProcessor.reasonCodeForAuthorizationFailure(
+            TopicMetaRequestIngressProcessor.reasonHintForAuthorizationFailure(
+                null,
                 new AuthorizationTokenException(
                     "Signing keyId 'client-key-1' (role=CLIENT) is not trusted for required role CLIENT")))
-        .isEqualTo(DlqReasonCode.AUTHORIZATION_FAILED);
+        .isEqualTo(DlqReasonCode.AUTHORIZATION_FAILED.name());
+    assertThat(
+            TopicMetaRequestIngressProcessor.reasonHintForAuthorizationFailure(
+                new TopicMetaIngressEnvelope(
+                    new byte[0], validTopicMeta("msg-err"), false, "client-key-1", "Malformed base64 signature for keyId=client-key-1: bad"),
+                new AuthorizationTokenException("Malformed base64 signature for keyId=client-key-1: bad")))
+        .isEqualTo(DlqReasonCode.SIGNATURE_MALFORMED.name());
   }
 
   private static TestHarness newHarness(
@@ -224,7 +237,8 @@ class TopicMetaRequestIngressProcessorTest {
 
     builder.stream(
             INPUT_TOPIC,
-            Consumed.with(TopologyProducer.TOPIC_META_KEY_SERDE, TopologyProducer.TOPIC_META_SERDE))
+            Consumed.with(
+                TopologyProducer.TOPIC_META_KEY_SERDE, TopologyProducer.TOPIC_META_INGRESS_SERDE))
         .process(
             () ->
                 new TopicMetaRequestIngressProcessor(

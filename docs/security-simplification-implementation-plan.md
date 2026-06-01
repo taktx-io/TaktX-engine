@@ -34,7 +34,10 @@
 - Engine process-instance security policy metadata has been flattened further: legacy JWT/authorization-shape flags were removed from `MessageSecurityPolicy`, and trigger-type helpers now drive the remaining legacy auth toggles in `EngineAuthorizationService`.
 - Presented process-instance JWTs are now validated as optional context even when the legacy task-completion/entry auth gate is off, and replay protection follows presented entry JWTs instead of the legacy entry-auth toggle.
 - Process-instance authorization no longer enforces the legacy runtime JWT gates at all: unsigned `OPEN` ingress is accepted, `ANCHORED`/signing-enabled ingress requires trusted signatures, and presented JWTs remain validated as optional context only.
+- External `topic-meta-requested` ingress now also flows through a signed ingress envelope so mode/signature enforcement, raw-payload verification state, and authorization-stage DLQ classification match the newer message-event and signal paths.
 - External message correlation and signal publication ingress now flow through signed ingress envelopes so `ANCHORED`/signing-enabled mode requires verified trusted signatures for externally published records while engine-internal subscription mutations remain allowed.
+- `usertasks-response` now preserves the original process-instance trigger envelope and headers when handing user task completion into `process-instance`, so replay protection and process-instance authorization evaluate the original external ingress context instead of an engine-rewrapped DTO.
+- Final `C5` audit confirmed that the current topology's live external runtime ingress set is now covered (`process-instance`, `usertasks-response`, `topic-meta-requested`, externally published `message-event`, externally published `signals`). Remaining special cases are intentional non-`C5` exceptions: engine-internal `schedule-commands`, engine-internal non-entry `process-instance` continuations, and control-plane/operator topics such as authoritative namespace policy mutation and `dlq.replay`.
 - Process-instance ingress security rejections now short-circuit to `security-events` instead of creating DLQ entries; DLQ remains reserved for payload/engine-processing failures while readiness gating still fails closed.
 - The remaining work is concentrated in finishing Phase 2 production cleanup, Phase 3/4 identity + trust-registry behavior, and broadening Phase 5 coverage beyond the current engine/integration adaptations.
 
@@ -289,8 +292,8 @@ Make namespace mode immediately authoritative and enforce a single ingress rule.
 - [x] Remove policy dependence on `requiredSigning.*`
 - [x] Remove policy dependence on `requiredAuthorization.*`
 - [x] Remove JWT as a posture mechanism
-- [ ] Keep JWT only as optional business/user context
-- [ ] Implement uniform rule:
+- [x] Keep JWT only as optional business/user context
+- [x] Implement uniform rule:
   - [x] `OPEN`: process-instance ingress accepts unsigned records when no legacy runtime gate is active
   - [x] `ANCHORED`: process-instance ingress requires a verified trusted signature
 - [x] Ensure unknown / revoked / unanchored signers are rejected cleanly
@@ -298,7 +301,7 @@ Make namespace mode immediately authoritative and enforce a single ingress rule.
 **Remaining for completion**
 - [x] Validate presented JWTs as optional process-instance context even when legacy auth gates are off
 - [x] Remove the remaining legacy runtime JWT gates so namespace mode becomes the only process-instance ingress posture driver
-- [ ] Apply the same mode-only rule consistently beyond process-instance ingress
+- [x] Apply the same mode-only rule consistently beyond process-instance ingress
 
 **Acceptance criteria**
 - Enforcement is driven solely by namespace mode
@@ -338,14 +341,19 @@ Make namespace mode immediately authoritative and enforce a single ingress rule.
 - `EngineAuthorizationService` plus any topic-specific security entry points
 
 **Work**
-- [ ] Verify coverage for:
+- [x] Verify coverage for the current topology's external runtime ingress set:
   - [x] process start
+  - [x] topic metadata request
   - [x] message correlation
   - [x] signal publication
   - [x] external task completion
   - [x] user task completion
-  - [ ] future external runtime commands
-- [ ] Remove special-case posture handling where possible
+- [x] Remove special-case posture handling where possible
+
+**Intentional non-C5 exceptions**
+- `schedule-commands` remains engine-internal (`ENGINE`-signed only) and is deferred to later internal-only hardening work
+- engine-internal non-entry `process-instance` continuations (`ContinueFlowElementTriggerDTO`, `StartFlowElementTriggerDTO`, `EventSignalTriggerDTO`) remain trusted internal traffic
+- control-plane / operator topics (`taktx-security-policy`, `taktx-configuration`, `taktx-signing-keys`, `dlq.replay`, etc.) are outside external runtime ingress scope
 
 **Acceptance criteria**
 - All external runtime ingress follows the same enforcement model
@@ -738,9 +746,9 @@ Start with this bounded slice:
 | A5 | Simplify participant supported modes | Done | A1 | Remove posture ladder |
 | C1 | Remove activation workflow | Done | A2,A4 | Engine policy store/processor now keep only one authoritative policy; rejected mutations remain the only control-plane failure path |
 | C2 | Simplify engine readiness | Done | C1 | Readiness now reflects concrete anchored enforceability prerequisites and remains fail-closed for protected runtime work |
-| C3 | Rewrite ingress enforcement | In progress | C1,C2 | Process-instance ingress is now signature/mode driven with JWT retained as optional context only; remaining work is broader ingress coverage and final message-policy cleanup |
+| C3 | Rewrite ingress enforcement | In progress | C1,C2 | Process-instance ingress is now signature/mode driven with JWT retained as optional context only, and the mode-only rule now extends across the current external runtime ingress set; remaining work is final message-policy cleanup |
 | C4 | Prevent security rejection DLQ | Done | C3 | Process-instance ingress now emits security events for authorization/readiness rejection while reserving DLQ for decode/processing failures |
-| C5 | Apply same rule to all ingress | In progress | C3 | Process-instance, message-event, and signal external ingress now enforce mode/signature rules; remaining work is future ingress paths and lingering topic-specific special cases |
+| C5 | Apply same rule to all ingress | Done | C3 | Current external runtime ingress (`process-instance`, `usertasks-response`, `topic-meta-requested`, externally published `message-event`, externally published `signals`) now preserves/enforces the same mode/signature model; remaining special cases are intentional internal/control-plane exceptions |
 | D1 | Add managed local file-backed identity source | Todo |  | Persistent identity |
 | D2 | Make persistent identity default | Todo | D1 | Stable restarts |
 | D3 | Simplify client policy interpretation | Todo | A2,C1,D2 | Mode-only client logic |

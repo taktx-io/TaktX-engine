@@ -7,9 +7,11 @@
  */
 package io.taktx.engine.pd;
 
+import io.taktx.dto.ProcessInstanceTriggerDTO;
 import io.taktx.dto.UserTaskResponseDlqEntryDTO;
 import io.taktx.dto.UserTaskResponseTriggerDTO;
 import io.taktx.engine.dlq.DlqHeaders;
+import io.taktx.engine.pi.ProcessInstanceTriggerEnvelope;
 import io.taktx.engine.security.ProtectedDataPlaneParticipationGuard;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
@@ -25,14 +27,15 @@ import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;
 
 /**
- * Processor for the {@code usertasks-response} ingress topic. On success, forwards the {@link
- * UserTaskResponseTriggerDTO} to the process-instance trigger stream. On deserializer failure
- * (surfacing here as a null value) or processing exception, emits a {@link
+ * Processor for the {@code usertasks-response} ingress topic. On success, forwards the original
+ * {@link ProcessInstanceTriggerEnvelope} to the process-instance trigger stream so downstream
+ * authorization and replay protection still see the original payload bytes and headers. On
+ * deserializer failure (surfacing here as a null value) or processing exception, emits a {@link
  * UserTaskResponseDlqEntryDTO} to DLQ.
  */
 @Slf4j
 public class UserTaskResponseProcessor
-    implements Processor<UUID, UserTaskResponseTriggerDTO, Object, Object> {
+    implements Processor<UUID, ProcessInstanceTriggerEnvelope, Object, Object> {
 
   private static final String DLQ_REASON_HINT_HEADER = DlqHeaders.REASON_HINT;
   private static final String DLQ_REASON_TEXT_HEADER = DlqHeaders.REASON_TEXT;
@@ -59,8 +62,10 @@ public class UserTaskResponseProcessor
   }
 
   @Override
-  public void process(Record<UUID, UserTaskResponseTriggerDTO> userTaskResponseTriggerRecord) {
-    if (userTaskResponseTriggerRecord.value() == null) {
+  public void process(Record<UUID, ProcessInstanceTriggerEnvelope> userTaskResponseTriggerRecord) {
+    ProcessInstanceTriggerEnvelope envelope = userTaskResponseTriggerRecord.value();
+    ProcessInstanceTriggerDTO trigger = envelope != null ? envelope.trigger() : null;
+    if (trigger == null) {
       log.warn("⚠ Null decoded payload on usertasks-response, routing to DLQ");
       emitUserTaskResponseDlq(
           userTaskResponseTriggerRecord,
@@ -69,15 +74,24 @@ public class UserTaskResponseProcessor
           "DESERIALIZER");
       return;
     }
+    if (!(trigger instanceof UserTaskResponseTriggerDTO response)) {
+      emitUserTaskResponseDlq(
+          userTaskResponseTriggerRecord,
+          "PAYLOAD_TYPE_MISMATCH",
+          "Expected UserTaskResponseTriggerDTO but decoded " + trigger.getClass().getSimpleName(),
+          "PROCESSOR");
+      return;
+    }
     try {
       if (shouldBlockProtectedDataPlane(userTaskResponseTriggerRecord)) {
         return;
       }
       context.forward(
           new Record<>(
-              userTaskResponseTriggerRecord.value().getProcessInstanceId(),
-              userTaskResponseTriggerRecord.value(),
-              clock.millis()));
+              response.getProcessInstanceId(),
+              envelope,
+              clock.millis(),
+              userTaskResponseTriggerRecord.headers()));
     } catch (Exception e) {
       log.error(
           "⚠ Exception processing usertasks-response record, routing to DLQ: {}",
@@ -89,7 +103,7 @@ public class UserTaskResponseProcessor
   }
 
   private boolean shouldBlockProtectedDataPlane(
-      Record<UUID, UserTaskResponseTriggerDTO> userTaskResponseTriggerRecord) {
+      Record<UUID, ProcessInstanceTriggerEnvelope> userTaskResponseTriggerRecord) {
     if (protectedDataPlaneParticipationGuard == null) {
       return false;
     }
@@ -104,7 +118,7 @@ public class UserTaskResponseProcessor
   }
 
   private void emitUserTaskResponseDlq(
-      Record<UUID, UserTaskResponseTriggerDTO> userTaskResponseTriggerRecord,
+      Record<UUID, ProcessInstanceTriggerEnvelope> userTaskResponseTriggerRecord,
       String reasonHint,
       String reasonText,
       String captureStage) {
@@ -112,12 +126,15 @@ public class UserTaskResponseProcessor
     headersMap.put(DLQ_REASON_HINT_HEADER, reasonHint.getBytes(StandardCharsets.UTF_8));
     headersMap.put(DLQ_REASON_TEXT_HEADER, reasonText.getBytes(StandardCharsets.UTF_8));
     headersMap.put(DLQ_CAPTURE_STAGE_HEADER, captureStage.getBytes(StandardCharsets.UTF_8));
+    ProcessInstanceTriggerEnvelope envelope = userTaskResponseTriggerRecord.value();
+    UserTaskResponseTriggerDTO value =
+        envelope != null && envelope.trigger() instanceof UserTaskResponseTriggerDTO response
+            ? response
+            : null;
     UserTaskResponseDlqEntryDTO dlqEntry =
         new UserTaskResponseDlqEntryDTO(
-            userTaskResponseTriggerRecord.value() != null
-                ? userTaskResponseTriggerRecord.value().getProcessInstanceId()
-                : userTaskResponseTriggerRecord.key(),
-            userTaskResponseTriggerRecord.value(),
+            value != null ? value.getProcessInstanceId() : userTaskResponseTriggerRecord.key(),
+            value,
             headersMap);
     context.forward(new Record<>(null, dlqEntry, clock.millis()));
   }

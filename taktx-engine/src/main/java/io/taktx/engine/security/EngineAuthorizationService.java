@@ -37,6 +37,7 @@ import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.pd.MessageEventIngressEnvelope;
 import io.taktx.engine.pd.SignalIngressEnvelope;
 import io.taktx.engine.pi.ProcessInstanceTriggerEnvelope;
+import io.taktx.engine.topicmanagement.TopicMetaIngressEnvelope;
 import io.taktx.security.AuthorizationTokenException;
 import io.taktx.security.AuthorizationTokenValidator;
 import io.taktx.security.Ed25519Service;
@@ -328,41 +329,15 @@ public class EngineAuthorizationService {
     return jwtMeta != null ? jwtMeta : sigMeta;
   }
 
-  /**
-   * Authorises a `topic-meta-requested` record after the deserializer has already verified the
-   * Ed25519 signature cryptographically.
-   *
-   * <p>Returns {@code null} when all security gates are disabled (both {@code signingEnabled} and
-   * {@code engineRequiresAuthorization} are {@code false} in the latest {@link
-   * GlobalConfigurationDTO}). This matches the opt-in posture of {@link #authorize}: no enforcement
-   * is applied until an operator explicitly enables it via the {@code taktx-configuration} topic.
-   *
-   * <p>When security is active, delegates key resolution, revoke check, and trust-policy evaluation
-   * to {@link VerificationCore}. A request must carry a valid {@code tx-sig} whose key resolves to
-   * a trusted {@code CLIENT}-or-higher role.
-   */
-  public SigningKeyDTO authorizeTopicMetaRequest(Headers headers, TopicMetaDTO request) {
-    GlobalConfigurationDTO cfg = effectiveConfig();
-    if (!isSecurityActive(cfg)) {
-      log.debug(
-          "Security gates disabled — skipping signature enforcement for topic-meta-requested");
-      return null;
-    }
-
-    MessageSecurityPolicy policy =
-        messageSecurityPolicyRegistry.resolve(
-            Topics.TOPIC_META_REQUESTED_TOPIC.getTopicName(), TopicMetaDTO.class);
-
-    VerifiedMessageContext ctx =
-        verificationCore.verify(lastHeader(headers, SIG_HEADER), requiredRole(policy));
-
-    log.info(
-        "✅ Authorised topic-meta-requested topic={} keyId={} owner={} role={}",
-        request == null ? null : request.getTopicName(),
-        ctx.keyId(),
-        ctx.key().getOwner(),
-        ctx.role());
-    return ctx.key();
+  /** Authorizes externally published {@code topic-meta-requested} ingress. */
+  public SigningKeyDTO authorizeTopicMetaIngress(
+      Headers headers, TopicMetaIngressEnvelope ingressEnvelope) {
+    return authorizeSignedIngress(
+        headers,
+        ingressEnvelope == null ? null : ingressEnvelope.value(),
+        ingressEnvelope == null ? false : ingressEnvelope.signatureVerified(),
+        ingressEnvelope == null ? null : ingressEnvelope.signatureError(),
+        Topics.TOPIC_META_REQUESTED_TOPIC.getTopicName());
   }
 
   public SigningKeyDTO authorizeMessageEventIngress(
@@ -663,13 +638,6 @@ public class EngineAuthorizationService {
     return requiredRole;
   }
 
-
-  private static boolean isSecurityActive(GlobalConfigurationDTO cfg) {
-    return cfg.isSigningEnabled()
-        || cfg.isEngineRequiresAuthorization()
-        || cfg.isEngineRequiresExternalTaskAuthorization()
-        || cfg.isEngineRequiresUserTaskAuthorization();
-  }
 
   private static boolean isSignatureGateActive(
       GlobalConfigurationDTO cfg, NamespaceSecurityPolicyDTO authoritativePolicy) {
