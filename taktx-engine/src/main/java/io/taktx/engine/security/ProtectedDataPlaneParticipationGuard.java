@@ -17,10 +17,9 @@ import java.time.Clock;
 /**
  * Decides whether the local engine may participate in protected data-plane processing.
  *
- * <p>Control-plane traffic remains available while policy is pending or participants are
- * converging, but protected runtime work must fail closed unless there is either no explicit
- * authoritative policy (default community-open) or the engine is READY for the exact authoritative
- * active policy identity.
+ * <p>Control-plane traffic remains available, but protected runtime work must fail closed unless
+ * there is either no explicit authoritative policy (default community-open) or the engine is READY
+ * for that authoritative policy identity.
  */
 public class ProtectedDataPlaneParticipationGuard {
 

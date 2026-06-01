@@ -124,8 +124,6 @@ public class ParticipantStatusPublisher {
   }
 
   private void publishBlockedEventIfNeeded(ParticipantStatusDTO status) {
-    NamespaceSecurityPolicyDTO currentPolicy =
-        namespaceSecurityPolicyStore != null ? namespaceSecurityPolicyStore.get() : null;
     NamespaceSecurityPolicyDTO authoritativePolicy =
         namespaceSecurityPolicyStore != null
             ? namespaceSecurityPolicyStore.getAuthoritativePolicy()
@@ -153,9 +151,9 @@ public class ParticipantStatusPublisher {
               .distinct()
               .reduce((left, right) -> left + "," + right)
               .orElse(""));
-      if (currentPolicy != null) {
-        metadata.put("policyVersion", String.valueOf(currentPolicy.getPolicyVersion()));
-        metadata.put("policyHash", String.valueOf(currentPolicy.getPolicyHash()));
+      if (authoritativePolicy != null) {
+        metadata.put("policyVersion", String.valueOf(authoritativePolicy.getPolicyVersion()));
+        metadata.put("policyHash", String.valueOf(authoritativePolicy.getPolicyHash()));
       }
     }
 
@@ -201,12 +199,12 @@ public class ParticipantStatusPublisher {
             .participantId(status.getParticipantId())
             .participantInstanceId(status.getParticipantInstanceId())
             .desiredPolicyVersion(
-                currentPolicy != null
-                    ? currentPolicy.getPolicyVersion()
+                authoritativePolicy != null
+                    ? authoritativePolicy.getPolicyVersion()
                     : status.getObservedPolicyVersion())
             .desiredPolicyHash(
-                currentPolicy != null
-                    ? currentPolicy.getPolicyHash()
+                authoritativePolicy != null
+                    ? authoritativePolicy.getPolicyHash()
                     : status.getObservedPolicyHash())
             .activePolicyVersion(
                 authoritativePolicy != null

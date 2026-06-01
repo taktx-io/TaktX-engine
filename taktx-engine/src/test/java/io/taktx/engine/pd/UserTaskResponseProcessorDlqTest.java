@@ -19,8 +19,6 @@ import static org.mockito.Mockito.when;
 
 import io.taktx.dto.NamespaceSecurityPolicyDTO;
 import io.taktx.dto.ProcessInstanceTriggerDTO;
-import io.taktx.dto.RequiredSigningDTO;
-import io.taktx.dto.SecurityActivationState;
 import io.taktx.dto.SecurityMode;
 import io.taktx.dto.UserTaskResponseDlqEntryDTO;
 import io.taktx.dto.UserTaskResponseResultDTO;
@@ -150,7 +148,7 @@ class UserTaskResponseProcessorDlqTest {
   }
 
   @Test
-  void process_pendingPolicy_emitsDlqWithPolicyNotActiveHint() {
+  void process_authoritativeAnchoredPolicyWithoutTrustAnchor_emitsDlq() {
     UUID processInstanceId = UUID.randomUUID();
     UserTaskResponseResultDTO result =
         new UserTaskResponseResultDTO(UserTaskResponseType.COMPLETED, null, null);
@@ -158,7 +156,7 @@ class UserTaskResponseProcessorDlqTest {
         new UserTaskResponseTriggerDTO(
             processInstanceId, List.of(3L), result, VariablesDTO.empty());
     UserTaskResponseProcessor guardedProcessor =
-        guardedProcessorWithPolicy(requestedPolicy(42L), null);
+        guardedProcessorWithPolicy(anchoredPolicy(42L));
 
     guardedProcessor.process(new Record<>(processInstanceId, response, 400L, new RecordHeaders()));
 
@@ -182,7 +180,7 @@ class UserTaskResponseProcessorDlqTest {
     UserTaskResponseTriggerDTO response =
         new UserTaskResponseTriggerDTO(
             processInstanceId, List.of(4L), result, VariablesDTO.empty());
-    UserTaskResponseProcessor guardedProcessor = guardedProcessorWithPolicy(null, null);
+    UserTaskResponseProcessor guardedProcessor = guardedProcessorWithPolicy(null);
 
     guardedProcessor.process(new Record<>(processInstanceId, response, 500L, new RecordHeaders()));
 
@@ -194,10 +192,9 @@ class UserTaskResponseProcessorDlqTest {
   }
 
   private UserTaskResponseProcessor guardedProcessorWithPolicy(
-      NamespaceSecurityPolicyDTO currentPolicy, NamespaceSecurityPolicyDTO activePolicy) {
+      NamespaceSecurityPolicyDTO authoritativePolicy) {
     NamespaceSecurityPolicyStore policyStore = new NamespaceSecurityPolicyStore();
-    policyStore.setCurrentPolicy(currentPolicy);
-    policyStore.setActivePolicy(activePolicy);
+    policyStore.update(authoritativePolicy);
     MessageSigningService messageSigningService = mock(MessageSigningService.class);
     when(messageSigningService.getKeyId()).thenReturn("engine-key-1");
     when(messageSigningService.isPublicKeyPublished()).thenReturn(true);
@@ -214,7 +211,7 @@ class UserTaskResponseProcessorDlqTest {
     return guardedProcessor;
   }
 
-  private static NamespaceSecurityPolicyDTO requestedPolicy(long version) {
+  private static NamespaceSecurityPolicyDTO anchoredPolicy(long version) {
     return NamespaceSecurityPolicySupport.requireValid(
         NamespaceSecurityPolicyDTO.builder()
             .mode(SecurityMode.ANCHORED)

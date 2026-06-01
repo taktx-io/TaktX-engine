@@ -23,9 +23,8 @@ import org.slf4j.LoggerFactory;
 /**
  * Global-store processor for the namespace-local {@code taktx-security-policy} topic.
  *
- * <p>The first slice intentionally keeps this processor narrow: it validates and caches the latest
- * explicit policy record so downstream runtime components can adopt the official contract without
- * yet implementing activation-state transitions here.
+ * <p>Validates and caches the latest explicit policy record as the single authoritative namespace
+ * security policy.
  */
 public class NamespaceSecurityPolicyProcessor implements Processor<String, byte[], Void, Void> {
 
@@ -95,17 +94,13 @@ public class NamespaceSecurityPolicyProcessor implements Processor<String, byte[
       } else {
         namespaceSecurityPolicyStore.update(validated);
       }
+      NamespaceSecurityPolicyDTO authoritativePolicy =
+          namespaceSecurityPolicyStore.getAuthoritativePolicy();
       log.info(
           "Namespace security policy updated: policyVersion={} policyHash={} mode={}",
-          namespaceSecurityPolicyStore.get() != null
-              ? namespaceSecurityPolicyStore.get().getPolicyVersion()
-              : validated.getPolicyVersion(),
-          namespaceSecurityPolicyStore.get() != null
-              ? namespaceSecurityPolicyStore.get().getPolicyHash()
-              : validated.getPolicyHash(),
-          namespaceSecurityPolicyStore.get() != null
-              ? namespaceSecurityPolicyStore.get().getMode()
-              : validated.getMode());
+          authoritativePolicy != null ? authoritativePolicy.getPolicyVersion() : validated.getPolicyVersion(),
+          authoritativePolicy != null ? authoritativePolicy.getPolicyHash() : validated.getPolicyHash(),
+          authoritativePolicy != null ? authoritativePolicy.getMode() : validated.getMode());
     } catch (AuthorizationTokenException e) {
       if (activationService != null) {
         activationService.onRejectedPolicyMutation(e.getMessage(), rec.key());

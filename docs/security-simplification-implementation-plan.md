@@ -1,6 +1,6 @@
 # Security Simplification Implementation Plan
 
-**Status:** Draft / Ready for execution  
+**Status:** In progress  
 **Date:** 2026-06-01  
 **Related docs:**
 - `docs/drastic-security-simplification.md`
@@ -22,6 +22,14 @@
 - [ ] Phase 4: Align trust-registry semantics on `taktx-signing-keys`
 - [ ] Phase 5: Rewrite tests around the simplified model
 - [ ] Phase 6: Remove legacy bridges and update docs
+
+## Progress update — 2026-06-01
+- Shared-contract hard break (A1–A5) is complete and remains the stable baseline.
+- `taktx-engine` main/test source sets compile cleanly and `:taktx-engine:test` is green against the simplified contract.
+- Public-client security integration tests have been rewritten away from legacy activation-state / `SECURED` assumptions and now target `OPEN` / `ANCHORED` semantics.
+- Dead engine activation-monitor plumbing has been removed from the policy/status path, including the obsolete policy activation timeout configuration and participant-status reevaluation hook.
+- The engine namespace-policy store now carries a single authoritative policy view; remaining Phase 2 work is focused on readiness/enforcement cleanup rather than activation rollback state.
+- The remaining work is concentrated in finishing Phase 2 production cleanup, Phase 3/4 identity + trust-registry behavior, and broadening Phase 5 coverage beyond the current engine/integration adaptations.
 
 ---
 
@@ -230,10 +238,10 @@ Make namespace mode immediately authoritative and enforce a single ingress rule.
 - `taktx-engine/src/main/java/io/taktx/engine/config/NamespaceSecurityPolicyProcessor.java`
 
 **Work**
-- [ ] Remove `REQUESTED` / `VALIDATING` / `ACTIVE`
-- [ ] Remove convergence and rollback logic
-- [ ] Make the latest valid policy immediately authoritative
-- [ ] Keep rejection only for malformed/unauthorized policy mutation
+- [x] Remove `REQUESTED` / `VALIDATING` / `ACTIVE`
+- [x] Remove convergence and rollback logic
+- [x] Make the latest valid policy immediately authoritative
+- [x] Keep rejection only for malformed/unauthorized policy mutation
 
 **Acceptance criteria**
 - The engine stores exactly one authoritative policy
@@ -716,8 +724,8 @@ Start with this bounded slice:
 | A3 | Rewrite `NamespaceSecurityPolicySupport` | Done | A2 | Canonical hash simplification |
 | A4 | Simplify proto + mapper | Done | A2,A3 | Regenerate protobufs |
 | A5 | Simplify participant supported modes | Done | A1 | Remove posture ladder |
-| C1 | Remove activation workflow | Todo | A2,A4 | Immediate authority |
-| C2 | Simplify engine readiness | Todo | C1 | Fail-closed in anchored |
+| C1 | Remove activation workflow | Done | A2,A4 | Engine policy store/processor now keep only one authoritative policy; rejected mutations remain the only control-plane failure path |
+| C2 | Simplify engine readiness | In progress | C1 | Fail-closed anchored behavior is covered in current engine/integration tests, but final cleanup is still pending |
 | C3 | Rewrite ingress enforcement | Todo | C1,C2 | `OPEN => accept`, `ANCHORED => verify` |
 | C4 | Prevent security rejection DLQ | Todo | C3 | Emit events instead |
 | C5 | Apply same rule to all ingress | Todo | C3 | Uniform external ingress |
@@ -731,8 +739,8 @@ Start with this bounded slice:
 | E3 | Define explicit rotation lifecycle | Todo | D5,E1 | Revocation path |
 | F1 | Update shared tests | Todo | Phase 1 | Hard-break contract tests |
 | F2 | Update client tests | Todo | Phase 3 | Auto-sign + persistence |
-| F3 | Update engine tests | Todo | Phase 2 | No lifecycle tests |
-| F4 | Rewrite integration security tests | Todo | Phases 2-4 | Prompt coverage |
+| F3 | Update engine tests | In progress | Phase 2 | Engine unit suites compile/pass against the simplified contract; legacy activation assertions still need final cleanup |
+| F4 | Rewrite integration security tests | In progress | Phases 2-4 | Public-client dogfood tests now target `OPEN` / `ANCHORED`; remaining coverage gaps are identity rotation / approved anchored success paths |
 | G1 | Remove legacy global-config bridge | Todo | Phases 2-3 | One authoritative model |
 | G2 | Update docs | Todo | final behavior | Simplified story |
 | G3 | Add migration notes | Todo | final behavior | Breaking change guidance |

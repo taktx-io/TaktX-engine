@@ -27,8 +27,6 @@ import io.taktx.dto.NamespaceSecurityPolicyDTO;
 import io.taktx.dto.ProcessDefinitionKey;
 import io.taktx.dto.ProcessInstanceDTO;
 import io.taktx.dto.ProcessInstanceDlqEntryDTO;
-import io.taktx.dto.RequiredSigningDTO;
-import io.taktx.dto.SecurityActivationState;
 import io.taktx.dto.SecurityMode;
 import io.taktx.dto.StartCommandDTO;
 import io.taktx.dto.UserTaskResponseResultDTO;
@@ -261,7 +259,7 @@ class ProcessInstanceProcessorDlqTest {
   }
 
   @Test
-  void process_pendingPolicyWithoutAuthoritativeActivePolicy_emitsDlqEntry() {
+  void process_authoritativeAnchoredPolicyWithoutTrustAnchor_emitsDlqEntry() {
     UUID processInstanceId = UUID.randomUUID();
     byte[] payload = new byte[] {10, 20, 30};
     RecordHeaders headers = new RecordHeaders();
@@ -277,7 +275,7 @@ class ProcessInstanceProcessorDlqTest {
     when(engineAuthorizationService.authorize(headers, envelope)).thenReturn(null);
 
     ProcessInstanceProcessor guardedProcessor =
-        guardedProcessorWithPolicy(requestedPolicy(42L), null, null, true);
+        guardedProcessorWithPolicy(anchoredPolicy(42L), null, true);
 
     guardedProcessor.process(new Record<>(processInstanceId, envelope, 42L, headers));
 
@@ -308,9 +306,9 @@ class ProcessInstanceProcessorDlqTest {
         new ProcessInstanceTriggerEnvelope(payload, trigger, false, null);
     when(engineAuthorizationService.authorize(headers, envelope)).thenReturn(null);
 
-    NamespaceSecurityPolicyDTO activeAnchored = anchoredActivePolicy(42L);
+    NamespaceSecurityPolicyDTO activeAnchored = anchoredPolicy(42L);
     ProcessInstanceProcessor guardedProcessor =
-        guardedProcessorWithPolicy(activeAnchored, activeAnchored, null, true);
+        guardedProcessorWithPolicy(activeAnchored, null, true);
 
     guardedProcessor.process(new Record<>(processInstanceId, envelope, 42L, headers));
 
@@ -393,8 +391,7 @@ class ProcessInstanceProcessorDlqTest {
                 "Namespace security policy requires anchored trust but no platform public key is configured"));
 
     ProcessInstanceProcessor guardedProcessor =
-        guardedProcessorWithPolicy(
-            anchoredActivePolicy(42L), anchoredActivePolicy(42L), null, true);
+        guardedProcessorWithPolicy(anchoredPolicy(42L), null, true);
 
     guardedProcessor.process(new Record<>(processInstanceId, envelope, 45L, headers));
 
@@ -429,13 +426,11 @@ class ProcessInstanceProcessorDlqTest {
   }
 
   private ProcessInstanceProcessor guardedProcessorWithPolicy(
-      NamespaceSecurityPolicyDTO currentPolicy,
-      NamespaceSecurityPolicyDTO activePolicy,
+      NamespaceSecurityPolicyDTO authoritativePolicy,
       String platformPublicKey,
       boolean signingAvailable) {
     NamespaceSecurityPolicyStore policyStore = new NamespaceSecurityPolicyStore();
-    policyStore.setCurrentPolicy(currentPolicy);
-    policyStore.setActivePolicy(activePolicy);
+    policyStore.update(authoritativePolicy);
     when(taktConfiguration.getPlatformPublicKey()).thenReturn(platformPublicKey);
 
     MessageSigningService messageSigningService = mock(MessageSigningService.class);
@@ -466,7 +461,7 @@ class ProcessInstanceProcessorDlqTest {
     return guardedProcessor;
   }
 
-  private static NamespaceSecurityPolicyDTO requestedPolicy(long version) {
+  private static NamespaceSecurityPolicyDTO anchoredPolicy(long version) {
     return NamespaceSecurityPolicySupport.requireValid(
         NamespaceSecurityPolicyDTO.builder()
             .mode(SecurityMode.ANCHORED)
@@ -474,10 +469,6 @@ class ProcessInstanceProcessorDlqTest {
             .build());
   }
 
-  private static NamespaceSecurityPolicyDTO anchoredActivePolicy(long version) {
-    return NamespaceSecurityPolicySupport.requireValid(
-        NamespaceSecurityPolicyDTO.builder().mode(SecurityMode.ANCHORED).policyVersion(version).build());
-  }
 
   private void assertAuthorizationFailureDlq(
       UUID processInstanceId, byte[] payload, String reasonTextFragment) {

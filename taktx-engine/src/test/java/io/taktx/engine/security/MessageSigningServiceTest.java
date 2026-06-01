@@ -12,8 +12,6 @@ import static org.mockito.Mockito.mock;
 
 import io.taktx.dto.GlobalConfigurationDTO;
 import io.taktx.dto.NamespaceSecurityPolicyDTO;
-import io.taktx.dto.RequiredSigningDTO;
-import io.taktx.dto.SecurityActivationState;
 import io.taktx.dto.SecurityMode;
 import io.taktx.engine.config.GlobalConfigStore;
 import io.taktx.engine.config.NamespaceSecurityPolicyStore;
@@ -101,17 +99,8 @@ class MessageSigningServiceTest {
   }
 
   @Test
-  void requestedSecuredPolicy_preparesButDoesNotSignBeforeActivation() {
-    namespaceSecurityPolicyStore.setCurrentPolicy(requestedPolicy(42L));
-
-    MessageSigningService svc = serviceWithConfigStore(globalConfigStore);
-
-    assertThat(svc.signToHeaderValue(PAYLOAD)).isNotNull();
-  }
-
-  @Test
-  void activeSecuredPolicy_signsWithoutLegacyRuntimeToggle() {
-    namespaceSecurityPolicyStore.update(activePolicy(42L));
+  void authoritativeAnchoredPolicy_signsWithoutLegacyRuntimeToggle() {
+    namespaceSecurityPolicyStore.update(anchoredPolicy(42L));
 
     MessageSigningService svc = serviceWithConfigStore(globalConfigStore);
 
@@ -275,15 +264,11 @@ class MessageSigningServiceTest {
         .build();
   }
 
-  private static NamespaceSecurityPolicyDTO requestedPolicy(long version) {
+  private static NamespaceSecurityPolicyDTO anchoredPolicy(long version) {
     return NamespaceSecurityPolicySupport.requireValid(
         NamespaceSecurityPolicyDTO.builder()
             .mode(SecurityMode.ANCHORED)
             .policyVersion(version)
             .build());
-  }
-
-  private static NamespaceSecurityPolicyDTO activePolicy(long version) {
-    return requestedPolicy(version);
   }
 }

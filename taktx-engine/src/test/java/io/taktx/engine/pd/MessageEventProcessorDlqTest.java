@@ -25,8 +25,6 @@ import io.taktx.dto.MessageEventDlqEntryDTO;
 import io.taktx.dto.MessageEventKeyDTO;
 import io.taktx.dto.NamespaceSecurityPolicyDTO;
 import io.taktx.dto.ProcessDefinitionKey;
-import io.taktx.dto.RequiredSigningDTO;
-import io.taktx.dto.SecurityActivationState;
 import io.taktx.dto.SecurityMode;
 import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.config.NamespaceSecurityPolicyStore;
@@ -166,8 +164,8 @@ class MessageEventProcessorDlqTest {
   }
 
   @Test
-  void process_messageTriggerUnderPendingPolicy_emitsDlqWithPolicyNotActiveHint() {
-    MessageEventProcessor guardedProcessor = guardedProcessorWithPolicy(requestedPolicy(42L), null);
+  void process_messageTriggerUnderAnchoredPolicyWithoutTrustAnchor_emitsDlq() {
+    MessageEventProcessor guardedProcessor = guardedProcessorWithPolicy(anchoredPolicy(42L));
     MessageEventKeyDTO key = new MessageEventKeyDTO("pay");
     DefinitionMessageEventTriggerDTO trigger =
         new DefinitionMessageEventTriggerDTO("pay", VariablesDTO.empty());
@@ -184,8 +182,8 @@ class MessageEventProcessorDlqTest {
   }
 
   @Test
-  void process_subscriptionMutationUnderPendingPolicy_remainsAllowed() {
-    MessageEventProcessor guardedProcessor = guardedProcessorWithPolicy(requestedPolicy(42L), null);
+  void process_subscriptionMutationUnderAnchoredPolicy_remainsAllowed() {
+    MessageEventProcessor guardedProcessor = guardedProcessorWithPolicy(anchoredPolicy(42L));
     MessageEventKeyDTO key = new MessageEventKeyDTO("pay");
     DefinitionMessageSubscriptionDTO subscription =
         new DefinitionMessageSubscriptionDTO(new ProcessDefinitionKey("proc", 1), "start", "pay");
@@ -196,11 +194,9 @@ class MessageEventProcessorDlqTest {
     verify(context, never()).forward(any());
   }
 
-  private MessageEventProcessor guardedProcessorWithPolicy(
-      NamespaceSecurityPolicyDTO currentPolicy, NamespaceSecurityPolicyDTO activePolicy) {
+  private MessageEventProcessor guardedProcessorWithPolicy(NamespaceSecurityPolicyDTO authoritativePolicy) {
     NamespaceSecurityPolicyStore policyStore = new NamespaceSecurityPolicyStore();
-    policyStore.setCurrentPolicy(currentPolicy);
-    policyStore.setActivePolicy(activePolicy);
+    policyStore.update(authoritativePolicy);
     MessageSigningService messageSigningService = mock(MessageSigningService.class);
     when(messageSigningService.getKeyId()).thenReturn("engine-key-1");
     when(messageSigningService.isPublicKeyPublished()).thenReturn(true);
@@ -219,7 +215,7 @@ class MessageEventProcessorDlqTest {
     return guardedProcessor;
   }
 
-  private static NamespaceSecurityPolicyDTO requestedPolicy(long version) {
+  private static NamespaceSecurityPolicyDTO anchoredPolicy(long version) {
     return NamespaceSecurityPolicySupport.requireValid(
         NamespaceSecurityPolicyDTO.builder()
             .mode(SecurityMode.ANCHORED)

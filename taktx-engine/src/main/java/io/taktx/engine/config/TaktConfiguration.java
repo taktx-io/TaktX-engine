@@ -115,16 +115,10 @@ public class TaktConfiguration {
   @ConfigProperty(name = "taktx.security.production-mode", defaultValue = "false")
   String securityProductionMode;
 
-  @ConfigProperty(name = "taktx.security.policy.activation-timeout-ms", defaultValue = "30000")
-  long securityPolicyActivationTimeoutMs;
-
   public boolean inTestMode() {
     return Boolean.parseBoolean(isTest);
   }
 
-  public long getSecurityPolicyActivationTimeoutMs() {
-    return securityPolicyActivationTimeoutMs;
-  }
 
   @PostConstruct
   void validateSegments() {

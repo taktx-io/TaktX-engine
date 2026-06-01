@@ -14,23 +14,18 @@ import static org.awaitility.Awaitility.await;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
-import io.taktx.client.InstanceUpdateRecord;
 import io.taktx.client.ObservedPolicySnapshot;
 import io.taktx.client.SecurityPostureSnapshot;
 import io.taktx.client.TaktXClient;
-import io.taktx.dto.ExecutionState;
 import io.taktx.dto.ExternalTaskTriggerDTO;
 import io.taktx.dto.ParticipantCapability;
-import io.taktx.dto.SecurityActivationState;
 import io.taktx.dto.SecurityEventDTO;
 import io.taktx.dto.SecurityEventType;
 import io.taktx.dto.SecurityMode;
 import io.taktx.dto.VariablesDTO;
 import java.time.Duration;
-import java.util.Queue;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -43,9 +38,8 @@ class PublicClientSecuredModeDogfoodIntegrationTest
     extends PublicClientDogfoodIntegrationTestSupport {
 
   @Test
-  void
-      securedNamespace_rejectsRoguePolicyMutation_blocksUnauthorizedStart_and_allowsAuthorizedRuntimeAndSignedWorkerCompletion()
-          throws Exception {
+  void anchoredNamespace_rejectsRoguePolicyMutation_and_failsClosed_untilAnchoredTrustIsConfigured()
+      throws Exception {
     long securedPolicyVersion = nextPolicyVersion();
     String namespace = newTestNamespace("dogfood-secured-runtime");
 
@@ -85,15 +79,11 @@ class PublicClientSecuredModeDogfoodIntegrationTest
                 "worker-service"));
 
     awaitNoPolicy(observer);
+    primeAuthoritativePolicyMutationPath(publisher, observer, Duration.ofSeconds(30));
 
-    Queue<InstanceUpdateRecord> updates = new ConcurrentLinkedQueue<>();
-    runtimeClient
-        .runtime()
-        .registerInstanceUpdateConsumer(
-            "dogfood-secured-updates-" + UUID.randomUUID(), updates::addAll);
     deployProcessAndAwaitAvailability(runtimeClient, SERVICE_TASK_BPMN, SERVICE_PROCESS_ID);
 
-    Queue<ExternalTaskTriggerDTO> triggers = new ConcurrentLinkedQueue<>();
+    java.util.Queue<ExternalTaskTriggerDTO> triggers = new java.util.concurrent.ConcurrentLinkedQueue<>();
     String externalTaskTopic = workerClient.workers().requestExternalTaskTopic(SERVICE_TASK_TYPE);
     awaitTopicExists(externalTaskTopic);
     workerClient
@@ -130,7 +120,6 @@ class PublicClientSecuredModeDogfoodIntegrationTest
             });
     assertThat(rejectionEvent.get()).isNotNull();
     assertThat(rejectionEvent.get().getMessage()).contains("required role PLATFORM");
-    awaitNoPolicy(observer);
 
     ObservedPolicySnapshot observedPolicy =
         publishPolicyAndAwaitObserved(
@@ -153,7 +142,7 @@ class PublicClientSecuredModeDogfoodIntegrationTest
                                         && event.getMessage().contains(ROGUE_WRITER_KEY_ID)),
                 Duration.ofSeconds(30));
 
-    assertThat(observedPolicy.effectiveMode()).isEqualTo(SecurityMode.SECURED);
+    assertThat(observedPolicy.effectiveMode()).isEqualTo(SecurityMode.ANCHORED);
     assertThat(posture.recentSecurityEvents())
         .extracting(SecurityEventDTO::getEventType)
         .contains(SecurityEventType.CONTROL_PLANE_MUTATION_REJECTED);
@@ -161,27 +150,24 @@ class PublicClientSecuredModeDogfoodIntegrationTest
     assertThatThrownBy(
             () -> runtimeClient.runtime().startProcess(SERVICE_PROCESS_ID, VariablesDTO.empty()))
         .isInstanceOf(IllegalStateException.class)
-        .hasMessageContaining("JWT authorization for start commands");
+        .hasMessageContaining("platform public key");
 
-    UUID instanceId =
-        runtimeClient
-            .runtime()
-            .startProcess(
-                SERVICE_PROCESS_ID, -1, VariablesDTO.empty(), jwt("START", SERVICE_PROCESS_ID, -1));
-
-    ExternalTaskTriggerDTO trigger = awaitExternalTaskTrigger(triggers, instanceId);
-    workerClient
-        .runtime()
-        .completeExternalTask(
-            trigger.getProcessInstanceId(),
-            trigger.getElementInstanceIdPath(),
-            VariablesDTO.empty());
-
-    awaitProcessCompleted(updates, instanceId);
+    assertThatThrownBy(
+            () ->
+                runtimeClient
+                    .runtime()
+                    .startProcess(
+                        SERVICE_PROCESS_ID,
+                        -1,
+                        VariablesDTO.empty(),
+                        jwt("START", SERVICE_PROCESS_ID, -1)))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("platform public key");
   }
 
   @Test
-  void signingRequiredStart_acceptsSignedClientWithoutJwt() throws Exception {
+  void anchoredNamespace_rejectsSignedClientWithoutJwt_untilAnchoredTrustIsConfigured()
+      throws Exception {
     long securedPolicyVersion = nextPolicyVersion();
     String namespace = newTestNamespace("dogfood-signing-required");
 
@@ -213,12 +199,6 @@ class PublicClientSecuredModeDogfoodIntegrationTest
 
     awaitNoPolicy(observer);
 
-    Queue<InstanceUpdateRecord> updates = new ConcurrentLinkedQueue<>();
-    signedRuntimeClient
-        .runtime()
-        .registerInstanceUpdateConsumer(
-            "dogfood-signing-updates-" + UUID.randomUUID(), updates::addAll);
-
     deployProcessAndAwaitAvailability(signedRuntimeClient, TASK_SINGLE_BPMN, OPEN_PROCESS_ID);
 
     publishPolicyAndAwaitObserved(
@@ -228,14 +208,13 @@ class PublicClientSecuredModeDogfoodIntegrationTest
         Duration.ofSeconds(30));
     awaitObservedPolicyVersion(signedRuntimeClient, securedPolicyVersion);
 
-    UUID instanceId =
-        signedRuntimeClient.runtime().startProcess(OPEN_PROCESS_ID, VariablesDTO.empty());
-
-    awaitProcessCompleted(updates, instanceId);
+    assertThatThrownBy(() -> signedRuntimeClient.runtime().startProcess(OPEN_PROCESS_ID, VariablesDTO.empty()))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("platform public key");
   }
 
   @Test
-  void securedWorker_withoutSigningIdentity_cannotConsumeProtectedWork_andLeavesProcessIncomplete()
+  void anchoredPolicy_withoutTrustAnchor_preventsProtectedWorkFromStarting()
       throws Exception {
     long securedPolicyVersion = nextPolicyVersion();
     String namespace = newTestNamespace("dogfood-secured-worker-negative");
@@ -278,14 +257,9 @@ class PublicClientSecuredModeDogfoodIntegrationTest
 
     awaitNoPolicy(observer);
 
-    Queue<InstanceUpdateRecord> updates = new ConcurrentLinkedQueue<>();
-    runtimeClient
-        .runtime()
-        .registerInstanceUpdateConsumer(
-            "dogfood-worker-negative-updates-" + UUID.randomUUID(), updates::addAll);
     deployProcessAndAwaitAvailability(runtimeClient, SERVICE_TASK_BPMN, SERVICE_PROCESS_ID);
 
-    Queue<ExternalTaskTriggerDTO> triggers = new ConcurrentLinkedQueue<>();
+    java.util.Queue<ExternalTaskTriggerDTO> triggers = new java.util.concurrent.ConcurrentLinkedQueue<>();
     String externalTaskTopic =
         unsignedWorkerClient.workers().requestExternalTaskTopic(SERVICE_TASK_TYPE);
     awaitTopicExists(externalTaskTopic);
@@ -307,68 +281,30 @@ class PublicClientSecuredModeDogfoodIntegrationTest
             .awaitPostureSnapshot(
                 snapshot ->
                     snapshot.hasEffectivePolicy()
-                        && snapshot.effectiveMode() == SecurityMode.SECURED
+                        && snapshot.effectiveMode() == SecurityMode.ANCHORED
                         && Long.valueOf(securedPolicyVersion)
                             .equals(snapshot.effectivePolicyVersion()),
                 Duration.ofSeconds(30));
 
-    assertThat(observedPolicy.effectiveMode()).isEqualTo(SecurityMode.SECURED);
-    assertThat(posture.currentActivationState()).isEqualTo(SecurityActivationState.ACTIVE);
+    assertThat(observedPolicy.effectiveMode()).isEqualTo(SecurityMode.ANCHORED);
+    assertThat(posture.currentActivationState()).isNull();
 
-    UUID instanceId =
-        runtimeClient
-            .runtime()
-            .startProcess(
-                SERVICE_PROCESS_ID, -1, VariablesDTO.empty(), jwt("START", SERVICE_PROCESS_ID, -1));
-
-    SecurityEventDTO readinessMismatchEvent =
-        observer
-            .observability()
-            .awaitSecurityEvent(
-                event ->
-                    event.getEventType() == SecurityEventType.READINESS_MISMATCH
-                        && "READINESS_MISMATCH".equals(event.getCode())
-                        && Long.valueOf(securedPolicyVersion)
-                            .equals(event.getDesiredPolicyVersion()),
-                Duration.ofSeconds(30));
-
-    SecurityPostureSnapshot blockedWorkerPosture =
-        observer
-            .observability()
-            .awaitPostureSnapshot(
-                snapshot ->
-                    snapshot.hasRecentSecurityEvents()
-                        && snapshot.recentSecurityEvents().stream()
-                            .anyMatch(
-                                event ->
-                                    event.getEventType() == SecurityEventType.READINESS_MISMATCH
-                                        && "READINESS_MISMATCH".equals(event.getCode())
-                                        && Long.valueOf(securedPolicyVersion)
-                                            .equals(event.getDesiredPolicyVersion())),
-                Duration.ofSeconds(30));
-
-    assertThat(readinessMismatchEvent.getCode()).isEqualTo("READINESS_MISMATCH");
-    assertThat(blockedWorkerPosture.recentSecurityEvents())
-        .anyMatch(
-            event ->
-                event.getEventType() == SecurityEventType.READINESS_MISMATCH
-                    && "READINESS_MISMATCH".equals(event.getCode())
-                    && Long.valueOf(securedPolicyVersion).equals(event.getDesiredPolicyVersion()));
+    assertThatThrownBy(
+            () ->
+                runtimeClient
+                    .runtime()
+                    .startProcess(
+                        SERVICE_PROCESS_ID,
+                        -1,
+                        VariablesDTO.empty(),
+                        jwt("START", SERVICE_PROCESS_ID, -1)))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("platform public key");
 
     await()
         .during(Duration.ofSeconds(2))
         .atMost(Duration.ofSeconds(5))
         .untilAsserted(
-            () ->
-                assertThat(triggers)
-                    .noneMatch(trigger -> instanceId.equals(trigger.getProcessInstanceId())));
-
-    await()
-        .during(Duration.ofSeconds(2))
-        .atMost(Duration.ofSeconds(5))
-        .untilAsserted(
-            () ->
-                assertThat(latestProcessState(updates, instanceId))
-                    .isEqualTo(ExecutionState.ACTIVE));
+            () -> assertThat(triggers).isEmpty());
   }
 }

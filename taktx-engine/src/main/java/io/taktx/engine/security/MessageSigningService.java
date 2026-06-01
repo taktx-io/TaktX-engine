@@ -365,11 +365,10 @@ public class MessageSigningService {
     if (hasLegacySecurityToggle()) {
       return true;
     }
-    return isProtectedPosture(namespaceSecurityPolicyStore != null ? namespaceSecurityPolicyStore.get() : null)
-        || isProtectedPosture(
-            namespaceSecurityPolicyStore != null
-                ? namespaceSecurityPolicyStore.getAuthoritativePolicy()
-                : null);
+    return isProtectedPosture(
+        namespaceSecurityPolicyStore != null
+            ? namespaceSecurityPolicyStore.getAuthoritativePolicy()
+            : null);
   }
 
   private boolean shouldSignEngineMessages() {

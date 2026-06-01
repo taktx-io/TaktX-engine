@@ -539,9 +539,7 @@ public class TopologyProducer {
             .withLoggingDisabled(),
         taktConfiguration.getPrefixed(Topics.PARTICIPANT_STATUS_TOPIC.getTopicName()),
         Consumed.with(Serdes.String(), Serdes.ByteArray()),
-        () ->
-            new ParticipantStatusProcessor(
-                participantStatusStore, namespaceSecurityPolicyActivationService));
+        () -> new ParticipantStatusProcessor(participantStatusStore));
 
     builder.globalTable(
         taktConfiguration.getPrefixed(Topics.SIGNING_KEYS_TOPIC.getTopicName()),

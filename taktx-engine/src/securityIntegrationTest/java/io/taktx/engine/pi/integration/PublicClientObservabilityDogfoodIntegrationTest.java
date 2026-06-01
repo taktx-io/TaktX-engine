@@ -23,7 +23,6 @@ import io.taktx.dto.ParticipantCapability;
 import io.taktx.dto.ParticipantEffectiveState;
 import io.taktx.dto.ParticipantKind;
 import io.taktx.dto.ParticipantStatusDTO;
-import io.taktx.dto.SecurityActivationState;
 import io.taktx.dto.SecurityEventDTO;
 import io.taktx.dto.SecurityEventType;
 import io.taktx.dto.SecurityMode;
@@ -90,16 +89,6 @@ class PublicClientObservabilityDogfoodIntegrationTest
             activeAnchoredPolicy(anchoredPolicyVersion),
             Duration.ofSeconds(30));
 
-    SecurityEventDTO readinessMismatchEvent =
-        observer
-            .observability()
-            .awaitSecurityEvent(
-                event ->
-                    event.getEventType() == SecurityEventType.READINESS_MISMATCH
-                        && "READINESS_MISMATCH".equals(event.getCode())
-                        && Long.valueOf(anchoredPolicyVersion)
-                            .equals(event.getDesiredPolicyVersion()),
-                Duration.ofSeconds(30));
     SecurityEventDTO blockedEvent =
         observer
             .observability()
@@ -117,7 +106,7 @@ class PublicClientObservabilityDogfoodIntegrationTest
             .awaitPostureSnapshot(
                 snapshot ->
                     snapshot.hasEffectivePolicy()
-                        && snapshot.effectiveMode() == SecurityMode.ANCHORED_SECURED
+                        && snapshot.effectiveMode() == SecurityMode.ANCHORED
                         && Long.valueOf(anchoredPolicyVersion)
                             .equals(snapshot.effectivePolicyVersion())
                         && snapshot.recentSecurityEvents().stream()
@@ -128,16 +117,11 @@ class PublicClientObservabilityDogfoodIntegrationTest
                 Duration.ofSeconds(30));
 
     assertThat(observedPolicy.hasAuthoritativePolicy()).isTrue();
-    assertThat(observedPolicy.effectiveMode()).isEqualTo(SecurityMode.ANCHORED_SECURED);
-    assertThat(posture.currentActivationState()).isEqualTo(SecurityActivationState.ACTIVE);
-    assertThat(readinessMismatchEvent.getCode()).isEqualTo("READINESS_MISMATCH");
+    assertThat(observedPolicy.effectiveMode()).isEqualTo(SecurityMode.ANCHORED);
+    assertThat(posture.currentActivationState()).isNull();
     assertThat(blockedEvent.getCode()).isEqualTo("TRUST_ANCHOR_MISSING");
     assertThat(blockedEvent.getMessage()).contains("platform public key");
     assertThat(posture.recentSecurityEvents())
-        .anyMatch(
-            event ->
-                event.getEventType() == SecurityEventType.READINESS_MISMATCH
-                    && "READINESS_MISMATCH".equals(event.getCode()))
         .anyMatch(
             event ->
                 event.getEventType() == SecurityEventType.DATA_PLANE_BLOCKED
@@ -216,7 +200,7 @@ class PublicClientObservabilityDogfoodIntegrationTest
                               && snapshot.hasMismatchReasons(),
                       Duration.ofSeconds(30));
 
-          assertThat(observedPolicy.effectiveMode()).isEqualTo(SecurityMode.ANCHORED_SECURED);
+          assertThat(observedPolicy.effectiveMode()).isEqualTo(SecurityMode.ANCHORED);
           assertThat(participantStatuses.values())
               .anySatisfy(
                   status -> {
@@ -273,7 +257,7 @@ class PublicClientObservabilityDogfoodIntegrationTest
     publishPolicyAndAwaitObserved(
         publisher,
         defaultObserver,
-        activeSecuredPolicy(securedPolicyVersion),
+        activeAnchoredPolicy(securedPolicyVersion),
         Duration.ofSeconds(30));
 
     await()
@@ -339,10 +323,10 @@ class PublicClientObservabilityDogfoodIntegrationTest
         publishPolicyAndAwaitObserved(
             securedPublisher,
             securedActor,
-            activeSecuredPolicy(securedPolicyVersion),
+            activeAnchoredPolicy(securedPolicyVersion),
             Duration.ofSeconds(30));
 
-    assertThat(securedObservedPolicy.effectiveMode()).isEqualTo(SecurityMode.SECURED);
+    assertThat(securedObservedPolicy.effectiveMode()).isEqualTo(SecurityMode.ANCHORED);
 
     await()
         .during(Duration.ofSeconds(2))
@@ -358,7 +342,7 @@ class PublicClientObservabilityDogfoodIntegrationTest
     assertThatThrownBy(
             () -> securedActor.runtime().startProcess(OPEN_PROCESS_ID, VariablesDTO.empty()))
         .isInstanceOf(IllegalStateException.class)
-        .hasMessageContaining("signed client commands");
+        .hasMessageContaining("platform public key");
 
     UUID openInstanceId = openActor.runtime().startProcess(OPEN_PROCESS_ID, VariablesDTO.empty());
     awaitProcessCompleted(openUpdates, openInstanceId);

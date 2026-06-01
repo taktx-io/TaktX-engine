@@ -18,7 +18,6 @@ import io.taktx.dto.SecurityEventDTO;
 import io.taktx.dto.SecurityEventType;
 import io.taktx.dto.SecurityMode;
 import io.taktx.engine.config.NamespaceSecurityPolicyStore;
-import io.taktx.engine.config.ParticipantStatusStore;
 import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.security.NamespaceSecurityPolicySupport;
 import java.time.Clock;
@@ -33,7 +32,6 @@ class NamespaceSecurityPolicyActivationServiceTest {
 
   private TaktConfiguration configuration;
   private NamespaceSecurityPolicyStore policyStore;
-  private ParticipantStatusStore participantStatusStore;
   private SecurityEventPublisher securityEventPublisher;
   private Clock clock;
   private NamespaceSecurityPolicyActivationService activationService;
@@ -45,20 +43,13 @@ class NamespaceSecurityPolicyActivationServiceTest {
     when(configuration.getNamespace()).thenReturn("bank.payments");
     when(configuration.getHost()).thenReturn("engine-host");
     when(configuration.getPort()).thenReturn(8080);
-    when(configuration.getSecurityPolicyActivationTimeoutMs()).thenReturn(1_000L);
 
     policyStore = new NamespaceSecurityPolicyStore();
-    participantStatusStore = new ParticipantStatusStore();
     securityEventPublisher = Mockito.mock(SecurityEventPublisher.class);
     clock = Clock.fixed(Instant.ofEpochMilli(1_716_450_000_000L), ZoneOffset.UTC);
     activationService =
         new NamespaceSecurityPolicyActivationService(
-            configuration,
-            policyStore,
-            participantStatusStore,
-            securityEventPublisher,
-            clock,
-            1_000L);
+            configuration, policyStore, securityEventPublisher, clock);
   }
 
   @Test
