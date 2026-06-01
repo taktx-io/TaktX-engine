@@ -88,10 +88,6 @@ public final class ParticipantStatusSupport {
     if (!normalized.getSupportedModes().contains(SecurityMode.OPEN)) {
       errors.add("supportedModes must include OPEN");
     }
-    if (normalized.getSupportedModes().contains(SecurityMode.ANCHORED_SECURED)
-        && !normalized.getSupportedModes().contains(SecurityMode.SECURED)) {
-      errors.add("supportedModes containing ANCHORED_SECURED must also include SECURED");
-    }
     if (isBlank(normalized.getNamespace())) {
       errors.add("namespace must not be blank");
     }
@@ -209,7 +205,7 @@ public final class ParticipantStatusSupport {
 
   /** Returns whether the participant can validate anchored trust requirements in principle. */
   public static boolean supportsTrustAnchorValidation(ParticipantStatusDTO status) {
-    return supportsMode(status, SecurityMode.ANCHORED_SECURED);
+    return supportsMode(status, SecurityMode.ANCHORED);
   }
 
   /** Derives support-in-principle modes from coarse participant capabilities. */
@@ -221,8 +217,7 @@ public final class ParticipantStatusSupport {
     if (capabilities.contains(ParticipantCapability.ENFORCER)
         || capabilities.contains(ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT)
         || capabilities.contains(ParticipantCapability.AUTHORITATIVE_POLICY_PUBLISHER)) {
-      supportedModes.add(SecurityMode.SECURED);
-      supportedModes.add(SecurityMode.ANCHORED_SECURED);
+      supportedModes.add(SecurityMode.ANCHORED);
     }
     return Set.copyOf(supportedModes);
   }

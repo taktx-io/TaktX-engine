@@ -35,10 +35,7 @@ public final class NamespaceSecurityPolicyControlPlaneContract {
             AuthoritativeControlPlaneSecurityProperty.FIXED_RECORD_KEY_REQUIRED));
   }
 
-  /**
-   * Returns the required security properties for a specific policy mutation, adding stricter
-   * integrity/privileged-downgrade requirements when the requested policy demands them.
-   */
+  /** Returns the required security properties for a specific policy mutation. */
   public static Set<AuthoritativeControlPlaneSecurityProperty> requiredWriterSecurityProperties(
       NamespaceSecurityPolicyDTO policy) {
     EnumSet<AuthoritativeControlPlaneSecurityProperty> requirements =
@@ -46,19 +43,10 @@ public final class NamespaceSecurityPolicyControlPlaneContract {
     if (policy == null || policy.getMode() == null) {
       return Set.copyOf(requirements);
     }
-    if (policy.getMode() == SecurityMode.SECURED
-        || policy.getMode() == SecurityMode.ANCHORED_SECURED) {
+    if (policy.getMode() == SecurityMode.ANCHORED) {
       requirements.add(
           AuthoritativeControlPlaneSecurityProperty.INTEGRITY_PROTECTION_REQUIRED_IN_SECURED_MODES);
     }
-    if (!isBlank(policy.getBreakGlassActor()) || !isBlank(policy.getBreakGlassReason())) {
-      requirements.add(
-          AuthoritativeControlPlaneSecurityProperty.BREAK_GLASS_METADATA_REQUIRED_FOR_DOWNGRADE);
-    }
     return Set.copyOf(requirements);
-  }
-
-  private static boolean isBlank(String value) {
-    return value == null || value.isBlank();
   }
 }

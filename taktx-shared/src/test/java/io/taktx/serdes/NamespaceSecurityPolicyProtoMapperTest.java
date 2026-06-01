@@ -10,9 +10,6 @@ package io.taktx.serdes;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import io.taktx.dto.NamespaceSecurityPolicyDTO;
-import io.taktx.dto.RequiredAuthorizationDTO;
-import io.taktx.dto.RequiredSigningDTO;
-import io.taktx.dto.SecurityActivationState;
 import io.taktx.dto.SecurityMode;
 import org.junit.jupiter.api.Test;
 
@@ -22,27 +19,7 @@ class NamespaceSecurityPolicyProtoMapperTest {
   void namespaceSecurityPolicy_roundTripsThroughProto() {
     NamespaceSecurityPolicyDTO dto =
         NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.ANCHORED_SECURED)
-            .activationState(SecurityActivationState.VALIDATING)
-            .desiredPolicyVersion(42L)
-            .desiredPolicyHash("abc123")
-            .activePolicyVersion(41L)
-            .activePolicyHash("def456")
-            .requiredSigning(
-                RequiredSigningDTO.builder()
-                    .engineOutbound(true)
-                    .clientCommands(true)
-                    .workerResponses(true)
-                    .build())
-            .requiredAuthorization(
-                RequiredAuthorizationDTO.builder()
-                    .startCommands(true)
-                    .externalTaskCompletion(true)
-                    .userTaskCompletion(true)
-                    .build())
-            .trustAnchorRequired(true)
-            .breakGlassActor("ops-admin")
-            .breakGlassReason("manual containment downgrade")
+            .mode(SecurityMode.ANCHORED)
             .policyVersion(42L)
             .policyHash("abc123")
             .build();
@@ -54,17 +31,16 @@ class NamespaceSecurityPolicyProtoMapperTest {
   }
 
   @Test
-  void namespaceSecurityPolicy_defaultsNestedRequirementsWhenProtoFieldsAreAbsent() {
+  void namespaceSecurityPolicy_mapsMinimalPolicyWhenOptionalFieldsAreAbsent() {
     NamespaceSecurityPolicyDTO dto =
         NamespaceSecurityPolicyProtoMapper.toDto(
             io.taktx.proto.NamespaceSecurityPolicyMessage.newBuilder()
                 .setMode(io.taktx.proto.SecurityModeMessage.OPEN)
-                .setActivationState(io.taktx.proto.SecurityActivationStateMessage.REQUESTED)
-                .setDesiredPolicyVersion(1L)
+                .setPolicyVersion(1L)
                 .build());
 
-    assertThat(dto.getRequiredSigning()).isEqualTo(RequiredSigningDTO.builder().build());
-    assertThat(dto.getRequiredAuthorization())
-        .isEqualTo(RequiredAuthorizationDTO.builder().build());
+    assertThat(dto.getMode()).isEqualTo(SecurityMode.OPEN);
+    assertThat(dto.getPolicyVersion()).isEqualTo(1L);
+    assertThat(dto.getPolicyHash()).isNull();
   }
 }

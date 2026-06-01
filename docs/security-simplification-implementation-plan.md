@@ -16,7 +16,7 @@
 - [x] Add a local file-backed identity source for stable participant identity
 
 ## Execution strategy
-- [ ] Phase 1: Collapse shared contracts to `OPEN` / `ANCHORED`
+- [x] Phase 1: Collapse shared contracts to `OPEN` / `ANCHORED`
 - [ ] Phase 2: Simplify engine policy handling and enforcement
 - [ ] Phase 3: Add file-backed identity persistence and client auto-signing
 - [ ] Phase 4: Align trust-registry semantics on `taktx-signing-keys`
@@ -121,9 +121,9 @@ Make the simplified model impossible to bypass in code by removing old modes and
 - `taktx-shared/src/main/java/io/taktx/dto/SecurityMode.java`
 
 **Work**
-- [ ] Remove `SECURED`
-- [ ] Replace/remove `ANCHORED_SECURED` with `ANCHORED`
-- [ ] Remove `MISCONFIGURED_SECURITY` if possible; prefer status/events over fake modes
+- [x] Remove `SECURED`
+- [x] Replace/remove `ANCHORED_SECURED` with `ANCHORED`
+- [x] Remove `MISCONFIGURED_SECURITY` if possible; prefer status/events over fake modes
 
 **Acceptance criteria**
 - `SecurityMode` expresses only the final runtime model
@@ -136,15 +136,15 @@ Make the simplified model impossible to bypass in code by removing old modes and
 - `taktx-shared/src/main/java/io/taktx/dto/NamespaceSecurityPolicyDTO.java`
 
 **Work**
-- [ ] Remove `requiredSigning`
-- [ ] Remove `requiredAuthorization`
-- [ ] Remove `activationState`
-- [ ] Remove desired-vs-active policy lifecycle fields if not needed
-- [ ] Keep only the authoritative policy identity, e.g.:
-  - [ ] `mode`
-  - [ ] optional `policyVersion`
-  - [ ] optional `policyHash`
-- [ ] Remove break-glass metadata unless explicitly retained as an operational policy feature
+- [x] Remove `requiredSigning`
+- [x] Remove `requiredAuthorization`
+- [x] Remove `activationState`
+- [x] Remove desired-vs-active policy lifecycle fields if not needed
+- [x] Keep only the authoritative policy identity, e.g.:
+  - [x] `mode`
+  - [x] optional `policyVersion`
+  - [x] optional `policyHash`
+- [x] Remove break-glass metadata unless explicitly retained as an operational policy feature
 
 **Acceptance criteria**
 - The DTO describes a single authoritative namespace mode
@@ -160,11 +160,11 @@ Make the simplified model impossible to bypass in code by removing old modes and
 - `taktx-shared/src/main/java/io/taktx/security/NamespaceSecurityPolicySupport.java`
 
 **Work**
-- [ ] Remove normalization of `requiredSigning`
-- [ ] Remove normalization of `requiredAuthorization`
-- [ ] Remove activation-state validation rules
-- [ ] Recompute canonical hash from the reduced authoritative policy shape only
-- [ ] Validate only the remaining contract fields
+- [x] Remove normalization of `requiredSigning`
+- [x] Remove normalization of `requiredAuthorization`
+- [x] Remove activation-state validation rules
+- [x] Recompute canonical hash from the reduced authoritative policy shape only
+- [x] Validate only the remaining contract fields
 
 **Acceptance criteria**
 - Validation is mode-centric only
@@ -181,12 +181,12 @@ Make the simplified model impossible to bypass in code by removing old modes and
 - `taktx-shared/src/main/java/io/taktx/serdes/NamespaceSecurityPolicyProtoMapper.java`
 
 **Work**
-- [ ] Replace `SecurityModeMessage` with `OPEN` / `ANCHORED`
-- [ ] Remove `RequiredSigningMessage`
-- [ ] Remove `RequiredAuthorizationMessage`
-- [ ] Remove `SecurityActivationStateMessage`
-- [ ] Simplify `NamespaceSecurityPolicyMessage` to the hard-break contract
-- [ ] Regenerate protobuf artifacts and fix mapping tests
+- [x] Replace `SecurityModeMessage` with `OPEN` / `ANCHORED`
+- [x] Remove `RequiredSigningMessage`
+- [x] Remove `RequiredAuthorizationMessage`
+- [x] Remove `SecurityActivationStateMessage`
+- [x] Simplify `NamespaceSecurityPolicyMessage` to the hard-break contract
+- [x] Regenerate protobuf artifacts and fix mapping tests
 
 **Acceptance criteria**
 - Serialized policy records match the simplified architecture
@@ -204,9 +204,9 @@ Make the simplified model impossible to bypass in code by removing old modes and
 - `taktx-shared/src/main/java/io/taktx/dto/ParticipantStatusDTO.java`
 
 **Work**
-- [ ] Remove assumptions about `SECURED` / `ANCHORED_SECURED`
-- [ ] Supported modes become `OPEN` plus optional `ANCHORED`
-- [ ] Keep readiness/mismatch reasons as observability only
+- [x] Remove assumptions about `SECURED` / `ANCHORED_SECURED`
+- [x] Supported modes become `OPEN` plus optional `ANCHORED`
+- [x] Keep readiness/mismatch reasons as observability only
 
 **Acceptance criteria**
 - Participant status no longer encodes the old posture ladder
@@ -686,11 +686,11 @@ Prevent drift back toward the old model and make migration obvious.
 
 Start with this bounded slice:
 
-- [ ] A1
-- [ ] A2
-- [ ] A3
-- [ ] A4
-- [ ] A5
+- [x] A1
+- [x] A2
+- [x] A3
+- [x] A4
+- [x] A5
 
 ### Why
 - It collapses the type system early
@@ -711,11 +711,11 @@ Start with this bounded slice:
 
 | ID | Task | Status | Depends on | Notes |
 |---|---|---|---|---|
-| A1 | Replace `SecurityMode` with `OPEN` / `ANCHORED` | Todo |  | Hard break |
-| A2 | Simplify `NamespaceSecurityPolicyDTO` | Todo | A1 | Remove granular flags |
-| A3 | Rewrite `NamespaceSecurityPolicySupport` | Todo | A2 | Canonical hash simplification |
-| A4 | Simplify proto + mapper | Todo | A2,A3 | Regenerate protobufs |
-| A5 | Simplify participant supported modes | Todo | A1 | Remove posture ladder |
+| A1 | Replace `SecurityMode` with `OPEN` / `ANCHORED` | Done |  | Hard break |
+| A2 | Simplify `NamespaceSecurityPolicyDTO` | Done | A1 | Remove granular flags |
+| A3 | Rewrite `NamespaceSecurityPolicySupport` | Done | A2 | Canonical hash simplification |
+| A4 | Simplify proto + mapper | Done | A2,A3 | Regenerate protobufs |
+| A5 | Simplify participant supported modes | Done | A1 | Remove posture ladder |
 | C1 | Remove activation workflow | Todo | A2,A4 | Immediate authority |
 | C2 | Simplify engine readiness | Todo | C1 | Fail-closed in anchored |
 | C3 | Rewrite ingress enforcement | Todo | C1,C2 | `OPEN => accept`, `ANCHORED => verify` |
@@ -746,4 +746,5 @@ Use prompts like this for future sessions:
 > Implement tasks A1–A4 from `docs/security-simplification-implementation-plan.md`. Use the fixed context pack unless compile or test failures require expansion. After edits, run only targeted module tests for changed code and summarize remaining breakages.
 
 This keeps implementation bounded and avoids re-deriving the architecture every time.
+
 

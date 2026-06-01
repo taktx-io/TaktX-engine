@@ -36,8 +36,7 @@ class SecurityObservabilityProtoMapperTest {
             .componentType("engine")
             .capabilities(
                 Set.of(ParticipantCapability.ENFORCER, ParticipantCapability.SECURITY_OBSERVER))
-            .supportedModes(
-                Set.of(SecurityMode.OPEN, SecurityMode.SECURED, SecurityMode.ANCHORED_SECURED))
+            .supportedModes(Set.of(SecurityMode.OPEN, SecurityMode.ANCHORED))
             .namespace("bank.payments")
             .startedAt(1716450000000L)
             .lastSeenAt(1716450060000L)
@@ -53,7 +52,7 @@ class SecurityObservabilityProtoMapperTest {
                         .code("TRUST_ANCHOR_MISSING")
                         .message(
                             "Namespace requires anchored trust but no platform public key is configured")
-                        .metadata(Map.of("expectedMode", "anchored_secured"))
+                        .metadata(Map.of("expectedMode", "anchored"))
                         .build()))
             .build();
 

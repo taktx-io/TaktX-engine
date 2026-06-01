@@ -9,43 +9,12 @@ option java_outer_classname = "SecurityPolicyProto";
 enum SecurityModeMessage {
   SECURITY_MODE_UNSPECIFIED = 0;
   OPEN = 1;
-  SECURED = 2;
-  ANCHORED_SECURED = 3;
-  MISCONFIGURED_SECURITY = 4;
-}
-
-enum SecurityActivationStateMessage {
-  SECURITY_ACTIVATION_STATE_UNSPECIFIED = 0;
-  REQUESTED = 1;
-  VALIDATING = 2;
-  ACTIVE = 3;
-}
-
-message RequiredSigningMessage {
-  bool engine_outbound = 1;
-  bool client_commands = 2;
-  bool worker_responses = 3;
-}
-
-message RequiredAuthorizationMessage {
-  bool start_commands = 1;
-  bool external_task_completion = 2;
-  bool user_task_completion = 3;
+  ANCHORED = 2;
 }
 
 message NamespaceSecurityPolicyMessage {
   SecurityModeMessage mode = 1;
-  SecurityActivationStateMessage activation_state = 2;
-  optional int64 desired_policy_version = 3;
-  string desired_policy_hash = 4;
-  optional int64 active_policy_version = 5;
-  string active_policy_hash = 6;
-  RequiredSigningMessage required_signing = 7;
-  RequiredAuthorizationMessage required_authorization = 8;
-  bool trust_anchor_required = 9;
-  optional int64 policy_version = 10;
-  string policy_hash = 11;
-  string break_glass_actor = 12;
-  string break_glass_reason = 13;
+  optional int64 policy_version = 2;
+  string policy_hash = 3;
 }
 

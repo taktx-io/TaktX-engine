@@ -10,7 +10,6 @@ package io.taktx.security;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import io.taktx.dto.NamespaceSecurityPolicyDTO;
-import io.taktx.dto.SecurityActivationState;
 import io.taktx.dto.SecurityMode;
 import org.junit.jupiter.api.Test;
 
@@ -27,13 +26,9 @@ class NamespaceSecurityPolicyControlPlaneContractTest {
   }
 
   @Test
-  void securedPolicy_requiresIntegrityProtectionProperty() {
+  void anchoredPolicy_requiresIntegrityProtectionProperty() {
     NamespaceSecurityPolicyDTO policy =
-        NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.SECURED)
-            .activationState(SecurityActivationState.REQUESTED)
-            .desiredPolicyVersion(42L)
-            .build();
+        NamespaceSecurityPolicyDTO.builder().mode(SecurityMode.ANCHORED).policyVersion(42L).build();
 
     assertThat(NamespaceSecurityPolicyControlPlaneContract.requiredWriterSecurityProperties(policy))
         .contains(
@@ -42,18 +37,13 @@ class NamespaceSecurityPolicyControlPlaneContractTest {
   }
 
   @Test
-  void breakGlassMetadata_requiresBreakGlassContractProperty() {
+  void openPolicy_doesNotRequireAnchoredIntegrityProperty() {
     NamespaceSecurityPolicyDTO policy =
-        NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.SECURED)
-            .activationState(SecurityActivationState.REQUESTED)
-            .desiredPolicyVersion(42L)
-            .breakGlassActor("ops-admin")
-            .breakGlassReason("containment downgrade")
-            .build();
+        NamespaceSecurityPolicyDTO.builder().mode(SecurityMode.OPEN).policyVersion(42L).build();
 
     assertThat(NamespaceSecurityPolicyControlPlaneContract.requiredWriterSecurityProperties(policy))
-        .contains(
-            AuthoritativeControlPlaneSecurityProperty.BREAK_GLASS_METADATA_REQUIRED_FOR_DOWNGRADE);
+        .doesNotContain(
+            AuthoritativeControlPlaneSecurityProperty
+                .INTEGRITY_PROTECTION_REQUIRED_IN_SECURED_MODES);
   }
 }

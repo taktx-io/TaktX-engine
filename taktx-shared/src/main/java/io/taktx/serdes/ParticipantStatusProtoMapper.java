@@ -181,18 +181,14 @@ public final class ParticipantStatusProtoMapper {
   private static SecurityModeMessage toProto(SecurityMode mode) {
     return switch (mode) {
       case OPEN -> SecurityModeMessage.OPEN;
-      case SECURED -> SecurityModeMessage.SECURED;
-      case ANCHORED_SECURED -> SecurityModeMessage.ANCHORED_SECURED;
-      case MISCONFIGURED_SECURITY -> SecurityModeMessage.MISCONFIGURED_SECURITY;
+      case ANCHORED -> SecurityModeMessage.ANCHORED;
     };
   }
 
   private static SecurityMode toDto(SecurityModeMessage mode) {
     return switch (mode) {
       case OPEN -> SecurityMode.OPEN;
-      case SECURED -> SecurityMode.SECURED;
-      case ANCHORED_SECURED -> SecurityMode.ANCHORED_SECURED;
-      case MISCONFIGURED_SECURITY -> SecurityMode.MISCONFIGURED_SECURITY;
+      case ANCHORED -> SecurityMode.ANCHORED;
       case SECURITY_MODE_UNSPECIFIED, UNRECOGNIZED -> null;
     };
   }
