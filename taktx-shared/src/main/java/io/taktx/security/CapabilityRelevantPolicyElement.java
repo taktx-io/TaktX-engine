@@ -9,11 +9,5 @@ package io.taktx.security;
 
 /** Policy elements that may be relevant to a participant capability set. */
 public enum CapabilityRelevantPolicyElement {
-  MODE,
-  TRUST_ANCHOR_REQUIRED,
-  REQUIRED_SIGNING_CLIENT_COMMANDS,
-  REQUIRED_SIGNING_WORKER_RESPONSES,
-  REQUIRED_AUTHORIZATION_START_COMMANDS,
-  REQUIRED_AUTHORIZATION_EXTERNAL_TASK_COMPLETION,
-  REQUIRED_AUTHORIZATION_USER_TASK_COMPLETION
+  MODE
 }

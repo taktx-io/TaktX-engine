@@ -11,221 +11,115 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.taktx.dto.NamespaceSecurityPolicyDTO;
-import io.taktx.dto.RequiredAuthorizationDTO;
-import io.taktx.dto.RequiredSigningDTO;
-import io.taktx.dto.SecurityActivationState;
 import io.taktx.dto.SecurityMode;
 import org.junit.jupiter.api.Test;
 
 class NamespaceSecurityPolicySupportTest {
 
   @Test
-  void normalize_fillsLegacyAliasesAndComputesDesiredHash() {
+  void normalize_computesCanonicalPolicyHashWhenMissing() {
     NamespaceSecurityPolicyDTO policy =
         NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.SECURED)
-            .activationState(SecurityActivationState.REQUESTED)
+            .mode(SecurityMode.OPEN)
             .policyVersion(42L)
-            .requiredSigning(RequiredSigningDTO.builder().engineOutbound(true).build())
-            .requiredAuthorization(RequiredAuthorizationDTO.builder().startCommands(true).build())
             .build();
 
     NamespaceSecurityPolicyDTO normalized = NamespaceSecurityPolicySupport.normalize(policy);
 
-    assertThat(normalized.getDesiredPolicyVersion()).isEqualTo(42L);
     assertThat(normalized.getPolicyVersion()).isEqualTo(42L);
-    assertThat(normalized.getDesiredPolicyHash()).isNotBlank();
-    assertThat(normalized.getPolicyHash()).isEqualTo(normalized.getDesiredPolicyHash());
+    assertThat(normalized.getPolicyHash()).isNotBlank();
   }
 
   @Test
-  void canonicalHash_ignoresDesiredAndActiveIdentityWrappers() {
+  void canonicalHash_dependsOnlyOnAuthoritativePolicyContent() {
     NamespaceSecurityPolicyDTO baseline =
         NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.ANCHORED_SECURED)
-            .activationState(SecurityActivationState.REQUESTED)
-            .desiredPolicyVersion(5L)
-            .desiredPolicyHash("requested-hash")
-            .activePolicyVersion(4L)
-            .activePolicyHash("active-hash")
-            .requiredSigning(
-                RequiredSigningDTO.builder()
-                    .engineOutbound(true)
-                    .clientCommands(true)
-                    .workerResponses(true)
-                    .build())
-            .requiredAuthorization(
-                RequiredAuthorizationDTO.builder()
-                    .startCommands(true)
-                    .externalTaskCompletion(true)
-                    .userTaskCompletion(true)
-                    .build())
-            .trustAnchorRequired(true)
+            .mode(SecurityMode.ANCHORED)
             .policyVersion(5L)
-            .policyHash("legacy-hash")
             .build();
 
-    NamespaceSecurityPolicyDTO sameEffectiveContentDifferentWrapper =
+    NamespaceSecurityPolicyDTO sameEffectiveContentDifferentHashWrapper =
         baseline.toBuilder()
-            .desiredPolicyVersion(999L)
-            .desiredPolicyHash("other-requested-hash")
-            .activePolicyVersion(123L)
-            .activePolicyHash("other-active-hash")
-            .policyVersion(999L)
-            .policyHash("other-legacy-hash")
+            .policyHash("manually-supplied-hash")
             .build();
 
     assertThat(NamespaceSecurityPolicySupport.canonicalHash(baseline))
-        .isEqualTo(
-            NamespaceSecurityPolicySupport.canonicalHash(sameEffectiveContentDifferentWrapper));
+        .isEqualTo(NamespaceSecurityPolicySupport.canonicalHash(sameEffectiveContentDifferentHashWrapper));
   }
 
   @Test
-  void validationErrors_rejectAnchoredModeWithoutTrustAnchorRequirement() {
+  void validationErrors_rejectMissingMode() {
     NamespaceSecurityPolicyDTO policy =
-        NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.ANCHORED_SECURED)
-            .activationState(SecurityActivationState.REQUESTED)
-            .desiredPolicyVersion(1L)
-            .build();
+        NamespaceSecurityPolicyDTO.builder().policyVersion(1L).build();
 
-    assertThat(NamespaceSecurityPolicySupport.validationErrors(policy))
-        .contains("ANCHORED_SECURED requires trustAnchorRequired=true");
+    assertThat(NamespaceSecurityPolicySupport.validationErrors(policy)).contains("mode must not be null");
   }
 
   @Test
-  void requireValid_rejectsActiveIdentityMismatch() {
+  void requireValid_rejectsMissingPolicyVersion() {
     NamespaceSecurityPolicyDTO policy =
-        NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.SECURED)
-            .activationState(SecurityActivationState.ACTIVE)
-            .desiredPolicyVersion(10L)
-            .desiredPolicyHash("requested")
-            .activePolicyVersion(9L)
-            .activePolicyHash("active")
-            .build();
+        NamespaceSecurityPolicyDTO.builder().mode(SecurityMode.OPEN).build();
 
     assertThatThrownBy(() -> NamespaceSecurityPolicySupport.requireValid(policy))
         .isInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining(
-            "ACTIVE policy requires desiredPolicyVersion to match activePolicyVersion")
-        .hasMessageContaining("ACTIVE policy requires desiredPolicyHash to match activePolicyHash");
+        .hasMessageContaining("policyVersion must not be null");
   }
 
   @Test
-  void requireValid_acceptsConsistentActivePolicy() {
+  void requireValid_acceptsOpenPolicyAndComputesHash() {
     NamespaceSecurityPolicyDTO policy =
         NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.SECURED)
-            .activationState(SecurityActivationState.ACTIVE)
-            .desiredPolicyVersion(10L)
-            .requiredSigning(RequiredSigningDTO.builder().engineOutbound(true).build())
-            .requiredAuthorization(RequiredAuthorizationDTO.builder().startCommands(true).build())
-            .activePolicyVersion(10L)
+            .mode(SecurityMode.OPEN)
+            .policyVersion(10L)
             .build();
 
     NamespaceSecurityPolicyDTO validated = NamespaceSecurityPolicySupport.requireValid(policy);
 
-    assertThat(validated.getDesiredPolicyHash()).isNotBlank();
-    assertThat(validated.getActivePolicyHash()).isEqualTo(validated.getDesiredPolicyHash());
+    assertThat(validated.getPolicyHash()).isNotBlank();
   }
 
   @Test
-  void requireValid_acceptsAnchoredRequestedPolicyPayload() {
+  void requireValid_acceptsAnchoredPolicyPayload() {
     NamespaceSecurityPolicyDTO policy =
         NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.ANCHORED_SECURED)
-            .activationState(SecurityActivationState.REQUESTED)
-            .desiredPolicyVersion(11L)
-            .trustAnchorRequired(true)
-            .requiredSigning(RequiredSigningDTO.builder().engineOutbound(true).build())
-            .requiredAuthorization(RequiredAuthorizationDTO.builder().startCommands(true).build())
+            .mode(SecurityMode.ANCHORED)
+            .policyVersion(11L)
             .build();
 
     NamespaceSecurityPolicyDTO validated = NamespaceSecurityPolicySupport.requireValid(policy);
 
-    assertThat(validated.getMode()).isEqualTo(SecurityMode.ANCHORED_SECURED);
-    assertThat(validated.isTrustAnchorRequired()).isTrue();
-    assertThat(validated.getDesiredPolicyVersion()).isEqualTo(11L);
-    assertThat(validated.getDesiredPolicyHash()).isNotBlank();
-    assertThat(validated.getPolicyHash()).isEqualTo(validated.getDesiredPolicyHash());
+    assertThat(validated.getMode()).isEqualTo(SecurityMode.ANCHORED);
+    assertThat(validated.getPolicyVersion()).isEqualTo(11L);
+    assertThat(validated.getPolicyHash()).isNotBlank();
   }
 
   @Test
-  void requireValid_rejectsPartialActiveIdentityState() {
+  void requireValid_rejectsNonPositivePolicyVersion() {
     NamespaceSecurityPolicyDTO policy =
         NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.SECURED)
-            .activationState(SecurityActivationState.REQUESTED)
-            .desiredPolicyVersion(10L)
-            .activePolicyVersion(9L)
+            .mode(SecurityMode.OPEN)
+            .policyVersion(0L)
             .build();
 
     assertThatThrownBy(() -> NamespaceSecurityPolicySupport.requireValid(policy))
         .isInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining("activePolicyVersion and activePolicyHash must be provided together");
-  }
-
-  @Test
-  void requireValid_rejectsPartialBreakGlassMetadata() {
-    NamespaceSecurityPolicyDTO policy =
-        NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.SECURED)
-            .activationState(SecurityActivationState.REQUESTED)
-            .desiredPolicyVersion(10L)
-            .breakGlassActor("ops-admin")
-            .build();
-
-    assertThatThrownBy(() -> NamespaceSecurityPolicySupport.requireValid(policy))
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining("breakGlassActor and breakGlassReason must be provided together");
+        .hasMessageContaining("policyVersion must be > 0");
   }
 
   @Test
   void parseSecurityMode_acceptsCommonOperatorFormats() {
-    assertThat(NamespaceSecurityPolicySupport.parseSecurityMode("secured"))
-        .isEqualTo(SecurityMode.SECURED);
-    assertThat(NamespaceSecurityPolicySupport.parseSecurityMode("anchored secured"))
-        .isEqualTo(SecurityMode.ANCHORED_SECURED);
-    assertThat(NamespaceSecurityPolicySupport.parseSecurityMode("MISCONFIGURED_SECURITY"))
-        .isEqualTo(SecurityMode.MISCONFIGURED_SECURITY);
+    assertThat(NamespaceSecurityPolicySupport.parseSecurityMode("open")).isEqualTo(SecurityMode.OPEN);
+    assertThat(NamespaceSecurityPolicySupport.parseSecurityMode("anchored"))
+        .isEqualTo(SecurityMode.ANCHORED);
   }
 
   @Test
-  void parseRequiredSigning_parsesCommaSeparatedTokens() {
-    RequiredSigningDTO parsed =
-        NamespaceSecurityPolicySupport.parseRequiredSigning(
-            "engine-outbound, client_commands, worker responses");
-
-    assertThat(parsed.isEngineOutbound()).isTrue();
-    assertThat(parsed.isClientCommands()).isTrue();
-    assertThat(parsed.isWorkerResponses()).isTrue();
-  }
-
-  @Test
-  void parseRequiredAuthorization_parsesTokenSet() {
-    RequiredAuthorizationDTO parsed =
-        NamespaceSecurityPolicySupport.parseRequiredAuthorization(
-            java.util.Set.of("start-commands", "external_task_completion"));
-
-    assertThat(parsed.isStartCommands()).isTrue();
-    assertThat(parsed.isExternalTaskCompletion()).isTrue();
-    assertThat(parsed.isUserTaskCompletion()).isFalse();
-  }
-
-  @Test
-  void parseHelpers_rejectUnsupportedTokens() {
-    assertThatThrownBy(() -> NamespaceSecurityPolicySupport.parseSecurityMode("community-secured"))
+  void parseHelpers_rejectUnsupportedModes() {
+    assertThatThrownBy(() -> NamespaceSecurityPolicySupport.parseSecurityMode("secured"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("Unsupported security mode");
-    assertThatThrownBy(() -> NamespaceSecurityPolicySupport.parseSecurityMode("unknown-mode"))
+    assertThatThrownBy(() -> NamespaceSecurityPolicySupport.parseSecurityMode("anchored secured"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("Unsupported security mode");
-    assertThatThrownBy(() -> NamespaceSecurityPolicySupport.parseRequiredSigning("bogus"))
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining("Unsupported signing requirement");
-    assertThatThrownBy(() -> NamespaceSecurityPolicySupport.parseRequiredAuthorization("bogus"))
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining("Unsupported authorization requirement");
   }
 }

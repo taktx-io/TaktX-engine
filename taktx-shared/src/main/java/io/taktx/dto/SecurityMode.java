@@ -7,15 +7,8 @@
  */
 package io.taktx.dto;
 
-/**
- * Operator-facing namespace security posture.
- *
- * <p>These modes mirror the proposed namespace security-policy model while remaining independent of
- * the current {@link GlobalConfigurationDTO} rollout path.
- */
+/** Operator-facing authoritative namespace security mode. */
 public enum SecurityMode {
   OPEN,
-  SECURED,
-  ANCHORED_SECURED,
-  MISCONFIGURED_SECURITY
+  ANCHORED
 }

@@ -99,9 +99,7 @@ class ParticipantStatusSupportTest {
 
     assertThat(validated.isReadyForDataPlane()).isTrue();
     assertThat(validated.getObservedPolicyVersion()).isEqualTo(42L);
-    assertThat(validated.getSupportedModes())
-        .containsExactlyInAnyOrder(
-            SecurityMode.OPEN, SecurityMode.SECURED, SecurityMode.ANCHORED_SECURED);
+    assertThat(validated.getSupportedModes()).containsExactlyInAnyOrder(SecurityMode.OPEN, SecurityMode.ANCHORED);
   }
 
   @Test
@@ -122,33 +120,7 @@ class ParticipantStatusSupportTest {
                 .effectiveState(ParticipantEffectiveState.READY)
                 .build());
 
-    assertThat(normalized.getSupportedModes())
-        .containsExactlyInAnyOrder(
-            SecurityMode.OPEN, SecurityMode.SECURED, SecurityMode.ANCHORED_SECURED);
-  }
-
-  @Test
-  void requireValid_rejectsAnchoredSupportWithoutSecuredSupport() {
-    ParticipantStatusDTO status =
-        ParticipantStatusDTO.builder()
-            .participantId("engine-1")
-            .participantInstanceId("engine-1-pod")
-            .participantKind(ParticipantKind.ENGINE)
-            .componentType("engine")
-            .capabilities(Set.of(ParticipantCapability.ENFORCER))
-            .supportedModes(Set.of(SecurityMode.OPEN, SecurityMode.ANCHORED_SECURED))
-            .namespace("bank.payments")
-            .startedAt(100L)
-            .lastSeenAt(150L)
-            .statusExpiresAt(200L)
-            .statusVerificationLevel(StatusVerificationLevel.UNVERIFIED_STATUS)
-            .effectiveState(ParticipantEffectiveState.NOT_READY)
-            .build();
-
-    assertThatThrownBy(() -> ParticipantStatusSupport.requireValid(status))
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining(
-            "supportedModes containing ANCHORED_SECURED must also include SECURED");
+    assertThat(normalized.getSupportedModes()).containsExactlyInAnyOrder(SecurityMode.OPEN, SecurityMode.ANCHORED);
   }
 
   @Test
@@ -381,12 +353,10 @@ class ParticipantStatusSupportTest {
             .effectiveState(ParticipantEffectiveState.MISMATCH)
             .readyForDataPlane(false)
             .supportedModes(
-                Set.of(SecurityMode.OPEN, SecurityMode.SECURED, SecurityMode.ANCHORED_SECURED))
+                Set.of(SecurityMode.OPEN, SecurityMode.ANCHORED))
             .build();
 
-    assertThat(ParticipantStatusSupport.supportsMode(status, SecurityMode.SECURED)).isTrue();
-    assertThat(ParticipantStatusSupport.supportsMode(status, SecurityMode.ANCHORED_SECURED))
-        .isTrue();
+    assertThat(ParticipantStatusSupport.supportsMode(status, SecurityMode.ANCHORED)).isTrue();
     assertThat(ParticipantStatusSupport.supportsProtectedRuntimeParticipation(status)).isTrue();
     assertThat(ParticipantStatusSupport.supportsAuthoritativePolicyPublication(status)).isTrue();
     assertThat(ParticipantStatusSupport.supportsTrustAnchorValidation(status)).isTrue();
