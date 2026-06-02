@@ -9,15 +9,26 @@ package io.taktx.client.serdes;
 
 import io.taktx.dto.SignalDTO;
 import io.taktx.proto.SignalEnvelope;
-import io.taktx.serdes.ProtoSerializer;
+import io.taktx.security.SigningServiceHolder.SigningFunction;
+import io.taktx.serdes.ProtoSigningSerializer;
 import io.taktx.serdes.SignalProtoMapper;
 import java.util.Map;
+import java.util.function.Supplier;
+import org.apache.kafka.common.header.Headers;
 import org.apache.kafka.common.serialization.Serializer;
 
 /** A protobuf serializer for {@link SignalDTO} objects. */
 public class SignalSerializer implements Serializer<SignalDTO> {
 
-  private final ProtoSerializer<SignalEnvelope> delegate = new ProtoSerializer<>();
+  private final ProtoSigningSerializer<SignalDTO> delegate;
+
+  public SignalSerializer() {
+    this(null);
+  }
+
+  public SignalSerializer(Supplier<SigningFunction> signingFunctionSupplier) {
+    this.delegate = new ProtoSigningSerializer<>(SignalProtoMapper::toProto, signingFunctionSupplier);
+  }
 
   @Override
   public void configure(Map<String, ?> configs, boolean isKey) {
@@ -26,7 +37,12 @@ public class SignalSerializer implements Serializer<SignalDTO> {
 
   @Override
   public byte[] serialize(String topic, SignalDTO data) {
-    return delegate.serialize(topic, data == null ? null : SignalProtoMapper.toProto(data));
+    return delegate.serialize(topic, data);
+  }
+
+  @Override
+  public byte[] serialize(String topic, Headers headers, SignalDTO data) {
+    return delegate.serialize(topic, headers, data);
   }
 
   @Override

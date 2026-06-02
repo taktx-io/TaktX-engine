@@ -12,8 +12,11 @@ import io.taktx.client.serdes.MessageEventKeySerializer;
 import io.taktx.client.serdes.MessageEventSerializer;
 import io.taktx.dto.MessageEventDTO;
 import io.taktx.dto.MessageEventKeyDTO;
+import io.taktx.security.SigningServiceHolder.SigningFunction;
 import io.taktx.util.TaktPropertiesHelper;
+import java.util.function.Supplier;
 import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 
 /**
@@ -22,8 +25,9 @@ import org.apache.kafka.clients.producer.ProducerRecord;
  */
 public class MessageEventSender {
 
-  private final KafkaProducer<MessageEventKeyDTO, MessageEventDTO> messageEventEmitter;
+  private final Producer<MessageEventKeyDTO, MessageEventDTO> messageEventEmitter;
   private final TaktPropertiesHelper taktPropertiesHelper;
+  private volatile Runnable beforeSendHook = () -> {};
   private volatile ProtectedClientDataPlaneGuard protectedDataPlaneGuard =
       ProtectedClientDataPlaneGuard.noop();
 
@@ -33,12 +37,27 @@ public class MessageEventSender {
    * @param taktPropertiesHelper the TaktPropertiesHelper to use for configuration
    */
   public MessageEventSender(TaktPropertiesHelper taktPropertiesHelper) {
-    this.taktPropertiesHelper = taktPropertiesHelper;
-    this.messageEventEmitter =
+    this(taktPropertiesHelper, null);
+  }
+
+  public MessageEventSender(
+      TaktPropertiesHelper taktPropertiesHelper,
+      Supplier<SigningFunction> signingFunctionSupplier) {
+    this(
+        taktPropertiesHelper,
+        signingFunctionSupplier,
         new KafkaProducer<>(
             taktPropertiesHelper.getKafkaProducerProperties(),
             new MessageEventKeySerializer(),
-            new MessageEventSerializer());
+            new MessageEventSerializer(signingFunctionSupplier)));
+  }
+
+  MessageEventSender(
+      TaktPropertiesHelper taktPropertiesHelper,
+      Supplier<SigningFunction> signingFunctionSupplier,
+      Producer<MessageEventKeyDTO, MessageEventDTO> messageEventEmitter) {
+    this.taktPropertiesHelper = taktPropertiesHelper;
+    this.messageEventEmitter = messageEventEmitter;
   }
 
   void setProtectedDataPlaneGuard(
@@ -49,6 +68,10 @@ public class MessageEventSender {
             : ProtectedClientDataPlaneGuard.noop();
   }
 
+  void setBeforeSendHook(@jakarta.annotation.Nullable Runnable beforeSendHook) {
+    this.beforeSendHook = beforeSendHook != null ? beforeSendHook : () -> {};
+  }
+
   /**
    * Sends a message event to the configured Kafka topic.
    *
@@ -56,6 +79,7 @@ public class MessageEventSender {
    */
   public void sendMessage(MessageEventDTO messageEventDTO) {
     protectedDataPlaneGuard.check(ProtectedClientDataPlaneOperation.MESSAGE_EVENT, null);
+    beforeSendHook.run();
     messageEventEmitter.send(
         new ProducerRecord<>(
             taktPropertiesHelper.getPrefixedTopicName(Topics.MESSAGE_EVENT_TOPIC.getTopicName()),

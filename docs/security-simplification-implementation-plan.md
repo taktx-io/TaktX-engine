@@ -42,6 +42,7 @@
 - `taktx-shared` now has a managed `LocalPersistentSigningIdentitySource` that persists a single `identity.properties` file under `~/.taktx/signing/` by default (or `taktx.signing.local.directory` / `TAKTX_SIGNING_LOCAL_DIRECTORY`), reuses the same Ed25519 keypair across restart, and fails closed on corrupt persisted state instead of silently churning identity; `FileSigningIdentitySource` remains the externally managed mounted-file reader.
 - `taktx-client` now defaults to that managed local persistent identity source when no explicit signing source is configured, still prefers explicitly configured `env`/`file` identities for managed deployments, supports explicit `local` selection, and treats restart-stable signing identity as an anchored-mode participation prerequisite so explicitly generated in-memory identities are no longer considered sufficient for `ANCHORED` runtime traffic.
 - `taktx-client` protected-runtime interpretation is now mode-only: legacy `requiredSigning` / `requiredAuthorization` posture checks are gone from the client guard and worker-signing preparation path, `OPEN` allows unsigned operation, and `ANCHORED` now fails fast only on the anchored prerequisites (stable/ready signing identity plus trust anchor) instead of on JWT-provider availability.
+- Client-originated runtime ingress now auto-signs consistently through the shared header-aware serializer path when signing is active: process-instance commands/responses still use `ProtoSigningSerializer`, and message events plus signals now do too, with the same pre-send signing/key-publication refresh hook so callers no longer choose signing per runtime ingress type.
 - The remaining work is concentrated in finishing Phase 2 production cleanup, Phase 3/4 identity + trust-registry behavior, and broadening Phase 5 coverage beyond the current engine/integration adaptations.
 
 ---
@@ -448,11 +449,11 @@ Make stable participant identity the default and ensure the client signs automat
 - relevant producers/responders
 
 **Work**
-- [ ] Start commands sign automatically
-- [ ] Message events sign automatically
-- [ ] Signals sign automatically
-- [ ] Worker completions sign automatically
-- [ ] Public key publication to `taktx-signing-keys` occurs automatically when needed
+- [x] Start commands sign automatically
+- [x] Message events sign automatically
+- [x] Signals sign automatically
+- [x] Worker completions sign automatically
+- [x] Public key publication to `taktx-signing-keys` occurs automatically when needed
 
 **Acceptance criteria**
 - Callers do not choose signing per command type
@@ -759,7 +760,7 @@ Start with this bounded slice:
 | D1 | Add managed local file-backed identity source | Done |  | Managed local `identity.properties` persistence added in `taktx-shared`; mounted-file source remains externally managed |
 | D2 | Make persistent identity default | Done | D1 | Client now defaults to managed local identity, keeps explicit env/file overrides, and requires restart-stable signing source for anchored participation |
 | D3 | Simplify client policy interpretation | Done | A2,C1,D2 | Client protected-runtime gating is now mode-only: OPEN permits unsigned operation, ANCHORED requires stable ready signing + trust anchor |
-| D4 | Auto-sign all anchored client traffic | Todo | D3 | No caller choice |
+| D4 | Auto-sign all anchored client traffic | Done | D3 | Process-instance commands/responses, message events, and signals now flow through automatic header-aware signing with shared key-publication refresh |
 | D5 | Detect and surface rotation | Todo | D1,D2 | Explicit churn detection |
 | E1 | Define trust-registry semantics in `SigningKeyDTO` | Todo |  | Reuse `taktx-signing-keys` |
 | E2 | Align trust policy with `ANCHORED` | Todo | A1,C3 | Anchored = countersigned |
