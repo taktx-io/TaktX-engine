@@ -38,11 +38,6 @@ final class ClientProtectedDataPlaneParticipationGuard {
   static final String STABLE_SIGNING_SOURCE_REQUIRED = "CLIENT_STABLE_SIGNING_SOURCE_REQUIRED";
   static final String CLIENT_COMMAND_SIGNING_UNAVAILABLE = "CLIENT_COMMAND_SIGNING_UNAVAILABLE";
   static final String WORKER_RESPONSE_SIGNING_UNAVAILABLE = "WORKER_RESPONSE_SIGNING_UNAVAILABLE";
-  static final String START_COMMAND_AUTHORIZATION_UNAVAILABLE =
-      "START_COMMAND_AUTHORIZATION_UNAVAILABLE";
-  static final String EXTERNAL_TASK_AUTHORIZATION_UNAVAILABLE =
-      "EXTERNAL_TASK_AUTHORIZATION_UNAVAILABLE";
-  static final String USER_TASK_AUTHORIZATION_UNAVAILABLE = "USER_TASK_AUTHORIZATION_UNAVAILABLE";
   static final String PROTECTED_RUNTIME_CAPABILITY_MISSING = "PROTECTED_RUNTIME_CAPABILITY_MISSING";
 
   private final TaktPropertiesHelper taktPropertiesHelper;
@@ -51,7 +46,6 @@ final class ClientProtectedDataPlaneParticipationGuard {
   private final Supplier<SigningIdentity> signingIdentitySupplier;
   private final BooleanSupplier signingIdentityRestartStableSupplier;
   private final BooleanSupplier signingReadySupplier;
-  private final BooleanSupplier authorizationTokenProviderAvailableSupplier;
   private final Supplier<String> platformPublicKeySupplier;
   private final Clock clock;
   private final long startedAtMs;
@@ -62,7 +56,6 @@ final class ClientProtectedDataPlaneParticipationGuard {
       Supplier<ClientNamespaceSecurityPolicyStore> policyStoreSupplier,
       Supplier<SigningIdentity> signingIdentitySupplier,
       BooleanSupplier signingReadySupplier,
-      BooleanSupplier authorizationTokenProviderAvailableSupplier,
       Supplier<String> platformPublicKeySupplier,
       Clock clock) {
     this(
@@ -72,7 +65,6 @@ final class ClientProtectedDataPlaneParticipationGuard {
         signingIdentitySupplier,
         () -> true,
         signingReadySupplier,
-        authorizationTokenProviderAvailableSupplier,
         platformPublicKeySupplier,
         clock);
   }
@@ -84,7 +76,6 @@ final class ClientProtectedDataPlaneParticipationGuard {
       Supplier<SigningIdentity> signingIdentitySupplier,
       BooleanSupplier signingIdentityRestartStableSupplier,
       BooleanSupplier signingReadySupplier,
-      BooleanSupplier authorizationTokenProviderAvailableSupplier,
       Supplier<String> platformPublicKeySupplier,
       Clock clock) {
     this.taktPropertiesHelper = taktPropertiesHelper;
@@ -94,7 +85,6 @@ final class ClientProtectedDataPlaneParticipationGuard {
     this.signingIdentitySupplier = signingIdentitySupplier;
     this.signingIdentityRestartStableSupplier = signingIdentityRestartStableSupplier;
     this.signingReadySupplier = signingReadySupplier;
-    this.authorizationTokenProviderAvailableSupplier = authorizationTokenProviderAvailableSupplier;
     this.platformPublicKeySupplier = platformPublicKeySupplier;
     this.clock = clock;
     this.startedAtMs = clock.millis();
@@ -189,30 +179,9 @@ final class ClientProtectedDataPlaneParticipationGuard {
       }
 
       boolean signingReady = hasSigningReadyCapability();
-      boolean authorizationAvailable = hasAuthorization(explicitAuthorizationToken);
 
       switch (operation) {
-        case START_COMMAND -> {
-          if (!signingReady) {
-            effectiveState = ParticipantEffectiveState.MISMATCH;
-            readyForDataPlane = false;
-            mismatchReasons.add(
-                mismatchReason(
-                    CLIENT_COMMAND_SIGNING_UNAVAILABLE,
-                    "Namespace requires protected client commands but no publishable client signing"
-                        + " identity is ready"));
-          }
-          if (!authorizationAvailable) {
-            effectiveState = ParticipantEffectiveState.MISMATCH;
-            readyForDataPlane = false;
-            mismatchReasons.add(
-                mismatchReason(
-                    START_COMMAND_AUTHORIZATION_UNAVAILABLE,
-                    "Namespace requires authorization for protected start commands but no explicit"
-                        + " token or AuthorizationTokenProvider is available"));
-          }
-        }
-        case CLIENT_COMMAND -> {
+        case START_COMMAND, CLIENT_COMMAND -> {
           if (!signingReady) {
             effectiveState = ParticipantEffectiveState.MISMATCH;
             readyForDataPlane = false;
@@ -233,15 +202,6 @@ final class ClientProtectedDataPlaneParticipationGuard {
                     "Namespace requires protected worker responses but no publishable worker signing"
                         + " identity is ready"));
           }
-          if (!authorizationAvailable) {
-            effectiveState = ParticipantEffectiveState.MISMATCH;
-            readyForDataPlane = false;
-            mismatchReasons.add(
-                mismatchReason(
-                    EXTERNAL_TASK_AUTHORIZATION_UNAVAILABLE,
-                    "Namespace requires authorization for protected external-task completion but no"
-                        + " explicit token or AuthorizationTokenProvider is available"));
-          }
         }
         case USER_TASK_RESPONSE, USER_TASK_CONSUME -> {
           if (!signingReady) {
@@ -252,15 +212,6 @@ final class ClientProtectedDataPlaneParticipationGuard {
                     WORKER_RESPONSE_SIGNING_UNAVAILABLE,
                     "Namespace requires protected worker responses but no publishable worker signing"
                         + " identity is ready"));
-          }
-          if (!authorizationAvailable) {
-            effectiveState = ParticipantEffectiveState.MISMATCH;
-            readyForDataPlane = false;
-            mismatchReasons.add(
-                mismatchReason(
-                    USER_TASK_AUTHORIZATION_UNAVAILABLE,
-                    "Namespace requires authorization for protected user-task completion but no"
-                        + " explicit token or AuthorizationTokenProvider is available"));
           }
         }
         case MESSAGE_EVENT, SIGNAL_EVENT -> {
@@ -295,10 +246,6 @@ final class ClientProtectedDataPlaneParticipationGuard {
     return identity != null && signingReadySupplier.getAsBoolean();
   }
 
-  private boolean hasAuthorization(@Nullable String explicitAuthorizationToken) {
-    return !isBlank(explicitAuthorizationToken)
-        || authorizationTokenProviderAvailableSupplier.getAsBoolean();
-  }
 
   private String participantId() {
     return participantDescriptor.participantId();

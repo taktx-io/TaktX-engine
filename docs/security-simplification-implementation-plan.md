@@ -41,6 +41,7 @@
 - Process-instance ingress security rejections now short-circuit to `security-events` instead of creating DLQ entries; DLQ remains reserved for payload/engine-processing failures while readiness gating still fails closed.
 - `taktx-shared` now has a managed `LocalPersistentSigningIdentitySource` that persists a single `identity.properties` file under `~/.taktx/signing/` by default (or `taktx.signing.local.directory` / `TAKTX_SIGNING_LOCAL_DIRECTORY`), reuses the same Ed25519 keypair across restart, and fails closed on corrupt persisted state instead of silently churning identity; `FileSigningIdentitySource` remains the externally managed mounted-file reader.
 - `taktx-client` now defaults to that managed local persistent identity source when no explicit signing source is configured, still prefers explicitly configured `env`/`file` identities for managed deployments, supports explicit `local` selection, and treats restart-stable signing identity as an anchored-mode participation prerequisite so explicitly generated in-memory identities are no longer considered sufficient for `ANCHORED` runtime traffic.
+- `taktx-client` protected-runtime interpretation is now mode-only: legacy `requiredSigning` / `requiredAuthorization` posture checks are gone from the client guard and worker-signing preparation path, `OPEN` allows unsigned operation, and `ANCHORED` now fails fast only on the anchored prerequisites (stable/ready signing identity plus trust anchor) instead of on JWT-provider availability.
 - The remaining work is concentrated in finishing Phase 2 production cleanup, Phase 3/4 identity + trust-registry behavior, and broadening Phase 5 coverage beyond the current engine/integration adaptations.
 
 ---
@@ -426,10 +427,10 @@ Make stable participant identity the default and ensure the client signs automat
 - `taktx-client/src/main/java/io/taktx/client/ClientProtectedDataPlaneParticipationGuard.java`
 
 **Work**
-- [ ] Remove checks based on `requiredSigning` / `requiredAuthorization`
-- [ ] Replace protected-posture logic with `ANCHORED` mode logic
-- [ ] In `OPEN`, allow unsigned operation
-- [ ] In `ANCHORED`, fail fast when no usable identity exists
+- [x] Remove checks based on `requiredSigning` / `requiredAuthorization`
+- [x] Replace protected-posture logic with `ANCHORED` mode logic
+- [x] In `OPEN`, allow unsigned operation
+- [x] In `ANCHORED`, fail fast when no usable identity exists
 
 **Acceptance criteria**
 - Client mode handling is simple and authoritative
@@ -757,7 +758,7 @@ Start with this bounded slice:
 | C5 | Apply same rule to all ingress | Done | C3 | Current external runtime ingress (`process-instance`, `usertasks-response`, `topic-meta-requested`, externally published `message-event`, externally published `signals`) now preserves/enforces the same mode/signature model; remaining special cases are intentional internal/control-plane exceptions |
 | D1 | Add managed local file-backed identity source | Done |  | Managed local `identity.properties` persistence added in `taktx-shared`; mounted-file source remains externally managed |
 | D2 | Make persistent identity default | Done | D1 | Client now defaults to managed local identity, keeps explicit env/file overrides, and requires restart-stable signing source for anchored participation |
-| D3 | Simplify client policy interpretation | Todo | A2,C1,D2 | Mode-only client logic |
+| D3 | Simplify client policy interpretation | Done | A2,C1,D2 | Client protected-runtime gating is now mode-only: OPEN permits unsigned operation, ANCHORED requires stable ready signing + trust anchor |
 | D4 | Auto-sign all anchored client traffic | Todo | D3 | No caller choice |
 | D5 | Detect and surface rotation | Todo | D1,D2 | Explicit churn detection |
 | E1 | Define trust-registry semantics in `SigningKeyDTO` | Todo |  | Reuse `taktx-signing-keys` |

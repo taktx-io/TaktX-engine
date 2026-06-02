@@ -219,7 +219,6 @@ public class TaktXClient {
             this::currentSigningIdentity,
             () -> signingIdentitySource != null && signingIdentitySource.isRestartStable(),
             this::hasPublishedSigningCapability,
-            () -> authorizationTokenProvider != null,
             this::resolvePlatformPublicKey,
             Clock.systemUTC());
     ProtectedClientDataPlaneGuard guard = this::ensureProtectedDataPlaneOperationAllowed;
@@ -1253,25 +1252,6 @@ public class TaktXClient {
 
     boolean signingPrepared = shouldPrepareSigningInfrastructure();
     boolean signingEnabled = shouldSignClientMessages();
-    boolean commandAuthRequired = isStartCommandAuthorizationRequired();
-    boolean externalTaskAuthRequired = isExternalTaskAuthorizationRequired();
-    boolean userTaskAuthRequired = isUserTaskAuthorizationRequired();
-    boolean anyAuthRequired =
-        commandAuthRequired || externalTaskAuthRequired || userTaskAuthRequired;
-
-    // ── Auth gate check ───────────────────────────────────────────────────
-    if (anyAuthRequired && authorizationTokenProvider == null) {
-      log.warn(
-          "Authorization is enabled in runtime config (engineRequiresAuthorization={}"
-              + ", engineRequiresExternalTaskAuthorization={}"
-              + ", engineRequiresUserTaskAuthorization={}) but no AuthorizationTokenProvider"
-              + " is configured — commands sent without an explicit JWT may be rejected by the engine."
-              + " Trusted Ed25519 signatures can still satisfy external-task/user-task authorization"
-              + " when signing is enabled. Configure taktx.oidc.* or supply an AuthorizationTokenProvider.",
-          commandAuthRequired,
-          externalTaskAuthRequired,
-          userTaskAuthRequired);
-    }
 
     // ── Signing gate check ────────────────────────────────────────────────
     if (!signingEnabled) {
@@ -1289,32 +1269,16 @@ public class TaktXClient {
           ensureWorkerKeyPublished(identity);
           logWorkerSigningRegistrationState(
               "prepared:" + identity.getKeyId(),
-              "Worker signing prepared for requested/protected posture — public key publication"
-                  + " may proceed while outbound client traffic remains unsigned until signing"
-                  + " becomes active. source={} keyId={}",
+              "Worker signing prepared for pending anchored posture — public key publication"
+                  + " may proceed while outbound client traffic remains unsigned until the"
+                  + " authoritative policy becomes anchored. source={} keyId={}",
               signingIdentitySource.getSourceType(),
               identity.getKeyId());
         }
       } else {
         logWorkerSigningRegistrationState(
             "runtime-disabled",
-            "Worker response signing inactive — runtime configuration and namespace posture do"
-                + " not require signing");
-      }
-      if (commandAuthRequired) {
-        log.info(
-            "engineRequiresAuthorization=true — entry commands require JWT"
-                + " (tx-auth); non-entry commands are accepted without Ed25519");
-      }
-      if (externalTaskAuthRequired) {
-        log.info(
-            "engineRequiresExternalTaskAuthorization=true — external task completions require JWT"
-                + " (tx-auth) when worker signing is inactive");
-      }
-      if (userTaskAuthRequired) {
-        log.info(
-            "engineRequiresUserTaskAuthorization=true — user task completions require JWT"
-                + " (tx-auth) when worker signing is inactive");
+            "Worker response signing inactive — authoritative namespace posture is OPEN");
       }
       return;
     }
@@ -1347,23 +1311,11 @@ public class TaktXClient {
           identity.getKeyId());
       return;
     }
-    if (commandAuthRequired) {
-      // AND mode: entry commands need BOTH JWT (auth gate) AND Ed25519 (signing gate).
-      // ENGINE-role keys satisfy both gates without JWT.
-      logWorkerSigningRegistrationState(
-          "active-and:" + identity.getKeyId(),
-          "AND security mode active (engineRequiresAuthorization=true AND signingEnabled=true)"
-              + " — entry commands require JWT + Ed25519; ENGINE-role keys satisfy both gates."
-              + " source={} keyId={}",
-          signingIdentitySource.getSourceType(),
-          identity.getKeyId());
-    } else {
-      logWorkerSigningRegistrationState(
-          "active:" + identity.getKeyId(),
-          "Worker response signing active — runtime configuration enabled, source={} keyId={}",
-          signingIdentitySource.getSourceType(),
-          identity.getKeyId());
-    }
+    logWorkerSigningRegistrationState(
+        "active:" + identity.getKeyId(),
+        "Worker response signing active for authoritative anchored posture — source={} keyId={}",
+        signingIdentitySource.getSourceType(),
+        identity.getKeyId());
   }
 
   private void logWorkerSigningRegistrationState(String newState, String message, Object... args) {
@@ -1481,47 +1433,12 @@ public class TaktXClient {
   }
 
   boolean shouldPrepareSigningInfrastructure() {
-    if (hasLegacySecurityToggle()) {
-      return true;
-    }
-    return isProtectedPosture(currentNamespaceSecurityPolicy())
-        || isProtectedPosture(authoritativeNamespaceSecurityPolicy());
+    return isAnchoredMode(currentNamespaceSecurityPolicy())
+        || isAnchoredMode(authoritativeNamespaceSecurityPolicy());
   }
 
   boolean shouldSignClientMessages() {
-    if (RuntimeConfigurationHolder.isSigningEnabled()) {
-      return true;
-    }
-    NamespaceSecurityPolicyDTO policy = authoritativeNamespaceSecurityPolicy();
-    return isProtectedPosture(policy);
-  }
-
-  private boolean hasLegacySecurityToggle() {
-    return RuntimeConfigurationHolder.isSigningEnabled()
-        || RuntimeConfigurationHolder.isEngineRequiresAuthorization()
-        || RuntimeConfigurationHolder.isEngineRequiresExternalTaskAuthorization()
-        || RuntimeConfigurationHolder.isEngineRequiresUserTaskAuthorization();
-  }
-
-  private boolean isStartCommandAuthorizationRequired() {
-    if (RuntimeConfigurationHolder.isEngineRequiresAuthorization()) {
-      return true;
-    }
-    return isProtectedPosture(authoritativeNamespaceSecurityPolicy());
-  }
-
-  private boolean isExternalTaskAuthorizationRequired() {
-    if (RuntimeConfigurationHolder.isEngineRequiresExternalTaskAuthorization()) {
-      return true;
-    }
-    return isProtectedPosture(authoritativeNamespaceSecurityPolicy());
-  }
-
-  private boolean isUserTaskAuthorizationRequired() {
-    if (RuntimeConfigurationHolder.isEngineRequiresUserTaskAuthorization()) {
-      return true;
-    }
-    return isProtectedPosture(authoritativeNamespaceSecurityPolicy());
+    return isAnchoredMode(authoritativeNamespaceSecurityPolicy());
   }
 
   private @Nullable NamespaceSecurityPolicyDTO authoritativeNamespaceSecurityPolicy() {
@@ -1534,7 +1451,7 @@ public class TaktXClient {
     return namespaceSecurityPolicyStore != null ? namespaceSecurityPolicyStore.get() : null;
   }
 
-  private static boolean isProtectedPosture(@Nullable NamespaceSecurityPolicyDTO policy) {
+  private static boolean isAnchoredMode(@Nullable NamespaceSecurityPolicyDTO policy) {
     if (policy == null || policy.getMode() == null) {
       return false;
     }
