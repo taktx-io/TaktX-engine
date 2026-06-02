@@ -10,8 +10,11 @@ package io.taktx.client;
 import io.taktx.Topics;
 import io.taktx.client.serdes.SignalSerializer;
 import io.taktx.dto.SignalDTO;
+import io.taktx.security.SigningServiceHolder.SigningFunction;
 import io.taktx.util.TaktPropertiesHelper;
+import java.util.function.Supplier;
 import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.StringSerializer;
 
@@ -21,8 +24,9 @@ import org.apache.kafka.common.serialization.StringSerializer;
  */
 public class SignalSender {
 
-  private final KafkaProducer<String, SignalDTO> signalEmitter;
+  private final Producer<String, SignalDTO> signalEmitter;
   private final TaktPropertiesHelper taktPropertiesHelper;
+  private volatile Runnable beforeSendHook = () -> {};
   private volatile ProtectedClientDataPlaneGuard protectedDataPlaneGuard =
       ProtectedClientDataPlaneGuard.noop();
 
@@ -32,12 +36,26 @@ public class SignalSender {
    * @param taktPropertiesHelper the TaktPropertiesHelper to use for configuration
    */
   public SignalSender(TaktPropertiesHelper taktPropertiesHelper) {
-    this.taktPropertiesHelper = taktPropertiesHelper;
-    this.signalEmitter =
+    this(taktPropertiesHelper, null);
+  }
+
+  public SignalSender(
+      TaktPropertiesHelper taktPropertiesHelper, Supplier<SigningFunction> signingFunctionSupplier) {
+    this(
+        taktPropertiesHelper,
+        signingFunctionSupplier,
         new KafkaProducer<>(
             taktPropertiesHelper.getKafkaProducerProperties(),
             new StringSerializer(),
-            new SignalSerializer());
+            new SignalSerializer(signingFunctionSupplier)));
+  }
+
+  SignalSender(
+      TaktPropertiesHelper taktPropertiesHelper,
+      Supplier<SigningFunction> signingFunctionSupplier,
+      Producer<String, SignalDTO> signalEmitter) {
+    this.taktPropertiesHelper = taktPropertiesHelper;
+    this.signalEmitter = signalEmitter;
   }
 
   void setProtectedDataPlaneGuard(
@@ -48,6 +66,10 @@ public class SignalSender {
             : ProtectedClientDataPlaneGuard.noop();
   }
 
+  void setBeforeSendHook(@jakarta.annotation.Nullable Runnable beforeSendHook) {
+    this.beforeSendHook = beforeSendHook != null ? beforeSendHook : () -> {};
+  }
+
   /**
    * Sends a signal to the configured Kafka topic.
    *
@@ -55,6 +77,7 @@ public class SignalSender {
    */
   public void sendMSignal(SignalDTO signalDTO) {
     protectedDataPlaneGuard.check(ProtectedClientDataPlaneOperation.SIGNAL_EVENT, null);
+    beforeSendHook.run();
     signalEmitter.send(
         new ProducerRecord<>(
             taktPropertiesHelper.getPrefixedTopicName(Topics.SIGNAL_TOPIC.getTopicName()),

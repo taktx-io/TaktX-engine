@@ -201,8 +201,8 @@ public class TaktXClient {
     this.processInstanceProducer =
         new ProcessInstanceProducer(
             taktPropertiesHelper, processInstanceTriggerEmitter, authorizationTokenProvider);
-    this.messageEventSender = new MessageEventSender(taktPropertiesHelper);
-    this.signalSender = new SignalSender(taktPropertiesHelper);
+    this.messageEventSender = new MessageEventSender(taktPropertiesHelper, () -> globalWorkerSigningFunction);
+    this.signalSender = new SignalSender(taktPropertiesHelper, () -> globalWorkerSigningFunction);
     this.processInstanceUpdateConsumer =
         new ProcessInstanceUpdateConsumer(taktPropertiesHelper, executor);
     this.processInstanceResponder = processInstanceResponder;
@@ -2490,6 +2490,8 @@ public class TaktXClient {
               effectiveRegistrationSignature);
       localSigningFunction.set(client::signWorkerPayload);
       externalTaskResponder.setBeforeSendHook(client::refreshWorkerSigningFunctionRegistration);
+      client.messageEventSender.setBeforeSendHook(client::refreshWorkerSigningFunctionRegistration);
+      client.signalSender.setBeforeSendHook(client::refreshWorkerSigningFunctionRegistration);
       SigningIdentity identity = client.currentSigningIdentity();
       if (identity != null) {
         log.info(
