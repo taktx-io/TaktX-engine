@@ -64,6 +64,11 @@ public class LocalPersistentSigningIdentitySource implements SigningIdentitySour
     this(System.getenv(), systemProperties, null, null);
   }
 
+  public LocalPersistentSigningIdentitySource(
+      Properties systemProperties, String keyIdPrefixOverride) {
+    this(System.getenv(), systemProperties, null, keyIdPrefixOverride);
+  }
+
   public LocalPersistentSigningIdentitySource(String directoryPath) {
     this(System.getenv(), System.getProperties(), directoryPath, null);
   }

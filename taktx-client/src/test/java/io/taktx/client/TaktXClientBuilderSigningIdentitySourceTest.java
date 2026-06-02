@@ -13,6 +13,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import io.taktx.security.EnvironmentWorkerSigningIdentitySource;
 import io.taktx.security.FileSigningIdentitySource;
 import io.taktx.security.GeneratedSigningIdentitySource;
+import io.taktx.security.LocalPersistentSigningIdentitySource;
 import io.taktx.security.SigningIdentitySource;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -25,13 +26,18 @@ class TaktXClientBuilderSigningIdentitySourceTest {
   @TempDir Path tempDir;
 
   @Test
-  void resolveSigningIdentitySource_defaultsToGeneratedSourceWhenNoIdentityIsConfigured() {
+  void resolveSigningIdentitySource_defaultsToManagedLocalPersistentSourceWhenNoIdentityIsConfigured()
+      throws Exception {
+    Properties props = new Properties();
+    props.setProperty("taktx.signing.local.directory", tempDir.resolve("managed-client").toString());
+
     TaktXClient.TaktXClientBuilder builder = TaktXClient.newClientBuilder();
 
-    SigningIdentitySource source = builder.resolveSigningIdentitySource(new Properties());
+    SigningIdentitySource source = builder.resolveSigningIdentitySource(props);
 
-    assertThat(source).isInstanceOf(GeneratedSigningIdentitySource.class);
+    assertThat(source).isInstanceOf(LocalPersistentSigningIdentitySource.class);
     assertThat(source.currentIdentity().getKeyId()).startsWith("client-");
+    assertThat(tempDir.resolve("managed-client").resolve("identity.properties")).exists();
   }
 
   @Test
@@ -96,6 +102,20 @@ class TaktXClientBuilderSigningIdentitySourceTest {
   }
 
   @Test
+  void resolveSigningIdentitySource_supportsExplicitLocalSource() {
+    Properties props = new Properties();
+    props.setProperty("taktx.signing.identity-source", "local");
+    props.setProperty("taktx.signing.local.directory", tempDir.resolve("explicit-local").toString());
+
+    TaktXClient.TaktXClientBuilder builder = TaktXClient.newClientBuilder();
+
+    SigningIdentitySource source = builder.resolveSigningIdentitySource(props);
+
+    assertThat(source).isInstanceOf(LocalPersistentSigningIdentitySource.class);
+    assertThat(source.currentIdentity().getKeyId()).startsWith("client-");
+  }
+
+  @Test
   void resolveSigningIdentitySource_supportsGeneratedSource() {
     Properties props = new Properties();
     props.setProperty("taktx.signing.identity-source", "generated");
@@ -131,6 +151,6 @@ class TaktXClientBuilderSigningIdentitySourceTest {
     assertThatThrownBy(() -> builder.resolveSigningIdentitySource(props))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("taktx.signing.identity-source")
-        .hasMessageContaining("env, file, generated");
+        .hasMessageContaining("env, file, local, generated");
   }
 }

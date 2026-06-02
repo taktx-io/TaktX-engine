@@ -35,6 +35,7 @@ final class ClientProtectedDataPlaneParticipationGuard {
 
   static final String POLICY_NOT_READY_HINT = "SECURITY_POLICY_NOT_READY";
   static final String TRUST_ANCHOR_MISSING = SecurityPostureIssueCodes.TRUST_ANCHOR_MISSING;
+  static final String STABLE_SIGNING_SOURCE_REQUIRED = "CLIENT_STABLE_SIGNING_SOURCE_REQUIRED";
   static final String CLIENT_COMMAND_SIGNING_UNAVAILABLE = "CLIENT_COMMAND_SIGNING_UNAVAILABLE";
   static final String WORKER_RESPONSE_SIGNING_UNAVAILABLE = "WORKER_RESPONSE_SIGNING_UNAVAILABLE";
   static final String START_COMMAND_AUTHORIZATION_UNAVAILABLE =
@@ -48,6 +49,7 @@ final class ClientProtectedDataPlaneParticipationGuard {
   private final SecurityParticipantDescriptor participantDescriptor;
   private final Supplier<ClientNamespaceSecurityPolicyStore> policyStoreSupplier;
   private final Supplier<SigningIdentity> signingIdentitySupplier;
+  private final BooleanSupplier signingIdentityRestartStableSupplier;
   private final BooleanSupplier signingReadySupplier;
   private final BooleanSupplier authorizationTokenProviderAvailableSupplier;
   private final Supplier<String> platformPublicKeySupplier;
@@ -63,11 +65,34 @@ final class ClientProtectedDataPlaneParticipationGuard {
       BooleanSupplier authorizationTokenProviderAvailableSupplier,
       Supplier<String> platformPublicKeySupplier,
       Clock clock) {
+    this(
+        taktPropertiesHelper,
+        participantDescriptor,
+        policyStoreSupplier,
+        signingIdentitySupplier,
+        () -> true,
+        signingReadySupplier,
+        authorizationTokenProviderAvailableSupplier,
+        platformPublicKeySupplier,
+        clock);
+  }
+
+  ClientProtectedDataPlaneParticipationGuard(
+      TaktPropertiesHelper taktPropertiesHelper,
+      SecurityParticipantDescriptor participantDescriptor,
+      Supplier<ClientNamespaceSecurityPolicyStore> policyStoreSupplier,
+      Supplier<SigningIdentity> signingIdentitySupplier,
+      BooleanSupplier signingIdentityRestartStableSupplier,
+      BooleanSupplier signingReadySupplier,
+      BooleanSupplier authorizationTokenProviderAvailableSupplier,
+      Supplier<String> platformPublicKeySupplier,
+      Clock clock) {
     this.taktPropertiesHelper = taktPropertiesHelper;
     this.participantDescriptor =
         SecurityParticipantDescriptorSupport.requireValid(participantDescriptor);
     this.policyStoreSupplier = policyStoreSupplier;
     this.signingIdentitySupplier = signingIdentitySupplier;
+    this.signingIdentityRestartStableSupplier = signingIdentityRestartStableSupplier;
     this.signingReadySupplier = signingReadySupplier;
     this.authorizationTokenProviderAvailableSupplier = authorizationTokenProviderAvailableSupplier;
     this.platformPublicKeySupplier = platformPublicKeySupplier;
@@ -144,6 +169,16 @@ final class ClientProtectedDataPlaneParticipationGuard {
     }
 
     if (policy.getMode() == SecurityMode.ANCHORED) {
+      if (!signingIdentityRestartStableSupplier.getAsBoolean()) {
+        effectiveState = ParticipantEffectiveState.MISMATCH;
+        readyForDataPlane = false;
+        mismatchReasons.add(
+            mismatchReason(
+                STABLE_SIGNING_SOURCE_REQUIRED,
+                "Namespace requires anchored trust but the client is not configured with a"
+                    + " restart-stable signing identity source"));
+      }
+
       if (isBlank(platformPublicKeySupplier.get())) {
         effectiveState = ParticipantEffectiveState.MISMATCH;
         readyForDataPlane = false;

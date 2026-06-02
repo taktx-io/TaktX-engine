@@ -45,6 +45,7 @@ import io.taktx.security.Ed25519Service;
 import io.taktx.security.EnvironmentWorkerSigningIdentitySource;
 import io.taktx.security.FileSigningIdentitySource;
 import io.taktx.security.GeneratedSigningIdentitySource;
+import io.taktx.security.LocalPersistentSigningIdentitySource;
 import io.taktx.security.NamespaceSecurityPolicyActivationAuthority;
 import io.taktx.security.NamespaceSecurityPolicyActivationAuthorityContract;
 import io.taktx.security.NamespaceSecurityPolicyControlPlaneContract;
@@ -216,6 +217,7 @@ public class TaktXClient {
             participantDescriptor,
             () -> namespaceSecurityPolicyStore,
             this::currentSigningIdentity,
+            () -> signingIdentitySource != null && signingIdentitySource.isRestartStable(),
             this::hasPublishedSigningCapability,
             () -> authorizationTokenProvider != null,
             this::resolvePlatformPublicKey,
@@ -2648,8 +2650,8 @@ public class TaktXClient {
           return environmentSource;
         }
         log.info(
-            "No worker signing identity configured via environment/system properties — falling back to generated keypair");
-        return new GeneratedSigningIdentitySource("client-");
+            "No worker signing identity configured via environment/system properties — falling back to managed local persistent identity");
+        return new LocalPersistentSigningIdentitySource(properties, "client-");
       }
       if ("env".equalsIgnoreCase(sourceType) || "environment".equalsIgnoreCase(sourceType)) {
         return new EnvironmentWorkerSigningIdentitySource(properties, keyIdOverride);
@@ -2657,13 +2659,16 @@ public class TaktXClient {
       if ("file".equalsIgnoreCase(sourceType)) {
         return new FileSigningIdentitySource(properties);
       }
+      if ("local".equalsIgnoreCase(sourceType)) {
+        return new LocalPersistentSigningIdentitySource(properties, "client-");
+      }
       if ("generated".equalsIgnoreCase(sourceType)) {
         return new GeneratedSigningIdentitySource("client-");
       }
       throw new IllegalArgumentException(
           "Unsupported taktx.signing.identity-source='"
               + sourceType
-              + "'. Supported values: env, file, generated");
+              + "'. Supported values: env, file, local, generated");
     }
 
     private static String firstNonBlank(String... candidates) {
