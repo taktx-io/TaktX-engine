@@ -18,6 +18,16 @@ public interface SigningIdentitySource {
   /** Returns the currently active identity, or {@code null} when signing is unavailable. */
   SigningIdentity currentIdentity();
 
+  /**
+   * Returns whether this source is expected to preserve the same identity across normal restarts.
+   *
+   * <p>The default is {@code true} so custom stable sources are not penalized. Ephemeral generated
+   * sources should override this to return {@code false}.
+   */
+  default boolean isRestartStable() {
+    return true;
+  }
+
   default String getSourceType() {
     return getClass().getSimpleName();
   }

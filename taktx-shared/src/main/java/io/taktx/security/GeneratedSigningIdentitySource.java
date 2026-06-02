@@ -28,6 +28,11 @@ public class GeneratedSigningIdentitySource implements SigningIdentitySource {
     return identity;
   }
 
+  @Override
+  public boolean isRestartStable() {
+    return false;
+  }
+
   private static SigningIdentity generate(String keyIdPrefix) {
     String prefix = keyIdPrefix != null && !keyIdPrefix.isBlank() ? keyIdPrefix : "generated-";
     KeyPair keyPair = SigningKeyGenerator.generate();
