@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_adhoc" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.40.1" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.4.0">
+  <bpmn:process id="adhoc-subprocess-basic" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_1">
+      <bpmn:outgoing>Flow_0zwupec</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:endEvent id="EndEvent_1">
+      <bpmn:incoming>Flow_1cup8v4</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:adHocSubProcess id="adhoc-1">
+      <bpmn:extensionElements>
+        <zeebe:adHoc activeElementsCollection="=activeElements" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_0zwupec</bpmn:incoming>
+      <bpmn:outgoing>Flow_1cup8v4</bpmn:outgoing>
+      <bpmn:task id="taskA1" name="Task A" />
+      <bpmn:task id="taskB1" name="Task B" />
+      <bpmn:task id="taskC1" name="Task C" />
+    </bpmn:adHocSubProcess>
+    <bpmn:sequenceFlow id="Flow_0zwupec" sourceRef="StartEvent_1" targetRef="adhoc-1" />
+    <bpmn:sequenceFlow id="Flow_1cup8v4" sourceRef="adhoc-1" targetRef="EndEvent_1" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="adhoc-subprocess-basic">
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="179" y="99" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <dc:Bounds x="712" y="99" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0eyhxy8_di" bpmnElement="adhoc-1" isExpanded="true">
+        <dc:Bounds x="260" y="50" width="420" height="230" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1roaqvb_di" bpmnElement="taskA1">
+        <dc:Bounds x="300" y="120" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_0gbuheo" bpmnElement="taskB1">
+        <dc:Bounds x="430" y="120" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_0zds6gp" bpmnElement="taskC1">
+        <dc:Bounds x="550" y="120" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_0zwupec_di" bpmnElement="Flow_0zwupec">
+        <di:waypoint x="215" y="117" />
+        <di:waypoint x="260" y="117" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1cup8v4_di" bpmnElement="Flow_1cup8v4">
+        <di:waypoint x="680" y="117" />
+        <di:waypoint x="712" y="117" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

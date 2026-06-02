@@ -40,6 +40,7 @@ message BaseElementEnvelope {
     ErrorEventDefinitionMessage       error_event_def       = 27; // TypeId "ER"
     MessageEventDefinitionMessage     msg_event_def         = 28; // TypeId "ME"
     SignalEventDefinitionMessage      signal_event_def      = 29; // TypeId "SE"
+    AdHocSubProcessMessage            ad_hoc_sub_process    = 30; // TypeId "AH"
   }
 }
 
@@ -519,6 +520,21 @@ message StartEventMessage {
   InputOutputMappingMessage io_mapping = 6;
   repeated BaseElementEnvelope event_definitions = 7;
   bool interrupting = 8;
+}
+
+// Java: AdHocSubProcessDTO
+message AdHocSubProcessMessage {
+  string id = 1;
+  string parent_id = 2;
+  string name = 3;
+  repeated string incoming = 4;
+  repeated string outgoing = 5;
+  LoopCharacteristicsMessage loop_characteristics = 6;
+  InputOutputMappingMessage io_mapping = 7;
+  FlowElementsMessage elements = 8;
+  string active_elements_collection = 9;
+  string completion_condition = 10;
+  bool cancel_remaining_instances = 11;
 }
 
 // Java: SubProcessDTO

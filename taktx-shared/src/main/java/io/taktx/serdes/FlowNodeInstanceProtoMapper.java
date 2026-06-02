@@ -39,6 +39,7 @@ import io.taktx.dto.ScriptTaskInstanceDTO;
 import io.taktx.dto.SendTaskInstanceDTO;
 import io.taktx.dto.ServiceTaskInstanceDTO;
 import io.taktx.dto.StartEventInstanceDTO;
+import io.taktx.dto.AdHocSubProcessInstanceDTO;
 import io.taktx.dto.SubProcessInstanceDTO;
 import io.taktx.dto.SubscriptionDTO;
 import io.taktx.dto.SubscriptionsDTO;
@@ -89,6 +90,7 @@ import io.taktx.proto.SendTaskInstanceMessage;
 import io.taktx.proto.ServiceTaskInstanceMessage;
 import io.taktx.proto.SignalSubscriptionMessage;
 import io.taktx.proto.StartEventInstanceMessage;
+import io.taktx.proto.AdHocSubProcessInstanceMessage;
 import io.taktx.proto.SubProcessInstanceMessage;
 import io.taktx.proto.SubscriptionEnvelope;
 import io.taktx.proto.SubscriptionList;
@@ -146,6 +148,8 @@ public final class FlowNodeInstanceProtoMapper {
       builder.setParallelGw(toProto(parallelGateway));
     } else if (dto instanceof ReceiveTaskInstanceDTO receiveTask) {
       builder.setReceiveTask(toProto(receiveTask));
+    } else if (dto instanceof AdHocSubProcessInstanceDTO adHocSubProcess) {
+      builder.setAdHocSubProcess(toProto(adHocSubProcess));
     } else if (dto instanceof SubProcessInstanceDTO subProcess) {
       builder.setSubProcess(toProto(subProcess));
     } else if (dto instanceof UserTaskInstanceDTO userTask) {
@@ -186,6 +190,7 @@ public final class FlowNodeInstanceProtoMapper {
       case PARALLEL_GW -> toDto(envelope.getParallelGw());
       case RECEIVE_TASK -> toDto(envelope.getReceiveTask());
       case SUB_PROCESS -> toDto(envelope.getSubProcess());
+      case AD_HOC_SUB_PROCESS -> toDto(envelope.getAdHocSubProcess());
       case TASK -> toDto(envelope.getTask());
       case USER_TASK -> toDto(envelope.getUserTask());
       case SERVICE_TASK -> toDto(envelope.getServiceTask());
@@ -305,6 +310,26 @@ public final class FlowNodeInstanceProtoMapper {
               });
     }
     return builder.build();
+  }
+
+  private static AdHocSubProcessInstanceMessage toProto(AdHocSubProcessInstanceDTO dto) {
+    AdHocSubProcessInstanceMessage.Builder builder =
+        mergeFrom(AdHocSubProcessInstanceMessage.newBuilder(), toProtoActivity(dto));
+    if (dto.getScope() != null) {
+      builder.setScope(toProto(dto.getScope()));
+    }
+    builder.setCompletionConditionTriggered(dto.isCompletionConditionTriggered());
+    return builder.build();
+  }
+
+  private static AdHocSubProcessInstanceDTO toDto(AdHocSubProcessInstanceMessage message) {
+    AdHocSubProcessInstanceDTO dto = new AdHocSubProcessInstanceDTO();
+    applyBase(
+        (ActivityInstanceDTO) dto,
+        parseBase(message, ActivityInstanceMessage.parser(), "ActivityInstanceMessage"));
+    dto.setScope(message.hasScope() ? toDto(message.getScope()) : null);
+    dto.setCompletionConditionTriggered(message.getCompletionConditionTriggered());
+    return dto;
   }
 
   private static SubProcessInstanceMessage toProto(SubProcessInstanceDTO dto) {

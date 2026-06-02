@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_adhoc_cancel" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="adhoc-subprocess-async-cancel" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_1">
+      <bpmn:outgoing>Flow_in</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="Flow_in" sourceRef="StartEvent_1" targetRef="adhoc-1" />
+    <bpmn:adHocSubProcess id="adhoc-1" cancelRemainingInstances="true">
+      <bpmn:extensionElements>
+        <zeebe:adHoc activeElementsCollection="=[&quot;svcA&quot;,&quot;svcB&quot;,&quot;svcC&quot;]" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_in</bpmn:incoming>
+      <bpmn:outgoing>Flow_out</bpmn:outgoing>
+      <bpmn:serviceTask id="svcA" name="Service A">
+        <bpmn:extensionElements>
+          <zeebe:taskDefinition type="adhoc-task-a" />
+        </bpmn:extensionElements>
+      </bpmn:serviceTask>
+      <bpmn:serviceTask id="svcB" name="Service B">
+        <bpmn:extensionElements>
+          <zeebe:taskDefinition type="adhoc-task-b" />
+        </bpmn:extensionElements>
+      </bpmn:serviceTask>
+      <bpmn:serviceTask id="svcC" name="Service C">
+        <bpmn:extensionElements>
+          <zeebe:taskDefinition type="adhoc-task-c" />
+        </bpmn:extensionElements>
+      </bpmn:serviceTask>
+      <bpmn:completionCondition>=svcADone</bpmn:completionCondition>
+    </bpmn:adHocSubProcess>
+    <bpmn:sequenceFlow id="Flow_out" sourceRef="adhoc-1" targetRef="EndEvent_1" />
+    <bpmn:endEvent id="EndEvent_1">
+      <bpmn:incoming>Flow_out</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="adhoc-subprocess-async-cancel">
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="152" y="262" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="125" y="305" width="90" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="adhoc-1_di" bpmnElement="adhoc-1" isExpanded="true">
+        <dc:Bounds x="240" y="160" width="570" height="240" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="svcA_di" bpmnElement="svcA">
+        <dc:Bounds x="290" y="240" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="svcB_di" bpmnElement="svcB">
+        <dc:Bounds x="490" y="240" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="svcC_di" bpmnElement="svcC">
+        <dc:Bounds x="690" y="240" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <dc:Bounds x="862" y="262" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="835" y="305" width="90" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_in_di" bpmnElement="Flow_in">
+        <di:waypoint x="188" y="280" />
+        <di:waypoint x="240" y="280" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_out_di" bpmnElement="Flow_out">
+        <di:waypoint x="810" y="280" />
+        <di:waypoint x="862" y="280" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

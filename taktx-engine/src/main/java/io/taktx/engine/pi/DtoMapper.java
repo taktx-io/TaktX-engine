@@ -8,6 +8,7 @@
 
 package io.taktx.engine.pi;
 
+import io.taktx.dto.AdHocSubProcessDTO;
 import io.taktx.dto.BaseElementDTO;
 import io.taktx.dto.BoundaryEventDTO;
 import io.taktx.dto.BusinessRuleTaskDTO;
@@ -49,6 +50,7 @@ import io.taktx.dto.TimerEventDefinitionDTO;
 import io.taktx.dto.TimerEventSignalDTO;
 import io.taktx.dto.UserTaskDTO;
 import io.taktx.dto.VariablesDTO;
+import io.taktx.engine.pd.model.AdHocSubProcess;
 import io.taktx.engine.pd.model.BaseElement;
 import io.taktx.engine.pd.model.BoundaryEvent;
 import io.taktx.engine.pd.model.BusinessRuleTask;
@@ -126,6 +128,7 @@ public interface DtoMapper {
   @SubclassMapping(source = ReceiveTaskDTO.class, target = ReceiveTask.class)
   @SubclassMapping(source = ScriptTaskDTO.class, target = ScriptTask.class)
   @SubclassMapping(source = TaskDTO.class, target = Task.class)
+  @SubclassMapping(source = AdHocSubProcessDTO.class, target = AdHocSubProcess.class)
   @SubclassMapping(source = SubProcessDTO.class, target = SubProcess.class)
   @SubclassMapping(source = SequenceFlowDTO.class, target = SequenceFlow.class)
   @SubclassMapping(source = CallActivityDTO.class, target = CallActivity.class)
@@ -175,6 +178,10 @@ public interface DtoMapper {
   @Mapping(target = "boundaryEvents", ignore = true)
   @Mapping(target = "parentElement", ignore = true)
   Task map(TaskDTO task);
+
+  @Mapping(target = "boundaryEvents", ignore = true)
+  @Mapping(target = "parentElement", ignore = true)
+  AdHocSubProcess map(AdHocSubProcessDTO adHocSubProcess);
 
   @Mapping(target = "boundaryEvents", ignore = true)
   @Mapping(target = "parentElement", ignore = true)

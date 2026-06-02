@@ -27,12 +27,14 @@ import io.taktx.bpmn.TReceiveTask;
 import io.taktx.bpmn.TScriptTask;
 import io.taktx.bpmn.TSendTask;
 import io.taktx.bpmn.TSequenceFlow;
+import io.taktx.bpmn.TAdHocSubProcess;
 import io.taktx.bpmn.TServiceTask;
 import io.taktx.bpmn.TStartEvent;
 import io.taktx.bpmn.TSubProcess;
 import io.taktx.bpmn.TTask;
 import io.taktx.bpmn.TThrowEvent;
 import io.taktx.bpmn.TUserTask;
+import io.taktx.dto.AdHocSubProcessDTO;
 import io.taktx.dto.BoundaryEventDTO;
 import io.taktx.dto.CatchEventDTO;
 import io.taktx.dto.EndEventDTO;
@@ -291,6 +293,41 @@ public class GenericFlowElementMapper implements FlowElementMapper {
                   mapQNameList(task.getOutgoing()),
                   loopCharacteristics,
                   ioMapping);
+      case TAdHocSubProcess adHoc -> {
+        Map<String, FlowElementDTO> adHocElements =
+            adHoc.getFlowElement().stream()
+                .map(
+                    flowElement ->
+                        bpmnMapperFactory
+                            .createFlowElementMapper()
+                            .map(flowElement.getValue(), activity.getId()))
+                .collect(Collectors.toMap(FlowElementDTO::getId, Function.identity()));
+
+        String completionConditionExpr =
+            adHoc.getCompletionCondition() != null
+                ? adHoc.getCompletionCondition().getContent().stream()
+                    .map(Object::toString)
+                    .collect(Collectors.joining(""))
+                : null;
+
+        String activeElementsCollection =
+            bpmnMapperFactory.createAdHocSubProcessMapper()
+                .mapActiveElementsCollection(adHoc);
+
+        activityFlowElement =
+            new AdHocSubProcessDTO(
+                activity.getId(),
+                parentId,
+                activity.getName(),
+                mapQNameList(adHoc.getIncoming()),
+                mapQNameList(adHoc.getOutgoing()),
+                loopCharacteristics,
+                new FlowElementsDTO(adHocElements),
+                ioMapping,
+                activeElementsCollection,
+                completionConditionExpr,
+                adHoc.isCancelRemainingInstances());
+      }
       case TSubProcess subProcess -> {
         Map<String, FlowElementDTO> elements =
             subProcess.getFlowElement().stream()

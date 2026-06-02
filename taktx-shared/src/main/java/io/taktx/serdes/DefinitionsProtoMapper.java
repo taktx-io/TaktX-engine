@@ -52,6 +52,7 @@ import io.taktx.dto.ScriptTaskDTO;
 import io.taktx.dto.ScriptType;
 import io.taktx.dto.SendTaskDTO;
 import io.taktx.dto.SequenceFlowDTO;
+import io.taktx.dto.AdHocSubProcessDTO;
 import io.taktx.dto.ServiceTaskDTO;
 import io.taktx.dto.SigDTO;
 import io.taktx.dto.SignalEventDefinitionDTO;
@@ -106,6 +107,7 @@ import io.taktx.proto.ServiceTaskMessage;
 import io.taktx.proto.SigMessage;
 import io.taktx.proto.SignalEventDefinitionMessage;
 import io.taktx.proto.StartEventMessage;
+import io.taktx.proto.AdHocSubProcessMessage;
 import io.taktx.proto.SubProcessMessage;
 import io.taktx.proto.TaskMessage;
 import io.taktx.proto.TaskScheduleMessage;
@@ -235,6 +237,8 @@ public final class DefinitionsProtoMapper {
       builder.setParallelGw(toProto(parallelGateway));
     } else if (dto instanceof ExclusiveGatewayDTO exclusiveGateway) {
       builder.setExclusiveGw(toProto(exclusiveGateway));
+    } else if (dto instanceof AdHocSubProcessDTO adHocSubProcess) {
+      builder.setAdHocSubProcess(toProto(adHocSubProcess));
     } else if (dto instanceof SubProcessDTO subProcess) {
       builder.setSubProcess(toProto(subProcess));
     } else if (dto instanceof CallActivityDTO callActivity) {
@@ -297,6 +301,7 @@ public final class DefinitionsProtoMapper {
       case PARALLEL_GW -> toDto(envelope.getParallelGw());
       case EXCLUSIVE_GW -> toDto(envelope.getExclusiveGw());
       case SUB_PROCESS -> toDto(envelope.getSubProcess());
+      case AD_HOC_SUB_PROCESS -> toDto(envelope.getAdHocSubProcess());
       case CALL_ACTIVITY -> toDto(envelope.getCallActivity());
       case RECEIVE_TASK -> toDto(envelope.getReceiveTask());
       case SEND_TASK -> toDto(envelope.getSendTask());
@@ -667,6 +672,48 @@ public final class DefinitionsProtoMapper {
         stringSet(message.getIncomingList()),
         stringSet(message.getOutgoingList()),
         emptyToNull(message.getDefaultFlow()));
+  }
+
+  private static AdHocSubProcessMessage toProto(AdHocSubProcessDTO dto) {
+    AdHocSubProcessMessage.Builder builder = AdHocSubProcessMessage.newBuilder();
+    if (dto == null) {
+      return builder.build();
+    }
+    setActivityFields(
+        builder::setId,
+        builder::setParentId,
+        builder::setName,
+        builder::addAllIncoming,
+        builder::addAllOutgoing,
+        builder::setLoopCharacteristics,
+        builder::setIoMapping,
+        dto);
+    if (dto.getElements() != null) {
+      builder.setElements(toProto(dto.getElements()));
+    }
+    if (dto.getActiveElementsCollection() != null) {
+      builder.setActiveElementsCollection(dto.getActiveElementsCollection());
+    }
+    if (dto.getCompletionCondition() != null) {
+      builder.setCompletionCondition(dto.getCompletionCondition());
+    }
+    builder.setCancelRemainingInstances(dto.isCancelRemainingInstances());
+    return builder.build();
+  }
+
+  private static AdHocSubProcessDTO toDto(AdHocSubProcessMessage message) {
+    return new AdHocSubProcessDTO(
+        emptyToNull(message.getId()),
+        emptyToNull(message.getParentId()),
+        emptyToNull(message.getName()),
+        stringSet(message.getIncomingList()),
+        stringSet(message.getOutgoingList()),
+        message.hasLoopCharacteristics() ? toDto(message.getLoopCharacteristics()) : null,
+        message.hasElements() ? toDto(message.getElements()) : null,
+        message.hasIoMapping() ? toDto(message.getIoMapping()) : null,
+        emptyToNull(message.getActiveElementsCollection()),
+        emptyToNull(message.getCompletionCondition()),
+        message.getCancelRemainingInstances());
   }
 
   private static SubProcessMessage toProto(SubProcessDTO dto) {

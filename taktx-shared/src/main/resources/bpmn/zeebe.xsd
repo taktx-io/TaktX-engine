@@ -98,6 +98,12 @@
     </xs:complexType>
   </xs:element>
 
+  <xs:element name="adHoc">
+    <xs:complexType>
+      <xs:attribute name="activeElementsCollection" use="required" type="xs:string"/>
+    </xs:complexType>
+  </xs:element>
+
   <xs:element name="calledDecision">
     <xs:complexType>
       <xs:attribute name="decisionId" use="required" type="xs:string"/>

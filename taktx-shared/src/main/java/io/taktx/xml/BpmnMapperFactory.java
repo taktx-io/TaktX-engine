@@ -130,6 +130,14 @@ public class BpmnMapperFactory {
     }
   }
 
+  public AdHocSubProcessMapper createAdHocSubProcessMapper() {
+    if (namespaces.contains(NS_ZEEBE_1_0)) {
+      return new ZeebeAdHocSubProcessMapper();
+    } else {
+      return new GenericAdHocSubProcessMapper();
+    }
+  }
+
   public SignalMapper createSignalMapper() {
     return new GenericSignalMapper();
   }

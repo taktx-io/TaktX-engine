@@ -36,6 +36,7 @@ message FlowNodeInstanceEnvelope {
     ServiceTaskInstanceMessage                 service_task    = 19; // TypeId "V"
     IntermediateThrowEventInstanceMessage      throw_event     = 20; // TypeId "W"
     ExclusiveGatewayInstanceMessage            exclusive_gw    = 21; // TypeId "X"
+    AdHocSubProcessInstanceMessage             ad_hoc_sub_process = 22; // TypeId "A"
   }
 }
 
@@ -388,6 +389,24 @@ message StartEventInstanceMessage {
   string element_id = 5;
   int32 passed_cnt = 6;
   bool incident = 7;
+}
+
+// Java: AdHocSubProcessInstanceDTO
+message AdHocSubProcessInstanceMessage {
+  ExecutionState state = 1;
+  sint64 element_instance_id = 2;
+  sint64 parent_element_instance_id = 3;
+  int32 element_index = 4;
+  string element_id = 5;
+  int32 passed_cnt = 6;
+  bool incident = 7;
+  bool iteration = 8;
+  sint64 next_iteration_id = 9;
+  VariableValue input_element = 10;
+  VariableValue output_element = 11;
+  int32 loop_cnt = 12;
+  ScopeMessage scope = 13;
+  bool completion_condition_triggered = 14;
 }
 
 // Java: SubProcessInstanceDTO

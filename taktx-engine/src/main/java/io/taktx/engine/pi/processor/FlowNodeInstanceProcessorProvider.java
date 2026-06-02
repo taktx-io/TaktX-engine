@@ -10,6 +10,7 @@ package io.taktx.engine.pi.processor;
 
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.Activity;
+import io.taktx.engine.pd.model.AdHocSubProcess;
 import io.taktx.engine.pd.model.BaseElement;
 import io.taktx.engine.pd.model.BoundaryEvent;
 import io.taktx.engine.pd.model.BusinessRuleTask;
@@ -56,6 +57,7 @@ public class FlowNodeInstanceProcessorProvider {
   @Inject ServiceTaskInstanceProcessor serviceTaskProcessor;
   @Inject BoundaryEventInstanceProcessor boundaryEventProcessor;
   @Inject @DefaultTaskProcessor TaskInstanceProcessor taskProcessor;
+  @Inject AdHocSubProcessInstanceProcessor adHocSubProcessProcessor;
   @Inject SubProcessInstanceProcessor subProcessProcessor;
   @Inject CallActivityInstanceProcessor callActivityProcessor;
   @Inject ScriptTaskInstanceProcessor scriptTaskProcessor;
@@ -138,6 +140,8 @@ public class FlowNodeInstanceProcessorProvider {
       processor = messageIntermediateThrowEventInstanceProcessor;
     } else if (element instanceof ScriptTask) {
       processor = scriptTaskProcessor;
+    } else if (element instanceof AdHocSubProcess) {
+      processor = adHocSubProcessProcessor;
     } else if (element instanceof SubProcess) {
       processor = subProcessProcessor;
     } else if (element instanceof CallActivity) {
