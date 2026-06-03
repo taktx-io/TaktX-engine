@@ -119,7 +119,8 @@ class CompensationRegistrationTest {
 
     List<CompensationRegistration> result = scope.findRegistrationsForThrow("task-a");
 
-    assertThat(result).hasSize(3)
+    assertThat(result)
+        .hasSize(3)
         .extracting(CompensationRegistration::getRegistrationKey)
         .containsExactlyInAnyOrder("r1", "r2", "r3");
   }
@@ -127,12 +128,13 @@ class CompensationRegistrationTest {
   @Test
   void findRegistrationsForThrow_onlyConsumedRepeatIsExcluded() {
     // First completion already compensated, second still available
-    scope.addCompensationRegistration(reg("r1", "task-a", true));  // consumed
+    scope.addCompensationRegistration(reg("r1", "task-a", true)); // consumed
     scope.addCompensationRegistration(reg("r2", "task-a", false)); // not yet consumed
 
     List<CompensationRegistration> result = scope.findRegistrationsForThrow("task-a");
 
-    assertThat(result).hasSize(1)
+    assertThat(result)
+        .hasSize(1)
         .extracting(CompensationRegistration::getRegistrationKey)
         .containsOnly("r2");
   }
@@ -155,7 +157,8 @@ class CompensationRegistrationTest {
     // Last one completes → throw event unblocked
     assertThat(scope.markHandlerCompleted(12L)).isPresent();
     assertThat(triggerState.getPendingHandlerInstanceKeys()).isEmpty();
-    assertThat(triggerState.getCompletedHandlerInstanceKeys()).containsExactlyInAnyOrder(10L, 11L, 12L);
+    assertThat(triggerState.getCompletedHandlerInstanceKeys())
+        .containsExactlyInAnyOrder(10L, 11L, 12L);
   }
 
   // ── Req §5: scope-level isolation ────────────────────────────────────────
@@ -166,11 +169,12 @@ class CompensationRegistrationTest {
     scope.addCompensationRegistration(reg("r1", "task-a", false));
     scope.addCompensationRegistration(reg("r2", "task-a", false)); // second completion of task-a
     scope.addCompensationRegistration(reg("r3", "task-b", false));
-    scope.addCompensationRegistration(reg("r4", "task-b", true));  // consumed
+    scope.addCompensationRegistration(reg("r4", "task-b", true)); // consumed
 
     List<CompensationRegistration> result = scope.findRegistrationsForThrow(null);
 
-    assertThat(result).hasSize(3)
+    assertThat(result)
+        .hasSize(3)
         .extracting(CompensationRegistration::getRegistrationKey)
         .containsExactlyInAnyOrder("r1", "r2", "r3");
   }

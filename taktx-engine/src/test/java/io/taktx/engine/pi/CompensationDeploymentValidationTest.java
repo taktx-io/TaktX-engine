@@ -14,7 +14,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import io.taktx.dto.BoundaryEventDTO;
 import io.taktx.dto.CompensationEventDefinitionDTO;
 import io.taktx.dto.DefinitionsKey;
-import io.taktx.dto.EventDefinitionDTO;
 import io.taktx.dto.FlowElementDTO;
 import io.taktx.dto.FlowElementsDTO;
 import io.taktx.dto.IntermediateThrowEventDTO;
@@ -40,7 +39,8 @@ class CompensationDeploymentValidationTest {
   // ── helpers ──────────────────────────────────────────────────────────────
 
   private static ServiceTaskDTO task(String id) {
-    return new ServiceTaskDTO(id, null, id, id, null, Set.of(), Set.of(), null, null, Map.of(), null);
+    return new ServiceTaskDTO(
+        id, null, id, id, null, Set.of(), Set.of(), null, null, Map.of(), null);
   }
 
   private static ServiceTaskDTO handlerTask(String id) {
@@ -186,7 +186,8 @@ class CompensationDeploymentValidationTest {
                         task("task-a"),
                         compensationBoundary("compensate-task-a", "task-a", "undo-task-a"),
                         handlerTask("undo-task-a"),
-                        compensationThrow("throw-1", "throw-1")))) // self-reference, not an Activity
+                        compensationThrow(
+                            "throw-1", "throw-1")))) // self-reference, not an Activity
         .isInstanceOf(IllegalStateException.class);
   }
 }
