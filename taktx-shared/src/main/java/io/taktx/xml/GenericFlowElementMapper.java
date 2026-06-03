@@ -9,6 +9,8 @@ package io.taktx.xml;
 
 import io.taktx.bpmn.TActivity;
 import io.taktx.bpmn.TAdHocSubProcess;
+import io.taktx.bpmn.TArtifact;
+import io.taktx.bpmn.TAssociation;
 import io.taktx.bpmn.TBaseElement;
 import io.taktx.bpmn.TBoundaryEvent;
 import io.taktx.bpmn.TBusinessRuleTask;
@@ -38,6 +40,7 @@ import io.taktx.dto.ActivityDTO;
 import io.taktx.dto.AdHocSubProcessDTO;
 import io.taktx.dto.BoundaryEventDTO;
 import io.taktx.dto.CatchEventDTO;
+import io.taktx.dto.CompensationEventDefinitionDTO;
 import io.taktx.dto.EndEventDTO;
 import io.taktx.dto.EventBasedGatewayDTO;
 import io.taktx.dto.EventDefinitionDTO;
@@ -133,8 +136,7 @@ public class GenericFlowElementMapper implements FlowElementMapper {
   }
 
   private boolean hasMessageEventDefinition(Set<EventDefinitionDTO> eventDefinitions) {
-    return eventDefinitions.stream()
-        .anyMatch(eventDefinitionDTO -> eventDefinitionDTO instanceof MessageEventDefinitionDTO);
+    return eventDefinitions.stream().anyMatch(MessageEventDefinitionDTO.class::isInstance);
   }
 
   private GatewayDTO mapGateway(TGateway gateway, String parentId) {
@@ -242,7 +244,7 @@ public class GenericFlowElementMapper implements FlowElementMapper {
 
     LoopCharacteristicsDTO loopCharacteristics =
         bpmnMapperFactory.createLoopCharacteristicsMapper().map(activity.getLoopCharacteristics());
-    FlowElementDTO activityFlowElement = null;
+    FlowElementDTO activityFlowElement;
     switch (activity) {
       case TBusinessRuleTask businessRuleTask ->
           activityFlowElement =
@@ -304,6 +306,9 @@ public class GenericFlowElementMapper implements FlowElementMapper {
                             .map(flowElement.getValue(), activity.getId()))
                 .collect(Collectors.toMap(FlowElementDTO::getId, Function.identity()));
 
+        FlowElementsDTO adHocElementsDTO = new FlowElementsDTO(adHocElements);
+        resolveCompensationAssociations(adHoc.getArtifact(), adHocElementsDTO);
+
         String completionConditionExpr =
             adHoc.getCompletionCondition() != null
                 ? adHoc.getCompletionCondition().getContent().stream()
@@ -322,7 +327,7 @@ public class GenericFlowElementMapper implements FlowElementMapper {
                 mapQNameList(adHoc.getIncoming()),
                 mapQNameList(adHoc.getOutgoing()),
                 loopCharacteristics,
-                new FlowElementsDTO(adHocElements),
+                adHocElementsDTO,
                 ioMapping,
                 activeElementsCollection,
                 completionConditionExpr,
@@ -338,6 +343,9 @@ public class GenericFlowElementMapper implements FlowElementMapper {
                             .map(flowElement.getValue(), activity.getId()))
                 .collect(Collectors.toMap(FlowElementDTO::getId, Function.identity()));
 
+        FlowElementsDTO elementsDTO = new FlowElementsDTO(elements);
+        resolveCompensationAssociations(subProcess.getArtifact(), elementsDTO);
+
         activityFlowElement =
             new SubProcessDTO(
                 activity.getId(),
@@ -346,7 +354,7 @@ public class GenericFlowElementMapper implements FlowElementMapper {
                 mapQNameList(subProcess.getIncoming()),
                 mapQNameList(subProcess.getOutgoing()),
                 loopCharacteristics,
-                new FlowElementsDTO(elements),
+                elementsDTO,
                 ioMapping,
                 subProcess.isTriggeredByEvent());
       }
@@ -363,5 +371,46 @@ public class GenericFlowElementMapper implements FlowElementMapper {
       activityDTO.setForCompensation(true);
     }
     return activityFlowElement;
+  }
+
+  /**
+   * Shared helper: resolves compensation associations (boundary event → handler) from a BPMN
+   * artifact list into a {@link FlowElementsDTO}. Called for both process-level and
+   * subprocess-level elements so associations inside embedded subprocesses are never missed.
+   */
+  public static void resolveCompensationAssociations(
+      java.util.List<jakarta.xml.bind.JAXBElement<? extends TArtifact>> artifacts,
+      FlowElementsDTO elements) {
+    if (artifacts == null || elements.getElements() == null) {
+      return;
+    }
+    for (jakarta.xml.bind.JAXBElement<? extends TArtifact> jaxbArtifact : artifacts) {
+      TArtifact artifact = jaxbArtifact.getValue();
+      if (!(artifact instanceof TAssociation association)) {
+        continue;
+      }
+      String sourceId = association.getSourceRef().getLocalPart();
+      String targetId = association.getTargetRef().getLocalPart();
+      FlowElementDTO source = elements.getElements().get(sourceId);
+      if (source instanceof BoundaryEventDTO boundaryEvent
+          && boundaryEvent.getEventDefinitions().stream()
+              .anyMatch(CompensationEventDefinitionDTO.class::isInstance)) {
+        elements
+            .getElements()
+            .put(
+                sourceId,
+                new BoundaryEventDTO(
+                    boundaryEvent.getId(),
+                    boundaryEvent.getParentId(),
+                    boundaryEvent.getName(),
+                    boundaryEvent.getIncoming(),
+                    boundaryEvent.getOutgoing(),
+                    boundaryEvent.getEventDefinitions(),
+                    boundaryEvent.getAttachedToRef(),
+                    boundaryEvent.isCancelActivity(),
+                    boundaryEvent.getIoMapping(),
+                    targetId));
+      }
+    }
   }
 }

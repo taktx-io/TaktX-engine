@@ -18,34 +18,4 @@ public class EndEventInstance extends ThrowEventInstance<EndEvent> {
       IFlowNodeInstance parentInstance, EndEvent flowNode, long elementInstanceId) {
     super(parentInstance, flowNode, elementInstanceId);
   }
-
-  @Override
-  public boolean stateAllowsStart() {
-    return true;
-  }
-
-  @Override
-  public boolean stateAllowsStopping() {
-    return false;
-  }
-
-  @Override
-  public boolean stateAllowsContinue() {
-    return false;
-  }
-
-  @Override
-  public boolean isNotAwaiting() {
-    return true;
-  }
-
-  @Override
-  public boolean isDone() {
-    return true;
-  }
-
-  @Override
-  public void abort() {
-    // Do nothing
-  }
 }
