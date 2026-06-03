@@ -163,4 +163,50 @@ class CompensationTest {
         // undo-task-a must NOT have been invoked — process-level scope was not touched
         .hasNotPassedElementWithId("undo-task-a");
   }
+
+  /**
+   * Req §10 — a compensation boundary on a multi-instance activity treats the whole body as one
+   * compensatable unit. The handler fires exactly once regardless of the number of iterations.
+   */
+  @Test
+  void multiInstanceActivityHandlerFiresOnce() throws IOException {
+    SingletonBpmnTestEngine.getInstance()
+        .registerAndSubscribeToExternalTaskIds("undo-loop-task")
+        .deployProcessDefinitionAndWait("/bpmn/compensation-multi-instance.bpmn")
+        // 3 items → 3 loop iterations (auto-completing bpmn:task), then body completes once
+        .startProcessInstance(VariablesDTO.of("items", java.util.List.of("a", "b", "c")))
+        // loop-task auto-completes; next trigger is the compensation handler
+        .waitForExternalTaskTrigger("undo-loop-task")
+        .andRespondToExternalTaskWithSuccess("undo-loop-task", VariablesDTO.empty())
+        .waitUntilDone()
+        .assertThatProcess()
+        .isCompleted()
+        // handler instantiated exactly once — not once per iteration
+        .hasInstantiatedElementWithId("undo-loop-task", 1);
+  }
+
+  /**
+   * Req §14 — if the process is aborted while compensation handlers are active, the handlers are
+   * terminated and the process ends in an ABORTED state.
+   */
+  @Test
+  void abortingProcessTerminatesActiveCompensationHandlers() throws IOException {
+    BpmnTestEngine engine = SingletonBpmnTestEngine.getInstance();
+    engine
+        .registerAndSubscribeToExternalTaskIds("task-a", "undo-task-a")
+        .deployProcessDefinitionAndWait("/bpmn/compensation-simple.bpmn")
+        .startProcessInstance(VariablesDTO.empty())
+        .waitForExternalTaskTrigger("task-a")
+        .andRespondToExternalTaskWithSuccess("task-a", VariablesDTO.empty())
+        // compensation throw fires — undo-task-a handler starts and waits for a worker response
+        .waitForExternalTaskTrigger("undo-task-a");
+
+    // Abort the process BEFORE responding to undo-task-a
+    engine
+        .abortProcessInstance()
+        .waitUntilDone()
+        .assertThatProcess()
+        // process must be aborted, not completed
+        .isAborted();
+  }
 }

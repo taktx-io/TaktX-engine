@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions
+    xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+    xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+    xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+    xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+    xmlns:zeebe="http://camunda.org/schema/zeebe/1.0"
+    xmlns:modeler="http://camunda.org/schema/modeler/1.0"
+    id="Definitions_multi_instance"
+    targetNamespace="http://bpmn.io/schema/bpmn"
+    exporter="Camunda Modeler"
+    exporterVersion="5.19.0"
+    modeler:executionPlatform="Camunda Cloud"
+    modeler:executionPlatformVersion="8.4.0">
+
+  <!--
+    Req §10: multi-instance compensation activity is treated as one compensatable unit.
+    The multi-instance BODY completes once (after all iterations). Only ONE compensation
+    registration is created. The handler fires ONCE, not once per iteration.
+
+    bpmn:task (auto-completing) is used for the loop body so the test needs no external workers
+    for the iterations. Only the compensation handler (service task) needs a worker.
+  -->
+  <bpmn:process id="compensation-multi-instance" isExecutable="true">
+
+    <bpmn:startEvent id="start">
+      <bpmn:outgoing>flow-start-to-loop</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="flow-start-to-loop" sourceRef="start" targetRef="loop-task"/>
+
+    <!-- Multi-instance task (parallel, 3 items from inputCollection) — auto-completes -->
+    <bpmn:task id="loop-task" name="Loop Task">
+      <bpmn:incoming>flow-start-to-loop</bpmn:incoming>
+      <bpmn:outgoing>flow-loop-to-throw</bpmn:outgoing>
+      <bpmn:multiInstanceLoopCharacteristics>
+        <bpmn:extensionElements>
+          <zeebe:loopCharacteristics inputCollection="=items" inputElement="item"/>
+        </bpmn:extensionElements>
+      </bpmn:multiInstanceLoopCharacteristics>
+    </bpmn:task>
+
+    <bpmn:boundaryEvent id="compensate-loop-task" attachedToRef="loop-task">
+      <bpmn:compensateEventDefinition id="ced-loop-task"/>
+    </bpmn:boundaryEvent>
+
+    <bpmn:sequenceFlow id="flow-loop-to-throw" sourceRef="loop-task" targetRef="throw-compensate"/>
+
+    <bpmn:intermediateThrowEvent id="throw-compensate" name="Compensate">
+      <bpmn:incoming>flow-loop-to-throw</bpmn:incoming>
+      <bpmn:outgoing>flow-throw-to-end</bpmn:outgoing>
+      <bpmn:compensateEventDefinition id="ced-throw"/>
+    </bpmn:intermediateThrowEvent>
+
+    <bpmn:sequenceFlow id="flow-throw-to-end" sourceRef="throw-compensate" targetRef="end"/>
+
+    <bpmn:endEvent id="end">
+      <bpmn:incoming>flow-throw-to-end</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <!-- Compensation handler: service task, fires ONCE for the whole multi-instance body -->
+    <bpmn:serviceTask id="undo-loop-task" name="Undo Loop Task" isForCompensation="true">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="undo-loop-task"/>
+      </bpmn:extensionElements>
+    </bpmn:serviceTask>
+
+    <bpmn:association id="assoc-loop" sourceRef="compensate-loop-task" targetRef="undo-loop-task"/>
+
+  </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="compensation-multi-instance">
+
+      <bpmndi:BPMNShape id="start_di" bpmnElement="start">
+        <dc:Bounds x="152" y="99" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="loop-task_di" bpmnElement="loop-task">
+        <dc:Bounds x="240" y="77" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="compensate-loop-task_di" bpmnElement="compensate-loop-task">
+        <dc:Bounds x="272" y="139" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="undo-loop-task_di" bpmnElement="undo-loop-task">
+        <dc:Bounds x="240" y="240" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="throw-compensate_di" bpmnElement="throw-compensate">
+        <dc:Bounds x="402" y="99" width="36" height="36"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="387" y="142" width="66" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="end_di" bpmnElement="end">
+        <dc:Bounds x="502" y="99" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNEdge id="flow-start-to-loop_di" bpmnElement="flow-start-to-loop">
+        <di:waypoint x="188" y="117"/><di:waypoint x="240" y="117"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow-loop-to-throw_di" bpmnElement="flow-loop-to-throw">
+        <di:waypoint x="340" y="117"/><di:waypoint x="402" y="117"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow-throw-to-end_di" bpmnElement="flow-throw-to-end">
+        <di:waypoint x="438" y="117"/><di:waypoint x="502" y="117"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="assoc-loop_di" bpmnElement="assoc-loop">
+        <di:waypoint x="290" y="175"/><di:waypoint x="290" y="240"/>
+      </bpmndi:BPMNEdge>
+
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+
+</bpmn:definitions>
