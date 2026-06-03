@@ -348,6 +348,38 @@ class SecurityIntegrationTest {
     rawInstanceUpdates.clear();
     rawExternalTaskTriggers.clear();
     engine.reset();
+    // After engine.reset() Kafka Streams restarts and rebuilds all state stores from their
+    // Kafka topics asynchronously.  Wait until the critical stores are ready before any test
+    // logic runs, otherwise tests that rely on the signing-keys KTable or GlobalConfigStore
+    // hit a race and fail non-deterministically.
+    awaitEngineReady();
+  }
+
+  private static void awaitEngineReady() {
+    try (var configHandle = Arc.container().instance(GlobalConfigStore.class)) {
+      GlobalConfigStore configStore = configHandle.get();
+      await()
+          .atMost(Duration.ofSeconds(30))
+          .pollInterval(Duration.ofMillis(100))
+          .until(() -> configStore.get() != null && configStore.get().isSigningEnabled());
+    }
+    EngineSigningKeysHolder.KeyResolver keyResolver = EngineSigningKeysHolder.get();
+    if (keyResolver != null) {
+      await()
+          .atMost(Duration.ofSeconds(30))
+          .pollInterval(Duration.ofMillis(100))
+          .until(() -> keyResolver.resolvePublicKey(WORKER_KEY_ID) != null);
+      await()
+          .atMost(Duration.ofSeconds(30))
+          .pollInterval(Duration.ofMillis(100))
+          .until(() -> keyResolver.resolvePublicKey(PLATFORM_KID) != null);
+      await()
+          .atMost(Duration.ofSeconds(30))
+          .pollInterval(Duration.ofMillis(100))
+          .until(
+              () ->
+                  keyResolver.resolvePublicKey(SecurityTestConfigResource.engineKeyId) != null);
+    }
   }
 
   // ── Authorization tests ────────────────────────────────────────────────────
@@ -669,19 +701,6 @@ class SecurityIntegrationTest {
    */
   @Test
   void engineInternalEd25519SignedStart_subProcessCompletes() throws IOException {
-    // The engine signs its internal sub-process triggers with its own key.  After engine.reset()
-    // Kafka Streams rebuilds the signing-keys KTable from the compacted topic asynchronously.
-    // If the engine key is not in the KTable yet when the internal trigger arrives it is rejected
-    // and the sub-process never starts.  Wait until the key is resolvable before proceeding.
-    EngineSigningKeysHolder.KeyResolver keyResolver = EngineSigningKeysHolder.get();
-    if (keyResolver != null) {
-      await()
-          .atMost(Duration.ofSeconds(30))
-          .pollInterval(Duration.ofMillis(100))
-          .until(
-              () -> keyResolver.resolvePublicKey(SecurityTestConfigResource.engineKeyId) != null);
-    }
-
     engine
         .registerAndSubscribeToExternalTaskIds("servicetask")
         .deployProcessDefinitionAndWait("/bpmn/subprocess-servicetask-single.bpmn");
