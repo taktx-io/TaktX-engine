@@ -308,4 +308,124 @@ class PublicClientSecuredModeDogfoodIntegrationTest
         .atMost(Duration.ofSeconds(5))
         .untilAsserted(() -> assertThat(triggers).isEmpty());
   }
+
+  @Test
+  void anchoredNamespace_acceptsSignedClientWithApprovedIdentity() throws Exception {
+    long securedPolicyVersion = nextPolicyVersion();
+    String namespace = newTestNamespace("dogfood-anchored-positive");
+
+    TaktXClient observer =
+        startClient(
+            baseProperties(namespace),
+            participantDescriptor(
+                "dogfood-anchored-pos-observer",
+                Set.of(ParticipantCapability.SECURITY_OBSERVER),
+                "dogfood-anchored-pos-observer"));
+    TaktXClient publisher =
+        startClient(
+            platformWriterProperties(namespace),
+            participantDescriptor(
+                "dogfood-anchored-pos-console",
+                Set.of(
+                    ParticipantCapability.AUTHORITATIVE_POLICY_PUBLISHER,
+                    ParticipantCapability.SECURITY_OBSERVER),
+                "console"));
+
+    // Runtime client: signs automatically; RUNTIME_SIGNER_KEY_ID is pre-published in the trust
+    // registry by publishTrustedControlPlaneKeysForNamespace, and the platform trust anchor is
+    // configured so the client-side participation guard permits ANCHORED operation.
+    TaktXClient runtimeClient =
+        startClient(
+            signedAnchoredRuntimeProperties(namespace),
+            participantDescriptor(
+                "dogfood-anchored-pos-runtime",
+                Set.of(
+                    ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT,
+                    ParticipantCapability.SECURITY_OBSERVER),
+                "anchored-client"));
+
+    awaitNoPolicy(observer);
+
+    java.util.Queue<io.taktx.client.InstanceUpdateRecord> updates =
+        new java.util.concurrent.ConcurrentLinkedQueue<>();
+    runtimeClient
+        .runtime()
+        .registerInstanceUpdateConsumer(
+            "dogfood-anchored-pos-updates-" + UUID.randomUUID(), updates::addAll);
+
+    deployProcessAndAwaitAvailability(runtimeClient, TASK_SINGLE_BPMN, OPEN_PROCESS_ID);
+
+    publishPolicyAndAwaitObserved(
+        publisher, observer, activeAnchoredPolicy(securedPolicyVersion), Duration.ofSeconds(30));
+    awaitObservedPolicyVersion(runtimeClient, securedPolicyVersion);
+
+    // The client auto-signs; the engine verifies the signature against the pre-published key
+    // and accepts the request — demonstrating the full ANCHORED happy path.
+    UUID instanceId = runtimeClient.runtime().startProcess(OPEN_PROCESS_ID, VariablesDTO.empty());
+    awaitProcessCompleted(updates, instanceId);
+  }
+
+  @Test
+  void anchoredNamespace_rejectsSignedClientWithUnpublishedKey() throws Exception {
+    long securedPolicyVersion = nextPolicyVersion();
+    String namespace = newTestNamespace("dogfood-anchored-unknown-key");
+
+    TaktXClient observer =
+        startClient(
+            baseProperties(namespace),
+            participantDescriptor(
+                "dogfood-unknown-key-observer",
+                Set.of(ParticipantCapability.SECURITY_OBSERVER),
+                "dogfood-unknown-key-observer"));
+    TaktXClient publisher =
+        startClient(
+            platformWriterProperties(namespace),
+            participantDescriptor(
+                "dogfood-unknown-key-console",
+                Set.of(
+                    ParticipantCapability.AUTHORITATIVE_POLICY_PUBLISHER,
+                    ParticipantCapability.SECURITY_OBSERVER),
+                "console"));
+
+    // Generate a fresh keypair whose public key is never published to taktx-signing-keys.
+    // Omitting the public-key property causes TaktXClient to skip auto-publication while still
+    // signing outbound messages — the engine receives a validly-signed request but cannot
+    // resolve the key ID and must reject it.
+    java.security.KeyPair unknownKeys = io.taktx.security.SigningKeyGenerator.generate();
+    String unknownPrivateKey = io.taktx.security.SigningKeyGenerator.encodePrivateKey(unknownKeys.getPrivate());
+
+    TaktXClient unknownKeyClient =
+        startClient(
+            signingOnlyWithoutPublishedKeyProperties(namespace, "unknown-key-dogfood", unknownPrivateKey),
+            participantDescriptor(
+                "dogfood-unknown-key-runtime",
+                Set.of(
+                    ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT,
+                    ParticipantCapability.SECURITY_OBSERVER),
+                "unknown-key-client"));
+
+    awaitNoPolicy(observer);
+
+    java.util.Queue<io.taktx.client.InstanceUpdateRecord> updates =
+        new java.util.concurrent.ConcurrentLinkedQueue<>();
+    unknownKeyClient
+        .runtime()
+        .registerInstanceUpdateConsumer(
+            "dogfood-unknown-key-updates-" + UUID.randomUUID(), updates::addAll);
+
+    deployProcessAndAwaitAvailability(unknownKeyClient, TASK_SINGLE_BPMN, OPEN_PROCESS_ID);
+
+    publishPolicyAndAwaitObserved(
+        publisher, observer, activeAnchoredPolicy(securedPolicyVersion), Duration.ofSeconds(30));
+    awaitObservedPolicyVersion(unknownKeyClient, securedPolicyVersion);
+
+    // The engine should reject the signed start command because "unknown-key-dogfood" is not
+    // present in the taktx-signing-keys KTable — no process instance should be created.
+    unknownKeyClient.runtime().startProcess(OPEN_PROCESS_ID, VariablesDTO.empty());
+
+    await()
+        .during(Duration.ofSeconds(3))
+        .atMost(Duration.ofSeconds(6))
+        .untilAsserted(() -> assertThat(updates).isEmpty());
+  }
 }
