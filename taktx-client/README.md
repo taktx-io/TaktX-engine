@@ -350,18 +350,12 @@ rm /tmp/worker-key.pem
 
 ### Behaviour on `start()`
 
-When a signing identity is available, `client.start()` automatically publishes the worker's public key to `taktx-signing-keys` only when legacy runtime security toggles are active or the namespace is preparing for / operating under `SECURED` or `ANCHORED_SECURED`. The client re-publishes whenever the key changes (live rotation). If `TAKTX_SIGNING_PUBLIC_KEY` is absent, only private-key signing is active and no auto-publication occurs.
+When a signing identity is available, `client.start()` publishes the worker's public key to `taktx-signing-keys` automatically. The client re-publishes whenever the key or its metadata changes (live rotation), and retires the old key to `TRUSTED` status so in-flight signatures from the previous key remain accepted during the drain window. If `TAKTX_SIGNING_PUBLIC_KEY` is absent, only private-key signing is active and no auto-publication occurs.
 
-Actual outbound client signing becomes active when either:
+Outbound message signing and steady-state key publication activate based solely on namespace mode:
 
-- `signingEnabled=true` is present in runtime configuration (legacy/global path), or
-- the authoritative active namespace policy requires `clientCommands` and/or `workerResponses` signing.
-
-So the steady-state behavior is:
-
-- **no active policy / `OPEN`** → unsigned, no steady-state key publication
-- **requested `SECURED` / `ANCHORED_SECURED`** → optional preparation/public-key publication, but outbound messages remain unsigned
-- **active `SECURED` / `ANCHORED_SECURED` requiring signing** → client messages are signed and publishable worker keys are kept current
+- **no active policy / `OPEN`** → unsigned, no key publication
+- **`ANCHORED`** → all client-originated runtime ingress is signed automatically; the client fails fast if no stable signing identity or platform trust anchor is configured
 
 ---
 

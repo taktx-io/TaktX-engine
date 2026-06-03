@@ -385,33 +385,27 @@ The current branch includes a namespace-owned security policy with an explicit e
 mode:
 
 ```java
-enum SecurityMode {
-  OPEN,
-  SECURED,
-  ANCHORED_SECURED,
-  MISCONFIGURED_SECURITY
+enum NamespaceSecurityMode {
+  OPEN,       // trust your infrastructure
+  ANCHORED    // trust cryptographic proof
 }
 ```
 
-The canonical namespace policy should include at least:
+The canonical namespace policy contains:
 
-- desired `mode`
-- explicit signing requirements
-- explicit authorization requirements
-- explicit trust-anchor requirement
-- `desiredPolicyVersion`
-- `desiredPolicyHash`
-- `activePolicyVersion`
-- `activePolicyHash`
-- `activationState`
+- `mode` — the single authoritative `OPEN` or `ANCHORED` value
+- `policyVersion` — monotonically increasing version number
+- `policyHash` — SHA-256 digest of the canonical policy content (mode + version)
 
 `policyHash` is required because `policyVersion` alone is not sufficient to prove that participants
-are operating against the exact same policy content, and desired-vs-active identity must remain
-separate while a policy is only `REQUESTED` / `VALIDATING`.
+are operating against the exact same policy content.
 
-For the current first slice, `policyHash` is defined as the SHA-256 digest of the canonical requested
-effective policy content only. It excludes activation-state wrappers, timestamps, publisher
-identity, and unrelated metadata.
+**OPEN** — no message-level signature verification; no trust registry required; infrastructure
+security (Kafka ACLs, SASL, mTLS, network controls) is the trust boundary.
+
+**ANCHORED** — all external runtime ingress must be signed by a key in the trust registry; the key
+must be non-revoked; in production deployments each key also requires a platform countersignature
+(`registrationSignature`). The runtime fails closed if enforcement prerequisites are not met.
 
 Canonicalization contract:
 
