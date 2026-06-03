@@ -1171,6 +1171,10 @@ class SecurityIntegrationTest {
         .registerAndSubscribeToExternalTaskIds(SERVICE_TASK_TYPE)
         .deployProcessDefinitionAndWait("/bpmn/servicetask-single.bpmn");
 
+    // Use a signed start command so the test is not sensitive to whether
+    // signingEnabled=true has been replayed into the GlobalConfigStore yet.
+    // The worker key is published in the signing-keys KTable and is accepted
+    // by the engine regardless of the GlobalConfig replay race.
     String jwt =
         buildJwt(
             "START",
@@ -1179,7 +1183,16 @@ class SecurityIntegrationTest {
             UUID.randomUUID().toString(),
             "user-1",
             Date.from(Instant.now().plusSeconds(300)));
-    engine.getTaktClient().startProcess(SERVICE_TASK_PROCESS_ID, -1, VariablesDTO.empty(), jwt);
+    sendSignedProcessInstanceTrigger(
+        new io.taktx.dto.StartCommandDTO(
+            UUID.randomUUID(),
+            null,
+            null,
+            new io.taktx.dto.ProcessDefinitionKey(SERVICE_TASK_PROCESS_ID, -1),
+            VariablesDTO.empty()),
+        WORKER_KEY_ID,
+        workerPrivateKeyBase64,
+        jwt);
 
     engine.waitForNewProcessInstance();
     engine.waitForExternalTaskTrigger(SERVICE_TASK_TYPE);
