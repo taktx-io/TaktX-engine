@@ -520,10 +520,32 @@ public class BpmnTestEngine {
                       .map(Entry::getKey)
                       .toList();
               if (!missingTaskIds.isEmpty()) {
-                missingTaskIds.forEach(
-                    taskId ->
-                        signedExternalTaskTopicRequester.requestExternalTaskTopic(
-                            taskId, 3, CleanupPolicy.COMPACT, (short) 1));
+                // For each missing topic: if the Kafka topic already exists (engine rejected
+                // the request as a duplicate because the topic was created in a prior reset
+                // cycle), seed the cache directly so we do not time out waiting for an
+                // engine publication that will never arrive.
+                try {
+                  Set<String> existingTopics = adminClientHelper.listTopicNames();
+                  missingTaskIds.forEach(
+                      taskId -> {
+                        String topicName = requestedTopicsByTaskId.get(taskId);
+                        if (existingTopics.contains(topicName)) {
+                          topicMetaCache.putIfAbsent(
+                              topicName,
+                              new io.taktx.dto.TopicMetaDTO(
+                                  topicName, 3, CleanupPolicy.COMPACT, (short) 1));
+                        } else {
+                          signedExternalTaskTopicRequester.requestExternalTaskTopic(
+                              taskId, 3, CleanupPolicy.COMPACT, (short) 1);
+                        }
+                      });
+                } catch (Exception e) {
+                  log.warn("Failed to check existing topics via AdminClient: %s", e.getMessage());
+                  missingTaskIds.forEach(
+                      taskId ->
+                          signedExternalTaskTopicRequester.requestExternalTaskTopic(
+                              taskId, 3, CleanupPolicy.COMPACT, (short) 1));
+                }
               }
               log.info(
                   "Waiting for external task topics {} to be available in cache {}",

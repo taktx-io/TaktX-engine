@@ -655,10 +655,10 @@ abstract class PublicClientDogfoodIntegrationTestSupport {
   }
 
   /**
-   * Properties for a signing client whose public key is intentionally omitted so that
-   * {@link TaktXClient} skips automatic key publication to {@code taktx-signing-keys}. The private
-   * key is present so the client still signs outbound messages; the engine will reject those
-   * messages because it cannot find the key ID in its trust registry.
+   * Properties for a signing client whose public key is intentionally omitted so that {@link
+   * TaktXClient} skips automatic key publication to {@code taktx-signing-keys}. The private key is
+   * present so the client still signs outbound messages; the engine will reject those messages
+   * because it cannot find the key ID in its trust registry.
    */
   protected static Properties signingOnlyWithoutPublishedKeyProperties(
       String namespace, String keyId, String privateKeyBase64) {
