@@ -641,4 +641,33 @@ abstract class PublicClientDogfoodIntegrationTestSupport {
     properties.setProperty("taktx.signing.public-key", runtimeSignerPublicKeyBase64);
     return properties;
   }
+
+  /**
+   * Properties for a signed runtime client that also carries the platform trust anchor — required
+   * for the client-side {@link io.taktx.client.ClientProtectedDataPlaneParticipationGuard} to
+   * permit protected-runtime operations in ANCHORED namespace mode.
+   */
+  protected static Properties signedAnchoredRuntimeProperties(String namespace) {
+    Properties properties = signedRuntimeProperties(namespace);
+    properties.setProperty(
+        "taktx.platform.public-key", SecurityTestConfigResource.rsaPublicKeyBase64);
+    return properties;
+  }
+
+  /**
+   * Properties for a signing client whose public key is intentionally omitted so that
+   * {@link TaktXClient} skips automatic key publication to {@code taktx-signing-keys}. The private
+   * key is present so the client still signs outbound messages; the engine will reject those
+   * messages because it cannot find the key ID in its trust registry.
+   */
+  protected static Properties signingOnlyWithoutPublishedKeyProperties(
+      String namespace, String keyId, String privateKeyBase64) {
+    Properties properties = baseProperties(namespace);
+    properties.setProperty("taktx.signing.key-id", keyId);
+    properties.setProperty("taktx.signing.private-key", privateKeyBase64);
+    // No taktx.signing.public-key → hasPublicKey()=false → ensureWorkerKeyPublished skips publish
+    properties.setProperty(
+        "taktx.platform.public-key", SecurityTestConfigResource.rsaPublicKeyBase64);
+    return properties;
+  }
 }
