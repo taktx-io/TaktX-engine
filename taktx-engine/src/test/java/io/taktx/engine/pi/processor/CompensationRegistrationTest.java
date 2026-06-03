@@ -108,6 +108,73 @@ class CompensationRegistrationTest {
     assertThat(scope.findTriggerStateByThrowKey(999L)).isEmpty();
   }
 
+  // ── Req §9: repeated activity completions ────────────────────────────────
+
+  @Test
+  void findRegistrationsForThrow_returnsAllRepeatCompletions() {
+    // Same activity completes 3 times (e.g. loop) → 3 separate registrations
+    scope.addCompensationRegistration(reg("r1", "task-a", false));
+    scope.addCompensationRegistration(reg("r2", "task-a", false));
+    scope.addCompensationRegistration(reg("r3", "task-a", false));
+
+    List<CompensationRegistration> result = scope.findRegistrationsForThrow("task-a");
+
+    assertThat(result).hasSize(3)
+        .extracting(CompensationRegistration::getRegistrationKey)
+        .containsExactlyInAnyOrder("r1", "r2", "r3");
+  }
+
+  @Test
+  void findRegistrationsForThrow_onlyConsumedRepeatIsExcluded() {
+    // First completion already compensated, second still available
+    scope.addCompensationRegistration(reg("r1", "task-a", true));  // consumed
+    scope.addCompensationRegistration(reg("r2", "task-a", false)); // not yet consumed
+
+    List<CompensationRegistration> result = scope.findRegistrationsForThrow("task-a");
+
+    assertThat(result).hasSize(1)
+        .extracting(CompensationRegistration::getRegistrationKey)
+        .containsOnly("r2");
+  }
+
+  // ── Req §10: multi-instance treated as one unit ───────────────────────────
+
+  @Test
+  void findRegistrationsForThrow_multipleHandlersPendingAllMustComplete() {
+    // When multiple handlers are dispatched for repeated completions, each
+    // gets its own pending key — all must complete before the throw event unblocks
+    CompensationTriggerState triggerState = new CompensationTriggerState(99L, "task-a");
+    triggerState.addPendingHandler(10L); // handler for 1st completion
+    triggerState.addPendingHandler(11L); // handler for 2nd completion
+    triggerState.addPendingHandler(12L); // handler for 3rd completion
+    scope.addCompensationTriggerState(triggerState);
+
+    // First two complete — still pending
+    assertThat(scope.markHandlerCompleted(10L)).isEmpty();
+    assertThat(scope.markHandlerCompleted(11L)).isEmpty();
+    // Last one completes → throw event unblocked
+    assertThat(scope.markHandlerCompleted(12L)).isPresent();
+    assertThat(triggerState.getPendingHandlerInstanceKeys()).isEmpty();
+    assertThat(triggerState.getCompletedHandlerInstanceKeys()).containsExactlyInAnyOrder(10L, 11L, 12L);
+  }
+
+  // ── Req §5: scope-level isolation ────────────────────────────────────────
+
+  @Test
+  void findRegistrationsForThrow_nullActivityIdFindsAllUnconsumedIncludingRepeats() {
+    // No activityRef → all unconsumed registrations across all activities
+    scope.addCompensationRegistration(reg("r1", "task-a", false));
+    scope.addCompensationRegistration(reg("r2", "task-a", false)); // second completion of task-a
+    scope.addCompensationRegistration(reg("r3", "task-b", false));
+    scope.addCompensationRegistration(reg("r4", "task-b", true));  // consumed
+
+    List<CompensationRegistration> result = scope.findRegistrationsForThrow(null);
+
+    assertThat(result).hasSize(3)
+        .extracting(CompensationRegistration::getRegistrationKey)
+        .containsExactlyInAnyOrder("r1", "r2", "r3");
+  }
+
   private static CompensationRegistration reg(String key, String activityId, boolean consumed) {
     CompensationRegistration reg = new CompensationRegistration();
     reg.setRegistrationKey(key);

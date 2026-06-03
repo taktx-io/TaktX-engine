@@ -136,4 +136,31 @@ class CompensationTest {
         .assertThatProcess()
         .isCompleted();
   }
+
+  /**
+   * Req §5 — a compensation throw event inside a subprocess only compensates activities in that
+   * subprocess scope. Process-level compensation registrations are not touched.
+   */
+  @Test
+  void throwInsideSubprocessOnlyCompensatesWithinSubprocessScope() throws IOException {
+    SingletonBpmnTestEngine.getInstance()
+        .registerAndSubscribeToExternalTaskIds("task-a", "task-b", "undo-task-b")
+        .deployProcessDefinitionAndWait("/bpmn/compensation-subprocess-scope.bpmn")
+        .startProcessInstance(VariablesDTO.empty())
+        // task-a completes at process level (creates a process-level compensation registration)
+        .waitForExternalTaskTrigger("task-a")
+        .andRespondToExternalTaskWithSuccess("task-a", VariablesDTO.empty())
+        // task-b completes inside the subprocess
+        .waitForExternalTaskTrigger("task-b")
+        .andRespondToExternalTaskWithSuccess("task-b", VariablesDTO.empty())
+        // compensation throw is INSIDE the subprocess — only undo-task-b should fire
+        .waitForExternalTaskTrigger("undo-task-b")
+        .andRespondToExternalTaskWithSuccess("undo-task-b", VariablesDTO.empty())
+        .waitUntilDone()
+        .assertThatProcess()
+        .isCompleted()
+        .hasInstantiatedElementWithId("undo-task-b")
+        // undo-task-a must NOT have been invoked — process-level scope was not touched
+        .hasNotPassedElementWithId("undo-task-a");
+  }
 }
