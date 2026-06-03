@@ -128,7 +128,7 @@ TaktX Engine can be configured using application properties or environment varia
 
 > **Security note:** the default/community trust mode is intended for local development. Production deployments should enable anchored trust (`TAKTX_PLATFORM_PUBLIC_KEY`, stable signing identities, and registration signatures), restrict writes to `taktx-signing-keys` with Kafka ACLs, and protect Kafka itself with TLS / SASL, quotas, and least-privilege producer access. See [`docs/security.md`](./docs/security.md) for the threat assumptions and production checklist.
 
-In the namespace security model, default `OPEN` posture remains steady-state unsigned. Signing identity publication/signing become active through legacy runtime security flags or when the namespace is preparing for / operating under `SECURED` or `ANCHORED_SECURED`.
+In the namespace security model there are exactly two modes: `OPEN` (unsigned, infrastructure-trusted) and `ANCHORED` (all external ingress must be signed by a key in the trust registry). Signing identity publication and automatic message signing activate when the namespace is in `ANCHORED` mode.
 
 ```properties
 # Core Engine Configuration

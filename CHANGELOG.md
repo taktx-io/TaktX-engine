@@ -12,6 +12,47 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### ⚠ Breaking changes — security model simplification
+
+The namespace security posture model has been replaced with a two-mode design. This is a
+**hard break** from the previous OPEN / SECURED / ANCHORED_SECURED posture model.
+
+**Removed:**
+
+- `SecurityMode.SECURED` and `SecurityMode.ANCHORED_SECURED` — removed entirely
+- `SecurityMode.MISCONFIGURED_SECURITY` — removed
+- `NamespaceSecurityPolicyDTO` fields: `requiredSigning`, `requiredAuthorization`, `activationState`
+- `TaktXClient.legacyGlobalSecurityConfigToNamespaceSecurityPolicy()` — removed
+- Posture negotiation, capability exchange, `supportedPostures`, and the REQUESTED / VALIDATING /
+  ACTIVE activation lifecycle
+- Per-message-type signing / authorization flags (`clientCommands`, `workerResponses`, etc.)
+- `AuthoritativeControlPlaneSecurityProperty.INTEGRITY_PROTECTION_REQUIRED_IN_SECURED_MODES`
+  → renamed to `INTEGRITY_PROTECTION_REQUIRED_IN_ANCHORED_MODE`
+
+**Migration from the old model:**
+
+| Old concept | New equivalent |
+|---|---|
+| `OPEN` | `OPEN` — unchanged |
+| `SECURED` or `ANCHORED_SECURED` | `ANCHORED` |
+| `activationState` / activation lifecycle | removed — policy takes effect immediately |
+| `requiredSigning.clientCommands = true` | `mode = ANCHORED` (all ingress is uniform) |
+| `legacyGlobalSecurityConfigToNamespaceSecurityPolicy()` | Publish `ANCHORED` or `OPEN` policy directly |
+| Generated in-memory identity for ANCHORED | `LocalPersistentSigningIdentitySource` (default) or `FileSigningIdentitySource` / env |
+
+**New behaviour:**
+
+- `OPEN` → infrastructure trust; no message-level verification; no trust registry required
+- `ANCHORED` → every external runtime ingress record must be signed by a non-revoked key in
+  `taktx-signing-keys`; engine fails closed if enforcement prerequisites are not met
+- `TaktXClient` signs all outbound messages automatically in `ANCHORED` mode — callers do not
+  choose signing per message type
+- Worker signing identity defaults to `LocalPersistentSigningIdentitySource` (stable across
+  restarts under `~/.taktx/signing/` or `TAKTX_SIGNING_LOCAL_DIRECTORY`)
+- Security rejections route to `security-events`; they do not produce DLQ entries
+
+---
+
 ### Added
 
 - Explicit namespace-security-policy control-plane support across `taktx-engine`, `taktx-client`,

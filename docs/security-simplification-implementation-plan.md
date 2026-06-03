@@ -777,8 +777,8 @@ Start with this bounded slice:
 | F3 | Update engine tests | Done | Phase 2 | All engine unit tests clean — `NamespaceSecurityPolicyActivationServiceTest` now tests only the simplified "immediately authoritative" model; no legacy lifecycle assertions remain |
 | F4 | Rewrite integration security tests | Done | Phases 2-4 | Added `anchoredNamespace_acceptsSignedClientWithApprovedIdentity` (positive ANCHORED end-to-end via TaktXClient auto-signing) and `anchoredNamespace_rejectsSignedClientWithUnpublishedKey` (unknown key rejected) to `PublicClientSecuredModeDogfoodIntegrationTest`; helper methods `signedAnchoredRuntimeProperties` and `signingOnlyWithoutPublishedKeyProperties` added to test support |
 | G1 | Remove legacy global-config bridge | Done | Phases 2-3 | Removed both `legacyGlobalSecurityConfigToNamespaceSecurityPolicy` overloads and their tests; renamed `INTEGRITY_PROTECTION_REQUIRED_IN_SECURED_MODES` → `INTEGRITY_PROTECTION_REQUIRED_IN_ANCHORED_MODE` across shared + client |
-| G2 | Update docs | Todo | final behavior | Simplified story |
-| G3 | Add migration notes | Todo | final behavior | Breaking change guidance |
+| G2 | Update docs | Done | final behavior | Updated `README.md`, `taktx-client/README.md`, `docs/ARCHITECTURE.md` — removed SECURED/ANCHORED_SECURED language, replaced posture negotiation language, described OPEN/ANCHORED two-mode model, updated signing behaviour section |
+| G3 | Add migration notes | Done | final behavior | Added breaking-change section to `CHANGELOG.md` — lists all removed APIs/fields/modes, migration table (old → new), new behaviour summary |
 
 ---
 
