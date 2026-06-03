@@ -40,6 +40,7 @@ import io.taktx.dto.SecurityMode;
 import io.taktx.dto.SecurityParticipantDescriptor;
 import io.taktx.dto.SecurityPostureIssueCodes;
 import io.taktx.dto.SignalDTO;
+import io.taktx.dto.SigningKeyDTO;
 import io.taktx.dto.UserTaskTriggerDTO;
 import io.taktx.dto.VariablesDTO;
 import io.taktx.security.AuthoritativeControlPlaneSecurityProperty;
@@ -170,6 +171,7 @@ public class TaktXClient {
       new CopyOnWriteArrayList<>();
   private volatile String publishedWorkerKeyId;
   private volatile String publishedWorkerIdentityDescriptor;
+  private volatile SigningKeyDTO publishedWorkerKeyRecord;
   private volatile String activeWorkerIdentityDescriptor;
   private volatile String workerSigningRegistrationState = "uninitialized";
   private volatile boolean globalWorkerSigningFunctionRegistered;
@@ -1357,6 +1359,7 @@ public class TaktXClient {
     if (descriptor.equals(publishedWorkerIdentityDescriptor)) {
       return true;
     }
+    SigningKeyDTO previousKeyRecord = publishedWorkerKeyRecord;
     try {
       publishSigningKey(
           identity.getKeyId(),
@@ -1367,10 +1370,49 @@ public class TaktXClient {
           workerKeyRegistrationSignature);
       publishedWorkerKeyId = identity.getKeyId();
       publishedWorkerIdentityDescriptor = descriptor;
+      publishedWorkerKeyRecord =
+          SigningKeyDTO.builder()
+              .keyId(identity.getKeyId())
+              .publicKeyBase64(identity.getPublicKeyBase64())
+              .algorithm(identity.getAlgorithm())
+              .owner(owner)
+              .role(KeyRole.CLIENT)
+              .registrationSignature(workerKeyRegistrationSignature)
+              .status(SigningKeyDTO.KeyStatus.ACTIVE)
+              .build();
+      retireOldWorkerKey(previousKeyRecord, identity.getKeyId());
       return true;
     } catch (Exception e) {
       log.error("Failed to publish worker signing key: {}", e.getMessage(), e);
       return false;
+    }
+  }
+
+  private void retireOldWorkerKey(@Nullable SigningKeyDTO previousKey, String newKeyId) {
+    if (previousKey == null || previousKey.getKeyId().equals(newKeyId)) {
+      return;
+    }
+    try {
+      new SigningKeyRegistrar(taktPropertiesHelper)
+          .publishKeyStatusChange(
+              SigningKeyDTO.builder()
+                  .keyId(previousKey.getKeyId())
+                  .publicKeyBase64(previousKey.getPublicKeyBase64())
+                  .algorithm(previousKey.getAlgorithm())
+                  .owner(previousKey.getOwner())
+                  .role(previousKey.effectiveRole())
+                  .registrationSignature(previousKey.getRegistrationSignature())
+                  .status(SigningKeyDTO.KeyStatus.TRUSTED)
+                  .build());
+      log.info(
+          "Previous worker key retired to TRUSTED: previousKeyId={} newKeyId={}",
+          previousKey.getKeyId(),
+          newKeyId);
+    } catch (Exception e) {
+      log.warn(
+          "Failed to retire previous worker key to TRUSTED: previousKeyId={} — {}",
+          previousKey.getKeyId(),
+          e.getMessage());
     }
   }
 
@@ -1660,6 +1702,7 @@ public class TaktXClient {
     securityEventStore = null;
     publishedWorkerKeyId = null;
     publishedWorkerIdentityDescriptor = null;
+    publishedWorkerKeyRecord = null;
     activeWorkerIdentityDescriptor = null;
     workerSigningRegistrationState = "uninitialized";
     RuntimeConfigurationHolder.clear();
