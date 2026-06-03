@@ -669,6 +669,19 @@ class SecurityIntegrationTest {
    */
   @Test
   void engineInternalEd25519SignedStart_subProcessCompletes() throws IOException {
+    // The engine signs its internal sub-process triggers with its own key.  After engine.reset()
+    // Kafka Streams rebuilds the signing-keys KTable from the compacted topic asynchronously.
+    // If the engine key is not in the KTable yet when the internal trigger arrives it is rejected
+    // and the sub-process never starts.  Wait until the key is resolvable before proceeding.
+    EngineSigningKeysHolder.KeyResolver keyResolver = EngineSigningKeysHolder.get();
+    if (keyResolver != null) {
+      await()
+          .atMost(Duration.ofSeconds(30))
+          .pollInterval(Duration.ofMillis(100))
+          .until(
+              () -> keyResolver.resolvePublicKey(SecurityTestConfigResource.engineKeyId) != null);
+    }
+
     engine
         .registerAndSubscribeToExternalTaskIds("servicetask")
         .deployProcessDefinitionAndWait("/bpmn/subprocess-servicetask-single.bpmn");
