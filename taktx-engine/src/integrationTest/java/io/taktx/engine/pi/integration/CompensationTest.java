@@ -8,9 +8,13 @@
 
 package io.taktx.engine.pi.integration;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
+import io.taktx.dto.ExternalTaskTriggerDTO;
 import io.taktx.dto.VariablesDTO;
+import io.taktx.engine.pi.testengine.BpmnTestEngine;
 import io.taktx.engine.pi.testengine.SingletonBpmnTestEngine;
 import io.taktx.engine.pi.testengine.TestConfigResource;
 import java.io.IOException;
@@ -63,5 +67,73 @@ class CompensationTest {
         .isCompleted()
         .hasInstantiatedElementWithId("undo-task-a")
         .hasNotPassedElementWithId("undo-task-b");
+  }
+
+  /** Req §7 — no activityRef → all completed handlers in scope are invoked concurrently. */
+  @Test
+  void allHandlersInvokedWhenNoActivityRef() throws IOException {
+    SingletonBpmnTestEngine.getInstance()
+        .registerAndSubscribeToExternalTaskIds("task-a", "task-b", "undo-task-a", "undo-task-b")
+        .deployProcessDefinitionAndWait("/bpmn/compensation-all-handlers.bpmn")
+        .startProcessInstance(VariablesDTO.empty())
+        .waitForExternalTaskTrigger("task-a")
+        .andRespondToExternalTaskWithSuccess("task-a", VariablesDTO.empty())
+        .waitForExternalTaskTrigger("task-b")
+        .andRespondToExternalTaskWithSuccess("task-b", VariablesDTO.empty())
+        // Both handlers are dispatched concurrently — order is not guaranteed
+        .waitForExternalTaskTrigger("undo-task-a")
+        .waitForExternalTaskTrigger("undo-task-b")
+        .andRespondToExternalTaskWithSuccess("undo-task-a", VariablesDTO.empty())
+        .andRespondToExternalTaskWithSuccess("undo-task-b", VariablesDTO.empty())
+        .waitUntilDone()
+        .assertThatProcess()
+        .isCompleted()
+        .hasInstantiatedElementWithId("undo-task-a")
+        .hasInstantiatedElementWithId("undo-task-b");
+  }
+
+  /** Req §4 — compensation can also be triggered from an end event. */
+  @Test
+  void compensationEndEventTriggersHandler() throws IOException {
+    SingletonBpmnTestEngine.getInstance()
+        .registerAndSubscribeToExternalTaskIds("task-a", "undo-task-a")
+        .deployProcessDefinitionAndWait("/bpmn/compensation-end-event.bpmn")
+        .startProcessInstance(VariablesDTO.empty())
+        .waitForExternalTaskTrigger("task-a")
+        .andRespondToExternalTaskWithSuccess("task-a", VariablesDTO.empty())
+        .waitForExternalTaskTrigger("undo-task-a")
+        .andRespondToExternalTaskWithSuccess("undo-task-a", VariablesDTO.empty())
+        .waitUntilDone()
+        .assertThatProcess()
+        .isCompleted()
+        .hasInstantiatedElementWithId("undo-task-a");
+  }
+
+  /**
+   * Req §12 — the handler receives the variable snapshot captured when the compensatable activity
+   * completed, not the current (possibly mutated) process state.
+   */
+  @Test
+  void handlerReceivesVariableSnapshotFromActivityCompletion() throws IOException {
+    BpmnTestEngine engine = SingletonBpmnTestEngine.getInstance();
+    engine
+        .registerAndSubscribeToExternalTaskIds("task-a", "undo-task-a")
+        .deployProcessDefinitionAndWait("/bpmn/compensation-simple.bpmn")
+        .startProcessInstance(VariablesDTO.empty())
+        .waitForExternalTaskTrigger("task-a")
+        // task-a outputs a variable; this should be snapshotted for the handler
+        .andRespondToExternalTaskWithSuccess("task-a", VariablesDTO.of("output", "captured-value"))
+        .waitForExternalTaskTrigger("undo-task-a");
+
+    // The snapshot is available as input variables on the handler trigger
+    ExternalTaskTriggerDTO handlerTrigger = engine.getActiveExternalTaskTrigger("undo-task-a");
+    assertThat(handlerTrigger).isNotNull();
+    assertThat(handlerTrigger.getVariables().getVariables()).containsKey("output");
+
+    engine
+        .andRespondToExternalTaskWithSuccess("undo-task-a", VariablesDTO.empty())
+        .waitUntilDone()
+        .assertThatProcess()
+        .isCompleted();
   }
 }

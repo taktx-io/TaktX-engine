@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions
+    xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+    xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+    xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+    xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+    xmlns:zeebe="http://camunda.org/schema/zeebe/1.0"
+    xmlns:modeler="http://camunda.org/schema/modeler/1.0"
+    id="Definitions_all_handlers"
+    targetNamespace="http://bpmn.io/schema/bpmn"
+    exporter="Camunda Modeler"
+    exporterVersion="5.19.0"
+    modeler:executionPlatform="Camunda Cloud"
+    modeler:executionPlatformVersion="8.4.0">
+
+  <bpmn:process id="compensation-all-handlers" isExecutable="true">
+
+    <bpmn:startEvent id="start" name="Start">
+      <bpmn:outgoing>flow-start-to-task-a</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="flow-start-to-task-a" sourceRef="start" targetRef="task-a"/>
+
+    <bpmn:serviceTask id="task-a" name="Task A">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="task-a"/>
+      </bpmn:extensionElements>
+      <bpmn:incoming>flow-start-to-task-a</bpmn:incoming>
+      <bpmn:outgoing>flow-task-a-to-task-b</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:boundaryEvent id="compensate-task-a" attachedToRef="task-a">
+      <bpmn:compensateEventDefinition id="ced-task-a"/>
+    </bpmn:boundaryEvent>
+
+    <bpmn:sequenceFlow id="flow-task-a-to-task-b" sourceRef="task-a" targetRef="task-b"/>
+
+    <bpmn:serviceTask id="task-b" name="Task B">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="task-b"/>
+      </bpmn:extensionElements>
+      <bpmn:incoming>flow-task-a-to-task-b</bpmn:incoming>
+      <bpmn:outgoing>flow-task-b-to-throw</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:boundaryEvent id="compensate-task-b" attachedToRef="task-b">
+      <bpmn:compensateEventDefinition id="ced-task-b"/>
+    </bpmn:boundaryEvent>
+
+    <bpmn:sequenceFlow id="flow-task-b-to-throw" sourceRef="task-b" targetRef="throw-compensate-all"/>
+
+    <!-- No activityRef: compensates ALL completed activities in scope -->
+    <bpmn:intermediateThrowEvent id="throw-compensate-all" name="Compensate All">
+      <bpmn:incoming>flow-task-b-to-throw</bpmn:incoming>
+      <bpmn:outgoing>flow-throw-to-end</bpmn:outgoing>
+      <bpmn:compensateEventDefinition id="ced-throw"/>
+    </bpmn:intermediateThrowEvent>
+
+    <bpmn:sequenceFlow id="flow-throw-to-end" sourceRef="throw-compensate-all" targetRef="end"/>
+
+    <bpmn:endEvent id="end" name="End">
+      <bpmn:incoming>flow-throw-to-end</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:serviceTask id="undo-task-a" name="Undo Task A" isForCompensation="true">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="undo-task-a"/>
+      </bpmn:extensionElements>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="undo-task-b" name="Undo Task B" isForCompensation="true">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="undo-task-b"/>
+      </bpmn:extensionElements>
+    </bpmn:serviceTask>
+
+    <bpmn:association id="assoc-a" sourceRef="compensate-task-a" targetRef="undo-task-a"/>
+    <bpmn:association id="assoc-b" sourceRef="compensate-task-b" targetRef="undo-task-b"/>
+
+  </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="compensation-all-handlers">
+
+      <bpmndi:BPMNShape id="start_di" bpmnElement="start">
+        <dc:Bounds x="152" y="99" width="36" height="36"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="158" y="142" width="24" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="task-a_di" bpmnElement="task-a">
+        <dc:Bounds x="240" y="77" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="compensate-task-a_di" bpmnElement="compensate-task-a">
+        <dc:Bounds x="272" y="139" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="undo-task-a_di" bpmnElement="undo-task-a">
+        <dc:Bounds x="240" y="240" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="task-b_di" bpmnElement="task-b">
+        <dc:Bounds x="400" y="77" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="compensate-task-b_di" bpmnElement="compensate-task-b">
+        <dc:Bounds x="432" y="139" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="undo-task-b_di" bpmnElement="undo-task-b">
+        <dc:Bounds x="400" y="240" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="throw-compensate-all_di" bpmnElement="throw-compensate-all">
+        <dc:Bounds x="562" y="99" width="36" height="36"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="542" y="142" width="76" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="end_di" bpmnElement="end">
+        <dc:Bounds x="662" y="99" width="36" height="36"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="670" y="142" width="20" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNEdge id="flow-start-to-task-a_di" bpmnElement="flow-start-to-task-a">
+        <di:waypoint x="188" y="117"/><di:waypoint x="240" y="117"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow-task-a-to-task-b_di" bpmnElement="flow-task-a-to-task-b">
+        <di:waypoint x="340" y="117"/><di:waypoint x="400" y="117"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow-task-b-to-throw_di" bpmnElement="flow-task-b-to-throw">
+        <di:waypoint x="500" y="117"/><di:waypoint x="562" y="117"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow-throw-to-end_di" bpmnElement="flow-throw-to-end">
+        <di:waypoint x="598" y="117"/><di:waypoint x="662" y="117"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="assoc-a_di" bpmnElement="assoc-a">
+        <di:waypoint x="290" y="175"/><di:waypoint x="290" y="240"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="assoc-b_di" bpmnElement="assoc-b">
+        <di:waypoint x="450" y="175"/><di:waypoint x="450" y="240"/>
+      </bpmndi:BPMNEdge>
+
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+
+</bpmn:definitions>
