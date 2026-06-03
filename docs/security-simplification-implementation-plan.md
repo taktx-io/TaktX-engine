@@ -776,7 +776,7 @@ Start with this bounded slice:
 | F2 | Update client tests | Done | Phase 3 | `ClientProtectedDataPlaneParticipationGuardTest` covers OPEN/ANCHORED guard logic; `TaktXClientWorkerSigningTest` covers auto-sign activation; `TaktXClientIdentityRotationTest` covers D5 rotation detection; `TaktXClientBuilderSigningIdentitySourceTest` covers persistent identity |
 | F3 | Update engine tests | Done | Phase 2 | All engine unit tests clean — `NamespaceSecurityPolicyActivationServiceTest` now tests only the simplified "immediately authoritative" model; no legacy lifecycle assertions remain |
 | F4 | Rewrite integration security tests | Done | Phases 2-4 | Added `anchoredNamespace_acceptsSignedClientWithApprovedIdentity` (positive ANCHORED end-to-end via TaktXClient auto-signing) and `anchoredNamespace_rejectsSignedClientWithUnpublishedKey` (unknown key rejected) to `PublicClientSecuredModeDogfoodIntegrationTest`; helper methods `signedAnchoredRuntimeProperties` and `signingOnlyWithoutPublishedKeyProperties` added to test support |
-| G1 | Remove legacy global-config bridge | Todo | Phases 2-3 | One authoritative model |
+| G1 | Remove legacy global-config bridge | Done | Phases 2-3 | Removed both `legacyGlobalSecurityConfigToNamespaceSecurityPolicy` overloads and their tests; renamed `INTEGRITY_PROTECTION_REQUIRED_IN_SECURED_MODES` → `INTEGRITY_PROTECTION_REQUIRED_IN_ANCHORED_MODE` across shared + client |
 | G2 | Update docs | Todo | final behavior | Simplified story |
 | G3 | Add migration notes | Todo | final behavior | Breaking change guidance |
 
