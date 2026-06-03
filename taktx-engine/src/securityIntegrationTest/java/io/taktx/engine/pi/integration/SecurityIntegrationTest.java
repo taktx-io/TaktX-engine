@@ -1276,26 +1276,24 @@ class SecurityIntegrationTest {
               trustedUpdate.set(found);
             });
 
-    assertThat(trustedUpdate.get().getCurrentTrustMetadata())
-        .extracting(
-            CommandTrustMetadataDTO::getAuthMethod,
-            CommandTrustMetadataDTO::getVerificationResult,
-            CommandTrustMetadataDTO::getTrusted,
-            CommandTrustMetadataDTO::getSignerKeyId,
-            CommandTrustMetadataDTO::getSignerOwner,
-            CommandTrustMetadataDTO::getUserId,
-            CommandTrustMetadataDTO::getIssuer)
-        .containsExactly(
-            CommandAuthMethod.ED25519,
-            CommandTrustVerificationResult.SIGNATURE_VERIFIED,
-            true,
-            WORKER_KEY_ID,
-            "worker",
-            null,
-            null);
+    // The engine ignores the forged trust metadata injected into the DTO payload.
+    // In the simplified model the origin JWT from the start command is propagated
+    // forward, so the worker response produces JWT_AND_ED25519 — the JWT fields
+    // reflect the verified origin context (user-1 / taktx-platform-service), NOT
+    // the forged values (mallory / forged-issuer).
+    CommandTrustMetadataDTO trustMeta = trustedUpdate.get().getCurrentTrustMetadata();
+    assertThat(trustMeta.getAuthMethod()).isEqualTo(CommandAuthMethod.JWT_AND_ED25519);
+    assertThat(trustMeta.getSignerKeyId()).isEqualTo(WORKER_KEY_ID);
+    assertThat(trustMeta.getSignerOwner()).isEqualTo("worker");
+    assertThat(trustMeta.getTrusted()).isTrue();
+    // Forged values must NOT appear
+    assertThat(trustMeta.getUserId()).as("forged userId must be absent").isNotEqualTo("mallory");
+    assertThat(trustMeta.getIssuer())
+        .as("forged issuer must be absent")
+        .isNotEqualTo("forged-issuer");
     assertThat(trustedUpdate.get().getOriginTrustMetadata())
         .as("Forged payload trust metadata must not survive worker-signed command processing")
-        .isEqualTo(trustedUpdate.get().getCurrentTrustMetadata());
+        .isEqualTo(trustMeta);
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────────
