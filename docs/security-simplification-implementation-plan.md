@@ -44,7 +44,13 @@
 - `taktx-client` protected-runtime interpretation is now mode-only: legacy `requiredSigning` / `requiredAuthorization` posture checks are gone from the client guard and worker-signing preparation path, `OPEN` allows unsigned operation, and `ANCHORED` now fails fast only on the anchored prerequisites (stable/ready signing identity plus trust anchor) instead of on JWT-provider availability.
 - Client-originated runtime ingress now auto-signs consistently through the shared header-aware serializer path when signing is active: process-instance commands/responses still use `ProtoSigningSerializer`, and message events plus signals now do too, with the same pre-send signing/key-publication refresh hook so callers no longer choose signing per runtime ingress type.
 - `taktx-client` now tracks the active worker signing identity descriptor separately from restart reuse, republishes the worker trust-registry entry whenever the publishable descriptor changes (not just the key ID), and surfaces runtime identity changes through the client observability event history with explicit `SIGNING_IDENTITY_ROTATED` / `UNEXPECTED_SIGNING_IDENTITY_CHURN` codes so expected mounted-file rotation is distinguishable from anomalous churn.
-- The remaining work is concentrated in finishing Phase 2 production cleanup, Phase 3/4 identity + trust-registry behavior, and broadening Phase 5 coverage beyond the current engine/integration adaptations.
+
+## Progress update — 2026-06-03
+- D5 committed: `TaktXClient` tracks full signing-identity descriptors across `currentSigningIdentity()` calls, detects changes, emits `SIGNING_IDENTITY_ROTATED` (INFO, expected live rotation) or `UNEXPECTED_SIGNING_IDENTITY_CHURN` (WARNING, anomalous), and republishes the trust-registry entry on any descriptor change. `TaktXClientIdentityRotationTest` covers all three D5 objectives. Bug fix: `LocalPersistentSigningIdentitySource.resolveDirectory()` now falls back to `System.getProperty("user.home")` when the passed TaktX config properties do not contain `user.home` (fixes `TaktXClientFacetTest` failure when building without signing config).
+- Phase 4 (E1/E2) found to be already complete: `SigningKeyDTO` already has ACTIVE/TRUSTED/REVOKED lifecycle and `registrationSignature` for anchoring; `OpenKeyTrustPolicy` and `AnchoredKeyTrustPolicy` are fully implemented; `KeyTrustPolicyProducer` selects the correct policy based on `TAKTX_PLATFORM_PUBLIC_KEY`. Task board updated accordingly.
+- E3 (client rotation lifecycle) completed: `TaktXClient.ensureWorkerKeyPublished()` now stores the full previously-published `SigningKeyDTO`, and on rotation calls `retireOldWorkerKey()` which publishes the old key with `status=TRUSTED` to the trust registry — matching the engine's existing `MessageSigningService.retirePreviousKey()` behavior.
+- Phase 5 audit: F1 (shared tests), F2 (client tests), and F3 (engine unit tests) are all clean — no legacy SECURED/activation-lifecycle references remain. F4 (integration tests) has broad coverage; identified remaining gaps: (1) explicit "unknown key rejected in ANCHORED" dogfood test, (2) "ANCHORED start + completion succeeds end-to-end via TaktXClient auto-signing" positive dogfood test in `PublicClientSecuredModeDogfoodIntegrationTest`.
+- Remaining work: complete F4 integration test gaps, then G1 (legacy bridge removal), G2 (docs), G3 (migration notes).
 
 ---
 
@@ -763,13 +769,13 @@ Start with this bounded slice:
 | D3 | Simplify client policy interpretation | Done | A2,C1,D2 | Client protected-runtime gating is now mode-only: OPEN permits unsigned operation, ANCHORED requires stable ready signing + trust anchor |
 | D4 | Auto-sign all anchored client traffic | Done | D3 | Process-instance commands/responses, message events, and signals now flow through automatic header-aware signing with shared key-publication refresh |
 | D5 | Detect and surface rotation | Done | D1,D2 | Client now tracks full signing-identity descriptors, republishes on rotation, and surfaces expected live rotation vs unexpected churn through observability codes |
-| E1 | Define trust-registry semantics in `SigningKeyDTO` | Todo |  | Reuse `taktx-signing-keys` |
-| E2 | Align trust policy with `ANCHORED` | Todo | A1,C3 | Anchored = countersigned |
-| E3 | Define explicit rotation lifecycle | Todo | D5,E1 | Revocation path |
-| F1 | Update shared tests | Todo | Phase 1 | Hard-break contract tests |
-| F2 | Update client tests | Todo | Phase 3 | Auto-sign + persistence |
-| F3 | Update engine tests | In progress | Phase 2 | Engine unit suites compile/pass against the simplified contract; legacy activation assertions still need final cleanup |
-| F4 | Rewrite integration security tests | In progress | Phases 2-4 | Public-client dogfood tests now target `OPEN` / `ANCHORED`; remaining coverage gaps are identity rotation / approved anchored success paths |
+| E1 | Define trust-registry semantics in `SigningKeyDTO` | Done |  | ACTIVE/TRUSTED/REVOKED + registrationSignature for anchoring — already present in `SigningKeyDTO`; `SigningKeyRegistrar.publishKeyStatusChange` handles transitions |
+| E2 | Align trust policy with `ANCHORED` | Done | A1,C3 | `AnchoredKeyTrustPolicy` requires valid RSA countersignature for all roles; `OpenKeyTrustPolicy` accepts any non-revoked key; `KeyTrustPolicyProducer` selects between them based on `TAKTX_PLATFORM_PUBLIC_KEY` |
+| E3 | Define explicit rotation lifecycle | Done | D5,E1 | Client `ensureWorkerKeyPublished()` now stores the full published `SigningKeyDTO` and calls `retireOldWorkerKey()` on rotation to publish `status=TRUSTED` for the previous key, matching engine's `MessageSigningService.retirePreviousKey()` |
+| F1 | Update shared tests | Done | Phase 1 | `NamespaceSecurityPolicySupportTest` and proto mapper test are clean — test only `OPEN`/`ANCHORED`, explicitly reject `secured`/`anchored_secured` |
+| F2 | Update client tests | Done | Phase 3 | `ClientProtectedDataPlaneParticipationGuardTest` covers OPEN/ANCHORED guard logic; `TaktXClientWorkerSigningTest` covers auto-sign activation; `TaktXClientIdentityRotationTest` covers D5 rotation detection; `TaktXClientBuilderSigningIdentitySourceTest` covers persistent identity |
+| F3 | Update engine tests | Done | Phase 2 | All engine unit tests clean — `NamespaceSecurityPolicyActivationServiceTest` now tests only the simplified "immediately authoritative" model; no legacy lifecycle assertions remain |
+| F4 | Rewrite integration security tests | In progress | Phases 2-4 | Broad coverage in place; remaining gaps: (1) explicit dogfood test for "unknown key rejected in ANCHORED mode" (key exists on client, not in trust registry), (2) positive end-to-end dogfood test for "ANCHORED start + completion via TaktXClient auto-signing with approved identity" in `PublicClientSecuredModeDogfoodIntegrationTest` |
 | G1 | Remove legacy global-config bridge | Todo | Phases 2-3 | One authoritative model |
 | G2 | Update docs | Todo | final behavior | Simplified story |
 | G3 | Add migration notes | Todo | final behavior | Breaking change guidance |
