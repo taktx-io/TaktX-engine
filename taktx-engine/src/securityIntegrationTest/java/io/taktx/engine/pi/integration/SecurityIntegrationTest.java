@@ -646,11 +646,10 @@ class SecurityIntegrationTest {
     // SigningServiceHolder is never touched so the engine's MessageSigningService
     // registration stays intact.
     startSignedProcess(SERVICE_TASK_PROCESS_ID, VariablesDTO.empty(), jwt);
-    engine
-        .waitForNewProcessInstance()
-        .waitForExternalTaskTrigger(SERVICE_TASK_TYPE)
-        .andRespondToExternalTaskWithSuccess(SERVICE_TASK_TYPE, VariablesDTO.of("var1", "ok"))
-        .waitUntilDone();
+    engine.waitForNewProcessInstance().waitForExternalTaskTrigger(SERVICE_TASK_TYPE);
+    workerResponder.respondSuccess(
+        engine.getActiveExternalTaskTrigger(SERVICE_TASK_TYPE), VariablesDTO.of("var1", "ok"));
+    engine.waitUntilDone();
 
     engine
         .assertThatProcess()
@@ -684,11 +683,10 @@ class SecurityIntegrationTest {
             Date.from(Instant.now().plusSeconds(300)));
     startSignedProcess(SUB_PROCESS_ID, VariablesDTO.of("var1", "hello"), jwt);
 
-    engine
-        .waitForNewProcessInstance()
-        .waitForExternalTaskTrigger("servicetask")
-        .andRespondToExternalTaskWithSuccess("servicetask", VariablesDTO.of("var2", "world"))
-        .waitUntilDone();
+    engine.waitForNewProcessInstance().waitForExternalTaskTrigger("servicetask");
+    workerResponder.respondSuccess(
+        engine.getActiveExternalTaskTrigger("servicetask"), VariablesDTO.of("var2", "world"));
+    engine.waitUntilDone();
 
     engine
         .assertThatProcess()
