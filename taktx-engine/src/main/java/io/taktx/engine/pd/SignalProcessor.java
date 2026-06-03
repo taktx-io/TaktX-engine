@@ -120,8 +120,7 @@ public class SignalProcessor implements Processor<String, SignalIngressEnvelope,
       return;
     }
     try {
-      if (value
-          instanceof NewInstanceSignalSubscriptionDTO newInstanceSignalSubscriptionDTO) {
+      if (value instanceof NewInstanceSignalSubscriptionDTO newInstanceSignalSubscriptionDTO) {
         SignalInstanceSubscriptionKeyDTO key =
             new SignalInstanceSubscriptionKeyDTO(
                 hash(newInstanceSignalSubscriptionDTO.getSignalName()),
@@ -170,7 +169,8 @@ public class SignalProcessor implements Processor<String, SignalIngressEnvelope,
     }
   }
 
-  private boolean shouldBlockProtectedDataPlane(Record<String, SignalIngressEnvelope> signalRecord) {
+  private boolean shouldBlockProtectedDataPlane(
+      Record<String, SignalIngressEnvelope> signalRecord) {
     if (protectedDataPlaneParticipationGuard == null) {
       return false;
     }
@@ -194,7 +194,9 @@ public class SignalProcessor implements Processor<String, SignalIngressEnvelope,
     headersMap.put(DLQ_CAPTURE_STAGE_HEADER, captureStage.getBytes(StandardCharsets.UTF_8));
     SignalDlqEntryDTO dlqEntry =
         new SignalDlqEntryDTO(
-            signalRecord.key(), signalRecord.value() == null ? null : signalRecord.value().value(), headersMap);
+            signalRecord.key(),
+            signalRecord.value() == null ? null : signalRecord.value().value(),
+            headersMap);
     context.forward(new Record<>(null, dlqEntry, clock.millis()));
   }
 
@@ -238,7 +240,8 @@ public class SignalProcessor implements Processor<String, SignalIngressEnvelope,
       return DlqReasonCode.SIGNATURE_VERIFICATION_FAILED.name();
     }
     String message = exception.getMessage() != null ? exception.getMessage().toLowerCase() : "";
-    if (message.contains("requires tx-sig") || message.startsWith("missing required tx-sig header")) {
+    if (message.contains("requires tx-sig")
+        || message.startsWith("missing required tx-sig header")) {
       return DlqReasonCode.SIGNATURE_MISSING.name();
     }
     if (message.startsWith("unknown ed25519 keyid")) {

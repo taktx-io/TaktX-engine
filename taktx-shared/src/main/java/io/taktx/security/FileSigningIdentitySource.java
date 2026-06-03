@@ -78,6 +78,11 @@ public class FileSigningIdentitySource implements SigningIdentitySource {
         System::currentTimeMillis);
   }
 
+  @Override
+  public boolean supportsLiveRotation() {
+    return true;
+  }
+
   public FileSigningIdentitySource(
       String keyIdPath, String privateKeyPath, String publicKeyPath, long refreshIntervalMs) {
     this(

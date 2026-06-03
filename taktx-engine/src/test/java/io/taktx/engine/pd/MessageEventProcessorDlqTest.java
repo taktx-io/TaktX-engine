@@ -69,7 +69,8 @@ class MessageEventProcessorDlqTest {
     when(taktConfiguration.getHost()).thenReturn("engine-host");
     when(taktConfiguration.getPort()).thenReturn(8080);
     when(taktConfiguration.getSigningIdentitySourceType()).thenReturn("file");
-    when(taktConfiguration.getEngineKeyRegistrationSignature()).thenReturn("engine-registration-signature");
+    when(taktConfiguration.getEngineKeyRegistrationSignature())
+        .thenReturn("engine-registration-signature");
     when(taktConfiguration.getPlatformPublicKey()).thenReturn(null);
     when(taktConfiguration.getPrefixed(Stores.DEFINITION_MESSAGE_SUBSCRIPTION.getStorename()))
         .thenReturn(Stores.DEFINITION_MESSAGE_SUBSCRIPTION.getStorename());
@@ -115,7 +116,8 @@ class MessageEventProcessorDlqTest {
     RecordHeaders headers = new RecordHeaders();
     headers.add("X-Test", "value".getBytes(StandardCharsets.UTF_8));
     Record<MessageEventKeyDTO, MessageEventIngressEnvelope> messageEventRecord =
-        new Record<>(key, new MessageEventIngressEnvelope(null, null, false, null, null), 100L, headers);
+        new Record<>(
+            key, new MessageEventIngressEnvelope(null, null, false, null, null), 100L, headers);
 
     processor.process(messageEventRecord);
 
@@ -203,7 +205,8 @@ class MessageEventProcessorDlqTest {
   @Test
   void process_messageTriggerAuthorizationFailure_emitsDlqWithSignatureHint() {
     MessageEventProcessor guardedProcessor =
-        new MessageEventProcessor(taktConfiguration, clock, processingStatistics, null, engineAuthorizationService);
+        new MessageEventProcessor(
+            taktConfiguration, clock, processingStatistics, null, engineAuthorizationService);
     guardedProcessor.init(context);
     MessageEventKeyDTO key = new MessageEventKeyDTO("pay");
     DefinitionMessageEventTriggerDTO trigger =
@@ -211,7 +214,9 @@ class MessageEventProcessorDlqTest {
     RecordHeaders headers = new RecordHeaders();
     MessageEventIngressEnvelope ingressEnvelope = envelope(trigger);
     when(engineAuthorizationService.authorizeMessageEventIngress(headers, ingressEnvelope))
-        .thenThrow(new AuthorizationTokenException("Missing required tx-sig header — required role: CLIENT"));
+        .thenThrow(
+            new AuthorizationTokenException(
+                "Missing required tx-sig header — required role: CLIENT"));
 
     guardedProcessor.process(new Record<>(key, ingressEnvelope, 320L, headers));
 
@@ -224,7 +229,8 @@ class MessageEventProcessorDlqTest {
         .isEqualTo("AUTHORIZATION");
   }
 
-  private MessageEventProcessor guardedProcessorWithPolicy(NamespaceSecurityPolicyDTO authoritativePolicy) {
+  private MessageEventProcessor guardedProcessorWithPolicy(
+      NamespaceSecurityPolicyDTO authoritativePolicy) {
     NamespaceSecurityPolicyStore policyStore = new NamespaceSecurityPolicyStore();
     policyStore.update(authoritativePolicy);
     MessageSigningService messageSigningService = mock(MessageSigningService.class);

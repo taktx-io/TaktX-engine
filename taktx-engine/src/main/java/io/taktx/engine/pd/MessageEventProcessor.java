@@ -12,9 +12,9 @@ import io.taktx.dto.CancelCorrelationMessageSubscriptionDTO;
 import io.taktx.dto.CancelDefinitionMessageSubscriptionDTO;
 import io.taktx.dto.CorrelationMessageEventTriggerDTO;
 import io.taktx.dto.CorrelationMessageSubscriptionDTO;
-import io.taktx.dto.DlqReasonCode;
 import io.taktx.dto.DefinitionMessageEventTriggerDTO;
 import io.taktx.dto.DefinitionMessageSubscriptionDTO;
+import io.taktx.dto.DlqReasonCode;
 import io.taktx.dto.EventSignalTriggerDTO;
 import io.taktx.dto.MessageEventDTO;
 import io.taktx.dto.MessageEventDlqEntryDTO;
@@ -74,11 +74,7 @@ public class MessageEventProcessor
       ProcessingStatistics processingStatistics,
       ProtectedDataPlaneParticipationGuard protectedDataPlaneParticipationGuard) {
     this(
-        taktConfiguration,
-        clock,
-        processingStatistics,
-        protectedDataPlaneParticipationGuard,
-        null);
+        taktConfiguration, clock, processingStatistics, protectedDataPlaneParticipationGuard, null);
   }
 
   public MessageEventProcessor(
@@ -154,9 +150,7 @@ public class MessageEventProcessor
           processCorrelationMessageEventTrigger(messageEventRecord.key(), messageEvent);
         }
         default -> {
-          log.warn(
-              "⚠ Unknown message-event type, routing to DLQ: {}",
-              value.getClass().getName());
+          log.warn("⚠ Unknown message-event type, routing to DLQ: {}", value.getClass().getName());
           emitMessageEventDlq(
               messageEventRecord,
               "PAYLOAD_TYPE_MISMATCH",
@@ -245,7 +239,8 @@ public class MessageEventProcessor
       return DlqReasonCode.SIGNATURE_VERIFICATION_FAILED.name();
     }
     String message = exception.getMessage() != null ? exception.getMessage().toLowerCase() : "";
-    if (message.contains("requires tx-sig") || message.startsWith("missing required tx-sig header")) {
+    if (message.contains("requires tx-sig")
+        || message.startsWith("missing required tx-sig header")) {
       return DlqReasonCode.SIGNATURE_MISSING.name();
     }
     if (message.startsWith("unknown ed25519 keyid")) {

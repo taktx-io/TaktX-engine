@@ -60,7 +60,6 @@ public final class NamespaceSecurityPolicyProtoMapper {
     };
   }
 
-
   private static String emptyToNull(String value) {
     return value == null || value.isEmpty() ? null : value;
   }

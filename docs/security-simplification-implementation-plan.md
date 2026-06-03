@@ -43,6 +43,7 @@
 - `taktx-client` now defaults to that managed local persistent identity source when no explicit signing source is configured, still prefers explicitly configured `env`/`file` identities for managed deployments, supports explicit `local` selection, and treats restart-stable signing identity as an anchored-mode participation prerequisite so explicitly generated in-memory identities are no longer considered sufficient for `ANCHORED` runtime traffic.
 - `taktx-client` protected-runtime interpretation is now mode-only: legacy `requiredSigning` / `requiredAuthorization` posture checks are gone from the client guard and worker-signing preparation path, `OPEN` allows unsigned operation, and `ANCHORED` now fails fast only on the anchored prerequisites (stable/ready signing identity plus trust anchor) instead of on JWT-provider availability.
 - Client-originated runtime ingress now auto-signs consistently through the shared header-aware serializer path when signing is active: process-instance commands/responses still use `ProtoSigningSerializer`, and message events plus signals now do too, with the same pre-send signing/key-publication refresh hook so callers no longer choose signing per runtime ingress type.
+- `taktx-client` now tracks the active worker signing identity descriptor separately from restart reuse, republishes the worker trust-registry entry whenever the publishable descriptor changes (not just the key ID), and surfaces runtime identity changes through the client observability event history with explicit `SIGNING_IDENTITY_ROTATED` / `UNEXPECTED_SIGNING_IDENTITY_CHURN` codes so expected mounted-file rotation is distinguishable from anomalous churn.
 - The remaining work is concentrated in finishing Phase 2 production cleanup, Phase 3/4 identity + trust-registry behavior, and broadening Phase 5 coverage beyond the current engine/integration adaptations.
 
 ---
@@ -469,9 +470,9 @@ Make stable participant identity the default and ensure the client signs automat
 - client signing/publishing and observability paths
 
 **Work**
-- [ ] Detect key changes versus restart reuse
-- [ ] Republish trust-registry entry on rotation
-- [ ] Emit observability signal for unexpected identity churn
+- [x] Detect key changes versus restart reuse
+- [x] Republish trust-registry entry on rotation
+- [x] Emit observability signal for unexpected identity churn
 
 **Acceptance criteria**
 - Identity rotation is explicit and testable
@@ -761,7 +762,7 @@ Start with this bounded slice:
 | D2 | Make persistent identity default | Done | D1 | Client now defaults to managed local identity, keeps explicit env/file overrides, and requires restart-stable signing source for anchored participation |
 | D3 | Simplify client policy interpretation | Done | A2,C1,D2 | Client protected-runtime gating is now mode-only: OPEN permits unsigned operation, ANCHORED requires stable ready signing + trust anchor |
 | D4 | Auto-sign all anchored client traffic | Done | D3 | Process-instance commands/responses, message events, and signals now flow through automatic header-aware signing with shared key-publication refresh |
-| D5 | Detect and surface rotation | Todo | D1,D2 | Explicit churn detection |
+| D5 | Detect and surface rotation | Done | D1,D2 | Client now tracks full signing-identity descriptors, republishes on rotation, and surfaces expected live rotation vs unexpected churn through observability codes |
 | E1 | Define trust-registry semantics in `SigningKeyDTO` | Todo |  | Reuse `taktx-signing-keys` |
 | E2 | Align trust policy with `ANCHORED` | Todo | A1,C3 | Anchored = countersigned |
 | E3 | Define explicit rotation lifecycle | Todo | D5,E1 | Revocation path |

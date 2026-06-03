@@ -169,7 +169,10 @@ class NamespaceSecurityPolicyProcessorTest {
           lifecycleDriver.createInputTopic(
               POLICY_TOPIC, Serdes.String().serializer(), Serdes.ByteArray().serializer());
       NamespaceSecurityPolicyDTO invalid =
-          NamespaceSecurityPolicyDTO.builder().mode(SecurityMode.ANCHORED).policyVersion(0L).build();
+          NamespaceSecurityPolicyDTO.builder()
+              .mode(SecurityMode.ANCHORED)
+              .policyVersion(0L)
+              .build();
 
       lifecycleTopic.pipeInput(
           NamespaceSecurityPolicyProcessor.POLICY_KEY,
@@ -231,7 +234,10 @@ class NamespaceSecurityPolicyProcessorTest {
           lifecycleDriver.createInputTopic(
               POLICY_TOPIC, Serdes.String().serializer(), Serdes.ByteArray().serializer());
       NamespaceSecurityPolicyDTO requested =
-          NamespaceSecurityPolicyDTO.builder().mode(SecurityMode.ANCHORED).policyVersion(52L).build();
+          NamespaceSecurityPolicyDTO.builder()
+              .mode(SecurityMode.ANCHORED)
+              .policyVersion(52L)
+              .build();
       byte[] payload = NamespaceSecurityPolicyProtoMapper.toProto(requested).toByteArray();
 
       Mockito.doThrow(

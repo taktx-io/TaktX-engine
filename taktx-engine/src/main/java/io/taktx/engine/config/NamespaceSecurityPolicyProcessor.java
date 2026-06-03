@@ -98,8 +98,12 @@ public class NamespaceSecurityPolicyProcessor implements Processor<String, byte[
           namespaceSecurityPolicyStore.getAuthoritativePolicy();
       log.info(
           "Namespace security policy updated: policyVersion={} policyHash={} mode={}",
-          authoritativePolicy != null ? authoritativePolicy.getPolicyVersion() : validated.getPolicyVersion(),
-          authoritativePolicy != null ? authoritativePolicy.getPolicyHash() : validated.getPolicyHash(),
+          authoritativePolicy != null
+              ? authoritativePolicy.getPolicyVersion()
+              : validated.getPolicyVersion(),
+          authoritativePolicy != null
+              ? authoritativePolicy.getPolicyHash()
+              : validated.getPolicyHash(),
           authoritativePolicy != null ? authoritativePolicy.getMode() : validated.getMode());
     } catch (AuthorizationTokenException e) {
       if (activationService != null) {

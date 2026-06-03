@@ -28,6 +28,16 @@ public interface SigningIdentitySource {
     return true;
   }
 
+  /**
+   * Returns whether this source is expected to rotate identities while the process remains running.
+   *
+   * <p>The default is {@code false}. Sources that deliberately watch external key material and
+   * update in place should override this to return {@code true}.
+   */
+  default boolean supportsLiveRotation() {
+    return false;
+  }
+
   default String getSourceType() {
     return getClass().getSimpleName();
   }

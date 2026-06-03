@@ -40,7 +40,8 @@ public class ProtoSigningSerializer<T> implements Serializer<T> {
   }
 
   public ProtoSigningSerializer(
-      Function<T, ? extends MessageLite> protoMapper, Supplier<SigningFunction> signingFunctionSupplier) {
+      Function<T, ? extends MessageLite> protoMapper,
+      Supplier<SigningFunction> signingFunctionSupplier) {
     this.protoMapper = Objects.requireNonNull(protoMapper, "protoMapper must not be null");
     this.signingFunctionSupplier = signingFunctionSupplier;
   }

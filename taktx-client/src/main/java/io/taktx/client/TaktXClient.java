@@ -33,10 +33,12 @@ import io.taktx.dto.ParticipantStatusDTO;
 import io.taktx.dto.ProcessDefinitionDTO;
 import io.taktx.dto.ProcessDefinitionKey;
 import io.taktx.dto.ProcessInstanceTriggerDTO;
-import io.taktx.dto.SecurityMode;
 import io.taktx.dto.SecurityEventDTO;
-import io.taktx.dto.SecurityPostureIssueCodes;
+import io.taktx.dto.SecurityEventSeverity;
+import io.taktx.dto.SecurityEventType;
+import io.taktx.dto.SecurityMode;
 import io.taktx.dto.SecurityParticipantDescriptor;
+import io.taktx.dto.SecurityPostureIssueCodes;
 import io.taktx.dto.SignalDTO;
 import io.taktx.dto.UserTaskTriggerDTO;
 import io.taktx.dto.VariablesDTO;
@@ -73,6 +75,7 @@ import java.time.Instant;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
@@ -166,6 +169,8 @@ public class TaktXClient {
   private final CopyOnWriteArrayList<SecurityEventConsumer> securityEventConsumers =
       new CopyOnWriteArrayList<>();
   private volatile String publishedWorkerKeyId;
+  private volatile String publishedWorkerIdentityDescriptor;
+  private volatile String activeWorkerIdentityDescriptor;
   private volatile String workerSigningRegistrationState = "uninitialized";
   private volatile boolean globalWorkerSigningFunctionRegistered;
   private final SigningServiceHolder.SigningFunction globalWorkerSigningFunction;
@@ -201,7 +206,8 @@ public class TaktXClient {
     this.processInstanceProducer =
         new ProcessInstanceProducer(
             taktPropertiesHelper, processInstanceTriggerEmitter, authorizationTokenProvider);
-    this.messageEventSender = new MessageEventSender(taktPropertiesHelper, () -> globalWorkerSigningFunction);
+    this.messageEventSender =
+        new MessageEventSender(taktPropertiesHelper, () -> globalWorkerSigningFunction);
     this.signalSender = new SignalSender(taktPropertiesHelper, () -> globalWorkerSigningFunction);
     this.processInstanceUpdateConsumer =
         new ProcessInstanceUpdateConsumer(taktPropertiesHelper, executor);
@@ -490,7 +496,9 @@ public class TaktXClient {
               org.apache.kafka.common.serialization.StringDeserializer.class,
               org.apache.kafka.common.serialization.ByteArrayDeserializer.class,
               "latest");
-      securityEventStore = new ClientSecurityEventStore(DEFAULT_SECURITY_EVENT_HISTORY_SIZE);
+      if (securityEventStore == null) {
+        securityEventStore = new ClientSecurityEventStore(DEFAULT_SECURITY_EVENT_HISTORY_SIZE);
+      }
       securityEventTopicStore =
           new SecurityEventTopicStore(
               consumerProps,
@@ -648,7 +656,8 @@ public class TaktXClient {
         "publish authoritative namespace security policy");
     try {
       publishNamespaceSecurityPolicy(taktPropertiesHelper.getTaktProperties(), policy);
-      authoritativePolicyMutationAvailability = AuthoritativePolicyMutationAvailability.availableNow();
+      authoritativePolicyMutationAvailability =
+          AuthoritativePolicyMutationAvailability.availableNow();
     } catch (SecurityControlPlaneMutationException e) {
       authoritativePolicyMutationAvailability =
           AuthoritativePolicyMutationAvailability.blockedNow(
@@ -710,7 +719,8 @@ public class TaktXClient {
         "clear authoritative namespace security policy");
     try {
       clearNamespaceSecurityPolicy(taktPropertiesHelper.getTaktProperties());
-      authoritativePolicyMutationAvailability = AuthoritativePolicyMutationAvailability.availableNow();
+      authoritativePolicyMutationAvailability =
+          AuthoritativePolicyMutationAvailability.availableNow();
     } catch (SecurityControlPlaneMutationException e) {
       authoritativePolicyMutationAvailability =
           AuthoritativePolicyMutationAvailability.blockedNow(
@@ -1237,7 +1247,10 @@ public class TaktXClient {
   }
 
   private SigningIdentity currentSigningIdentity() {
-    return signingIdentitySource != null ? signingIdentitySource.currentIdentity() : null;
+    SigningIdentity identity =
+        signingIdentitySource != null ? signingIdentitySource.currentIdentity() : null;
+    trackObservedWorkerIdentity(identity);
+    return identity;
   }
 
   void refreshWorkerSigningFunctionRegistration() {
@@ -1339,23 +1352,142 @@ public class TaktXClient {
               + " (set TAKTX_SIGNING_PUBLIC_KEY or taktx.signing.public-key)");
       return true;
     }
-    if (identity.getKeyId().equals(publishedWorkerKeyId)) {
+    String owner = resolveWorkerSigningOwner(identity);
+    String descriptor = workerIdentityPublicationDescriptor(identity, owner);
+    if (descriptor.equals(publishedWorkerIdentityDescriptor)) {
       return true;
     }
     try {
       publishSigningKey(
           identity.getKeyId(),
           identity.getPublicKeyBase64(),
-          resolveWorkerSigningOwner(identity),
+          owner,
           identity.getAlgorithm(),
           KeyRole.CLIENT,
           workerKeyRegistrationSignature);
       publishedWorkerKeyId = identity.getKeyId();
+      publishedWorkerIdentityDescriptor = descriptor;
       return true;
     } catch (Exception e) {
       log.error("Failed to publish worker signing key: {}", e.getMessage(), e);
       return false;
     }
+  }
+
+  private void trackObservedWorkerIdentity(@Nullable SigningIdentity identity) {
+    String descriptor = workerIdentityRuntimeDescriptor(identity);
+    String previousDescriptor = activeWorkerIdentityDescriptor;
+    if (Objects.equals(previousDescriptor, descriptor)) {
+      return;
+    }
+    activeWorkerIdentityDescriptor = descriptor;
+    if (previousDescriptor == null || descriptor == null) {
+      return;
+    }
+    recordWorkerIdentityRotation(previousDescriptor, descriptor);
+  }
+
+  private void recordWorkerIdentityRotation(String previousDescriptor, String newDescriptor) {
+    boolean expectedLiveRotation =
+        signingIdentitySource != null && signingIdentitySource.supportsLiveRotation();
+    String code =
+        expectedLiveRotation
+            ? SecurityPostureIssueCodes.SIGNING_IDENTITY_ROTATED
+            : SecurityPostureIssueCodes.UNEXPECTED_SIGNING_IDENTITY_CHURN;
+    SecurityEventSeverity severity =
+        expectedLiveRotation ? SecurityEventSeverity.INFO : SecurityEventSeverity.WARNING;
+    String previousKeyId = descriptorPart(previousDescriptor, 0);
+    String newKeyId = descriptorPart(newDescriptor, 0);
+    if (expectedLiveRotation) {
+      log.info(
+          "Worker signing identity rotated at runtime — source={} previousKeyId={} newKeyId={}",
+          signingIdentitySource != null ? signingIdentitySource.getSourceType() : "none",
+          previousKeyId,
+          newKeyId);
+    } else {
+      log.warn(
+          "Unexpected worker signing identity churn detected — source={} previousKeyId={} newKeyId={}",
+          signingIdentitySource != null ? signingIdentitySource.getSourceType() : "none",
+          previousKeyId,
+          newKeyId);
+    }
+    appendLocalSecurityEvent(
+        SecurityEventDTO.builder()
+            .eventType(SecurityEventType.POLICY_CHANGE)
+            .severity(severity)
+            .occurredAtMs(System.currentTimeMillis())
+            .namespace(taktPropertiesHelper.getNamespace())
+            .participantId(participantDescriptor.participantId())
+            .participantInstanceId(participantInstanceId())
+            .code(code)
+            .message(
+                expectedLiveRotation
+                    ? "Worker signing identity rotated and trust-registry publication will refresh"
+                    : "Worker signing identity changed unexpectedly and trust-registry publication will refresh")
+            .metadata(
+                Map.of(
+                    "sourceType",
+                    signingIdentitySource != null ? signingIdentitySource.getSourceType() : "none",
+                    "previousKeyId",
+                    previousKeyId,
+                    "newKeyId",
+                    newKeyId,
+                    "restartStable",
+                    String.valueOf(
+                        signingIdentitySource != null && signingIdentitySource.isRestartStable()),
+                    "supportsLiveRotation",
+                    String.valueOf(expectedLiveRotation)))
+            .build());
+  }
+
+  private void appendLocalSecurityEvent(SecurityEventDTO event) {
+    if (securityEventStore == null) {
+      securityEventStore = new ClientSecurityEventStore(DEFAULT_SECURITY_EVENT_HISTORY_SIZE);
+    }
+    securityEventStore.append(event);
+    notifySecurityEventConsumers(event);
+  }
+
+  private static @Nullable String workerIdentityRuntimeDescriptor(
+      @Nullable SigningIdentity identity) {
+    if (identity == null) {
+      return null;
+    }
+    return String.join(
+        "|",
+        safe(identity.getKeyId()),
+        safe(identity.getPublicKeyBase64()),
+        safe(identity.getAlgorithm()));
+  }
+
+  private String workerIdentityPublicationDescriptor(SigningIdentity identity, String owner) {
+    return String.join(
+        "|",
+        safe(identity.getKeyId()),
+        safe(identity.getPublicKeyBase64()),
+        safe(identity.getAlgorithm()),
+        safe(owner),
+        KeyRole.CLIENT.name(),
+        safe(workerKeyRegistrationSignature));
+  }
+
+  private String participantInstanceId() {
+    return participantDescriptor.participantId() + "#" + ProcessHandle.current().pid();
+  }
+
+  private static String descriptorPart(String descriptor, int index) {
+    if (descriptor == null) {
+      return "<none>";
+    }
+    String[] parts = descriptor.split("\\|", -1);
+    if (index < 0 || index >= parts.length) {
+      return "<none>";
+    }
+    return parts[index] == null || parts[index].isBlank() ? "<none>" : parts[index];
+  }
+
+  private static String safe(@Nullable String value) {
+    return value != null ? value : "";
   }
 
   private String resolveWorkerSigningOwner(SigningIdentity identity) {
@@ -1527,6 +1659,8 @@ public class TaktXClient {
     }
     securityEventStore = null;
     publishedWorkerKeyId = null;
+    publishedWorkerIdentityDescriptor = null;
+    activeWorkerIdentityDescriptor = null;
     workerSigningRegistrationState = "uninitialized";
     RuntimeConfigurationHolder.clear();
     if (globalWorkerSigningFunctionRegistered

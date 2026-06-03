@@ -40,7 +40,8 @@ class LocalPersistentSigningIdentitySourceTest {
     assertThat(firstIdentity.getPrivateKeyBase64()).isNotBlank();
     assertThat(firstIdentity.getPublicKeyBase64()).isNotBlank();
     assertThat(firstIdentity.getAlgorithm()).isEqualTo("Ed25519");
-    assertThat(Files.exists(directory.resolve(LocalPersistentSigningIdentitySource.IDENTITY_FILENAME)))
+    assertThat(
+            Files.exists(directory.resolve(LocalPersistentSigningIdentitySource.IDENTITY_FILENAME)))
         .isTrue();
   }
 
@@ -48,28 +49,31 @@ class LocalPersistentSigningIdentitySourceTest {
   void currentIdentity_honorsConfiguredDirectoryAndKeyPrefixProperties() {
     Path directory = tempDir.resolve("configured-home");
     Properties properties = new Properties();
-    properties.setProperty(LocalPersistentSigningIdentitySource.DIRECTORY_SYS_PROP, directory.toString());
+    properties.setProperty(
+        LocalPersistentSigningIdentitySource.DIRECTORY_SYS_PROP, directory.toString());
     properties.setProperty(LocalPersistentSigningIdentitySource.KEY_ID_PREFIX_SYS_PROP, "worker-");
 
     SigningIdentity identity =
-        new LocalPersistentSigningIdentitySource(Map.of(), properties, null, null).currentIdentity();
+        new LocalPersistentSigningIdentitySource(Map.of(), properties, null, null)
+            .currentIdentity();
 
     assertThat(identity.getKeyId()).startsWith("worker-");
-    assertThat(Files.exists(directory.resolve(LocalPersistentSigningIdentitySource.IDENTITY_FILENAME)))
+    assertThat(
+            Files.exists(directory.resolve(LocalPersistentSigningIdentitySource.IDENTITY_FILENAME)))
         .isTrue();
   }
 
   @Test
-  void currentIdentity_rejectsCorruptPersistedIdentityWithoutGeneratingReplacement() throws Exception {
+  void currentIdentity_rejectsCorruptPersistedIdentityWithoutGeneratingReplacement()
+      throws Exception {
     Path directory = Files.createDirectories(tempDir.resolve("corrupt"));
     Path identityFile = directory.resolve(LocalPersistentSigningIdentitySource.IDENTITY_FILENAME);
     String corruptIdentity = "keyId=worker-a\npublicKeyBase64=public-a\nalgorithm=Ed25519\n";
-    Files.writeString(
-        identityFile,
-        corruptIdentity);
+    Files.writeString(identityFile, corruptIdentity);
 
     LocalPersistentSigningIdentitySource source =
-        new LocalPersistentSigningIdentitySource(Map.of(), new Properties(), directory.toString(), "worker-");
+        new LocalPersistentSigningIdentitySource(
+            Map.of(), new Properties(), directory.toString(), "worker-");
 
     assertThatThrownBy(source::currentIdentity)
         .isInstanceOf(IllegalStateException.class)
@@ -77,5 +81,3 @@ class LocalPersistentSigningIdentitySourceTest {
     assertThat(Files.readString(identityFile)).isEqualTo(corruptIdentity);
   }
 }
-
-

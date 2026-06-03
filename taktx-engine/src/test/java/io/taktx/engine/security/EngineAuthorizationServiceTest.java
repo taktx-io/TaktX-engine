@@ -17,9 +17,9 @@ import io.taktx.dto.AbortTriggerDTO;
 import io.taktx.dto.CommandAuthMethod;
 import io.taktx.dto.CommandTrustMetadataDTO;
 import io.taktx.dto.CommandTrustVerificationResult;
+import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.dto.CorrelationMessageEventTriggerDTO;
 import io.taktx.dto.DefinitionMessageEventTriggerDTO;
-import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.dto.DefinitionScheduleKeyDTO;
 import io.taktx.dto.ExternalTaskResponseResultDTO;
 import io.taktx.dto.ExternalTaskResponseTriggerDTO;
@@ -32,7 +32,6 @@ import io.taktx.dto.ProcessDefinitionKey;
 import io.taktx.dto.ReplayProtectionMode;
 import io.taktx.dto.RequiredAuthorizationDTO;
 import io.taktx.dto.RequiredSigningDTO;
-import io.taktx.dto.SecurityActivationState;
 import io.taktx.dto.SetVariableTriggerDTO;
 import io.taktx.dto.SignalDTO;
 import io.taktx.dto.SigningKeyDTO;
@@ -284,7 +283,8 @@ class EngineAuthorizationServiceTest {
 
     SigningKeyDTO result =
         service.authorizeTopicMetaIngress(
-            new RecordHeaders(), new TopicMetaIngressEnvelope(new byte[0], request, false, null, null));
+            new RecordHeaders(),
+            new TopicMetaIngressEnvelope(new byte[0], request, false, null, null));
 
     assertThat(result).isNull();
   }
@@ -497,7 +497,8 @@ class EngineAuthorizationServiceTest {
 
     SigningKeyDTO result =
         service.authorizeMessageEventIngress(
-            new RecordHeaders(), new MessageEventIngressEnvelope(new byte[0], messageEvent, false, null, null));
+            new RecordHeaders(),
+            new MessageEventIngressEnvelope(new byte[0], messageEvent, false, null, null));
 
     assertThat(result).isNull();
   }
@@ -519,7 +520,8 @@ class EngineAuthorizationServiceTest {
     when(signingKeysStore.get(keyId)).thenReturn(keyEntry);
 
     CorrelationMessageEventTriggerDTO messageEvent =
-        new CorrelationMessageEventTriggerDTO("payment-received", "invoice-1", VariablesDTO.empty());
+        new CorrelationMessageEventTriggerDTO(
+            "payment-received", "invoice-1", VariablesDTO.empty());
 
     SigningKeyDTO result =
         service.authorizeMessageEventIngress(
@@ -553,7 +555,9 @@ class EngineAuthorizationServiceTest {
   void signalIngress_securityDisabled_returnsNull() {
     SigningKeyDTO result =
         service.authorizeSignalIngress(
-            new RecordHeaders(), new SignalIngressEnvelope(new byte[0], new SignalDTO("order-placed"), false, null, null));
+            new RecordHeaders(),
+            new SignalIngressEnvelope(
+                new byte[0], new SignalDTO("order-placed"), false, null, null));
 
     assertThat(result).isNull();
   }
@@ -577,7 +581,8 @@ class EngineAuthorizationServiceTest {
     SigningKeyDTO result =
         service.authorizeSignalIngress(
             headersWithSignature(keyId),
-            new SignalIngressEnvelope(new byte[0], new SignalDTO("order-placed"), true, keyId, null));
+            new SignalIngressEnvelope(
+                new byte[0], new SignalDTO("order-placed"), true, keyId, null));
 
     assertThat(result).isEqualTo(keyEntry);
   }
@@ -721,8 +726,7 @@ class EngineAuthorizationServiceTest {
   void missingHeader_withLegacyAuthFlagsOnly_returnsNull() {
     globalConfigStore.update(authorizationConfig());
 
-    assertThat(service.authorize(new RecordHeaders(), envelope(startCommand("proc", -1))))
-        .isNull();
+    assertThat(service.authorize(new RecordHeaders(), envelope(startCommand("proc", -1)))).isNull();
   }
 
   @Test
@@ -1108,7 +1112,8 @@ class EngineAuthorizationServiceTest {
   void userTaskCompletion_missingJwt_authOnlyConfig_returnsNull() {
     globalConfigStore.update(userTaskAuthorizationConfig(false));
 
-    assertThat(service.authorize(new RecordHeaders(), envelope(userTaskResponseTrigger()))).isNull();
+    assertThat(service.authorize(new RecordHeaders(), envelope(userTaskResponseTrigger())))
+        .isNull();
   }
 
   @Test
@@ -1241,7 +1246,8 @@ class EngineAuthorizationServiceTest {
     CommandTrustMetadataDTO userTaskResult =
         service.authorize(
             headersWithSignature(keyId),
-            new ProcessInstanceTriggerEnvelope(new byte[0], userTaskResponseTrigger(), true, keyId));
+            new ProcessInstanceTriggerEnvelope(
+                new byte[0], userTaskResponseTrigger(), true, keyId));
     CommandTrustMetadataDTO externalTaskResult =
         service.authorize(
             headersWithSignature(keyId),

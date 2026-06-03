@@ -40,7 +40,8 @@ public class SignalSender {
   }
 
   public SignalSender(
-      TaktPropertiesHelper taktPropertiesHelper, Supplier<SigningFunction> signingFunctionSupplier) {
+      TaktPropertiesHelper taktPropertiesHelper,
+      Supplier<SigningFunction> signingFunctionSupplier) {
     this(
         taktPropertiesHelper,
         signingFunctionSupplier,

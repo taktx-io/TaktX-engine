@@ -75,7 +75,7 @@ public class MessageSigningService {
     this(config, globalConfigStore, namespaceSecurityPolicyStore, signingIdentitySource, true);
   }
 
-   /** Test constructor with a pre-built identity source and publication scheduler disabled. */
+  /** Test constructor with a pre-built identity source and publication scheduler disabled. */
   MessageSigningService(
       TaktConfiguration config,
       GlobalConfigStore globalConfigStore,
@@ -187,9 +187,9 @@ public class MessageSigningService {
    * engine signing is inactive for the current posture/runtime state.
    *
    * <p>Default/open posture now remains unsigned unless a legacy runtime security toggle is still
-   * active. A requested secured posture may still trigger public-key publication as preparation, but
-   * actual message signing stays tied to authoritative secured posture (or legacy secure runtime
-   * configuration). Called by {@link io.taktx.serdes.ProtoSigningSerializer} via {@link
+   * active. A requested secured posture may still trigger public-key publication as preparation,
+   * but actual message signing stays tied to authoritative secured posture (or legacy secure
+   * runtime configuration). Called by {@link io.taktx.serdes.ProtoSigningSerializer} via {@link
    * SigningServiceHolder}.
    */
   public String signToHeaderValue(byte[] payloadBytes) {
@@ -263,9 +263,7 @@ public class MessageSigningService {
 
   boolean hasPublishableSigningIdentity() {
     refreshActiveIdentity();
-    return !isBlank(keyId)
-        && !isBlank(cachedPrivateKeyBase64)
-        && !isBlank(cachedPublicKeyBase64);
+    return !isBlank(keyId) && !isBlank(cachedPrivateKeyBase64) && !isBlank(cachedPublicKeyBase64);
   }
 
   boolean hasLegacyProtectedRuntimeRequirement() {

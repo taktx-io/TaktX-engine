@@ -29,7 +29,8 @@ public class MessageEventIngressEnvelopeDeserializer
   @Override
   public MessageEventIngressEnvelope deserialize(String topic, Headers headers, byte[] data) {
     MessageEventDTO value = decode(data);
-    Header sigHeader = headers != null ? headers.lastHeader(Constants.HEADER_ENGINE_SIGNATURE) : null;
+    Header sigHeader =
+        headers != null ? headers.lastHeader(Constants.HEADER_ENGINE_SIGNATURE) : null;
     if (sigHeader == null || sigHeader.value() == null) {
       return new MessageEventIngressEnvelope(data, value, false, null, null);
     }
@@ -103,4 +104,3 @@ public class MessageEventIngressEnvelopeDeserializer
     }
   }
 }
-

@@ -18,7 +18,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.taktx.dto.NamespaceSecurityPolicyDTO;
-import io.taktx.dto.ProcessInstanceTriggerDTO;
 import io.taktx.dto.ProcessDefinitionKey;
 import io.taktx.dto.SecurityMode;
 import io.taktx.dto.StartCommandDTO;
@@ -64,7 +63,8 @@ class UserTaskResponseProcessorDlqTest {
     when(configuration.getHost()).thenReturn("engine-host");
     when(configuration.getPort()).thenReturn(8080);
     when(configuration.getSigningIdentitySourceType()).thenReturn("file");
-    when(configuration.getEngineKeyRegistrationSignature()).thenReturn("engine-registration-signature");
+    when(configuration.getEngineKeyRegistrationSignature())
+        .thenReturn("engine-registration-signature");
     when(configuration.getPlatformPublicKey()).thenReturn(null);
     processor = new UserTaskResponseProcessor(clock);
     processor.init(context);
@@ -129,7 +129,8 @@ class UserTaskResponseProcessorDlqTest {
         new UserTaskResponseResultDTO(UserTaskResponseType.COMPLETED, null, null);
     UserTaskResponseTriggerDTO response = userTaskResponse(processInstanceId, List.of(2L), result);
 
-    // The first forward call (with ProcessInstanceTriggerEnvelope) throws; the second (DLQ) succeeds.
+    // The first forward call (with ProcessInstanceTriggerEnvelope) throws; the second (DLQ)
+    // succeeds.
     doThrow(new RuntimeException("forward failed"))
         .doNothing()
         .when(context)
@@ -164,8 +165,7 @@ class UserTaskResponseProcessorDlqTest {
     UserTaskResponseResultDTO result =
         new UserTaskResponseResultDTO(UserTaskResponseType.COMPLETED, null, null);
     UserTaskResponseTriggerDTO response = userTaskResponse(processInstanceId, List.of(3L), result);
-    UserTaskResponseProcessor guardedProcessor =
-        guardedProcessorWithPolicy(anchoredPolicy(42L));
+    UserTaskResponseProcessor guardedProcessor = guardedProcessorWithPolicy(anchoredPolicy(42L));
 
     guardedProcessor.process(
         new Record<>(
@@ -210,7 +210,11 @@ class UserTaskResponseProcessorDlqTest {
     UUID processInstanceId = UUID.randomUUID();
     StartCommandDTO wrongTrigger =
         new StartCommandDTO(
-            processInstanceId, null, null, new ProcessDefinitionKey("proc", 1), VariablesDTO.empty());
+            processInstanceId,
+            null,
+            null,
+            new ProcessDefinitionKey("proc", 1),
+            VariablesDTO.empty());
 
     processor.process(
         new Record<>(

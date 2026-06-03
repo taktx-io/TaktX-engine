@@ -28,7 +28,8 @@ public class SignalIngressEnvelopeDeserializer implements Deserializer<SignalIng
   @Override
   public SignalIngressEnvelope deserialize(String topic, Headers headers, byte[] data) {
     SignalDTO value = decode(data);
-    Header sigHeader = headers != null ? headers.lastHeader(Constants.HEADER_ENGINE_SIGNATURE) : null;
+    Header sigHeader =
+        headers != null ? headers.lastHeader(Constants.HEADER_ENGINE_SIGNATURE) : null;
     if (sigHeader == null || sigHeader.value() == null) {
       return new SignalIngressEnvelope(data, value, false, null, null);
     }
@@ -73,7 +74,11 @@ public class SignalIngressEnvelopeDeserializer implements Deserializer<SignalIng
       byte[] signatureBytes = Base64.getDecoder().decode(base64Sig);
       if (!Ed25519Service.verify(data, signatureBytes, publicKeyBase64)) {
         return new SignalIngressEnvelope(
-            data, value, false, keyId, "Engine Ed25519 signature verification failed for keyId=" + keyId);
+            data,
+            value,
+            false,
+            keyId,
+            "Engine Ed25519 signature verification failed for keyId=" + keyId);
       }
     } catch (IllegalArgumentException e) {
       return new SignalIngressEnvelope(
@@ -98,4 +103,3 @@ public class SignalIngressEnvelopeDeserializer implements Deserializer<SignalIng
     }
   }
 }
-

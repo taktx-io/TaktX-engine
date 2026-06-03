@@ -18,7 +18,8 @@ import org.apache.kafka.common.header.Header;
 import org.apache.kafka.common.header.Headers;
 import org.apache.kafka.common.serialization.Deserializer;
 
-public class TopicMetaIngressEnvelopeDeserializer implements Deserializer<TopicMetaIngressEnvelope> {
+public class TopicMetaIngressEnvelopeDeserializer
+    implements Deserializer<TopicMetaIngressEnvelope> {
 
   @Override
   public TopicMetaIngressEnvelope deserialize(String topic, byte[] data) {
@@ -28,7 +29,8 @@ public class TopicMetaIngressEnvelopeDeserializer implements Deserializer<TopicM
   @Override
   public TopicMetaIngressEnvelope deserialize(String topic, Headers headers, byte[] data) {
     TopicMetaDTO value = decode(data);
-    Header sigHeader = headers != null ? headers.lastHeader(Constants.HEADER_ENGINE_SIGNATURE) : null;
+    Header sigHeader =
+        headers != null ? headers.lastHeader(Constants.HEADER_ENGINE_SIGNATURE) : null;
     if (sigHeader == null || sigHeader.value() == null) {
       return new TopicMetaIngressEnvelope(data, value, false, null, null);
     }
@@ -103,4 +105,3 @@ public class TopicMetaIngressEnvelopeDeserializer implements Deserializer<TopicM
     }
   }
 }
-

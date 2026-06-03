@@ -549,12 +549,18 @@ abstract class PublicClientDogfoodIntegrationTestSupport {
 
   protected static NamespaceSecurityPolicyDTO requestedSecuredPolicy(long version) {
     return NamespaceSecurityPolicySupport.requireValid(
-        NamespaceSecurityPolicyDTO.builder().mode(SecurityMode.ANCHORED).policyVersion(version).build());
+        NamespaceSecurityPolicyDTO.builder()
+            .mode(SecurityMode.ANCHORED)
+            .policyVersion(version)
+            .build());
   }
 
   protected static NamespaceSecurityPolicyDTO activeCommunityOpenPolicy(long version) {
     return NamespaceSecurityPolicySupport.requireValid(
-        NamespaceSecurityPolicyDTO.builder().mode(SecurityMode.OPEN).policyVersion(version).build());
+        NamespaceSecurityPolicyDTO.builder()
+            .mode(SecurityMode.OPEN)
+            .policyVersion(version)
+            .build());
   }
 
   protected static NamespaceSecurityPolicyDTO activeSigningRequiredPolicy(long version) {
@@ -563,7 +569,10 @@ abstract class PublicClientDogfoodIntegrationTestSupport {
 
   protected static NamespaceSecurityPolicyDTO activeAnchoredPolicy(long version) {
     return NamespaceSecurityPolicySupport.requireValid(
-        NamespaceSecurityPolicyDTO.builder().mode(SecurityMode.ANCHORED).policyVersion(version).build());
+        NamespaceSecurityPolicyDTO.builder()
+            .mode(SecurityMode.ANCHORED)
+            .policyVersion(version)
+            .build());
   }
 
   protected static NamespaceSecurityPolicyDTO activeSecuredPolicy(long version) {

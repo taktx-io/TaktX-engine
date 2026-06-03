@@ -55,7 +55,9 @@ class MessageSigningServiceTest {
     config = mock(TaktConfiguration.class);
     globalConfigStore = new GlobalConfigStore();
     namespaceSecurityPolicyStore = new NamespaceSecurityPolicyStore();
-    service = new MessageSigningService(config, null, namespaceSecurityPolicyStore, signingIdentitySource, false);
+    service =
+        new MessageSigningService(
+            config, null, namespaceSecurityPolicyStore, signingIdentitySource, false);
   }
 
   /**

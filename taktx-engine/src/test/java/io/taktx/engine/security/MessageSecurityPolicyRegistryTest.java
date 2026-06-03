@@ -12,8 +12,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.taktx.Topics;
 import io.taktx.dto.AbortTriggerDTO;
-import io.taktx.dto.CorrelationMessageEventTriggerDTO;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
+import io.taktx.dto.CorrelationMessageEventTriggerDTO;
 import io.taktx.dto.DefinitionMessageEventTriggerDTO;
 import io.taktx.dto.EventSignalTriggerDTO;
 import io.taktx.dto.ExternalTaskResponseTriggerDTO;

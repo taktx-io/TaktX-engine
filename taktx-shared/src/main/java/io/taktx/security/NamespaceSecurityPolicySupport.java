@@ -33,7 +33,8 @@ public final class NamespaceSecurityPolicySupport {
 
   /** Returns a canonical digest for the authoritative policy content. */
   public static String canonicalHash(NamespaceSecurityPolicyDTO policy) {
-    NamespaceSecurityPolicyDTO normalized = policy == null ? NamespaceSecurityPolicyDTO.builder().build() : policy;
+    NamespaceSecurityPolicyDTO normalized =
+        policy == null ? NamespaceSecurityPolicyDTO.builder().build() : policy;
     String canonicalForm =
         String.join(
             "\n",
@@ -116,7 +117,6 @@ public final class NamespaceSecurityPolicySupport {
   private static boolean isBlank(String value) {
     return value == null || value.isBlank();
   }
-
 
   private static String blankToNull(String value) {
     return isBlank(value) ? null : value;

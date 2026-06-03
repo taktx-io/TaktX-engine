@@ -21,4 +21,3 @@ public record SignalIngressEnvelope(
     return signatureError != null && !signatureError.isBlank();
   }
 }
-

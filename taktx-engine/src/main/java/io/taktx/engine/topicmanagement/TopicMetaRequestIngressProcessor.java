@@ -101,7 +101,8 @@ public class TopicMetaRequestIngressProcessor
 
     try {
       var trustedSigner =
-          engineAuthorizationService.authorizeTopicMetaIngress(inputRecord.headers(), ingressEnvelope);
+          engineAuthorizationService.authorizeTopicMetaIngress(
+              inputRecord.headers(), ingressEnvelope);
       if (trustedSigner != null) {
         log.info(
             "Accepted topic meta ingress key='{}' topicName='{}' signerKeyId='{}' signerRole='{}' outcome='accepted'",
@@ -188,14 +189,12 @@ public class TopicMetaRequestIngressProcessor
     TopicMetaDTO topicMeta = ingressEnvelope != null ? ingressEnvelope.value() : null;
     Map<String, byte[]> headers = headersToMap(inputRecord.headers());
     headers.put(DlqHeaders.REASON_HINT, reasonHint.getBytes(StandardCharsets.UTF_8));
-    headers.put(DlqHeaders.REASON_TEXT, String.valueOf(reasonText).getBytes(StandardCharsets.UTF_8));
+    headers.put(
+        DlqHeaders.REASON_TEXT, String.valueOf(reasonText).getBytes(StandardCharsets.UTF_8));
     headers.put(DlqHeaders.CAPTURE_STAGE, captureStage.getBytes(StandardCharsets.UTF_8));
 
     return new TopicMetaDlqEntryDTO(
-        inputRecord.key(),
-        topicMeta,
-        headers,
-        serializeIngressPayload(ingressEnvelope, topicMeta));
+        inputRecord.key(), topicMeta, headers, serializeIngressPayload(ingressEnvelope, topicMeta));
   }
 
   static String reasonHintForAuthorizationFailure(
@@ -219,8 +218,11 @@ public class TopicMetaRequestIngressProcessor
     }
 
     String message =
-        exception == null || exception.getMessage() == null ? "" : exception.getMessage().toLowerCase();
-    if (message.contains("requires tx-sig") || message.startsWith("missing required tx-sig header")) {
+        exception == null || exception.getMessage() == null
+            ? ""
+            : exception.getMessage().toLowerCase();
+    if (message.contains("requires tx-sig")
+        || message.startsWith("missing required tx-sig header")) {
       return DlqReasonCode.SIGNATURE_MISSING.name();
     }
     if (message.startsWith("unknown ed25519 keyid")) {

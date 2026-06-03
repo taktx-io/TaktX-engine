@@ -21,4 +21,3 @@ public record MessageEventIngressEnvelope(
     return signatureError != null && !signatureError.isBlank();
   }
 }
-

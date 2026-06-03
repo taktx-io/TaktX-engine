@@ -228,7 +228,7 @@ public class LocalPersistentSigningIdentitySource implements SigningIdentitySour
     if (configuredDirectory != null) {
       return Path.of(configuredDirectory);
     }
-    String userHome = systemProperties.getProperty("user.home");
+    String userHome = systemProperties.getProperty("user.home", System.getProperty("user.home"));
     if (userHome == null || userHome.isBlank()) {
       throw new IllegalStateException(
           "No managed local signing directory configured and user.home is unavailable. "
@@ -287,5 +287,3 @@ public class LocalPersistentSigningIdentitySource implements SigningIdentitySour
     return null;
   }
 }
-
-

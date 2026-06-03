@@ -91,7 +91,8 @@ public class EngineSecurityReadinessEvaluator {
                   "Namespace requires anchored trust but no platform public key is configured"));
         }
 
-        if (messageSigningService.getKeyId() == null || !messageSigningService.isPublicKeyPublished()) {
+        if (messageSigningService.getKeyId() == null
+            || !messageSigningService.isPublicKeyPublished()) {
           effectiveState = ParticipantEffectiveState.MISMATCH;
           readyForDataPlane = false;
           mismatchReasons.add(
