@@ -12,18 +12,17 @@ import static org.assertj.core.api.Assertions.assertThat;
 import io.taktx.dto.NamespaceSecurityPolicyDTO;
 import io.taktx.dto.ParticipantCapability;
 import io.taktx.dto.ParticipantKind;
-import io.taktx.dto.RequiredAuthorizationDTO;
-import io.taktx.dto.RequiredSigningDTO;
-import io.taktx.dto.SecurityActivationState;
 import io.taktx.dto.SecurityMode;
 import io.taktx.dto.SecurityParticipantDescriptor;
 import io.taktx.security.SigningIdentity;
+import io.taktx.security.SigningKeyGenerator;
 import io.taktx.util.TaktPropertiesHelper;
 import java.security.KeyPair;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.Properties;
+import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -43,9 +42,9 @@ class ClientProtectedDataPlaneParticipationGuardTest {
   }
 
   @Test
-  void evaluate_blocksProtectedTrafficWhilePolicyIsPendingAndNoAuthoritativePolicyExists() {
+  void evaluate_permitsOpenTrafficWhenAuthoritativePolicyIsOpen() {
     ClientNamespaceSecurityPolicyStore store = new ClientNamespaceSecurityPolicyStore();
-    store.setCurrentPolicy(requestedPolicy());
+    store.setCurrentPolicy(policy(7L, SecurityMode.OPEN, "policy-open-7"));
 
     ClientProtectedDataPlaneParticipationGuard guard =
         new ClientProtectedDataPlaneParticipationGuard(
@@ -53,7 +52,7 @@ class ClientProtectedDataPlaneParticipationGuardTest {
             runtimeDescriptor(),
             () -> store,
             () -> null,
-            () -> false,
+            () -> true,
             () -> false,
             () -> null,
             clock);
@@ -61,45 +60,17 @@ class ClientProtectedDataPlaneParticipationGuardTest {
     ClientProtectedDataPlaneParticipationGuard.Decision decision =
         guard.evaluate(ProtectedClientDataPlaneOperation.START_COMMAND, null);
 
-    assertThat(decision.permitted()).isFalse();
-    assertThat(decision.reasonHint())
-        .isEqualTo(ClientProtectedDataPlaneParticipationGuard.POLICY_NOT_ACTIVE_HINT);
-    assertThat(decision.reasonText()).contains("becomes ACTIVE");
-  }
-
-  @Test
-  void evaluate_allowsAuthorizedStartCommandWhenActivePolicyOnlyRequiresJwt() {
-    ClientNamespaceSecurityPolicyStore store = new ClientNamespaceSecurityPolicyStore();
-    store.setCurrentPolicy(activePolicy(false, false, true, false, false, false));
-
-    ClientProtectedDataPlaneParticipationGuard guard =
-        new ClientProtectedDataPlaneParticipationGuard(
-            propertiesHelper,
-            runtimeDescriptor(),
-            () -> store,
-            () -> null,
-            () -> false,
-            () -> false,
-            () -> null,
-            clock);
-
-    ClientProtectedDataPlaneParticipationGuard.Decision decision =
-        guard.evaluate(ProtectedClientDataPlaneOperation.START_COMMAND, "jwt-explicit");
-
     assertThat(decision.permitted()).isTrue();
+    assertThat(decision.reasonHint()).isNull();
+    assertThat(decision.reasonText()).isNull();
   }
 
   @Test
-  void evaluate_allowsExternalTaskConsumptionWhenSigningSatisfiesCompletionAuthorization() {
+  void evaluate_allowsAnchoredStartCommandWhenSigningAndTrustAnchorAreReady() {
     ClientNamespaceSecurityPolicyStore store = new ClientNamespaceSecurityPolicyStore();
-    store.setCurrentPolicy(activePolicy(false, false, false, true, true, false));
+    store.setCurrentPolicy(policy(9L, SecurityMode.ANCHORED, "policy-anchored-9"));
 
-    KeyPair keyPair = io.taktx.security.SigningKeyGenerator.generate();
-    SigningIdentity identity =
-        SigningIdentity.ed25519(
-            "worker-key",
-            io.taktx.security.SigningKeyGenerator.encodePrivateKey(keyPair.getPrivate()),
-            io.taktx.security.SigningKeyGenerator.encodePublicKey(keyPair.getPublic()));
+    SigningIdentity identity = signingIdentity("worker-key");
 
     ClientProtectedDataPlaneParticipationGuard guard =
         new ClientProtectedDataPlaneParticipationGuard(
@@ -108,8 +79,32 @@ class ClientProtectedDataPlaneParticipationGuardTest {
             () -> store,
             () -> identity,
             () -> true,
-            () -> false,
-            () -> null,
+            () -> true,
+            () -> "platform-public-key",
+            clock);
+
+    ClientProtectedDataPlaneParticipationGuard.Decision decision =
+        guard.evaluate(ProtectedClientDataPlaneOperation.START_COMMAND, null);
+
+    assertThat(decision.permitted()).isTrue();
+  }
+
+  @Test
+  void evaluate_allowsExternalTaskConsumptionWhenAnchoredSigningIsReady() {
+    ClientNamespaceSecurityPolicyStore store = new ClientNamespaceSecurityPolicyStore();
+    store.setCurrentPolicy(policy(10L, SecurityMode.ANCHORED, "policy-anchored-10"));
+
+    SigningIdentity identity = signingIdentity("worker-key");
+
+    ClientProtectedDataPlaneParticipationGuard guard =
+        new ClientProtectedDataPlaneParticipationGuard(
+            propertiesHelper,
+            runtimeDescriptor(),
+            () -> store,
+            () -> identity,
+            () -> true,
+            () -> true,
+            () -> "platform-public-key",
             clock);
 
     ClientProtectedDataPlaneParticipationGuard.Decision decision =
@@ -119,9 +114,9 @@ class ClientProtectedDataPlaneParticipationGuardTest {
   }
 
   @Test
-  void evaluate_blocksClientCommandsWhenPolicyRequiresSigningButNoSigningIdentityIsReady() {
+  void evaluate_blocksClientCommandsWhenAnchoredButNoSigningIdentityIsReady() {
     ClientNamespaceSecurityPolicyStore store = new ClientNamespaceSecurityPolicyStore();
-    store.setCurrentPolicy(activePolicy(false, true, false, false, false, false));
+    store.setCurrentPolicy(policy(11L, SecurityMode.ANCHORED, "policy-anchored-11"));
 
     ClientProtectedDataPlaneParticipationGuard guard =
         new ClientProtectedDataPlaneParticipationGuard(
@@ -129,9 +124,9 @@ class ClientProtectedDataPlaneParticipationGuardTest {
             runtimeDescriptor(),
             () -> store,
             () -> null,
+            () -> true,
             () -> false,
-            () -> false,
-            () -> null,
+            () -> "platform-public-key",
             clock);
 
     ClientProtectedDataPlaneParticipationGuard.Decision decision =
@@ -145,7 +140,7 @@ class ClientProtectedDataPlaneParticipationGuardTest {
   @Test
   void evaluate_blocksAnchoredTrafficWhenPlatformTrustAnchorIsMissing() {
     ClientNamespaceSecurityPolicyStore store = new ClientNamespaceSecurityPolicyStore();
-    store.setCurrentPolicy(activePolicy(true, false, false, false, false, false));
+    store.setCurrentPolicy(policy(12L, SecurityMode.ANCHORED, "policy-anchored-12"));
 
     ClientProtectedDataPlaneParticipationGuard guard =
         new ClientProtectedDataPlaneParticipationGuard(
@@ -153,7 +148,7 @@ class ClientProtectedDataPlaneParticipationGuardTest {
             runtimeDescriptor(),
             () -> store,
             () -> null,
-            () -> false,
+            () -> true,
             () -> false,
             () -> null,
             clock);
@@ -169,17 +164,19 @@ class ClientProtectedDataPlaneParticipationGuardTest {
   @Test
   void evaluate_blocksProtectedRuntimeTrafficWhenDescriptorLacksRuntimeCapability() {
     ClientNamespaceSecurityPolicyStore store = new ClientNamespaceSecurityPolicyStore();
-    store.setCurrentPolicy(activePolicy(false, false, false, false, false, false));
+    store.setCurrentPolicy(policy(13L, SecurityMode.ANCHORED, "policy-anchored-13"));
+
+    SigningIdentity identity = signingIdentity("worker-key");
 
     ClientProtectedDataPlaneParticipationGuard guard =
         new ClientProtectedDataPlaneParticipationGuard(
             propertiesHelper,
             observerDescriptor(),
             () -> store,
-            () -> null,
-            () -> false,
-            () -> false,
-            () -> null,
+            () -> identity,
+            () -> true,
+            () -> true,
+            () -> "platform-public-key",
             clock);
 
     ClientProtectedDataPlaneParticipationGuard.Decision decision =
@@ -193,27 +190,30 @@ class ClientProtectedDataPlaneParticipationGuardTest {
   @Test
   void evaluateCurrentStatus_usesExplicitMixedCapabilityDescriptor() {
     ClientNamespaceSecurityPolicyStore store = new ClientNamespaceSecurityPolicyStore();
-    NamespaceSecurityPolicyDTO policy = activePolicy(false, false, true, false, false, false);
+    NamespaceSecurityPolicyDTO policy = policy(14L, SecurityMode.ANCHORED, "policy-anchored-14");
     store.setCurrentPolicy(policy);
 
     SecurityParticipantDescriptor descriptor =
         new SecurityParticipantDescriptor(
             "tenant.default.admin-console",
             ParticipantKind.CLIENT,
-            java.util.Set.of(
+            Set.of(
                 ParticipantCapability.AUTHORITATIVE_POLICY_PUBLISHER,
                 ParticipantCapability.SECURITY_OBSERVER,
                 ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT),
             "admin-console");
+
+    SigningIdentity identity = signingIdentity("worker-key");
+
     ClientProtectedDataPlaneParticipationGuard guard =
         new ClientProtectedDataPlaneParticipationGuard(
             propertiesHelper,
             descriptor,
             () -> store,
-            () -> null,
-            () -> false,
+            () -> identity,
             () -> true,
-            () -> null,
+            () -> true,
+            () -> "platform-public-key",
             clock);
 
     var status =
@@ -225,8 +225,7 @@ class ClientProtectedDataPlaneParticipationGuardTest {
     assertThat(status.getCapabilities())
         .containsExactlyInAnyOrderElementsOf(descriptor.capabilities());
     assertThat(status.getSupportedModes())
-        .containsExactlyInAnyOrder(
-            SecurityMode.OPEN, SecurityMode.SECURED, SecurityMode.ANCHORED_SECURED);
+        .containsExactlyInAnyOrder(SecurityMode.OPEN, SecurityMode.ANCHORED);
     assertThat(status.isReadyForDataPlane()).isTrue();
   }
 
@@ -234,7 +233,7 @@ class ClientProtectedDataPlaneParticipationGuardTest {
     return new SecurityParticipantDescriptor(
         "tenant.default.client",
         ParticipantKind.CLIENT,
-        java.util.Set.of(ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT),
+        Set.of(ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT),
         "generic-client");
   }
 
@@ -242,47 +241,24 @@ class ClientProtectedDataPlaneParticipationGuardTest {
     return new SecurityParticipantDescriptor(
         "tenant.default.observer",
         ParticipantKind.CLIENT,
-        java.util.Set.of(ParticipantCapability.SECURITY_OBSERVER),
+        Set.of(ParticipantCapability.SECURITY_OBSERVER),
         "observer");
   }
 
-  private NamespaceSecurityPolicyDTO requestedPolicy() {
+  private static NamespaceSecurityPolicyDTO policy(
+      long version, SecurityMode mode, String policyHash) {
     return NamespaceSecurityPolicyDTO.builder()
-        .mode(SecurityMode.SECURED)
-        .activationState(SecurityActivationState.REQUESTED)
-        .desiredPolicyVersion(7L)
-        .desiredPolicyHash("desired-7")
-        .requiredSigning(RequiredSigningDTO.builder().build())
-        .requiredAuthorization(RequiredAuthorizationDTO.builder().build())
+        .mode(mode)
+        .policyVersion(version)
+        .policyHash(policyHash)
         .build();
   }
 
-  private NamespaceSecurityPolicyDTO activePolicy(
-      boolean trustAnchorRequired,
-      boolean clientCommandSigning,
-      boolean startCommandAuthorization,
-      boolean workerResponseSigning,
-      boolean externalTaskAuthorization,
-      boolean userTaskAuthorization) {
-    return NamespaceSecurityPolicyDTO.builder()
-        .mode(trustAnchorRequired ? SecurityMode.ANCHORED_SECURED : SecurityMode.SECURED)
-        .activationState(SecurityActivationState.ACTIVE)
-        .desiredPolicyVersion(9L)
-        .desiredPolicyHash("policy-hash-9")
-        .activePolicyVersion(9L)
-        .activePolicyHash("policy-hash-9")
-        .trustAnchorRequired(trustAnchorRequired)
-        .requiredSigning(
-            RequiredSigningDTO.builder()
-                .clientCommands(clientCommandSigning)
-                .workerResponses(workerResponseSigning)
-                .build())
-        .requiredAuthorization(
-            RequiredAuthorizationDTO.builder()
-                .startCommands(startCommandAuthorization)
-                .externalTaskCompletion(externalTaskAuthorization)
-                .userTaskCompletion(userTaskAuthorization)
-                .build())
-        .build();
+  private static SigningIdentity signingIdentity(String keyId) {
+    KeyPair keyPair = SigningKeyGenerator.generate();
+    return SigningIdentity.ed25519(
+        keyId,
+        SigningKeyGenerator.encodePrivateKey(keyPair.getPrivate()),
+        SigningKeyGenerator.encodePublicKey(keyPair.getPublic()));
   }
 }

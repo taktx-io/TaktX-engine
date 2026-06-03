@@ -123,7 +123,8 @@ public class MessageSecurityPolicyRegistry {
         .build();
   }
 
-  private static MessageSecurityPolicy clientIngressPolicy(String topicName, Class<?> messageClass) {
+  private static MessageSecurityPolicy clientIngressPolicy(
+      String topicName, Class<?> messageClass) {
     return MessageSecurityPolicy.builder(topicName, messageClass)
         .allowedRoles(Set.of(KeyRole.CLIENT))
         .requireSignature(true)

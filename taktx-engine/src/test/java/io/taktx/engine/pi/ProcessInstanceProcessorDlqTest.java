@@ -160,7 +160,8 @@ class ProcessInstanceProcessorDlqTest {
 
     ArgumentCaptor<SecurityEventDTO> eventCaptor = ArgumentCaptor.forClass(SecurityEventDTO.class);
     verify(securityEventPublisher).publish(eq(processInstanceId.toString()), eventCaptor.capture());
-    assertThat(eventCaptor.getValue().getEventType()).isEqualTo(SecurityEventType.DATA_PLANE_BLOCKED);
+    assertThat(eventCaptor.getValue().getEventType())
+        .isEqualTo(SecurityEventType.DATA_PLANE_BLOCKED);
     assertThat(eventCaptor.getValue().getCode()).isEqualTo("AUTHORIZATION_FAILED");
     assertThat(eventCaptor.getValue().getMessage()).contains("JWT");
     assertThat(eventCaptor.getValue().getMetadata())
@@ -404,7 +405,8 @@ class ProcessInstanceProcessorDlqTest {
     ProcessInstanceTriggerEnvelope envelope =
         new ProcessInstanceTriggerEnvelope(payload, trigger, false, null);
     when(engineAuthorizationService.authorize(headers, envelope)).thenReturn(null);
-    when(engineAuthorizationService.validateJwtClaims(any(), eq(trigger))).thenReturn(mock(TokenClaims.class));
+    when(engineAuthorizationService.validateJwtClaims(any(), eq(trigger)))
+        .thenReturn(mock(TokenClaims.class));
 
     processor.process(new Record<>(processInstanceId, envelope, 77L, headers));
 
@@ -463,7 +465,8 @@ class ProcessInstanceProcessorDlqTest {
   private void assertSecurityEvent(UUID processInstanceId, String expectedCode, String stage) {
     ArgumentCaptor<SecurityEventDTO> eventCaptor = ArgumentCaptor.forClass(SecurityEventDTO.class);
     verify(securityEventPublisher).publish(eq(processInstanceId.toString()), eventCaptor.capture());
-    assertThat(eventCaptor.getValue().getEventType()).isEqualTo(SecurityEventType.DATA_PLANE_BLOCKED);
+    assertThat(eventCaptor.getValue().getEventType())
+        .isEqualTo(SecurityEventType.DATA_PLANE_BLOCKED);
     assertThat(eventCaptor.getValue().getCode()).isEqualTo(expectedCode);
     assertThat(eventCaptor.getValue().getMetadata())
         .containsEntry("rejectionStage", stage)
@@ -496,7 +499,8 @@ class ProcessInstanceProcessorDlqTest {
     ArgumentCaptor<SecurityEventDTO> eventCaptor = ArgumentCaptor.forClass(SecurityEventDTO.class);
     verify(securityEventPublisher).publish(eq(processInstanceId.toString()), eventCaptor.capture());
     assertThat(eventCaptor.getValue().getCode()).isEqualTo("AUTHORIZATION_FAILED");
-    assertThat(eventCaptor.getValue().getMetadata()).containsEntry("rejectionStage", "JWT_VALIDATION");
+    assertThat(eventCaptor.getValue().getMetadata())
+        .containsEntry("rejectionStage", "JWT_VALIDATION");
     assertThat(eventCaptor.getValue().getMessage()).contains("PLATFORM JWT issuer key");
     verify(context, never()).forward(any());
   }

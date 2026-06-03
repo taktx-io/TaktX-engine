@@ -69,7 +69,8 @@ class EngineSecurityReadinessEvaluatorTest {
   void stableAnchoredRuntime_reportsAnchoredAsSupportedMode() {
     when(configuration.getSigningIdentitySourceType()).thenReturn("file");
     when(configuration.getPlatformPublicKey()).thenReturn("platform-public-key");
-    when(configuration.getEngineKeyRegistrationSignature()).thenReturn("engine-registration-signature");
+    when(configuration.getEngineKeyRegistrationSignature())
+        .thenReturn("engine-registration-signature");
     when(messageSigningService.hasPublishableSigningIdentity()).thenReturn(true);
 
     EngineSecurityReadinessEvaluator evaluator =
@@ -98,7 +99,8 @@ class EngineSecurityReadinessEvaluatorTest {
         .isEqualTo(io.taktx.dto.ParticipantEffectiveState.MISMATCH);
     assertThat(status.isReadyForDataPlane()).isFalse();
     assertThat(status.getObservedPolicyVersion()).isEqualTo(42L);
-    assertThat(status.getObservedPolicyHash()).isEqualTo(policy(SecurityMode.ANCHORED, 42L).getPolicyHash());
+    assertThat(status.getObservedPolicyHash())
+        .isEqualTo(policy(SecurityMode.ANCHORED, 42L).getPolicyHash());
     assertThat(status.getMismatchReasons())
         .extracting(io.taktx.dto.PolicyMismatchReasonDTO::getCode)
         .contains(EngineSecurityReadinessEvaluator.TRUST_ANCHOR_MISSING);
@@ -108,7 +110,8 @@ class EngineSecurityReadinessEvaluatorTest {
   void anchoredPolicy_withoutStableSigningSource_reportsMismatch() {
     when(configuration.getSigningIdentitySourceType()).thenReturn("generated");
     when(configuration.getPlatformPublicKey()).thenReturn("platform-public-key");
-    when(configuration.getEngineKeyRegistrationSignature()).thenReturn("engine-registration-signature");
+    when(configuration.getEngineKeyRegistrationSignature())
+        .thenReturn("engine-registration-signature");
     when(messageSigningService.hasPublishableSigningIdentity()).thenReturn(true);
     policyStore.update(policy(SecurityMode.ANCHORED, 42L));
 
@@ -129,7 +132,8 @@ class EngineSecurityReadinessEvaluatorTest {
   void anchoredPolicy_withTrustAnchorButUnpublishedKey_reportsSigningUnavailable() {
     when(configuration.getSigningIdentitySourceType()).thenReturn("file");
     when(configuration.getPlatformPublicKey()).thenReturn("platform-public-key");
-    when(configuration.getEngineKeyRegistrationSignature()).thenReturn("engine-registration-signature");
+    when(configuration.getEngineKeyRegistrationSignature())
+        .thenReturn("engine-registration-signature");
     when(messageSigningService.hasPublishableSigningIdentity()).thenReturn(true);
     when(messageSigningService.getKeyId()).thenReturn(null);
     when(messageSigningService.isPublicKeyPublished()).thenReturn(false);
@@ -152,7 +156,8 @@ class EngineSecurityReadinessEvaluatorTest {
   void anchoredPolicy_withTrustAnchorAndSigningAvailable_reportsReady() {
     when(configuration.getSigningIdentitySourceType()).thenReturn("file");
     when(configuration.getPlatformPublicKey()).thenReturn("platform-public-key");
-    when(configuration.getEngineKeyRegistrationSignature()).thenReturn("engine-registration-signature");
+    when(configuration.getEngineKeyRegistrationSignature())
+        .thenReturn("engine-registration-signature");
     when(messageSigningService.hasPublishableSigningIdentity()).thenReturn(true);
     policyStore.update(policy(SecurityMode.ANCHORED, 42L));
 
@@ -165,7 +170,8 @@ class EngineSecurityReadinessEvaluatorTest {
     assertThat(status.getEffectiveState()).isEqualTo(io.taktx.dto.ParticipantEffectiveState.READY);
     assertThat(status.isReadyForDataPlane()).isTrue();
     assertThat(status.getObservedPolicyVersion()).isEqualTo(42L);
-    assertThat(status.getObservedPolicyHash()).isEqualTo(policy(SecurityMode.ANCHORED, 42L).getPolicyHash());
+    assertThat(status.getObservedPolicyHash())
+        .isEqualTo(policy(SecurityMode.ANCHORED, 42L).getPolicyHash());
     assertThat(status.getSupportedModes())
         .containsExactlyInAnyOrder(SecurityMode.OPEN, SecurityMode.ANCHORED);
     assertThat(status.getMismatchReasons()).isEmpty();

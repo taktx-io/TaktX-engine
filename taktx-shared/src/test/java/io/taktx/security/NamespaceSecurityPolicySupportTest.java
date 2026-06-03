@@ -19,10 +19,7 @@ class NamespaceSecurityPolicySupportTest {
   @Test
   void normalize_computesCanonicalPolicyHashWhenMissing() {
     NamespaceSecurityPolicyDTO policy =
-        NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.OPEN)
-            .policyVersion(42L)
-            .build();
+        NamespaceSecurityPolicyDTO.builder().mode(SecurityMode.OPEN).policyVersion(42L).build();
 
     NamespaceSecurityPolicyDTO normalized = NamespaceSecurityPolicySupport.normalize(policy);
 
@@ -33,18 +30,14 @@ class NamespaceSecurityPolicySupportTest {
   @Test
   void canonicalHash_dependsOnlyOnAuthoritativePolicyContent() {
     NamespaceSecurityPolicyDTO baseline =
-        NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.ANCHORED)
-            .policyVersion(5L)
-            .build();
+        NamespaceSecurityPolicyDTO.builder().mode(SecurityMode.ANCHORED).policyVersion(5L).build();
 
     NamespaceSecurityPolicyDTO sameEffectiveContentDifferentHashWrapper =
-        baseline.toBuilder()
-            .policyHash("manually-supplied-hash")
-            .build();
+        baseline.toBuilder().policyHash("manually-supplied-hash").build();
 
     assertThat(NamespaceSecurityPolicySupport.canonicalHash(baseline))
-        .isEqualTo(NamespaceSecurityPolicySupport.canonicalHash(sameEffectiveContentDifferentHashWrapper));
+        .isEqualTo(
+            NamespaceSecurityPolicySupport.canonicalHash(sameEffectiveContentDifferentHashWrapper));
   }
 
   @Test
@@ -52,7 +45,8 @@ class NamespaceSecurityPolicySupportTest {
     NamespaceSecurityPolicyDTO policy =
         NamespaceSecurityPolicyDTO.builder().policyVersion(1L).build();
 
-    assertThat(NamespaceSecurityPolicySupport.validationErrors(policy)).contains("mode must not be null");
+    assertThat(NamespaceSecurityPolicySupport.validationErrors(policy))
+        .contains("mode must not be null");
   }
 
   @Test
@@ -68,10 +62,7 @@ class NamespaceSecurityPolicySupportTest {
   @Test
   void requireValid_acceptsOpenPolicyAndComputesHash() {
     NamespaceSecurityPolicyDTO policy =
-        NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.OPEN)
-            .policyVersion(10L)
-            .build();
+        NamespaceSecurityPolicyDTO.builder().mode(SecurityMode.OPEN).policyVersion(10L).build();
 
     NamespaceSecurityPolicyDTO validated = NamespaceSecurityPolicySupport.requireValid(policy);
 
@@ -81,10 +72,7 @@ class NamespaceSecurityPolicySupportTest {
   @Test
   void requireValid_acceptsAnchoredPolicyPayload() {
     NamespaceSecurityPolicyDTO policy =
-        NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.ANCHORED)
-            .policyVersion(11L)
-            .build();
+        NamespaceSecurityPolicyDTO.builder().mode(SecurityMode.ANCHORED).policyVersion(11L).build();
 
     NamespaceSecurityPolicyDTO validated = NamespaceSecurityPolicySupport.requireValid(policy);
 
@@ -96,10 +84,7 @@ class NamespaceSecurityPolicySupportTest {
   @Test
   void requireValid_rejectsNonPositivePolicyVersion() {
     NamespaceSecurityPolicyDTO policy =
-        NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.OPEN)
-            .policyVersion(0L)
-            .build();
+        NamespaceSecurityPolicyDTO.builder().mode(SecurityMode.OPEN).policyVersion(0L).build();
 
     assertThatThrownBy(() -> NamespaceSecurityPolicySupport.requireValid(policy))
         .isInstanceOf(IllegalArgumentException.class)
@@ -108,7 +93,8 @@ class NamespaceSecurityPolicySupportTest {
 
   @Test
   void parseSecurityMode_acceptsCommonOperatorFormats() {
-    assertThat(NamespaceSecurityPolicySupport.parseSecurityMode("open")).isEqualTo(SecurityMode.OPEN);
+    assertThat(NamespaceSecurityPolicySupport.parseSecurityMode("open"))
+        .isEqualTo(SecurityMode.OPEN);
     assertThat(NamespaceSecurityPolicySupport.parseSecurityMode("anchored"))
         .isEqualTo(SecurityMode.ANCHORED);
   }

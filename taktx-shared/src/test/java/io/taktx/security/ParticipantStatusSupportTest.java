@@ -99,7 +99,8 @@ class ParticipantStatusSupportTest {
 
     assertThat(validated.isReadyForDataPlane()).isTrue();
     assertThat(validated.getObservedPolicyVersion()).isEqualTo(42L);
-    assertThat(validated.getSupportedModes()).containsExactlyInAnyOrder(SecurityMode.OPEN, SecurityMode.ANCHORED);
+    assertThat(validated.getSupportedModes())
+        .containsExactlyInAnyOrder(SecurityMode.OPEN, SecurityMode.ANCHORED);
   }
 
   @Test
@@ -120,7 +121,8 @@ class ParticipantStatusSupportTest {
                 .effectiveState(ParticipantEffectiveState.READY)
                 .build());
 
-    assertThat(normalized.getSupportedModes()).containsExactlyInAnyOrder(SecurityMode.OPEN, SecurityMode.ANCHORED);
+    assertThat(normalized.getSupportedModes())
+        .containsExactlyInAnyOrder(SecurityMode.OPEN, SecurityMode.ANCHORED);
   }
 
   @Test
@@ -352,8 +354,7 @@ class ParticipantStatusSupportTest {
             .statusVerificationLevel(StatusVerificationLevel.LOCALLY_VERIFIED_STATUS)
             .effectiveState(ParticipantEffectiveState.MISMATCH)
             .readyForDataPlane(false)
-            .supportedModes(
-                Set.of(SecurityMode.OPEN, SecurityMode.ANCHORED))
+            .supportedModes(Set.of(SecurityMode.OPEN, SecurityMode.ANCHORED))
             .build();
 
     assertThat(ParticipantStatusSupport.supportsMode(status, SecurityMode.ANCHORED)).isTrue();

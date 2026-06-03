@@ -15,9 +15,6 @@ import io.taktx.dto.ParticipantEffectiveState;
 import io.taktx.dto.ParticipantKind;
 import io.taktx.dto.ParticipantStatusDTO;
 import io.taktx.dto.PolicyMismatchReasonDTO;
-import io.taktx.dto.RequiredAuthorizationDTO;
-import io.taktx.dto.RequiredSigningDTO;
-import io.taktx.dto.SecurityActivationState;
 import io.taktx.dto.SecurityEventDTO;
 import io.taktx.dto.SecurityEventSeverity;
 import io.taktx.dto.SecurityEventType;
@@ -40,32 +37,34 @@ class SecurityObservabilityClientTest {
   void observedPolicySnapshot_prefersAuthoritativePolicyForEffectiveHelpers() {
     ObservedPolicySnapshot snapshot =
         new ObservedPolicySnapshot(
-            requestedPolicy(11L), activePolicy(7L, SecurityMode.ANCHORED_SECURED));
+            policy(11L, SecurityMode.OPEN), policy(7L, SecurityMode.ANCHORED));
 
     assertThat(snapshot.hasCurrentPolicy()).isTrue();
     assertThat(snapshot.hasAuthoritativePolicy()).isTrue();
-    assertThat(snapshot.currentActivationState()).isEqualTo(SecurityActivationState.REQUESTED);
-    assertThat(snapshot.requestedMode()).isEqualTo(SecurityMode.SECURED);
+    assertThat(snapshot.currentActivationState()).isNull();
+    assertThat(snapshot.requestedMode()).isEqualTo(SecurityMode.OPEN);
     assertThat(snapshot.requestedPolicyVersion()).isEqualTo(11L);
-    assertThat(snapshot.requestedPolicyHash()).isEqualTo("desired-11");
-    assertThat(snapshot.activeMode()).isEqualTo(SecurityMode.ANCHORED_SECURED);
+    assertThat(snapshot.requestedPolicyHash()).isEqualTo("policy-11");
+    assertThat(snapshot.activeMode()).isEqualTo(SecurityMode.ANCHORED);
     assertThat(snapshot.activePolicyVersion()).isEqualTo(7L);
-    assertThat(snapshot.activePolicyHash()).isEqualTo("active-7");
-    assertThat(snapshot.effectiveMode()).isEqualTo(SecurityMode.ANCHORED_SECURED);
+    assertThat(snapshot.activePolicyHash()).isEqualTo("policy-7");
+    assertThat(snapshot.effectiveMode()).isEqualTo(SecurityMode.ANCHORED);
     assertThat(snapshot.effectivePolicyVersion()).isEqualTo(7L);
-    assertThat(snapshot.effectivePolicyHash()).isEqualTo("active-7");
+    assertThat(snapshot.effectivePolicyHash()).isEqualTo("policy-7");
   }
 
   @Test
-  void getSimplifiedPostureSnapshot_keepsRequestedSecurePostureSeparateFromEffectiveOpen() {
+  void getSimplifiedPostureSnapshot_keepsRequestedAnchoredPostureSeparateFromEffectiveOpen() {
     TestHarness harness = new TestHarness();
-    harness.observedPolicySnapshot.set(new ObservedPolicySnapshot(requestedPolicy(12L), null));
+    harness.observedPolicySnapshot.set(
+        new ObservedPolicySnapshot(
+            policy(12L, SecurityMode.ANCHORED), policy(11L, SecurityMode.OPEN)));
 
     SimplifiedSecurityPostureSnapshot snapshot = harness.client.getSimplifiedPostureSnapshot();
 
-    assertThat(snapshot.requestedPosture()).isEqualTo(SecurityMode.SECURED);
+    assertThat(snapshot.requestedPosture()).isEqualTo(SecurityMode.ANCHORED);
     assertThat(snapshot.effectivePosture()).isEqualTo(SecurityMode.OPEN);
-    assertThat(snapshot.requestStatus()).isEqualTo(SecurityRequestStatus.REQUESTED);
+    assertThat(snapshot.requestStatus()).isEqualTo(SecurityRequestStatus.IN_SYNC);
     assertThat(snapshot.protectedRuntimeAllowed()).isTrue();
     assertThat(snapshot.blockingIssues()).isEmpty();
   }
@@ -74,7 +73,8 @@ class SecurityObservabilityClientTest {
   void getSimplifiedPostureSnapshot_surfacesBlockingIssuesAndParticipantSummary() {
     TestHarness harness = new TestHarness();
     harness.observedPolicySnapshot.set(
-        new ObservedPolicySnapshot(activePolicy(7L, SecurityMode.ANCHORED_SECURED), activePolicy(7L, SecurityMode.ANCHORED_SECURED)));
+        new ObservedPolicySnapshot(
+            policy(7L, SecurityMode.ANCHORED), policy(7L, SecurityMode.ANCHORED)));
     harness.participantStatuses.set(
         Map.of(
             "client#7",
@@ -94,15 +94,15 @@ class SecurityObservabilityClientTest {
                 .participantId("tenant.default.client")
                 .participantInstanceId("client#7")
                 .activePolicyVersion(7L)
-                .activePolicyHash("active-7")
+                .activePolicyHash("policy-7")
                 .code("TRUST_ANCHOR_MISSING")
                 .message("Platform trust anchor missing")
                 .build()));
 
     SimplifiedSecurityPostureSnapshot snapshot = harness.client.getSimplifiedPostureSnapshot();
 
-    assertThat(snapshot.requestedPosture()).isEqualTo(SecurityMode.ANCHORED_SECURED);
-    assertThat(snapshot.effectivePosture()).isEqualTo(SecurityMode.ANCHORED_SECURED);
+    assertThat(snapshot.requestedPosture()).isEqualTo(SecurityMode.ANCHORED);
+    assertThat(snapshot.effectivePosture()).isEqualTo(SecurityMode.ANCHORED);
     assertThat(snapshot.requestStatus()).isEqualTo(SecurityRequestStatus.IN_SYNC);
     assertThat(snapshot.protectedRuntimeAllowed()).isFalse();
     assertThat(snapshot.participantSummary().totalParticipants()).isEqualTo(2);
@@ -112,16 +112,19 @@ class SecurityObservabilityClientTest {
     assertThat(snapshot.blockingIssues())
         .extracting(BlockingIssue::code)
         .contains(SecurityPostureIssueCodes.TRUST_ANCHOR_MISSING);
-    assertThat(snapshot.targetModeFeasibility(SecurityMode.ANCHORED_SECURED).feasibleNow()).isFalse();
-    assertThat(snapshot.targetModeFeasibility(SecurityMode.ANCHORED_SECURED).blockers())
+    assertThat(snapshot.targetModeFeasibility(SecurityMode.ANCHORED).feasibleNow()).isFalse();
+    assertThat(snapshot.targetModeFeasibility(SecurityMode.ANCHORED).blockers())
         .extracting(BlockingIssue::code)
         .contains(SecurityPostureIssueCodes.TRUST_ANCHOR_MISSING);
   }
 
   @Test
-  void targetModeFeasibility_surfacesExplicitAuthoritativeWriterBlockerWithoutAffectingOpenRuntime() {
+  void
+      targetModeFeasibility_surfacesExplicitAuthoritativeWriterBlockerWithoutAffectingOpenRuntime() {
     TestHarness harness = new TestHarness();
-    harness.observedPolicySnapshot.set(new ObservedPolicySnapshot(requestedPolicy(15L), null));
+    harness.observedPolicySnapshot.set(
+        new ObservedPolicySnapshot(
+            policy(15L, SecurityMode.ANCHORED), policy(14L, SecurityMode.OPEN)));
     harness.mutationAvailability.set(
         AuthoritativePolicyMutationAvailability.blockedNow(
             SecurityPostureIssueCodes.AUTHORITATIVE_WRITER_UNCONFIGURED,
@@ -130,11 +133,11 @@ class SecurityObservabilityClientTest {
 
     SimplifiedSecurityPostureSnapshot snapshot = harness.client.getSimplifiedPostureSnapshot();
 
-    assertThat(snapshot.requestedPosture()).isEqualTo(SecurityMode.SECURED);
+    assertThat(snapshot.requestedPosture()).isEqualTo(SecurityMode.ANCHORED);
     assertThat(snapshot.effectivePosture()).isEqualTo(SecurityMode.OPEN);
     assertThat(snapshot.protectedRuntimeAllowed()).isTrue();
-    assertThat(snapshot.targetModeFeasibility(SecurityMode.SECURED).feasibleNow()).isFalse();
-    assertThat(snapshot.targetModeFeasibility(SecurityMode.SECURED).blockers())
+    assertThat(snapshot.targetModeFeasibility(SecurityMode.ANCHORED).feasibleNow()).isFalse();
+    assertThat(snapshot.targetModeFeasibility(SecurityMode.ANCHORED).blockers())
         .extracting(BlockingIssue::code)
         .containsExactly(SecurityPostureIssueCodes.AUTHORITATIVE_WRITER_UNCONFIGURED);
   }
@@ -143,21 +146,22 @@ class SecurityObservabilityClientTest {
   void targetModeFeasibility_usesSupportedModesInsteadOfCurrentReadiness() {
     TestHarness harness = new TestHarness();
     harness.observedPolicySnapshot.set(
-        new ObservedPolicySnapshot(requestedPolicy(21L), activePolicy(21L, SecurityMode.OPEN)));
+        new ObservedPolicySnapshot(
+            policy(21L, SecurityMode.ANCHORED), policy(21L, SecurityMode.OPEN)));
     harness.participantStatuses.set(
         Map.of(
             "client#7",
             participantStatus(
                 "client#7",
                 Set.of(ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT),
-                Set.of(SecurityMode.OPEN, SecurityMode.SECURED),
+                Set.of(SecurityMode.OPEN),
                 List.of())));
 
     SimplifiedSecurityPostureSnapshot snapshot = harness.client.getSimplifiedPostureSnapshot();
 
-    assertThat(snapshot.targetModeFeasibility(SecurityMode.SECURED).feasibleNow()).isTrue();
-    assertThat(snapshot.targetModeFeasibility(SecurityMode.ANCHORED_SECURED).feasibleNow()).isFalse();
-    assertThat(snapshot.targetModeFeasibility(SecurityMode.ANCHORED_SECURED).blockers())
+    assertThat(snapshot.targetModeFeasibility(SecurityMode.OPEN).feasibleNow()).isTrue();
+    assertThat(snapshot.targetModeFeasibility(SecurityMode.ANCHORED).feasibleNow()).isFalse();
+    assertThat(snapshot.targetModeFeasibility(SecurityMode.ANCHORED).blockers())
         .extracting(BlockingIssue::code)
         .contains(SecurityPostureIssueCodes.TARGET_MODE_UNSUPPORTED);
   }
@@ -165,7 +169,8 @@ class SecurityObservabilityClientTest {
   @Test
   void registerNamespaceSecurityPolicyConsumer_replaysCurrentSnapshotAndUpdates() {
     TestHarness harness = new TestHarness();
-    harness.observedPolicySnapshot.set(new ObservedPolicySnapshot(requestedPolicy(4L), null));
+    harness.observedPolicySnapshot.set(
+        new ObservedPolicySnapshot(policy(4L, SecurityMode.OPEN), null));
 
     List<ObservedPolicySnapshot> observedSnapshots = new ArrayList<>();
     harness.client.registerNamespaceSecurityPolicyConsumer(observedSnapshots::add);
@@ -174,12 +179,13 @@ class SecurityObservabilityClientTest {
     assertThat(observedSnapshots.getFirst().effectivePolicyVersion()).isEqualTo(4L);
 
     harness.observedPolicySnapshot.set(
-        new ObservedPolicySnapshot(requestedPolicy(5L), activePolicy(5L)));
+        new ObservedPolicySnapshot(
+            policy(5L, SecurityMode.ANCHORED), policy(5L, SecurityMode.ANCHORED)));
     harness.emitPolicySnapshot();
 
     assertThat(observedSnapshots).hasSize(2);
     assertThat(observedSnapshots.getLast().effectivePolicyVersion()).isEqualTo(5L);
-    assertThat(observedSnapshots.getLast().effectivePolicyHash()).isEqualTo("active-5");
+    assertThat(observedSnapshots.getLast().effectivePolicyHash()).isEqualTo("policy-5");
   }
 
   @Test
@@ -241,7 +247,7 @@ class SecurityObservabilityClientTest {
     TestHarness harness = new TestHarness();
     harness.observedPolicySnapshot.set(
         new ObservedPolicySnapshot(
-            requestedPolicy(12L), activePolicy(11L, SecurityMode.ANCHORED_SECURED)));
+            policy(12L, SecurityMode.OPEN), policy(11L, SecurityMode.ANCHORED)));
     harness.participantStatuses.set(
         Map.of(
             "client#7",
@@ -253,9 +259,9 @@ class SecurityObservabilityClientTest {
 
     SecurityPostureSnapshot snapshot = harness.client.getPostureSnapshot();
 
-    assertThat(snapshot.effectiveMode()).isEqualTo(SecurityMode.ANCHORED_SECURED);
+    assertThat(snapshot.effectiveMode()).isEqualTo(SecurityMode.ANCHORED);
     assertThat(snapshot.effectivePolicyVersion()).isEqualTo(11L);
-    assertThat(snapshot.effectivePolicyHash()).isEqualTo("active-11");
+    assertThat(snapshot.effectivePolicyHash()).isEqualTo("policy-11");
     assertThat(snapshot.participantStatuses()).containsOnlyKeys("client#7");
     assertThat(snapshot.mismatchReasons()).hasSize(1);
     assertThat(snapshot.mismatchReasons().getFirst().participantInstanceId()).isEqualTo("client#7");
@@ -270,7 +276,7 @@ class SecurityObservabilityClientTest {
   void getPostureSnapshot_keepsMismatchVisibilitySeparateFromEventHistory() {
     TestHarness harness = new TestHarness();
     harness.observedPolicySnapshot.set(
-        new ObservedPolicySnapshot(requestedPolicy(6L), activePolicy(6L)));
+        new ObservedPolicySnapshot(policy(6L, SecurityMode.OPEN), policy(6L, SecurityMode.OPEN)));
     harness.participantStatuses.set(
         Map.of(
             "client#2",
@@ -322,7 +328,8 @@ class SecurityObservabilityClientTest {
                     throw new RuntimeException(e);
                   }
                   harness.observedPolicySnapshot.set(
-                      new ObservedPolicySnapshot(activePolicy(9L), activePolicy(9L)));
+                      new ObservedPolicySnapshot(
+                          policy(9L, SecurityMode.ANCHORED), policy(9L, SecurityMode.ANCHORED)));
                   harness.participantStatuses.set(
                       Map.of(
                           "engine#1",
@@ -355,7 +362,7 @@ class SecurityObservabilityClientTest {
 
     updater.join();
 
-    assertThat(policySnapshot.effectivePolicyHash()).isEqualTo("active-9");
+    assertThat(policySnapshot.effectivePolicyHash()).isEqualTo("policy-9");
     assertThat(statuses).containsKey("engine#1");
     assertThat(event.getOccurredAtMs()).isEqualTo(9L);
     assertThat(postureSnapshot.mismatchReasons())
@@ -367,31 +374,11 @@ class SecurityObservabilityClientTest {
         .contains("ENGINE_SYNC_PENDING");
   }
 
-  private static NamespaceSecurityPolicyDTO requestedPolicy(long version) {
-    return NamespaceSecurityPolicyDTO.builder()
-        .mode(SecurityMode.SECURED)
-        .activationState(SecurityActivationState.REQUESTED)
-        .desiredPolicyVersion(version)
-        .desiredPolicyHash("desired-" + version)
-        .requiredSigning(RequiredSigningDTO.builder().engineOutbound(true).build())
-        .requiredAuthorization(RequiredAuthorizationDTO.builder().startCommands(true).build())
-        .build();
-  }
-
-  private static NamespaceSecurityPolicyDTO activePolicy(long version) {
-    return activePolicy(version, SecurityMode.SECURED);
-  }
-
-  private static NamespaceSecurityPolicyDTO activePolicy(long version, SecurityMode mode) {
+  private static NamespaceSecurityPolicyDTO policy(long version, SecurityMode mode) {
     return NamespaceSecurityPolicyDTO.builder()
         .mode(mode)
-        .activationState(SecurityActivationState.ACTIVE)
-        .desiredPolicyVersion(version)
-        .desiredPolicyHash("desired-" + version)
-        .activePolicyVersion(version)
-        .activePolicyHash("active-" + version)
-        .requiredSigning(RequiredSigningDTO.builder().engineOutbound(true).build())
-        .requiredAuthorization(RequiredAuthorizationDTO.builder().startCommands(true).build())
+        .policyVersion(version)
+        .policyHash("policy-" + version)
         .build();
   }
 
@@ -430,7 +417,7 @@ class SecurityObservabilityClientTest {
                 : ParticipantEffectiveState.MISMATCH)
         .readyForDataPlane(mismatchReasons == null || mismatchReasons.isEmpty())
         .observedPolicyVersion(7L)
-        .observedPolicyHash("active-7")
+        .observedPolicyHash("policy-7")
         .mismatchReasons(mismatchReasons == null ? List.of() : List.copyOf(mismatchReasons))
         .build();
   }
@@ -448,7 +435,7 @@ class SecurityObservabilityClientTest {
         .participantId("tenant.default.client")
         .participantInstanceId("tenant.default.client#1")
         .activePolicyVersion(occurredAtMs)
-        .activePolicyHash("active-" + occurredAtMs)
+        .activePolicyHash("policy-" + occurredAtMs)
         .code(code)
         .message(code)
         .build();

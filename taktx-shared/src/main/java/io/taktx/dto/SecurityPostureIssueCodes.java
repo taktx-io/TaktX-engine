@@ -21,9 +21,11 @@ public final class SecurityPostureIssueCodes {
   public static final String PARTICIPANT_NOT_READY = "PARTICIPANT_NOT_READY";
   public static final String AUTHORITATIVE_WRITER_UNCONFIGURED =
       "AUTHORITATIVE_WRITER_UNCONFIGURED";
-  public static final String AUTHORITATIVE_WRITER_UNAVAILABLE =
-      "AUTHORITATIVE_WRITER_UNAVAILABLE";
+  public static final String AUTHORITATIVE_WRITER_UNAVAILABLE = "AUTHORITATIVE_WRITER_UNAVAILABLE";
   public static final String TARGET_MODE_UNSUPPORTED = "TARGET_MODE_UNSUPPORTED";
+  public static final String SIGNING_IDENTITY_ROTATED = "SIGNING_IDENTITY_ROTATED";
+  public static final String UNEXPECTED_SIGNING_IDENTITY_CHURN =
+      "UNEXPECTED_SIGNING_IDENTITY_CHURN";
 
   private SecurityPostureIssueCodes() {}
 }

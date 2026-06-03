@@ -59,7 +59,8 @@ public class NamespaceSecurityPolicyActivationService {
     if (securityEventPublisher == null) {
       return;
     }
-    NamespaceSecurityPolicyDTO authoritativePolicy = namespaceSecurityPolicyStore.getAuthoritativePolicy();
+    NamespaceSecurityPolicyDTO authoritativePolicy =
+        namespaceSecurityPolicyStore.getAuthoritativePolicy();
     securityEventPublisher.publish(
         SecurityEventDTO.builder()
             .eventType(SecurityEventType.CONTROL_PLANE_MUTATION_REJECTED)
@@ -70,10 +71,12 @@ public class NamespaceSecurityPolicyActivationService {
             .participantInstanceId(participantInstanceId())
             .desiredPolicyVersion(
                 authoritativePolicy != null ? authoritativePolicy.getPolicyVersion() : null)
-            .desiredPolicyHash(authoritativePolicy != null ? authoritativePolicy.getPolicyHash() : null)
+            .desiredPolicyHash(
+                authoritativePolicy != null ? authoritativePolicy.getPolicyHash() : null)
             .activePolicyVersion(
                 authoritativePolicy != null ? authoritativePolicy.getPolicyVersion() : null)
-            .activePolicyHash(authoritativePolicy != null ? authoritativePolicy.getPolicyHash() : null)
+            .activePolicyHash(
+                authoritativePolicy != null ? authoritativePolicy.getPolicyHash() : null)
             .code(INVALID_POLICY_MUTATION_CODE)
             .message(reason)
             .metadata(
@@ -82,7 +85,6 @@ public class NamespaceSecurityPolicyActivationService {
                     "reason", reason == null ? "unknown" : reason))
             .build());
   }
-
 
   private String participantId() {
     return configuration.getTenantId() + "." + configuration.getNamespace() + ".engine";

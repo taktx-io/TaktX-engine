@@ -83,7 +83,8 @@ class PublicClientSecuredModeDogfoodIntegrationTest
 
     deployProcessAndAwaitAvailability(runtimeClient, SERVICE_TASK_BPMN, SERVICE_PROCESS_ID);
 
-    java.util.Queue<ExternalTaskTriggerDTO> triggers = new java.util.concurrent.ConcurrentLinkedQueue<>();
+    java.util.Queue<ExternalTaskTriggerDTO> triggers =
+        new java.util.concurrent.ConcurrentLinkedQueue<>();
     String externalTaskTopic = workerClient.workers().requestExternalTaskTopic(SERVICE_TASK_TYPE);
     awaitTopicExists(externalTaskTopic);
     workerClient
@@ -208,14 +209,14 @@ class PublicClientSecuredModeDogfoodIntegrationTest
         Duration.ofSeconds(30));
     awaitObservedPolicyVersion(signedRuntimeClient, securedPolicyVersion);
 
-    assertThatThrownBy(() -> signedRuntimeClient.runtime().startProcess(OPEN_PROCESS_ID, VariablesDTO.empty()))
+    assertThatThrownBy(
+            () -> signedRuntimeClient.runtime().startProcess(OPEN_PROCESS_ID, VariablesDTO.empty()))
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("platform public key");
   }
 
   @Test
-  void anchoredPolicy_withoutTrustAnchor_preventsProtectedWorkFromStarting()
-      throws Exception {
+  void anchoredPolicy_withoutTrustAnchor_preventsProtectedWorkFromStarting() throws Exception {
     long securedPolicyVersion = nextPolicyVersion();
     String namespace = newTestNamespace("dogfood-secured-worker-negative");
     String unsignedWorkerParticipantId = "dogfood-unsigned-worker";
@@ -259,7 +260,8 @@ class PublicClientSecuredModeDogfoodIntegrationTest
 
     deployProcessAndAwaitAvailability(runtimeClient, SERVICE_TASK_BPMN, SERVICE_PROCESS_ID);
 
-    java.util.Queue<ExternalTaskTriggerDTO> triggers = new java.util.concurrent.ConcurrentLinkedQueue<>();
+    java.util.Queue<ExternalTaskTriggerDTO> triggers =
+        new java.util.concurrent.ConcurrentLinkedQueue<>();
     String externalTaskTopic =
         unsignedWorkerClient.workers().requestExternalTaskTopic(SERVICE_TASK_TYPE);
     awaitTopicExists(externalTaskTopic);
@@ -304,7 +306,6 @@ class PublicClientSecuredModeDogfoodIntegrationTest
     await()
         .during(Duration.ofSeconds(2))
         .atMost(Duration.ofSeconds(5))
-        .untilAsserted(
-            () -> assertThat(triggers).isEmpty());
+        .untilAsserted(() -> assertThat(triggers).isEmpty());
   }
 }

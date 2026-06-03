@@ -119,7 +119,6 @@ public class TaktConfiguration {
     return Boolean.parseBoolean(isTest);
   }
 
-
   @PostConstruct
   void validateSegments() {
     TopicSegmentValidator.validate("tenant-id", tenantId);

@@ -8,7 +8,6 @@
 package io.taktx.client.serdes;
 
 import io.taktx.dto.MessageEventDTO;
-import io.taktx.proto.MessageEventEnvelope;
 import io.taktx.security.SigningServiceHolder.SigningFunction;
 import io.taktx.serdes.MessageEventProtoMapper;
 import io.taktx.serdes.ProtoSigningSerializer;

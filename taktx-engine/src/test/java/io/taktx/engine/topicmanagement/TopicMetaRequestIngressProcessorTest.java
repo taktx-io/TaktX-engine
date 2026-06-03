@@ -97,7 +97,8 @@ class TopicMetaRequestIngressProcessorTest {
               new String(dlqEntry.getHeaders().get(DlqHeaders.REASON_HINT), StandardCharsets.UTF_8))
           .isEqualTo(DlqReasonCode.SIGNATURE_KEY_UNKNOWN.name());
       assertThat(
-              new String(dlqEntry.getHeaders().get(DlqHeaders.CAPTURE_STAGE), StandardCharsets.UTF_8))
+              new String(
+                  dlqEntry.getHeaders().get(DlqHeaders.CAPTURE_STAGE), StandardCharsets.UTF_8))
           .isEqualTo("AUTHORIZATION");
       assertThat(dlqEntry.getData()).isNotEmpty();
     }
@@ -213,8 +214,13 @@ class TopicMetaRequestIngressProcessorTest {
     assertThat(
             TopicMetaRequestIngressProcessor.reasonHintForAuthorizationFailure(
                 new TopicMetaIngressEnvelope(
-                    new byte[0], validTopicMeta("msg-err"), false, "client-key-1", "Malformed base64 signature for keyId=client-key-1: bad"),
-                new AuthorizationTokenException("Malformed base64 signature for keyId=client-key-1: bad")))
+                    new byte[0],
+                    validTopicMeta("msg-err"),
+                    false,
+                    "client-key-1",
+                    "Malformed base64 signature for keyId=client-key-1: bad"),
+                new AuthorizationTokenException(
+                    "Malformed base64 signature for keyId=client-key-1: bad")))
         .isEqualTo(DlqReasonCode.SIGNATURE_MALFORMED.name());
   }
 

@@ -28,10 +28,7 @@ class NamespaceSecurityPolicyCapabilityRelevanceTest {
   @Test
   void relevantPolicyForCapabilities_returnsNormalizedAuthoritativePolicy() {
     NamespaceSecurityPolicyDTO policy =
-        NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.ANCHORED)
-            .policyVersion(42L)
-            .build();
+        NamespaceSecurityPolicyDTO.builder().mode(SecurityMode.ANCHORED).policyVersion(42L).build();
 
     NamespaceSecurityPolicyDTO relevant =
         NamespaceSecurityPolicyCapabilityRelevance.relevantPolicyForCapabilities(
@@ -45,10 +42,7 @@ class NamespaceSecurityPolicyCapabilityRelevanceTest {
   @Test
   void relevantPolicyForCapabilities_doesNotVaryByCapabilitiesInModeOnlyModel() {
     NamespaceSecurityPolicyDTO policy =
-        NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.OPEN)
-            .policyVersion(42L)
-            .build();
+        NamespaceSecurityPolicyDTO.builder().mode(SecurityMode.OPEN).policyVersion(42L).build();
 
     NamespaceSecurityPolicyDTO controlPlaneRelevant =
         NamespaceSecurityPolicyCapabilityRelevance.relevantPolicyForCapabilities(

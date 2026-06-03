@@ -361,7 +361,8 @@ class EngineAuthorizationServiceMatrixTest {
   @Test
   void row11_authOnly_nonEntry_engineSigPresent_returnsNull() {
     EngineAuthorizationService svc = service(true, false);
-    assertThat(svc.authorize(sigHeaders(ENGINE_KEY_ID), clientNonEntryEnvelope(true, ENGINE_KEY_ID)))
+    assertThat(
+            svc.authorize(sigHeaders(ENGINE_KEY_ID), clientNonEntryEnvelope(true, ENGINE_KEY_ID)))
         .isNull();
   }
 
@@ -474,7 +475,8 @@ class EngineAuthorizationServiceMatrixTest {
     assertThat(
             svc.authorize(
                 sigHeaders(ENGINE_KEY_ID),
-                new ProcessInstanceTriggerEnvelope(new byte[0], startCommand(), true, ENGINE_KEY_ID)))
+                new ProcessInstanceTriggerEnvelope(
+                    new byte[0], startCommand(), true, ENGINE_KEY_ID)))
         .isNull();
   }
 
@@ -488,7 +490,8 @@ class EngineAuthorizationServiceMatrixTest {
     assertThat(
             svc.authorize(
                 sigHeaders(WORKER_KEY_ID),
-                new ProcessInstanceTriggerEnvelope(new byte[0], startCommand(), true, WORKER_KEY_ID)))
+                new ProcessInstanceTriggerEnvelope(
+                    new byte[0], startCommand(), true, WORKER_KEY_ID)))
         .isNull();
   }
 

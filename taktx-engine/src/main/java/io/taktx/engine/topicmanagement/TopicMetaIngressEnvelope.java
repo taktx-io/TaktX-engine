@@ -21,4 +21,3 @@ public record TopicMetaIngressEnvelope(
     return signatureError != null && !signatureError.isBlank();
   }
 }
-

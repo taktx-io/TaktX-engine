@@ -1123,7 +1123,9 @@ public class TopologyProducer {
                     ks.map(
                             (key, value) ->
                                 KeyValue.pair(
-                                    ((ProcessInstanceTriggerEnvelope) value).trigger().getProcessInstanceId(),
+                                    ((ProcessInstanceTriggerEnvelope) value)
+                                        .trigger()
+                                        .getProcessInstanceId(),
                                     (ProcessInstanceTriggerEnvelope) value))
                         .to(
                             taktConfiguration.getPrefixed(

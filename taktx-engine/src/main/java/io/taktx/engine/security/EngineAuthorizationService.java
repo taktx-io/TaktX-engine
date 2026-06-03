@@ -13,8 +13,8 @@ import io.taktx.dto.AbortTriggerDTO;
 import io.taktx.dto.CommandAuthMethod;
 import io.taktx.dto.CommandTrustMetadataDTO;
 import io.taktx.dto.CommandTrustVerificationResult;
-import io.taktx.dto.CorrelationMessageEventTriggerDTO;
 import io.taktx.dto.Constants;
+import io.taktx.dto.CorrelationMessageEventTriggerDTO;
 import io.taktx.dto.DefinitionMessageEventTriggerDTO;
 import io.taktx.dto.ExternalTaskResponseTriggerDTO;
 import io.taktx.dto.GlobalConfigurationDTO;
@@ -29,7 +29,6 @@ import io.taktx.dto.SetVariableTriggerDTO;
 import io.taktx.dto.SigningKeyDTO;
 import io.taktx.dto.StartCommandDTO;
 import io.taktx.dto.TokenClaims;
-import io.taktx.dto.TopicMetaDTO;
 import io.taktx.dto.UserTaskResponseTriggerDTO;
 import io.taktx.engine.config.GlobalConfigStore;
 import io.taktx.engine.config.NamespaceSecurityPolicyStore;
@@ -290,8 +289,7 @@ public class EngineAuthorizationService {
     boolean sigIsEngine = false;
     if (sigHeader != null && sigHeader.value() != null) {
       sigMeta = authorizeViaEd25519(sigHeader, triggerEnvelope, requiredRole);
-      sigIsEngine =
-          CommandTrustVerificationResult.ENGINE_SIGNED == sigMeta.getVerificationResult();
+      sigIsEngine = CommandTrustVerificationResult.ENGINE_SIGNED == sigMeta.getVerificationResult();
     }
 
     if (signingActive && policy.requireSignature() && sigMeta == null) {
@@ -350,7 +348,8 @@ public class EngineAuthorizationService {
         Topics.MESSAGE_EVENT_TOPIC.getTopicName());
   }
 
-  public SigningKeyDTO authorizeSignalIngress(Headers headers, SignalIngressEnvelope ingressEnvelope) {
+  public SigningKeyDTO authorizeSignalIngress(
+      Headers headers, SignalIngressEnvelope ingressEnvelope) {
     return authorizeSignedIngress(
         headers,
         ingressEnvelope == null ? null : ingressEnvelope.value(),
@@ -490,12 +489,14 @@ public class EngineAuthorizationService {
       return null;
     }
 
-    MessageSecurityPolicy policy = messageSecurityPolicyRegistry.resolve(topicName, message.getClass());
+    MessageSecurityPolicy policy =
+        messageSecurityPolicyRegistry.resolve(topicName, message.getClass());
     if (signatureError != null && !signatureError.isBlank()) {
       throw new AuthorizationTokenException(signatureError);
     }
 
-    VerifiedMessageContext ctx = verificationCore.verify(lastHeader(headers, SIG_HEADER), requiredRole(policy));
+    VerifiedMessageContext ctx =
+        verificationCore.verify(lastHeader(headers, SIG_HEADER), requiredRole(policy));
     if (!signatureVerified) {
       throw new AuthorizationTokenException(
           "Ed25519 header present for ingress message "
@@ -638,7 +639,6 @@ public class EngineAuthorizationService {
     return requiredRole;
   }
 
-
   private static boolean isSignatureGateActive(
       GlobalConfigurationDTO cfg, NamespaceSecurityPolicyDTO authoritativePolicy) {
     return cfg.isSigningEnabled() || isPolicyDrivenSignatureRequired(authoritativePolicy);
@@ -668,7 +668,6 @@ public class EngineAuthorizationService {
   public static boolean isExternallyPublishedSignal(Object value) {
     return value != null && value.getClass() == io.taktx.dto.SignalDTO.class;
   }
-
 
   private void assertTrustAnchorRequirementSatisfied(
       NamespaceSecurityPolicyDTO authoritativePolicy) {

@@ -11,17 +11,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import io.taktx.dto.GlobalConfigurationDTO;
 import io.taktx.dto.NamespaceSecurityPolicyDTO;
-import io.taktx.dto.RequiredAuthorizationDTO;
-import io.taktx.dto.RequiredSigningDTO;
-import io.taktx.dto.SecurityActivationState;
 import io.taktx.dto.SecurityMode;
 import io.taktx.security.RuntimeConfigurationHolder;
 import io.taktx.security.SigningIdentity;
 import io.taktx.security.SigningKeyGenerator;
 import io.taktx.security.SigningServiceHolder;
+import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
-import java.lang.reflect.Field;
 import java.util.Properties;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -35,10 +32,9 @@ class TaktXClientWorkerSigningTest {
   }
 
   @Test
-  void refreshWorkerSigningFunctionRegistration_registersSignerAfterRuntimeEnablement() {
-    KeyPair keyPair = SigningKeyGenerator.generate();
-    String privateKeyBase64 = SigningKeyGenerator.encodePrivateKey(keyPair.getPrivate());
-    SigningIdentity signingIdentity = SigningIdentity.ed25519("worker-key", privateKeyBase64, null);
+  void
+      refreshWorkerSigningFunctionRegistration_ignoresLegacyRuntimeEnablementWithoutAnchoredPolicy() {
+    SigningIdentity signingIdentity = signingIdentity("worker-key");
 
     Properties props = new Properties();
     props.setProperty("bootstrap.servers", "localhost:9092");
@@ -56,9 +52,7 @@ class TaktXClientWorkerSigningTest {
     RuntimeConfigurationHolder.set(GlobalConfigurationDTO.builder().signingEnabled(true).build());
     client.refreshWorkerSigningFunctionRegistration();
 
-    assertThat(SigningServiceHolder.get()).isNotNull();
-    assertThat(SigningServiceHolder.get().sign("payload".getBytes(StandardCharsets.UTF_8)))
-        .startsWith("worker-key.");
+    assertThat(SigningServiceHolder.get()).isNull();
   }
 
   @Test
@@ -74,22 +68,9 @@ class TaktXClientWorkerSigningTest {
   }
 
   @Test
-  void requestedSecuredPolicy_preparesButDoesNotActivateClientSigning() throws Exception {
+  void currentAnchoredPolicy_preparesAndActivatesClientSigning() throws Exception {
     TaktXClient client = clientWithSigningIdentity();
-    setNamespaceSecurityPolicies(client, requestedPolicy(), null);
-
-    assertThat(client.shouldPrepareSigningInfrastructure()).isTrue();
-    assertThat(client.shouldSignClientMessages()).isFalse();
-
-    client.refreshWorkerSigningFunctionRegistration();
-
-    assertThat(SigningServiceHolder.get()).isNull();
-  }
-
-  @Test
-  void activeSecuredPolicy_reactivatesClientSigningWithoutLegacyRuntimeToggle() throws Exception {
-    TaktXClient client = clientWithSigningIdentity();
-    setNamespaceSecurityPolicies(client, activeSigningPolicy(), activeSigningPolicy());
+    setNamespaceSecurityPolicies(client, anchoredPolicy(42L, "policy-42"), null);
 
     assertThat(client.shouldPrepareSigningInfrastructure()).isTrue();
     assertThat(client.shouldSignClientMessages()).isTrue();
@@ -102,10 +83,25 @@ class TaktXClientWorkerSigningTest {
   }
 
   @Test
-  void refreshWorkerSigningFunctionRegistration_keepsSignerInactiveWhileRuntimeSigningDisabled() {
-    KeyPair keyPair = SigningKeyGenerator.generate();
-    String privateKeyBase64 = SigningKeyGenerator.encodePrivateKey(keyPair.getPrivate());
-    SigningIdentity signingIdentity = SigningIdentity.ed25519("worker-key", privateKeyBase64, null);
+  void activeAnchoredPolicy_reactivatesClientSigningWithoutLegacyRuntimeToggle() throws Exception {
+    TaktXClient client = clientWithSigningIdentity();
+    NamespaceSecurityPolicyDTO anchored = anchoredPolicy(42L, "policy-42");
+    setNamespaceSecurityPolicies(client, anchored, anchored);
+
+    assertThat(client.shouldPrepareSigningInfrastructure()).isTrue();
+    assertThat(client.shouldSignClientMessages()).isTrue();
+
+    client.refreshWorkerSigningFunctionRegistration();
+
+    assertThat(SigningServiceHolder.get()).isNotNull();
+    assertThat(SigningServiceHolder.get().sign("payload".getBytes(StandardCharsets.UTF_8)))
+        .startsWith("worker-key.");
+  }
+
+  @Test
+  void refreshWorkerSigningFunctionRegistration_keepsSignerActiveWithoutLegacyRuntimeConfiguration()
+      throws Exception {
+    SigningIdentity signingIdentity = signingIdentity("worker-key");
 
     Properties props = new Properties();
     props.setProperty("bootstrap.servers", "localhost:9092");
@@ -118,6 +114,9 @@ class TaktXClientWorkerSigningTest {
             .withSigningIdentitySource(() -> signingIdentity)
             .build();
 
+    NamespaceSecurityPolicyDTO anchored = anchoredPolicy(44L, "policy-44");
+    setNamespaceSecurityPolicies(client, anchored, anchored);
+
     RuntimeConfigurationHolder.set(GlobalConfigurationDTO.builder().signingEnabled(true).build());
     client.refreshWorkerSigningFunctionRegistration();
 
@@ -126,14 +125,12 @@ class TaktXClientWorkerSigningTest {
     RuntimeConfigurationHolder.clear();
 
     assertThat(SigningServiceHolder.get().sign("payload".getBytes(StandardCharsets.UTF_8)))
-        .isNull();
+        .startsWith("worker-key.");
   }
 
   @Test
   void refreshWorkerSigningFunctionRegistration_doesNotOverrideExistingGlobalSigner() {
-    KeyPair keyPair = SigningKeyGenerator.generate();
-    String privateKeyBase64 = SigningKeyGenerator.encodePrivateKey(keyPair.getPrivate());
-    SigningIdentity signingIdentity = SigningIdentity.ed25519("worker-key", privateKeyBase64, null);
+    SigningIdentity signingIdentity = signingIdentity("worker-key");
 
     Properties props = new Properties();
     props.setProperty("bootstrap.servers", "localhost:9092");
@@ -149,6 +146,13 @@ class TaktXClientWorkerSigningTest {
             .withSigningIdentitySource(() -> signingIdentity)
             .build();
 
+    try {
+      NamespaceSecurityPolicyDTO anchored = anchoredPolicy(43L, "policy-43");
+      setNamespaceSecurityPolicies(client, anchored, anchored);
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+
     RuntimeConfigurationHolder.set(GlobalConfigurationDTO.builder().signingEnabled(true).build());
     client.refreshWorkerSigningFunctionRegistration();
 
@@ -156,9 +160,7 @@ class TaktXClientWorkerSigningTest {
   }
 
   private static TaktXClient clientWithSigningIdentity() {
-    KeyPair keyPair = SigningKeyGenerator.generate();
-    String privateKeyBase64 = SigningKeyGenerator.encodePrivateKey(keyPair.getPrivate());
-    SigningIdentity signingIdentity = SigningIdentity.ed25519("worker-key", privateKeyBase64, null);
+    SigningIdentity signingIdentity = signingIdentity("worker-key");
 
     Properties props = new Properties();
     props.setProperty("bootstrap.servers", "localhost:9092");
@@ -185,27 +187,19 @@ class TaktXClientWorkerSigningTest {
     field.set(client, store);
   }
 
-  private static NamespaceSecurityPolicyDTO requestedPolicy() {
+  private static NamespaceSecurityPolicyDTO anchoredPolicy(long version, String hash) {
     return NamespaceSecurityPolicyDTO.builder()
-        .mode(SecurityMode.SECURED)
-        .activationState(SecurityActivationState.REQUESTED)
-        .desiredPolicyVersion(42L)
-        .desiredPolicyHash("desired-42")
-        .requiredSigning(RequiredSigningDTO.builder().workerResponses(true).build())
-        .requiredAuthorization(RequiredAuthorizationDTO.builder().build())
+        .mode(SecurityMode.ANCHORED)
+        .policyVersion(version)
+        .policyHash(hash)
         .build();
   }
 
-  private static NamespaceSecurityPolicyDTO activeSigningPolicy() {
-    return NamespaceSecurityPolicyDTO.builder()
-        .mode(SecurityMode.SECURED)
-        .activationState(SecurityActivationState.ACTIVE)
-        .desiredPolicyVersion(42L)
-        .desiredPolicyHash("policy-42")
-        .activePolicyVersion(42L)
-        .activePolicyHash("policy-42")
-        .requiredSigning(RequiredSigningDTO.builder().workerResponses(true).build())
-        .requiredAuthorization(RequiredAuthorizationDTO.builder().build())
-        .build();
+  private static SigningIdentity signingIdentity(String keyId) {
+    KeyPair keyPair = SigningKeyGenerator.generate();
+    return SigningIdentity.ed25519(
+        keyId,
+        SigningKeyGenerator.encodePrivateKey(keyPair.getPrivate()),
+        SigningKeyGenerator.encodePublicKey(keyPair.getPublic()));
   }
 }

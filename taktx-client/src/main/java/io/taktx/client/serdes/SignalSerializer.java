@@ -8,7 +8,6 @@
 package io.taktx.client.serdes;
 
 import io.taktx.dto.SignalDTO;
-import io.taktx.proto.SignalEnvelope;
 import io.taktx.security.SigningServiceHolder.SigningFunction;
 import io.taktx.serdes.ProtoSigningSerializer;
 import io.taktx.serdes.SignalProtoMapper;
@@ -27,7 +26,8 @@ public class SignalSerializer implements Serializer<SignalDTO> {
   }
 
   public SignalSerializer(Supplier<SigningFunction> signingFunctionSupplier) {
-    this.delegate = new ProtoSigningSerializer<>(SignalProtoMapper::toProto, signingFunctionSupplier);
+    this.delegate =
+        new ProtoSigningSerializer<>(SignalProtoMapper::toProto, signingFunctionSupplier);
   }
 
   @Override

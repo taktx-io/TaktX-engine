@@ -227,7 +227,8 @@ final class ClientProtectedDataPlaneParticipationGuard {
         .componentType(participantDescriptor.componentType())
         .capabilities(participantDescriptor.capabilities())
         .supportedModes(
-            ParticipantStatusSupport.supportedModesForCapabilities(participantDescriptor.capabilities()))
+            ParticipantStatusSupport.supportedModesForCapabilities(
+                participantDescriptor.capabilities()))
         .namespace(taktPropertiesHelper.getNamespace())
         .startedAt(startedAtMs)
         .lastSeenAt(nowMs)
@@ -245,7 +246,6 @@ final class ClientProtectedDataPlaneParticipationGuard {
     SigningIdentity identity = signingIdentitySupplier.get();
     return identity != null && signingReadySupplier.getAsBoolean();
   }
-
 
   private String participantId() {
     return participantDescriptor.participantId();

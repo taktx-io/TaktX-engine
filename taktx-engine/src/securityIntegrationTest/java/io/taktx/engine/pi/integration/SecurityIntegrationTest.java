@@ -314,7 +314,8 @@ class SecurityIntegrationTest {
       await()
           .atMost(Duration.ofSeconds(30))
           .pollInterval(Duration.ofMillis(200))
-          .until(() -> keyResolver.resolvePublicKey(SecurityTestConfigResource.engineKeyId) != null);
+          .until(
+              () -> keyResolver.resolvePublicKey(SecurityTestConfigResource.engineKeyId) != null);
     }
   }
 

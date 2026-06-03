@@ -535,7 +535,8 @@ public class ProcessInstanceProcessor
     }
 
     String message = exception.getMessage() != null ? exception.getMessage().toLowerCase() : "";
-    if (message.contains("requires tx-sig") || message.startsWith("missing required tx-sig header")) {
+    if (message.contains("requires tx-sig")
+        || message.startsWith("missing required tx-sig header")) {
       return "SIGNATURE_MISSING";
     }
     if (message.startsWith("unknown ed25519 keyid")) {
@@ -572,7 +573,8 @@ public class ProcessInstanceProcessor
         + ProcessHandle.current().pid();
   }
 
-  private static String signerKeyId(Headers headers, ProcessInstanceTriggerEnvelope triggerEnvelope) {
+  private static String signerKeyId(
+      Headers headers, ProcessInstanceTriggerEnvelope triggerEnvelope) {
     if (triggerEnvelope != null
         && triggerEnvelope.signatureKeyId() != null
         && !triggerEnvelope.signatureKeyId().isBlank()) {

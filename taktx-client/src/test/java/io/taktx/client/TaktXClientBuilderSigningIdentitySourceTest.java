@@ -26,10 +26,12 @@ class TaktXClientBuilderSigningIdentitySourceTest {
   @TempDir Path tempDir;
 
   @Test
-  void resolveSigningIdentitySource_defaultsToManagedLocalPersistentSourceWhenNoIdentityIsConfigured()
-      throws Exception {
+  void
+      resolveSigningIdentitySource_defaultsToManagedLocalPersistentSourceWhenNoIdentityIsConfigured()
+          throws Exception {
     Properties props = new Properties();
-    props.setProperty("taktx.signing.local.directory", tempDir.resolve("managed-client").toString());
+    props.setProperty(
+        "taktx.signing.local.directory", tempDir.resolve("managed-client").toString());
 
     TaktXClient.TaktXClientBuilder builder = TaktXClient.newClientBuilder();
 
@@ -105,7 +107,8 @@ class TaktXClientBuilderSigningIdentitySourceTest {
   void resolveSigningIdentitySource_supportsExplicitLocalSource() {
     Properties props = new Properties();
     props.setProperty("taktx.signing.identity-source", "local");
-    props.setProperty("taktx.signing.local.directory", tempDir.resolve("explicit-local").toString());
+    props.setProperty(
+        "taktx.signing.local.directory", tempDir.resolve("explicit-local").toString());
 
     TaktXClient.TaktXClientBuilder builder = TaktXClient.newClientBuilder();
 

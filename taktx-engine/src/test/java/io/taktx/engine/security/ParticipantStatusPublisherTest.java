@@ -160,8 +160,7 @@ class ParticipantStatusPublisherTest {
     verify(securityEventPublisher).publish(eventCaptor.capture());
     assertThat(eventCaptor.getValue().getEventType())
         .isEqualTo(SecurityEventType.DATA_PLANE_BLOCKED);
-    assertThat(eventCaptor.getValue().getCode())
-        .isEqualTo("TRUST_ANCHOR_MISSING");
+    assertThat(eventCaptor.getValue().getCode()).isEqualTo("TRUST_ANCHOR_MISSING");
     assertThat(eventCaptor.getValue().getDesiredPolicyVersion()).isEqualTo(42L);
   }
 
