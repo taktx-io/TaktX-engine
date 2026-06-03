@@ -11,6 +11,7 @@ import java.util.Set;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Getter
 @EqualsAndHashCode(callSuper = true)
@@ -19,6 +20,8 @@ public abstract class ActivityDTO extends FlowNodeDTO implements WithIoMappingDT
   private LoopCharacteristicsDTO loopCharacteristics;
 
   private InputOutputMappingDTO ioMapping;
+
+  @Setter private boolean forCompensation;
 
   protected ActivityDTO(
       String id,

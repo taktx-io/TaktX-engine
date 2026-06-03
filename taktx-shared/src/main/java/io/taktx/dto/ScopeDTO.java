@@ -7,6 +7,7 @@
  */
 package io.taktx.dto;
 
+import java.util.List;
 import java.util.Map;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -23,6 +24,8 @@ public class ScopeDTO {
   private long elementInstanceCnt;
   private Map<String, Long> gatewayInstances;
   private SubscriptionsDTO subscriptions;
+  private List<CompensationRegistrationDTO> compensationRegistrations;
+  private List<CompensationTriggerStateDTO> compensationTriggerStates;
 
   public ScopeDTO(
       ExecutionState state,
@@ -37,5 +40,19 @@ public class ScopeDTO {
     this.elementInstanceCnt = elementInstanceCnt;
     this.gatewayInstances = gatewayInstances;
     this.subscriptions = subscriptions;
+  }
+
+  public ScopeDTO(
+      ExecutionState state,
+      int activeCnt,
+      int subProcessLevel,
+      long elementInstanceCnt,
+      Map<String, Long> gatewayInstances,
+      SubscriptionsDTO subscriptions,
+      List<CompensationRegistrationDTO> compensationRegistrations,
+      List<CompensationTriggerStateDTO> compensationTriggerStates) {
+    this(state, activeCnt, subProcessLevel, elementInstanceCnt, gatewayInstances, subscriptions);
+    this.compensationRegistrations = compensationRegistrations;
+    this.compensationTriggerStates = compensationTriggerStates;
   }
 }

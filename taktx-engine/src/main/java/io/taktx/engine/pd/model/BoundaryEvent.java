@@ -23,6 +23,9 @@ public class BoundaryEvent extends CatchEvent {
 
   private boolean cancelActivity;
 
+  private String compensationHandlerId;
+  @Setter private Activity compensationHandler;
+
   @Override
   public BoundaryEventInstance newInstance(IFlowNodeInstance parentInstance, Scope scope) {
     return new BoundaryEventInstance(parentInstance, this, scope.nextElementInstanceId());

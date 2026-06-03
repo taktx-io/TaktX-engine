@@ -50,6 +50,8 @@ public class EndEventInstanceProcessor
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       Scope scope,
       EndEventInstance flowNodeInstance) {
-    flowNodeInstance.setState(ExecutionState.COMPLETED);
+    if (!flowNodeInstance.isActive()) {
+      flowNodeInstance.setState(ExecutionState.COMPLETED);
+    }
   }
 }

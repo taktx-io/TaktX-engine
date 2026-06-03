@@ -13,6 +13,8 @@ import static io.taktx.dto.Constants.MAX_LONG;
 import io.taktx.dto.AbortTriggerDTO;
 import io.taktx.dto.CommandTrustMetadataDTO;
 import io.taktx.dto.CommandTrustVerificationResult;
+import io.taktx.dto.CompensationRegistrationDTO;
+import io.taktx.dto.CompensationTriggerStateDTO;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.dto.DlqEntryDTO;
 import io.taktx.dto.EventSignalDTO;
@@ -877,13 +879,27 @@ public class ProcessInstanceProcessor
   }
 
   private ScopeDTO scopeToDTO(Scope scope) {
+    List<CompensationRegistrationDTO> registrationDTOs =
+        scope.getCompensationRegistrations().isEmpty()
+            ? null
+            : scope.getCompensationRegistrations().stream()
+                .map(instanceMapper::map)
+                .collect(java.util.stream.Collectors.toCollection(java.util.ArrayList::new));
+    List<CompensationTriggerStateDTO> triggerStateDTOs =
+        scope.getCompensationTriggerStates().isEmpty()
+            ? null
+            : scope.getCompensationTriggerStates().stream()
+                .map(instanceMapper::map)
+                .collect(java.util.stream.Collectors.toCollection(java.util.ArrayList::new));
     return new ScopeDTO(
         scope.getState(),
         scope.getActiveCnt(),
         scope.getSubProcessLevel(),
         scope.getElementInstanceCnt(),
         scope.getGatewayInstances(),
-        instanceMapper.map(scope.getSubscriptions(), scope.getFlowElements()));
+        instanceMapper.map(scope.getSubscriptions(), scope.getFlowElements()),
+        registrationDTOs,
+        triggerStateDTOs);
   }
 
   private void purgeProcessInstance(ProcessInstanceDTO processInstance) {

@@ -12,6 +12,8 @@ import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.dto.ExecutionState;
 import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.feel.FeelExpressionHandler;
+import io.taktx.engine.pd.model.Activity;
+import io.taktx.engine.pd.model.CompensationEventDefinition;
 import io.taktx.engine.pd.model.EventSignal;
 import io.taktx.engine.pd.model.IntermediateCatchEvent;
 import io.taktx.engine.pd.model.SignalEvent;
@@ -19,6 +21,8 @@ import io.taktx.engine.pd.model.ThrowEvent;
 import io.taktx.engine.pi.ProcessInstanceException;
 import io.taktx.engine.pi.ProcessInstanceMapper;
 import io.taktx.engine.pi.ProcessInstanceProcessingContext;
+import io.taktx.engine.pi.model.CompensationRegistration;
+import io.taktx.engine.pi.model.CompensationTriggerState;
 import io.taktx.engine.pi.model.ContinueFlowNodeInstanceInfo;
 import io.taktx.engine.pi.model.ErrorEventSignal;
 import io.taktx.engine.pi.model.EscalationEventSignal;
@@ -30,6 +34,7 @@ import io.taktx.engine.pi.model.VariableScope;
 import io.taktx.proto.VariableValue;
 import io.taktx.variables.Variables;
 import java.time.Clock;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import lombok.NoArgsConstructor;
@@ -158,9 +163,78 @@ public abstract class ThrowEventInstanceProcessor<
                   });
             });
 
+    Optional<CompensationEventDefinition> compensationDef =
+        flowNodeInstance.getFlowNode().getCompensationEventDefinition();
+    if (compensationDef.isPresent()) {
+      startCompensation(compensationDef.get(), flowNodeInstance, scope, variableScope);
+      if (flowNodeInstance.isActive()) {
+        // Handlers were started; throw event stays active until they complete
+        processStartSpecificThrowEventInstance(
+            processInstanceProcessingContext, scope, flowNodeInstance);
+        return;
+      }
+    }
+
     flowNodeInstance.setState(ExecutionState.COMPLETED);
     processStartSpecificThrowEventInstance(
         processInstanceProcessingContext, scope, flowNodeInstance);
+  }
+
+  private void startCompensation(
+      CompensationEventDefinition ced,
+      I flowNodeInstance,
+      Scope scope,
+      VariableScope variableScope) {
+    List<CompensationRegistration> registrations =
+        scope.findRegistrationsForThrow(ced.getActivityRef());
+    if (registrations.isEmpty()) {
+      // Nothing to compensate — complete immediately
+      flowNodeInstance.setState(ExecutionState.COMPLETED);
+      return;
+    }
+    flowNodeInstance.setState(ExecutionState.ACTIVE);
+    CompensationTriggerState triggerState =
+        new CompensationTriggerState(flowNodeInstance.getElementInstanceId(), ced.getActivityRef());
+    for (CompensationRegistration reg : registrations) {
+      Activity handler = scope.getFlowElements().getActivity(reg.getHandlerId()).orElse(null);
+      if (handler == null) {
+        continue;
+      }
+      FlowNodeInstance<?> handlerInstance =
+          handler.createAndStoreNewInstance(flowNodeInstance.getParentInstance(), scope);
+      VariableScope parentVarScope =
+          variableScope.getParentScope() != null ? variableScope.getParentScope() : variableScope;
+      VariableScope handlerScope = parentVarScope.selectChildScope(handlerInstance);
+      if (reg.getVariableSnapshot() != null) {
+        handlerScope.merge(reg.getVariableSnapshot());
+      }
+      triggerState.addPendingHandler(handlerInstance.getElementInstanceId());
+      scope
+          .getDirectInstanceResult()
+          .addNewFlowNodeInstance(
+              new StartFlowNodeInstanceInfo(handlerInstance, null, handlerScope));
+      reg.setConsumed(true);
+      reg.setConsumedByThrowInstanceKey(flowNodeInstance.getElementInstanceId());
+    }
+    if (triggerState.isAllHandlersDone()) {
+      // All handlers were no-ops; complete immediately
+      flowNodeInstance.setState(ExecutionState.COMPLETED);
+    } else {
+      scope.addCompensationTriggerState(triggerState);
+    }
+  }
+
+  @Override
+  protected void processContinueSpecificFlowNodeInstance(
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
+      Scope scope,
+      VariableScope variableScope,
+      I flowNodeInstance,
+      ContinueFlowElementTriggerDTO trigger) {
+    // Compensation throw events are continued when all handlers complete
+    flowNodeInstance.setState(ExecutionState.COMPLETED);
+    scope.removeCompensationTriggerState(
+        scope.findTriggerStateByThrowKey(flowNodeInstance.getElementInstanceId()).orElse(null));
   }
 
   protected abstract void processStartSpecificThrowEventInstance(

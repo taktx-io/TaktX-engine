@@ -21,6 +21,8 @@ public class BoundaryEventDTO extends CatchEventDTO {
 
   private boolean cancelActivity;
 
+  private String compensationHandlerId;
+
   public BoundaryEventDTO(
       String id,
       String parentId,
@@ -34,5 +36,29 @@ public class BoundaryEventDTO extends CatchEventDTO {
     super(id, parentId, name, incoming, outgoing, eventDefinitions, ioMapping);
     this.attachedToRef = attachedToRef;
     this.cancelActivity = cancelActivity;
+  }
+
+  public BoundaryEventDTO(
+      String id,
+      String parentId,
+      String name,
+      Set<String> incoming,
+      Set<String> outgoing,
+      Set<EventDefinitionDTO> eventDefinitions,
+      String attachedToRef,
+      boolean cancelActivity,
+      InputOutputMappingDTO ioMapping,
+      String compensationHandlerId) {
+    this(
+        id,
+        parentId,
+        name,
+        incoming,
+        outgoing,
+        eventDefinitions,
+        attachedToRef,
+        cancelActivity,
+        ioMapping);
+    this.compensationHandlerId = compensationHandlerId;
   }
 }

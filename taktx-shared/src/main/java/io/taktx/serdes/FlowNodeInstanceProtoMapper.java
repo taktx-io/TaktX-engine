@@ -11,9 +11,12 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.MessageLite;
 import com.google.protobuf.Parser;
 import io.taktx.dto.ActivityInstanceDTO;
+import io.taktx.dto.AdHocSubProcessInstanceDTO;
 import io.taktx.dto.BoundaryEventInstanceDTO;
 import io.taktx.dto.BusinessRuleTaskInstanceDTO;
 import io.taktx.dto.CallActivityInstanceDTO;
+import io.taktx.dto.CompensationRegistrationDTO;
+import io.taktx.dto.CompensationTriggerStateDTO;
 import io.taktx.dto.DefinitionScheduleKeyDTO;
 import io.taktx.dto.EndEventInstanceDTO;
 import io.taktx.dto.EventBasedGatewayInstanceDTO;
@@ -39,7 +42,6 @@ import io.taktx.dto.ScriptTaskInstanceDTO;
 import io.taktx.dto.SendTaskInstanceDTO;
 import io.taktx.dto.ServiceTaskInstanceDTO;
 import io.taktx.dto.StartEventInstanceDTO;
-import io.taktx.dto.AdHocSubProcessInstanceDTO;
 import io.taktx.dto.SubProcessInstanceDTO;
 import io.taktx.dto.SubscriptionDTO;
 import io.taktx.dto.SubscriptionsDTO;
@@ -55,12 +57,15 @@ import io.taktx.dto.subscriptions.SignalSubscriptionDTO;
 import io.taktx.dto.subscriptions.SubScriptionType;
 import io.taktx.dto.subscriptions.TimerSubscriptionDTO;
 import io.taktx.proto.ActivityInstanceMessage;
+import io.taktx.proto.AdHocSubProcessInstanceMessage;
 import io.taktx.proto.BoundaryEventInstanceMessage;
 import io.taktx.proto.BusinessRuleTaskInstanceMessage;
 import io.taktx.proto.CallActivityInstanceMessage;
 import io.taktx.proto.CatchAllErrorSubscriptionMessage;
 import io.taktx.proto.CatchAllEscalationSubscriptionMessage;
 import io.taktx.proto.CatchEventInstanceMessage;
+import io.taktx.proto.CompensationRegistrationMessage;
+import io.taktx.proto.CompensationTriggerStateMessage;
 import io.taktx.proto.CorrelationKeyListMessage;
 import io.taktx.proto.DefinitionScheduleKeyMessage;
 import io.taktx.proto.EndEventInstanceMessage;
@@ -90,7 +95,6 @@ import io.taktx.proto.SendTaskInstanceMessage;
 import io.taktx.proto.ServiceTaskInstanceMessage;
 import io.taktx.proto.SignalSubscriptionMessage;
 import io.taktx.proto.StartEventInstanceMessage;
-import io.taktx.proto.AdHocSubProcessInstanceMessage;
 import io.taktx.proto.SubProcessInstanceMessage;
 import io.taktx.proto.SubscriptionEnvelope;
 import io.taktx.proto.SubscriptionList;
@@ -675,17 +679,104 @@ public final class FlowNodeInstanceProtoMapper {
     if (dto.getSubscriptions() != null) {
       builder.setSubscriptions(toProto(dto.getSubscriptions()));
     }
+    if (dto.getCompensationRegistrations() != null) {
+      dto.getCompensationRegistrations().stream()
+          .map(FlowNodeInstanceProtoMapper::toProto)
+          .forEach(builder::addCompensationRegistrations);
+    }
+    if (dto.getCompensationTriggerStates() != null) {
+      dto.getCompensationTriggerStates().stream()
+          .map(FlowNodeInstanceProtoMapper::toProto)
+          .forEach(builder::addCompensationTriggerStates);
+    }
     return builder.build();
   }
 
   private static ScopeDTO toDto(ScopeMessage message) {
+    // Use ArrayList (mutable) so callers can add further registrations/states after deserialization
+    List<CompensationRegistrationDTO> registrations =
+        new ArrayList<>(
+            message.getCompensationRegistrationsList().stream()
+                .map(FlowNodeInstanceProtoMapper::toDto)
+                .toList());
+    List<CompensationTriggerStateDTO> triggerStates =
+        new ArrayList<>(
+            message.getCompensationTriggerStatesList().stream()
+                .map(FlowNodeInstanceProtoMapper::toDto)
+                .toList());
     return new ScopeDTO(
         toDto(message.getState()),
         message.getActiveCnt(),
         message.getSubProcessLevel(),
         message.getElementInstanceCnt(),
         new LinkedHashMap<>(message.getGatewayInstancesMap()),
-        message.hasSubscriptions() ? toDto(message.getSubscriptions()) : new SubscriptionsDTO());
+        message.hasSubscriptions() ? toDto(message.getSubscriptions()) : new SubscriptionsDTO(),
+        registrations.isEmpty() ? null : registrations,
+        triggerStates.isEmpty() ? null : triggerStates);
+  }
+
+  private static CompensationRegistrationMessage toProto(CompensationRegistrationDTO dto) {
+    CompensationRegistrationMessage.Builder builder = CompensationRegistrationMessage.newBuilder();
+    if (dto.getRegistrationKey() != null) {
+      builder.setRegistrationKey(dto.getRegistrationKey());
+    }
+    builder.setActivityInstanceKey(dto.getActivityInstanceKey());
+    if (dto.getActivityId() != null) {
+      builder.setActivityId(dto.getActivityId());
+    }
+    if (dto.getBoundaryEventId() != null) {
+      builder.setBoundaryEventId(dto.getBoundaryEventId());
+    }
+    if (dto.getHandlerId() != null) {
+      builder.setHandlerId(dto.getHandlerId());
+    }
+    if (dto.getVariableSnapshot() != null) {
+      builder.putAllVariableSnapshot(dto.getVariableSnapshot());
+    }
+    builder.setCompletedAtSequence(dto.getCompletedAtSequence());
+    builder.setConsumed(dto.isConsumed());
+    builder.setConsumedByThrowInstanceKey(dto.getConsumedByThrowInstanceKey());
+    return builder.build();
+  }
+
+  private static CompensationRegistrationDTO toDto(CompensationRegistrationMessage message) {
+    return new CompensationRegistrationDTO(
+        emptyToNull(message.getRegistrationKey()),
+        message.getActivityInstanceKey(),
+        emptyToNull(message.getActivityId()),
+        emptyToNull(message.getBoundaryEventId()),
+        emptyToNull(message.getHandlerId()),
+        new LinkedHashMap<>(message.getVariableSnapshotMap()),
+        message.getCompletedAtSequence(),
+        message.getConsumed(),
+        message.getConsumedByThrowInstanceKey());
+  }
+
+  private static CompensationTriggerStateMessage toProto(CompensationTriggerStateDTO dto) {
+    CompensationTriggerStateMessage.Builder builder = CompensationTriggerStateMessage.newBuilder();
+    builder.setThrowEventInstanceKey(dto.getThrowEventInstanceKey());
+    if (dto.getTargetActivityId() != null) {
+      builder.setTargetActivityId(dto.getTargetActivityId());
+    }
+    if (dto.getPendingHandlerInstanceKeys() != null) {
+      builder.addAllPendingHandlerKeys(dto.getPendingHandlerInstanceKeys());
+    }
+    if (dto.getCompletedHandlerInstanceKeys() != null) {
+      builder.addAllCompletedHandlerKeys(dto.getCompletedHandlerInstanceKeys());
+    }
+    if (dto.getFailedHandlerInstanceKeys() != null) {
+      builder.addAllFailedHandlerKeys(dto.getFailedHandlerInstanceKeys());
+    }
+    return builder.build();
+  }
+
+  private static CompensationTriggerStateDTO toDto(CompensationTriggerStateMessage message) {
+    return new CompensationTriggerStateDTO(
+        message.getThrowEventInstanceKey(),
+        emptyToNull(message.getTargetActivityId()),
+        new LinkedHashSet<>(message.getPendingHandlerKeysList()),
+        new LinkedHashSet<>(message.getCompletedHandlerKeysList()),
+        new LinkedHashSet<>(message.getFailedHandlerKeysList()));
   }
 
   private static SubscriptionsMessage toProto(SubscriptionsDTO dto) {

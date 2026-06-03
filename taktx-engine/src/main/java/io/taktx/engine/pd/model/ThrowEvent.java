@@ -57,4 +57,11 @@ public abstract class ThrowEvent extends Event
         .map(TerminateEventDefinition.class::cast)
         .findFirst();
   }
+
+  public Optional<CompensationEventDefinition> getCompensationEventDefinition() {
+    return eventDefinitions.stream()
+        .filter(CompensationEventDefinition.class::isInstance)
+        .map(CompensationEventDefinition.class::cast)
+        .findFirst();
+  }
 }

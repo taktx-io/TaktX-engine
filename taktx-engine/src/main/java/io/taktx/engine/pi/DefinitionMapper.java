@@ -17,6 +17,7 @@ import io.taktx.dto.SigDTO;
 import io.taktx.engine.pd.model.Activity;
 import io.taktx.engine.pd.model.BoundaryEvent;
 import io.taktx.engine.pd.model.CatchEvent;
+import io.taktx.engine.pd.model.CompensationEventDefinition;
 import io.taktx.engine.pd.model.ErrorEvent;
 import io.taktx.engine.pd.model.EscalationEvent;
 import io.taktx.engine.pd.model.FlowElement;
@@ -27,6 +28,7 @@ import io.taktx.engine.pd.model.Message;
 import io.taktx.engine.pd.model.SequenceFlow;
 import io.taktx.engine.pd.model.SignalEvent;
 import io.taktx.engine.pd.model.SubProcess;
+import io.taktx.engine.pd.model.ThrowEvent;
 import io.taktx.engine.pd.model.WIthChildElements;
 import io.taktx.engine.pd.model.WithErrorEventDefinitions;
 import io.taktx.engine.pd.model.WithEscalationEventDefinitions;
@@ -54,7 +56,92 @@ public class DefinitionMapper {
     setErrorReferences(flowElements1.getElements(), definitionsDTO.getErrors());
     setSignalReferences(flowElements1.getElements(), definitionsDTO.getSignals());
     setSequenceFlowReferences(flowElements1);
+    validateCompensationModel(flowElements1.getElements());
     return flowElements1;
+  }
+
+  private void validateCompensationModel(Map<String, FlowElement> elements) {
+    for (FlowElement flowElement : elements.values()) {
+      if (flowElement instanceof BoundaryEvent boundaryEvent) {
+        boolean isCompensation =
+            boundaryEvent.getEventDefinitions().stream()
+                .anyMatch(ed -> ed instanceof CompensationEventDefinition);
+        if (isCompensation) {
+          if (boundaryEvent.getCompensationHandlerId() == null) {
+            throw new IllegalStateException(
+                "Compensation boundary event '"
+                    + boundaryEvent.getId()
+                    + "' has no associated handler. Add an association from the boundary event to"
+                    + " a handler activity.");
+          }
+          if (boundaryEvent.getCompensationHandler() == null) {
+            throw new IllegalStateException(
+                "Compensation handler '"
+                    + boundaryEvent.getCompensationHandlerId()
+                    + "' referenced by boundary event '"
+                    + boundaryEvent.getId()
+                    + "' was not found in the process.");
+          }
+          if (!boundaryEvent.getCompensationHandler().isForCompensation()) {
+            throw new IllegalStateException(
+                "Activity '"
+                    + boundaryEvent.getCompensationHandlerId()
+                    + "' is referenced as a compensation handler but does not have"
+                    + " isForCompensation=\"true\".");
+          }
+          if (!boundaryEvent.getCompensationHandler().getIncomingSequenceFlows().isEmpty()) {
+            throw new IllegalStateException(
+                "Compensation handler '"
+                    + boundaryEvent.getCompensationHandlerId()
+                    + "' must not be reachable through normal sequence flow.");
+          }
+        }
+      }
+      if (flowElement instanceof ThrowEvent throwEvent) {
+        throwEvent
+            .getCompensationEventDefinition()
+            .filter(ced -> ced.getActivityRef() != null)
+            .ifPresent(
+                ced -> {
+                  String activityRef = ced.getActivityRef();
+                  FlowElement target = elements.get(activityRef);
+                  if (target == null) {
+                    throw new IllegalStateException(
+                        "Compensation throw event '"
+                            + throwEvent.getId()
+                            + "' has activityRef='"
+                            + activityRef
+                            + "' but no such element exists in the same scope.");
+                  }
+                  if (!(target instanceof Activity)) {
+                    throw new IllegalStateException(
+                        "Compensation throw event '"
+                            + throwEvent.getId()
+                            + "' activityRef='"
+                            + activityRef
+                            + "' does not reference an activity.");
+                  }
+                  Activity refActivity = (Activity) target;
+                  boolean hasCompensationBoundary =
+                      refActivity.getBoundaryEvents().stream()
+                          .anyMatch(
+                              be ->
+                                  be.getEventDefinitions().stream()
+                                      .anyMatch(ed -> ed instanceof CompensationEventDefinition));
+                  if (!hasCompensationBoundary) {
+                    throw new IllegalStateException(
+                        "Compensation throw event '"
+                            + throwEvent.getId()
+                            + "' activityRef='"
+                            + activityRef
+                            + "' references an activity without a compensation boundary event.");
+                  }
+                });
+      }
+      if (flowElement instanceof WIthChildElements withChildElements) {
+        validateCompensationModel(withChildElements.getElements().getElements());
+      }
+    }
   }
 
   private void setSequenceFlowReferences(FlowElements flowElements) {
@@ -81,6 +168,11 @@ public class DefinitionMapper {
                     flowElements.getActivity(boundaryEvent.getAttachedToRef()).get();
                 boundaryEvent.setAttachedActivity(attachedActivity);
                 attachedActivity.addBoundaryEvent(boundaryEvent);
+                if (boundaryEvent.getCompensationHandlerId() != null) {
+                  flowElements
+                      .getActivity(boundaryEvent.getCompensationHandlerId())
+                      .ifPresent(boundaryEvent::setCompensationHandler);
+                }
               }
             });
 

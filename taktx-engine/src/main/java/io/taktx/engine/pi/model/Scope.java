@@ -16,8 +16,11 @@ import io.taktx.engine.pd.model.WIthChildElements;
 import io.taktx.engine.pi.DirectInstanceResult;
 import io.taktx.engine.pi.ProcessInstanceMapper;
 import io.taktx.engine.pi.model.subscriptions.Subscriptions;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -48,6 +51,9 @@ public class Scope {
 
   private ProcessInstanceMapper processInstanceMapper;
   private FlowElements flowElements;
+
+  private List<CompensationRegistration> compensationRegistrations = new ArrayList<>();
+  private List<CompensationTriggerState> compensationTriggerStates = new ArrayList<>();
 
   public Scope(
       Scope parentScope,
@@ -151,6 +157,106 @@ public class Scope {
         flowElements,
         processInstanceMapper,
         flowNodeInstances.getFlowNodeInstanceStore());
+  }
+
+  public List<CompensationRegistration> getCompensationRegistrations() {
+    if (compensationRegistrations == null) {
+      compensationRegistrations = new ArrayList<>();
+    }
+    return compensationRegistrations;
+  }
+
+  public List<CompensationTriggerState> getCompensationTriggerStates() {
+    if (compensationTriggerStates == null) {
+      compensationTriggerStates = new ArrayList<>();
+    }
+    return compensationTriggerStates;
+  }
+
+  public void addCompensationRegistration(CompensationRegistration registration) {
+    ensureMutableRegistrations();
+    getCompensationRegistrations().add(registration);
+  }
+
+  public void addCompensationTriggerState(CompensationTriggerState triggerState) {
+    ensureMutableTriggerStates();
+    getCompensationTriggerStates().add(triggerState);
+  }
+
+  private void ensureMutableRegistrations() {
+    if (compensationRegistrations != null && !(compensationRegistrations instanceof ArrayList)) {
+      compensationRegistrations = new ArrayList<>(compensationRegistrations);
+    }
+  }
+
+  private void ensureMutableTriggerStates() {
+    if (compensationTriggerStates != null && !(compensationTriggerStates instanceof ArrayList)) {
+      compensationTriggerStates = new ArrayList<>(compensationTriggerStates);
+    }
+  }
+
+  /**
+   * Returns all unconsumed registrations for the given activityId, or all if activityId is null.
+   * Also recursively collects from completed child subprocess scopes.
+   */
+  public List<CompensationRegistration> findRegistrationsForThrow(String activityId) {
+    List<CompensationRegistration> result = new ArrayList<>();
+    collectRegistrations(result, activityId);
+    return result;
+  }
+
+  private void collectRegistrations(List<CompensationRegistration> result, String activityId) {
+    for (CompensationRegistration reg : getCompensationRegistrations()) {
+      if (reg.isConsumed()) {
+        continue;
+      }
+      if (activityId == null || activityId.equals(reg.getActivityId())) {
+        result.add(reg);
+      }
+    }
+    // Recursively include registrations from completed embedded sub-scopes
+    if (flowNodeInstances != null) {
+      for (FlowNodeInstance<?> instance : flowNodeInstances.getInstances().values()) {
+        if (instance instanceof WithScope withScope && instance.isDone()) {
+          withScope.getScope().collectRegistrations(result, activityId);
+        }
+      }
+    }
+  }
+
+  public Optional<CompensationTriggerState> findTriggerStateForHandler(long handlerInstanceKey) {
+    return getCompensationTriggerStates().stream()
+        .filter(
+            s ->
+                s.getPendingHandlerInstanceKeys().contains(handlerInstanceKey)
+                    || s.getCompletedHandlerInstanceKeys().contains(handlerInstanceKey))
+        .findFirst();
+  }
+
+  public Optional<CompensationTriggerState> findTriggerStateByThrowKey(long throwInstanceKey) {
+    return getCompensationTriggerStates().stream()
+        .filter(s -> s.getThrowEventInstanceKey() == throwInstanceKey)
+        .findFirst();
+  }
+
+  /**
+   * Marks a compensation handler as completed. Returns the trigger state if all handlers are done.
+   */
+  public Optional<CompensationTriggerState> markHandlerCompleted(long handlerInstanceKey) {
+    for (CompensationTriggerState state : getCompensationTriggerStates()) {
+      if (state.getPendingHandlerInstanceKeys().remove(handlerInstanceKey)) {
+        state.getCompletedHandlerInstanceKeys().add(handlerInstanceKey);
+        if (state.isAllHandlersDone()) {
+          return Optional.of(state);
+        }
+        return Optional.empty();
+      }
+    }
+    return Optional.empty();
+  }
+
+  public void removeCompensationTriggerState(CompensationTriggerState state) {
+    getCompensationTriggerStates().remove(state);
   }
 
   public FlowNodeInstance<?> mapToFlowNodeInstance(FlowNodeInstanceDTO value) {

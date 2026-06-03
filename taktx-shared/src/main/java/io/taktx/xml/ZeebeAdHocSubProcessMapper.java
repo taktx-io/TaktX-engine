@@ -14,8 +14,7 @@ public class ZeebeAdHocSubProcessMapper implements AdHocSubProcessMapper {
 
   @Override
   public String mapActiveElementsCollection(TAdHocSubProcess adHoc) {
-    return ExtensionElementHelper.extractExtensionElement(
-            adHoc.getExtensionElements(), AdHoc.class)
+    return ExtensionElementHelper.extractExtensionElement(adHoc.getExtensionElements(), AdHoc.class)
         .map(AdHoc::getActiveElementsCollection)
         .orElse(null);
   }

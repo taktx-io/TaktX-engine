@@ -7,6 +7,7 @@
  */
 package io.taktx.xml;
 
+import io.taktx.bpmn.TCompensateEventDefinition;
 import io.taktx.bpmn.TErrorEventDefinition;
 import io.taktx.bpmn.TEscalationEventDefinition;
 import io.taktx.bpmn.TEventDefinition;
@@ -15,6 +16,7 @@ import io.taktx.bpmn.TMessageEventDefinition;
 import io.taktx.bpmn.TSignalEventDefinition;
 import io.taktx.bpmn.TTerminateEventDefinition;
 import io.taktx.bpmn.TTimerEventDefinition;
+import io.taktx.dto.CompensationEventDefinitionDTO;
 import io.taktx.dto.ErrorEventDefinitionDTO;
 import io.taktx.dto.EscalationEventDefinitionDTO;
 import io.taktx.dto.EventDefinitionDTO;
@@ -53,6 +55,8 @@ public class GenericEventDefinitionMapper implements EventDefinitionMapper {
       return mapErrorEventDefinition(errorEventDefinition);
     } else if (ed instanceof TSignalEventDefinition signalEventDefinition) {
       return mapSignalEventDefinition(signalEventDefinition);
+    } else if (ed instanceof TCompensateEventDefinition compensateEventDefinition) {
+      return mapCompensationEventDefinition(compensateEventDefinition);
     }
     throw new IllegalStateException("Unknown event definition: " + ed.getClass().getName());
   }
@@ -98,6 +102,15 @@ public class GenericEventDefinitionMapper implements EventDefinitionMapper {
         messageEventDefinition.getId(),
         messageEventDefinition.getMessageRef() != null
             ? messageEventDefinition.getMessageRef().getLocalPart()
+            : null);
+  }
+
+  private EventDefinitionDTO mapCompensationEventDefinition(
+      TCompensateEventDefinition compensateEventDefinition) {
+    return new CompensationEventDefinitionDTO(
+        compensateEventDefinition.getId(),
+        compensateEventDefinition.getActivityRef() != null
+            ? compensateEventDefinition.getActivityRef().getLocalPart()
             : null);
   }
 

@@ -12,6 +12,8 @@ import io.taktx.dto.AdHocSubProcessInstanceDTO;
 import io.taktx.dto.BoundaryEventInstanceDTO;
 import io.taktx.dto.BusinessRuleTaskInstanceDTO;
 import io.taktx.dto.CallActivityInstanceDTO;
+import io.taktx.dto.CompensationRegistrationDTO;
+import io.taktx.dto.CompensationTriggerStateDTO;
 import io.taktx.dto.EndEventInstanceDTO;
 import io.taktx.dto.EventBasedGatewayInstanceDTO;
 import io.taktx.dto.ExclusiveGatewayInstanceDTO;
@@ -53,6 +55,8 @@ import io.taktx.engine.pi.model.AdHocSubProcessInstance;
 import io.taktx.engine.pi.model.BoundaryEventInstance;
 import io.taktx.engine.pi.model.BusinessRuleTaskInstance;
 import io.taktx.engine.pi.model.CallActivityInstance;
+import io.taktx.engine.pi.model.CompensationRegistration;
+import io.taktx.engine.pi.model.CompensationTriggerState;
 import io.taktx.engine.pi.model.EndEventInstance;
 import io.taktx.engine.pi.model.EventBasedGatewayInstance;
 import io.taktx.engine.pi.model.ExclusiveGatewayInstance;
@@ -363,8 +367,13 @@ public interface ProcessInstanceMapper {
   @Mapping(target = "wasWaiting", ignore = true)
   @Mapping(target = "wasNew", ignore = true)
   @Mapping(target = "counted", ignore = true)
-  AdHocSubProcessInstance map(AdHocSubProcessInstanceDTO source, @Context FlowElements flowElements);
+  AdHocSubProcessInstance map(
+      AdHocSubProcessInstanceDTO source, @Context FlowElements flowElements);
 
+  @Mapping(
+      target = "flowNode",
+      expression =
+          "java((io.taktx.engine.pd.model.SubProcess)flowElements.getFlowNode(flowElements.getIndex(source.getElementIndex())).orElseThrow())")
   @Mapping(
       target = "scope",
       expression =
@@ -452,7 +461,9 @@ public interface ProcessInstanceMapper {
   @SubclassMapping(target = UserTaskInstance.class, source = UserTaskInstanceDTO.class)
   @SubclassMapping(target = ReceiveTaskInstance.class, source = ReceiveTaskInstanceDTO.class)
   @SubclassMapping(target = ScriptTaskInstance.class, source = ScriptTaskInstanceDTO.class)
-  @SubclassMapping(target = AdHocSubProcessInstance.class, source = AdHocSubProcessInstanceDTO.class)
+  @SubclassMapping(
+      target = AdHocSubProcessInstance.class,
+      source = AdHocSubProcessInstanceDTO.class)
   @SubclassMapping(target = SubProcessInstance.class, source = SubProcessInstanceDTO.class)
   @SubclassMapping(target = CallActivityInstance.class, source = CallActivityInstanceDTO.class)
   @SubclassMapping(target = MultiInstanceInstance.class, source = MultiInstanceInstanceDTO.class)
@@ -684,7 +695,8 @@ public interface ProcessInstanceMapper {
       expression = "java(flowElements.indexOf(source.getFlowNode().getId()))")
   @Mapping(target = "parentElementInstanceId", ignore = true)
   @Mapping(target = "elementId", ignore = true)
-  AdHocSubProcessInstanceDTO map(AdHocSubProcessInstance source, @Context FlowElements flowElements);
+  AdHocSubProcessInstanceDTO map(
+      AdHocSubProcessInstance source, @Context FlowElements flowElements);
 
   @Mapping(
       target = "elementIndex",
@@ -762,7 +774,9 @@ public interface ProcessInstanceMapper {
   @SubclassMapping(source = UserTaskInstance.class, target = UserTaskInstanceDTO.class)
   @SubclassMapping(source = ReceiveTaskInstance.class, target = ReceiveTaskInstanceDTO.class)
   @SubclassMapping(source = ScriptTaskInstance.class, target = ScriptTaskInstanceDTO.class)
-  @SubclassMapping(source = AdHocSubProcessInstance.class, target = AdHocSubProcessInstanceDTO.class)
+  @SubclassMapping(
+      source = AdHocSubProcessInstance.class,
+      target = AdHocSubProcessInstanceDTO.class)
   @SubclassMapping(source = SubProcessInstance.class, target = SubProcessInstanceDTO.class)
   @SubclassMapping(source = CallActivityInstance.class, target = CallActivityInstanceDTO.class)
   @SubclassMapping(source = MultiInstanceInstance.class, target = MultiInstanceInstanceDTO.class)
@@ -801,6 +815,14 @@ public interface ProcessInstanceMapper {
   @Mapping(target = "processInstanceMapper", ignore = true)
   @Mapping(target = "flowElements", ignore = true)
   Scope map(ScopeDTO source, @Context FlowElements flowElements);
+
+  CompensationRegistration map(CompensationRegistrationDTO source);
+
+  CompensationRegistrationDTO map(CompensationRegistration source);
+
+  CompensationTriggerState map(CompensationTriggerStateDTO source);
+
+  CompensationTriggerStateDTO map(CompensationTriggerState source);
 
   @Mapping(
       target = "instanceSubscriptions",

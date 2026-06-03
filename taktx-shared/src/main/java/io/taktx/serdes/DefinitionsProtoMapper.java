@@ -8,11 +8,13 @@
 package io.taktx.serdes;
 
 import io.taktx.dto.ActivityDTO;
+import io.taktx.dto.AdHocSubProcessDTO;
 import io.taktx.dto.AssignmentDefinitionDTO;
 import io.taktx.dto.BaseElementDTO;
 import io.taktx.dto.BoundaryEventDTO;
 import io.taktx.dto.BusinessRuleTaskDTO;
 import io.taktx.dto.CallActivityDTO;
+import io.taktx.dto.CompensationEventDefinitionDTO;
 import io.taktx.dto.DefinitionsKey;
 import io.taktx.dto.DefinitionsTriggerDTO;
 import io.taktx.dto.EndEventDTO;
@@ -52,7 +54,6 @@ import io.taktx.dto.ScriptTaskDTO;
 import io.taktx.dto.ScriptType;
 import io.taktx.dto.SendTaskDTO;
 import io.taktx.dto.SequenceFlowDTO;
-import io.taktx.dto.AdHocSubProcessDTO;
 import io.taktx.dto.ServiceTaskDTO;
 import io.taktx.dto.SigDTO;
 import io.taktx.dto.SignalEventDefinitionDTO;
@@ -65,11 +66,13 @@ import io.taktx.dto.TimerEventDefinitionDTO;
 import io.taktx.dto.UserTaskDTO;
 import io.taktx.dto.UserTaskTypeEnum;
 import io.taktx.dto.XmlDefinitionsDTO;
+import io.taktx.proto.AdHocSubProcessMessage;
 import io.taktx.proto.AssignmentDefinitionMessage;
 import io.taktx.proto.BaseElementEnvelope;
 import io.taktx.proto.BoundaryEventMessage;
 import io.taktx.proto.BusinessRuleTaskMessage;
 import io.taktx.proto.CallActivityMessage;
+import io.taktx.proto.CompensationEventDefinitionMessage;
 import io.taktx.proto.DefinitionsKeyMessage;
 import io.taktx.proto.DefinitionsTriggerEnvelope;
 import io.taktx.proto.EndEventMessage;
@@ -107,7 +110,6 @@ import io.taktx.proto.ServiceTaskMessage;
 import io.taktx.proto.SigMessage;
 import io.taktx.proto.SignalEventDefinitionMessage;
 import io.taktx.proto.StartEventMessage;
-import io.taktx.proto.AdHocSubProcessMessage;
 import io.taktx.proto.SubProcessMessage;
 import io.taktx.proto.TaskMessage;
 import io.taktx.proto.TaskScheduleMessage;
@@ -279,6 +281,8 @@ public final class DefinitionsProtoMapper {
       builder.setMsgEventDef(toProto(messageEventDefinition));
     } else if (dto instanceof SignalEventDefinitionDTO signalEventDefinition) {
       builder.setSignalEventDef(toProto(signalEventDefinition));
+    } else if (dto instanceof CompensationEventDefinitionDTO compensationEventDefinition) {
+      builder.setCompensationEventDef(toProto(compensationEventDefinition));
     } else {
       throw new IllegalArgumentException(
           "Unsupported BPMN element type: " + dto.getClass().getName());
@@ -321,6 +325,7 @@ public final class DefinitionsProtoMapper {
       case ERROR_EVENT_DEF -> toDto(envelope.getErrorEventDef());
       case MSG_EVENT_DEF -> toDto(envelope.getMsgEventDef());
       case SIGNAL_EVENT_DEF -> toDto(envelope.getSignalEventDef());
+      case COMPENSATION_EVENT_DEF -> toDto(envelope.getCompensationEventDef());
       case ELEMENT_NOT_SET -> null;
     };
   }
@@ -426,6 +431,9 @@ public final class DefinitionsProtoMapper {
       builder.setAttachedToRef(dto.getAttachedToRef());
     }
     builder.setCancelActivity(dto.isCancelActivity());
+    if (dto.getCompensationHandlerId() != null) {
+      builder.setCompensationHandlerId(dto.getCompensationHandlerId());
+    }
     return builder.build();
   }
 
@@ -439,7 +447,8 @@ public final class DefinitionsProtoMapper {
         toEventDefinitionSet(message.getEventDefinitionsList()),
         emptyToNull(message.getAttachedToRef()),
         message.getCancelActivity(),
-        message.hasIoMapping() ? toDto(message.getIoMapping()) : null);
+        message.hasIoMapping() ? toDto(message.getIoMapping()) : null,
+        emptyToNull(message.getCompensationHandlerId()));
   }
 
   private static StartEventMessage toProto(StartEventDTO dto) {
@@ -734,20 +743,24 @@ public final class DefinitionsProtoMapper {
       builder.setElements(toProto(dto.getElements()));
     }
     builder.setTriggeredByEvent(dto.isTriggeredByEvent());
+    builder.setIsForCompensation(dto.isForCompensation());
     return builder.build();
   }
 
   private static SubProcessDTO toDto(SubProcessMessage message) {
-    return new SubProcessDTO(
-        emptyToNull(message.getId()),
-        emptyToNull(message.getParentId()),
-        emptyToNull(message.getName()),
-        stringSet(message.getIncomingList()),
-        stringSet(message.getOutgoingList()),
-        message.hasLoopCharacteristics() ? toDto(message.getLoopCharacteristics()) : null,
-        message.hasElements() ? toDto(message.getElements()) : null,
-        message.hasIoMapping() ? toDto(message.getIoMapping()) : null,
-        message.getTriggeredByEvent());
+    SubProcessDTO dto =
+        new SubProcessDTO(
+            emptyToNull(message.getId()),
+            emptyToNull(message.getParentId()),
+            emptyToNull(message.getName()),
+            stringSet(message.getIncomingList()),
+            stringSet(message.getOutgoingList()),
+            message.hasLoopCharacteristics() ? toDto(message.getLoopCharacteristics()) : null,
+            message.hasElements() ? toDto(message.getElements()) : null,
+            message.hasIoMapping() ? toDto(message.getIoMapping()) : null,
+            message.getTriggeredByEvent());
+    dto.setForCompensation(message.getIsForCompensation());
+    return dto;
   }
 
   private static CallActivityMessage toProto(CallActivityDTO dto) {
@@ -769,21 +782,25 @@ public final class DefinitionsProtoMapper {
     }
     builder.setPropagateAllParentVariables(dto.isPropagateAllParentVariables());
     builder.setPropagateAllChildVariables(dto.isPropagateAllChildVariables());
+    builder.setIsForCompensation(dto.isForCompensation());
     return builder.build();
   }
 
   private static CallActivityDTO toDto(CallActivityMessage message) {
-    return new CallActivityDTO(
-        emptyToNull(message.getId()),
-        emptyToNull(message.getParentId()),
-        emptyToNull(message.getName()),
-        stringSet(message.getIncomingList()),
-        stringSet(message.getOutgoingList()),
-        message.hasLoopCharacteristics() ? toDto(message.getLoopCharacteristics()) : null,
-        emptyToNull(message.getCalledElement()),
-        message.getPropagateAllParentVariables(),
-        message.getPropagateAllChildVariables(),
-        message.hasIoMapping() ? toDto(message.getIoMapping()) : null);
+    CallActivityDTO dto =
+        new CallActivityDTO(
+            emptyToNull(message.getId()),
+            emptyToNull(message.getParentId()),
+            emptyToNull(message.getName()),
+            stringSet(message.getIncomingList()),
+            stringSet(message.getOutgoingList()),
+            message.hasLoopCharacteristics() ? toDto(message.getLoopCharacteristics()) : null,
+            emptyToNull(message.getCalledElement()),
+            message.getPropagateAllParentVariables(),
+            message.getPropagateAllChildVariables(),
+            message.hasIoMapping() ? toDto(message.getIoMapping()) : null);
+    dto.setForCompensation(message.getIsForCompensation());
+    return dto;
   }
 
   private static ReceiveTaskMessage toProto(ReceiveTaskDTO dto) {
@@ -836,22 +853,26 @@ public final class DefinitionsProtoMapper {
         builder::setImplementation,
         builder::putAllHeaders,
         dto);
+    builder.setIsForCompensation(dto.isForCompensation());
     return builder.build();
   }
 
   private static SendTaskDTO toDto(SendTaskMessage message) {
-    return new SendTaskDTO(
-        emptyToNull(message.getId()),
-        emptyToNull(message.getParentId()),
-        emptyToNull(message.getName()),
-        emptyToNull(message.getWorkerDefinition()),
-        emptyToNull(message.getRetries()),
-        stringSet(message.getIncomingList()),
-        stringSet(message.getOutgoingList()),
-        emptyToNull(message.getImplementation()),
-        message.hasLoopCharacteristics() ? toDto(message.getLoopCharacteristics()) : null,
-        new LinkedHashMap<>(message.getHeadersMap()),
-        message.hasIoMapping() ? toDto(message.getIoMapping()) : null);
+    SendTaskDTO dto =
+        new SendTaskDTO(
+            emptyToNull(message.getId()),
+            emptyToNull(message.getParentId()),
+            emptyToNull(message.getName()),
+            emptyToNull(message.getWorkerDefinition()),
+            emptyToNull(message.getRetries()),
+            stringSet(message.getIncomingList()),
+            stringSet(message.getOutgoingList()),
+            emptyToNull(message.getImplementation()),
+            message.hasLoopCharacteristics() ? toDto(message.getLoopCharacteristics()) : null,
+            new LinkedHashMap<>(message.getHeadersMap()),
+            message.hasIoMapping() ? toDto(message.getIoMapping()) : null);
+    dto.setForCompensation(message.getIsForCompensation());
+    return dto;
   }
 
   private static ServiceTaskMessage toProto(ServiceTaskDTO dto) {
@@ -872,22 +893,26 @@ public final class DefinitionsProtoMapper {
         builder::setImplementation,
         builder::putAllHeaders,
         dto);
+    builder.setIsForCompensation(dto.isForCompensation());
     return builder.build();
   }
 
   private static ServiceTaskDTO toDto(ServiceTaskMessage message) {
-    return new ServiceTaskDTO(
-        emptyToNull(message.getId()),
-        emptyToNull(message.getParentId()),
-        emptyToNull(message.getName()),
-        emptyToNull(message.getWorkerDefinition()),
-        emptyToNull(message.getRetries()),
-        stringSet(message.getIncomingList()),
-        stringSet(message.getOutgoingList()),
-        emptyToNull(message.getImplementation()),
-        message.hasLoopCharacteristics() ? toDto(message.getLoopCharacteristics()) : null,
-        new LinkedHashMap<>(message.getHeadersMap()),
-        message.hasIoMapping() ? toDto(message.getIoMapping()) : null);
+    ServiceTaskDTO dto =
+        new ServiceTaskDTO(
+            emptyToNull(message.getId()),
+            emptyToNull(message.getParentId()),
+            emptyToNull(message.getName()),
+            emptyToNull(message.getWorkerDefinition()),
+            emptyToNull(message.getRetries()),
+            stringSet(message.getIncomingList()),
+            stringSet(message.getOutgoingList()),
+            emptyToNull(message.getImplementation()),
+            message.hasLoopCharacteristics() ? toDto(message.getLoopCharacteristics()) : null,
+            new LinkedHashMap<>(message.getHeadersMap()),
+            message.hasIoMapping() ? toDto(message.getIoMapping()) : null);
+    dto.setForCompensation(message.getIsForCompensation());
+    return dto;
   }
 
   private static MessageEndEventMessage toProto(MessageEndEventDTO dto) {
@@ -1022,24 +1047,28 @@ public final class DefinitionsProtoMapper {
     if (dto.getResultVariableName() != null) {
       builder.setResultVariableName(dto.getResultVariableName());
     }
+    builder.setIsForCompensation(dto.isForCompensation());
     return builder.build();
   }
 
   private static ScriptTaskDTO toDto(ScriptTaskMessage message) {
-    return new ScriptTaskDTO(
-        emptyToNull(message.getId()),
-        emptyToNull(message.getParentId()),
-        emptyToNull(message.getName()),
-        emptyToNull(message.getWorkerDefinition()),
-        emptyToNull(message.getRetries()),
-        stringSet(message.getIncomingList()),
-        stringSet(message.getOutgoingList()),
-        message.hasLoopCharacteristics() ? toDto(message.getLoopCharacteristics()) : null,
-        new LinkedHashMap<>(message.getHeadersMap()),
-        message.hasIoMapping() ? toDto(message.getIoMapping()) : null,
-        toDto(message.getScriptType()),
-        List.copyOf(message.getScriptExpressionsList()),
-        emptyToNull(message.getResultVariableName()));
+    ScriptTaskDTO dto =
+        new ScriptTaskDTO(
+            emptyToNull(message.getId()),
+            emptyToNull(message.getParentId()),
+            emptyToNull(message.getName()),
+            emptyToNull(message.getWorkerDefinition()),
+            emptyToNull(message.getRetries()),
+            stringSet(message.getIncomingList()),
+            stringSet(message.getOutgoingList()),
+            message.hasLoopCharacteristics() ? toDto(message.getLoopCharacteristics()) : null,
+            new LinkedHashMap<>(message.getHeadersMap()),
+            message.hasIoMapping() ? toDto(message.getIoMapping()) : null,
+            toDto(message.getScriptType()),
+            List.copyOf(message.getScriptExpressionsList()),
+            emptyToNull(message.getResultVariableName()));
+    dto.setForCompensation(message.getIsForCompensation());
+    return dto;
   }
 
   private static UserTaskMessage toProto(UserTaskDTO dto) {
@@ -1069,23 +1098,27 @@ public final class DefinitionsProtoMapper {
     if (dto.getHeaders() != null) {
       builder.putAllHeaders(dto.getHeaders());
     }
+    builder.setIsForCompensation(dto.isForCompensation());
     return builder.build();
   }
 
   private static UserTaskDTO toDto(UserTaskMessage message) {
-    return new UserTaskDTO(
-        emptyToNull(message.getId()),
-        emptyToNull(message.getParentId()),
-        emptyToNull(message.getName()),
-        stringSet(message.getIncomingList()),
-        stringSet(message.getOutgoingList()),
-        message.hasLoopCharacteristics() ? toDto(message.getLoopCharacteristics()) : null,
-        message.hasIoMapping() ? toDto(message.getIoMapping()) : null,
-        new LinkedHashMap<>(message.getHeadersMap()),
-        toDto(message.getUserTaskType()),
-        message.hasAssignmentDefinition() ? toDto(message.getAssignmentDefinition()) : null,
-        message.hasTaskSchedule() ? toDto(message.getTaskSchedule()) : null,
-        message.hasPriorityDefinition() ? toDto(message.getPriorityDefinition()) : null);
+    UserTaskDTO dto =
+        new UserTaskDTO(
+            emptyToNull(message.getId()),
+            emptyToNull(message.getParentId()),
+            emptyToNull(message.getName()),
+            stringSet(message.getIncomingList()),
+            stringSet(message.getOutgoingList()),
+            message.hasLoopCharacteristics() ? toDto(message.getLoopCharacteristics()) : null,
+            message.hasIoMapping() ? toDto(message.getIoMapping()) : null,
+            new LinkedHashMap<>(message.getHeadersMap()),
+            toDto(message.getUserTaskType()),
+            message.hasAssignmentDefinition() ? toDto(message.getAssignmentDefinition()) : null,
+            message.hasTaskSchedule() ? toDto(message.getTaskSchedule()) : null,
+            message.hasPriorityDefinition() ? toDto(message.getPriorityDefinition()) : null);
+    dto.setForCompensation(message.getIsForCompensation());
+    return dto;
   }
 
   private static TaskMessage toProto(TaskDTO dto) {
@@ -1102,18 +1135,22 @@ public final class DefinitionsProtoMapper {
         builder::setLoopCharacteristics,
         builder::setIoMapping,
         dto);
+    builder.setIsForCompensation(dto.isForCompensation());
     return builder.build();
   }
 
   private static TaskDTO toDto(TaskMessage message) {
-    return new TaskDTO(
-        emptyToNull(message.getId()),
-        emptyToNull(message.getParentId()),
-        emptyToNull(message.getName()),
-        stringSet(message.getIncomingList()),
-        stringSet(message.getOutgoingList()),
-        message.hasLoopCharacteristics() ? toDto(message.getLoopCharacteristics()) : null,
-        message.hasIoMapping() ? toDto(message.getIoMapping()) : null);
+    TaskDTO dto =
+        new TaskDTO(
+            emptyToNull(message.getId()),
+            emptyToNull(message.getParentId()),
+            emptyToNull(message.getName()),
+            stringSet(message.getIncomingList()),
+            stringSet(message.getOutgoingList()),
+            message.hasLoopCharacteristics() ? toDto(message.getLoopCharacteristics()) : null,
+            message.hasIoMapping() ? toDto(message.getIoMapping()) : null);
+    dto.setForCompensation(message.getIsForCompensation());
+    return dto;
   }
 
   private static SequenceFlowMessage toProto(SequenceFlowDTO dto) {
@@ -1269,6 +1306,26 @@ public final class DefinitionsProtoMapper {
   private static SignalEventDefinitionDTO toDto(SignalEventDefinitionMessage message) {
     return new SignalEventDefinitionDTO(
         emptyToNull(message.getId()), emptyToNull(message.getSignalRef()));
+  }
+
+  private static CompensationEventDefinitionMessage toProto(CompensationEventDefinitionDTO dto) {
+    CompensationEventDefinitionMessage.Builder builder =
+        CompensationEventDefinitionMessage.newBuilder();
+    if (dto == null) {
+      return builder.build();
+    }
+    if (dto.getId() != null) {
+      builder.setId(dto.getId());
+    }
+    if (dto.getActivityRef() != null) {
+      builder.setActivityRef(dto.getActivityRef());
+    }
+    return builder.build();
+  }
+
+  private static CompensationEventDefinitionDTO toDto(CompensationEventDefinitionMessage message) {
+    return new CompensationEventDefinitionDTO(
+        emptyToNull(message.getId()), emptyToNull(message.getActivityRef()));
   }
 
   private static DefinitionsKeyMessage toProto(DefinitionsKey key) {

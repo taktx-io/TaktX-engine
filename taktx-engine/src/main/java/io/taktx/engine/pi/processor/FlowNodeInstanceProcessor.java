@@ -12,26 +12,37 @@ import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.dto.FlowNodeInstanceDTO;
 import io.taktx.dto.FlowNodeInstanceUpdateDTO;
 import io.taktx.dto.VariablesDTO;
+import io.taktx.engine.pd.model.Activity;
+import io.taktx.engine.pd.model.BoundaryEvent;
+import io.taktx.engine.pd.model.CompensationEventDefinition;
 import io.taktx.engine.pd.model.FlowNode;
 import io.taktx.engine.pd.model.Gateway;
 import io.taktx.engine.pd.model.SequenceFlow;
+import io.taktx.engine.pd.model.ThrowEvent;
 import io.taktx.engine.pd.model.WithIoMapping;
 import io.taktx.engine.pi.InstanceUpdate;
 import io.taktx.engine.pi.ProcessInstanceMapper;
 import io.taktx.engine.pi.ProcessInstanceProcessingContext;
+import io.taktx.engine.pi.model.CompensationRegistration;
+import io.taktx.engine.pi.model.CompensationTriggerState;
+import io.taktx.engine.pi.model.ContinueFlowNodeInstanceInfo;
 import io.taktx.engine.pi.model.FlowNodeInstance;
 import io.taktx.engine.pi.model.IFlowNodeInstance;
 import io.taktx.engine.pi.model.ProcessInstance;
 import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.StartFlowNodeInstanceInfo;
+import io.taktx.engine.pi.model.ThrowEventInstance;
 import io.taktx.engine.pi.model.VariableScope;
 import io.taktx.proto.VariableValue;
 import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -85,6 +96,8 @@ public abstract class FlowNodeInstanceProcessor<
       if (flowNode instanceof WithIoMapping withIoMapping) {
         ioMappingProcessor.processOutputMappings(withIoMapping, variableScope);
       }
+      maybeRegisterCompensation(flowNodeInstance, scope, variableScope);
+      maybeNotifyCompensationHandlerDone(flowNodeInstance, scope, variableScope);
     }
 
     ProcessInstance processInstance = processInstanceProcessingContext.getProcessInstance();
@@ -160,6 +173,8 @@ public abstract class FlowNodeInstanceProcessor<
       if (flowNodeInstance.getFlowNode() instanceof WithIoMapping withIoMapping) {
         ioMappingProcessor.processOutputMappings(withIoMapping, variableScope);
       }
+      maybeRegisterCompensation(flowNodeInstance, scope, variableScope);
+      maybeNotifyCompensationHandlerDone(flowNodeInstance, scope, variableScope);
     }
 
     ProcessInstance processInstance = processInstanceProcessingContext.getProcessInstance();
@@ -191,6 +206,8 @@ public abstract class FlowNodeInstanceProcessor<
     // Only terminate if the instanceToContinue is ready or waiting
     if (instance.stateAllowsStopping()) {
       long now = clock.instant().toEpochMilli();
+
+      maybeAbortCompensationHandlers(instance, scope);
 
       ProcessInstance processInstance = processInstanceProcessingContext.getProcessInstance();
       processAbortSpecificFlowNodeInstance(
@@ -300,6 +317,100 @@ public abstract class FlowNodeInstanceProcessor<
       Scope scope,
       VariableScope variableScope,
       I instance);
+
+  private void maybeRegisterCompensation(
+      FlowNodeInstance<?> flowNodeInstance, Scope scope, VariableScope variableScope) {
+    if (!(flowNodeInstance.getFlowNode() instanceof Activity activity)) {
+      return;
+    }
+    if (flowNodeInstance.isIteration()) {
+      return;
+    }
+    if (activity.isForCompensation()) {
+      return;
+    }
+    for (BoundaryEvent boundaryEvent : activity.getBoundaryEvents()) {
+      boolean hasCompensation =
+          boundaryEvent.getEventDefinitions().stream()
+              .anyMatch(ed -> ed instanceof CompensationEventDefinition);
+      if (!hasCompensation || boundaryEvent.getCompensationHandlerId() == null) {
+        continue;
+      }
+      CompensationRegistration registration = new CompensationRegistration();
+      registration.setRegistrationKey(UUID.randomUUID().toString());
+      registration.setActivityInstanceKey(flowNodeInstance.getElementInstanceId());
+      registration.setActivityId(activity.getId());
+      registration.setBoundaryEventId(boundaryEvent.getId());
+      registration.setHandlerId(boundaryEvent.getCompensationHandlerId());
+      registration.setVariableSnapshot(new HashMap<>(variableScope.scopeToMap()));
+      registration.setCompletedAtSequence(scope.nextElementInstanceId());
+      scope.addCompensationRegistration(registration);
+    }
+  }
+
+  private void maybeNotifyCompensationHandlerDone(
+      FlowNodeInstance<?> flowNodeInstance, Scope scope, VariableScope variableScope) {
+    if (!(flowNodeInstance.getFlowNode() instanceof Activity activity)) {
+      return;
+    }
+    if (!activity.isForCompensation()) {
+      return;
+    }
+    Optional<CompensationTriggerState> doneTrigger =
+        scope.markHandlerCompleted(flowNodeInstance.getElementInstanceId());
+    doneTrigger.ifPresent(
+        triggerState -> {
+          FlowNodeInstance<?> throwInstance =
+              scope
+                  .getFlowNodeInstances()
+                  .getInstanceWithInstanceId(triggerState.getThrowEventInstanceKey());
+          if (throwInstance != null) {
+            VariableScope throwScope =
+                variableScope.getParentScope().selectChildScope(throwInstance);
+            ContinueFlowElementTriggerDTO emptyTrigger =
+                new ContinueFlowElementTriggerDTO(
+                    scope.getProcessInstanceId(),
+                    throwInstance.createKeyPath(),
+                    null,
+                    VariablesDTO.empty());
+            scope
+                .getDirectInstanceResult()
+                .addContinueInstance(
+                    new ContinueFlowNodeInstanceInfo(throwInstance, emptyTrigger, throwScope));
+          }
+        });
+  }
+
+  private void maybeAbortCompensationHandlers(IFlowNodeInstance instance, Scope scope) {
+    if (!(instance instanceof ThrowEventInstance<?> throwEventInstance)) {
+      return;
+    }
+    if (!(throwEventInstance.getFlowNode() instanceof ThrowEvent throwEvent)) {
+      return;
+    }
+    boolean hasCompensation =
+        throwEvent.getEventDefinitions().stream()
+            .anyMatch(ed -> ed instanceof CompensationEventDefinition);
+    if (!hasCompensation) {
+      return;
+    }
+    scope
+        .findTriggerStateByThrowKey(instance.getElementInstanceId())
+        .ifPresent(
+            triggerState -> {
+              triggerState
+                  .getPendingHandlerInstanceKeys()
+                  .forEach(
+                      handlerKey -> {
+                        FlowNodeInstance<?> handler =
+                            scope.getFlowNodeInstances().getInstanceWithInstanceId(handlerKey);
+                        if (handler != null && handler.isActive()) {
+                          scope.getDirectInstanceResult().addAbortInstance(handler);
+                        }
+                      });
+              scope.removeCompensationTriggerState(triggerState);
+            });
+  }
 
   protected InstanceUpdate createFlowNodeInstanceUpdate(
       ProcessInstance processInstance,

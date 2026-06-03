@@ -13,6 +13,7 @@ import io.taktx.dto.BaseElementDTO;
 import io.taktx.dto.BoundaryEventDTO;
 import io.taktx.dto.BusinessRuleTaskDTO;
 import io.taktx.dto.CallActivityDTO;
+import io.taktx.dto.CompensationEventDefinitionDTO;
 import io.taktx.dto.EndEventDTO;
 import io.taktx.dto.ErrorEventDefinitionDTO;
 import io.taktx.dto.ErrorEventSignalDTO;
@@ -55,6 +56,7 @@ import io.taktx.engine.pd.model.BaseElement;
 import io.taktx.engine.pd.model.BoundaryEvent;
 import io.taktx.engine.pd.model.BusinessRuleTask;
 import io.taktx.engine.pd.model.CallActivity;
+import io.taktx.engine.pd.model.CompensationEventDefinition;
 import io.taktx.engine.pd.model.EndEvent;
 import io.taktx.engine.pd.model.ErrorEventDefinition;
 import io.taktx.engine.pd.model.EscalationEventDefinition;
@@ -139,6 +141,7 @@ public interface DtoMapper {
   FlowElement getFlowElement(FlowElementDTO flowElement);
 
   @Mapping(target = "attachedActivity", ignore = true)
+  @Mapping(target = "compensationHandler", ignore = true)
   @Mapping(target = "parentElement", ignore = true)
   BoundaryEvent map(BoundaryEventDTO boundaryEventDTO);
 
@@ -240,7 +243,12 @@ public interface DtoMapper {
   @SubclassMapping(
       source = TerminateEventDefinitionDTO.class,
       target = TerminateEventDefinition.class)
+  @SubclassMapping(
+      source = CompensationEventDefinitionDTO.class,
+      target = CompensationEventDefinition.class)
   EventDefinition map(EventDefinitionDTO eventDefinition);
+
+  CompensationEventDefinition map(CompensationEventDefinitionDTO compensationEventDefinitionDTO);
 
   @Mapping(target = "parentId", ignore = true)
   TimerEventDefinitionDTO map(TimerEventDefinition eventDefinition);

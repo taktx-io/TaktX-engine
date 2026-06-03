@@ -8,6 +8,7 @@
 package io.taktx.xml;
 
 import io.taktx.bpmn.TActivity;
+import io.taktx.bpmn.TAdHocSubProcess;
 import io.taktx.bpmn.TBaseElement;
 import io.taktx.bpmn.TBoundaryEvent;
 import io.taktx.bpmn.TBusinessRuleTask;
@@ -27,13 +28,13 @@ import io.taktx.bpmn.TReceiveTask;
 import io.taktx.bpmn.TScriptTask;
 import io.taktx.bpmn.TSendTask;
 import io.taktx.bpmn.TSequenceFlow;
-import io.taktx.bpmn.TAdHocSubProcess;
 import io.taktx.bpmn.TServiceTask;
 import io.taktx.bpmn.TStartEvent;
 import io.taktx.bpmn.TSubProcess;
 import io.taktx.bpmn.TTask;
 import io.taktx.bpmn.TThrowEvent;
 import io.taktx.bpmn.TUserTask;
+import io.taktx.dto.ActivityDTO;
 import io.taktx.dto.AdHocSubProcessDTO;
 import io.taktx.dto.BoundaryEventDTO;
 import io.taktx.dto.CatchEventDTO;
@@ -311,8 +312,7 @@ public class GenericFlowElementMapper implements FlowElementMapper {
                 : null;
 
         String activeElementsCollection =
-            bpmnMapperFactory.createAdHocSubProcessMapper()
-                .mapActiveElementsCollection(adHoc);
+            bpmnMapperFactory.createAdHocSubProcessMapper().mapActiveElementsCollection(adHoc);
 
         activityFlowElement =
             new AdHocSubProcessDTO(
@@ -358,6 +358,9 @@ public class GenericFlowElementMapper implements FlowElementMapper {
       default ->
           throw new IllegalStateException(
               "Unknown activity type: " + activity.getClass().getName());
+    }
+    if (activityFlowElement instanceof ActivityDTO activityDTO && activity.isIsForCompensation()) {
+      activityDTO.setForCompensation(true);
     }
     return activityFlowElement;
   }

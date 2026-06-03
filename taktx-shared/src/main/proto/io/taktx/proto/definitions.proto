@@ -41,6 +41,7 @@ message BaseElementEnvelope {
     MessageEventDefinitionMessage     msg_event_def         = 28; // TypeId "ME"
     SignalEventDefinitionMessage      signal_event_def      = 29; // TypeId "SE"
     AdHocSubProcessMessage            ad_hoc_sub_process    = 30; // TypeId "AH"
+    CompensationEventDefinitionMessage compensation_event_def = 31; // TypeId "CO"
   }
 }
 
@@ -116,6 +117,14 @@ message BoundaryEventMessage {
   repeated BaseElementEnvelope event_definitions = 7;
   string attached_to_ref = 8;
   bool cancel_activity = 9;
+  string compensation_handler_id = 10;
+}
+
+// Java: CompensationEventDefinitionDTO
+message CompensationEventDefinitionMessage {
+  string id = 1;
+  string parent_id = 2;
+  string activity_ref = 3;
 }
 
 // Java: BusinessRuleTaskDTO
@@ -143,6 +152,7 @@ message CallActivityMessage {
   string called_element = 8;
   bool propagate_all_parent_variables = 9;
   bool propagate_all_child_variables = 10;
+  bool is_for_compensation = 11;
 }
 
 // Java: CatchEventDTO (abstract)
@@ -249,6 +259,7 @@ message ExternalTaskMessage {
   string retries = 9;
   string implementation = 10;
   map<string, string> headers = 11;
+  bool is_for_compensation = 12;
 }
 
 // NOTE: FlowConditionMessage is defined in common.proto — do not redefine here.
@@ -455,6 +466,7 @@ message ScriptTaskMessage {
   ScriptType script_type = 12;
   repeated string script_expressions = 13;
   string result_variable_name = 14;
+  bool is_for_compensation = 15;
 }
 
 // Java: SendTaskDTO
@@ -470,6 +482,7 @@ message SendTaskMessage {
   string retries = 9;
   string implementation = 10;
   map<string, string> headers = 11;
+  bool is_for_compensation = 12;
 }
 
 // Java: SequenceFlowDTO
@@ -495,6 +508,7 @@ message ServiceTaskMessage {
   string retries = 9;
   string implementation = 10;
   map<string, string> headers = 11;
+  bool is_for_compensation = 12;
 }
 
 // Java: SigDTO
@@ -548,6 +562,7 @@ message SubProcessMessage {
   InputOutputMappingMessage io_mapping = 7;
   FlowElementsMessage elements = 8;
   bool triggered_by_event = 9;
+  bool is_for_compensation = 10;
 }
 
 // Java: TaskDTO
@@ -559,6 +574,7 @@ message TaskMessage {
   repeated string outgoing = 5;
   LoopCharacteristicsMessage loop_characteristics = 6;
   InputOutputMappingMessage io_mapping = 7;
+  bool is_for_compensation = 8;
 }
 
 // Java: TaskScheduleDTO
@@ -607,6 +623,7 @@ message UserTaskMessage {
   TaskScheduleMessage task_schedule = 10;
   PriorityDefinitionMessage priority_definition = 11;
   map<string, string> headers = 12;
+  bool is_for_compensation = 13;
 }
 
 // Java: XmlDefinitionsDTO

@@ -14,12 +14,12 @@ import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.AdHocSubProcess;
 import io.taktx.engine.pd.model.FlowElements;
 import io.taktx.engine.pd.model.FlowNode;
-import io.taktx.engine.pi.model.FlowNodeInstance;
 import io.taktx.engine.pd.model.SubProcess;
 import io.taktx.engine.pi.ProcessInstanceMapper;
 import io.taktx.engine.pi.ProcessInstanceProcessingContext;
 import io.taktx.engine.pi.ScopeProcessor;
 import io.taktx.engine.pi.model.AdHocSubProcessInstance;
+import io.taktx.engine.pi.model.FlowNodeInstance;
 import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.StartFlowNodeInstanceInfo;
 import io.taktx.engine.pi.model.VariableScope;
@@ -60,8 +60,7 @@ public class AdHocSubProcessInstanceProcessor
       AdHocSubProcessInstance adHocInstance,
       String inputFlowId) {
 
-    Scope childScope =
-        scope.selectChildScope(adHocInstance, adHocInstance.getFlowElements());
+    Scope childScope = scope.selectChildScope(adHocInstance, adHocInstance.getFlowElements());
     adHocInstance.setScope(childScope);
     adHocInstance.setState(ExecutionState.ACTIVE);
 
@@ -116,8 +115,7 @@ public class AdHocSubProcessInstanceProcessor
           childScope.getFlowNodeInstances().getAllInstances().values().stream()
               .filter(FlowNodeInstance::isActive)
               .forEach(inst -> childScope.getDirectInstanceResult().addAbortInstance(inst));
-          scopeProcessor.doBusiness(
-              processInstanceProcessingContext, childScope, variableScope);
+          scopeProcessor.doBusiness(processInstanceProcessingContext, childScope, variableScope);
           // After doBusiness: activeCnt == 0, scope.state == INITIALIZED
           // → scope.getState() == COMPLETED
         } else {
@@ -151,7 +149,8 @@ public class AdHocSubProcessInstanceProcessor
     String expr = adHocInstance.getFlowNode().getActiveElementsCollection();
     if (expr == null) {
       throw new IllegalStateException(
-          "activeElementsCollection is required for ad-hoc subprocess " + adHocInstance.getFlowNode().getId());
+          "activeElementsCollection is required for ad-hoc subprocess "
+              + adHocInstance.getFlowNode().getId());
     }
 
     VariableValue result = feelExpressionHandler.processFeelExpression(expr, variableScope);
@@ -207,7 +206,8 @@ public class AdHocSubProcessInstanceProcessor
       VariableScope instanceVariableScope = variableScope.selectChildScope(instance);
       childScope
           .getDirectInstanceResult()
-          .addNewFlowNodeInstance(new StartFlowNodeInstanceInfo(instance, null, instanceVariableScope));
+          .addNewFlowNodeInstance(
+              new StartFlowNodeInstanceInfo(instance, null, instanceVariableScope));
     }
   }
 }

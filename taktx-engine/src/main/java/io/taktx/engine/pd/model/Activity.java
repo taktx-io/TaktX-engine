@@ -26,6 +26,8 @@ public abstract class Activity extends FlowNode implements WithIoMapping {
   private LoopCharacteristics loopCharacteristics;
   private InputOutputMapping ioMapping;
 
+  private boolean forCompensation;
+
   @Setter private List<BoundaryEvent> boundaryEvents;
 
   @Override

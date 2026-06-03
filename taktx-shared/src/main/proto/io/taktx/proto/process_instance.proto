@@ -8,6 +8,7 @@ option java_outer_classname = "ProcessInstanceProto";
 
 import "io/taktx/proto/common.proto";
 import "io/taktx/proto/schedule.proto";
+import "io/taktx/proto/variables.proto";
 
 // SubscriptionEnvelope — replaces SubscriptionTypeIdResolver
 message SubscriptionEnvelope {
@@ -76,6 +77,28 @@ message ProcessInstanceMessage {
 }
 
 // Java: ScopeDTO
+// Java: CompensationRegistrationDTO
+message CompensationRegistrationMessage {
+  string                    registration_key              = 1;
+  sint64                    activity_instance_key         = 2;
+  string                    activity_id                   = 3;
+  string                    boundary_event_id             = 4;
+  string                    handler_id                    = 5;
+  map<string, VariableValue> variable_snapshot            = 6;
+  sint64                    completed_at_sequence         = 7;
+  bool                      consumed                      = 8;
+  sint64                    consumed_by_throw_instance_key = 9;
+}
+
+// Java: CompensationTriggerStateDTO
+message CompensationTriggerStateMessage {
+  sint64           throw_event_instance_key   = 1;
+  string           target_activity_id         = 2;
+  repeated sint64  pending_handler_keys        = 3;
+  repeated sint64  completed_handler_keys      = 4;
+  repeated sint64  failed_handler_keys         = 5;
+}
+
 message ScopeMessage {
   int32                       sub_process_level    = 1;
   int32                       active_cnt           = 2;
@@ -83,6 +106,8 @@ message ScopeMessage {
   sint64                      element_instance_cnt = 4;
   map<string, sint64>         gateway_instances    = 5;
   SubscriptionsMessage        subscriptions        = 6;
+  repeated CompensationRegistrationMessage compensation_registrations  = 7;
+  repeated CompensationTriggerStateMessage compensation_trigger_states = 8;
 }
 
 // Java: SignalSubscriptionDTO

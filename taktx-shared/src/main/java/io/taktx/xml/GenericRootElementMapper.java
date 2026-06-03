@@ -7,9 +7,13 @@
  */
 package io.taktx.xml;
 
+import io.taktx.bpmn.TArtifact;
+import io.taktx.bpmn.TAssociation;
 import io.taktx.bpmn.TFlowElement;
 import io.taktx.bpmn.TProcess;
 import io.taktx.bpmn.TRootElement;
+import io.taktx.dto.BoundaryEventDTO;
+import io.taktx.dto.CompensationEventDefinitionDTO;
 import io.taktx.dto.FlowElementDTO;
 import io.taktx.dto.FlowElementsDTO;
 import io.taktx.dto.ProcessDTO;
@@ -29,7 +33,9 @@ public class GenericRootElementMapper implements RootElementMapper {
   public ProcessDTO map(TRootElement tRootElement) {
     if (tRootElement instanceof TProcess tProcess) {
       String id = tProcess.getId();
-      return new ProcessDTO(id, null, null, mapFlowElements(tProcess.getFlowElement()));
+      FlowElementsDTO elements = mapFlowElements(tProcess.getFlowElement());
+      resolveCompensationAssociations(tProcess, elements);
+      return new ProcessDTO(id, null, null, elements);
     }
     return ProcessDTO.NONE;
   }
@@ -44,5 +50,39 @@ public class GenericRootElementMapper implements RootElementMapper {
       flowElements.put(flowElement.getId(), flowElement);
     }
     return new FlowElementsDTO(flowElements);
+  }
+
+  private void resolveCompensationAssociations(TProcess tProcess, FlowElementsDTO elements) {
+    if (tProcess.getArtifact() == null) {
+      return;
+    }
+    for (JAXBElement<? extends TArtifact> jaxbArtifact : tProcess.getArtifact()) {
+      TArtifact artifact = jaxbArtifact.getValue();
+      if (!(artifact instanceof TAssociation association)) {
+        continue;
+      }
+      String sourceId = association.getSourceRef().getLocalPart();
+      String targetId = association.getTargetRef().getLocalPart();
+      FlowElementDTO source = elements.getElements().get(sourceId);
+      if (source instanceof BoundaryEventDTO boundaryEvent
+          && boundaryEvent.getEventDefinitions().stream()
+              .anyMatch(ed -> ed instanceof CompensationEventDefinitionDTO)) {
+        elements
+            .getElements()
+            .put(
+                sourceId,
+                new BoundaryEventDTO(
+                    boundaryEvent.getId(),
+                    boundaryEvent.getParentId(),
+                    boundaryEvent.getName(),
+                    boundaryEvent.getIncoming(),
+                    boundaryEvent.getOutgoing(),
+                    boundaryEvent.getEventDefinitions(),
+                    boundaryEvent.getAttachedToRef(),
+                    boundaryEvent.isCancelActivity(),
+                    boundaryEvent.getIoMapping(),
+                    targetId));
+      }
+    }
   }
 }
