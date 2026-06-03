@@ -217,5 +217,4 @@ class TaktXClientNamespaceSecurityPolicyTest {
     assertThat(TaktXClient.namespaceSecurityPolicyActivationAuthority())
         .isEqualTo(NamespaceSecurityPolicyActivationAuthority.PLATFORM_SERVICE);
   }
-
 }

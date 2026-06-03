@@ -73,15 +73,9 @@ public class EngineSecurityReadinessEvaluator {
       observedPolicyHash = policy.getPolicyHash();
 
       if (policy.getMode() == SecurityMode.ANCHORED) {
-        if (!hasStableSigningSourceConfigured()) {
-          effectiveState = ParticipantEffectiveState.MISMATCH;
-          readyForDataPlane = false;
-          mismatchReasons.add(
-              mismatchReason(
-                  STABLE_SIGNING_SOURCE_REQUIRED,
-                  "Namespace requires anchored trust but the engine is not configured with a stable signing identity source (env/file)"));
-        }
-
+        // Trust anchor is the primary architectural prerequisite — check it first so that
+        // the first mismatch reason (used as the security-event code) reflects the most
+        // significant missing piece when multiple conditions are unmet simultaneously.
         if (!hasPlatformTrustAnchorConfigured()) {
           effectiveState = ParticipantEffectiveState.MISMATCH;
           readyForDataPlane = false;
@@ -89,6 +83,15 @@ public class EngineSecurityReadinessEvaluator {
               mismatchReason(
                   TRUST_ANCHOR_MISSING,
                   "Namespace requires anchored trust but no platform public key is configured"));
+        }
+
+        if (!hasStableSigningSourceConfigured()) {
+          effectiveState = ParticipantEffectiveState.MISMATCH;
+          readyForDataPlane = false;
+          mismatchReasons.add(
+              mismatchReason(
+                  STABLE_SIGNING_SOURCE_REQUIRED,
+                  "Namespace requires anchored trust but the engine is not configured with a stable signing identity source (env/file)"));
         }
 
         if (messageSigningService.getKeyId() == null

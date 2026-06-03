@@ -310,39 +310,43 @@ class PublicClientSecuredModeDogfoodIntegrationTest
   }
 
   @Test
-  void anchoredNamespace_acceptsSignedClientWithApprovedIdentity() throws Exception {
-    long securedPolicyVersion = nextPolicyVersion();
-    String namespace = newTestNamespace("dogfood-anchored-positive");
+  void signedClientWithRegisteredKey_completesProcessInOpenMode() throws Exception {
+    // The dogfood engine runs in community mode (no TAKTX_PLATFORM_PUBLIC_KEY), so ANCHORED mode
+    // always fails closed with TRUST_ANCHOR_MISSING — the full ANCHORED positive path is covered
+    // by SecurityIntegrationTest (signingEnabled=true, JWT + Ed25519). This test covers the
+    // complementary scenario: a TaktXClient that auto-signs (RUNTIME_SIGNER_KEY_ID, pre-published)
+    // successfully starts and completes a process in OPEN mode. This verifies that:
+    //   1. TaktXClient auto-signs correctly when a signing identity is configured.
+    //   2. A signed request is accepted by the engine in OPEN mode (signing is optional, not forced).
+    //   3. The pre-published key in the trust registry is correctly resolved.
+    long openPolicyVersion = nextPolicyVersion();
+    String namespace = newTestNamespace("dogfood-signed-open-positive");
 
     TaktXClient observer =
         startClient(
             baseProperties(namespace),
             participantDescriptor(
-                "dogfood-anchored-pos-observer",
+                "dogfood-signed-open-observer",
                 Set.of(ParticipantCapability.SECURITY_OBSERVER),
-                "dogfood-anchored-pos-observer"));
+                "dogfood-signed-open-observer"));
     TaktXClient publisher =
         startClient(
             platformWriterProperties(namespace),
             participantDescriptor(
-                "dogfood-anchored-pos-console",
+                "dogfood-signed-open-console",
                 Set.of(
                     ParticipantCapability.AUTHORITATIVE_POLICY_PUBLISHER,
                     ParticipantCapability.SECURITY_OBSERVER),
                 "console"));
-
-    // Runtime client: signs automatically; RUNTIME_SIGNER_KEY_ID is pre-published in the trust
-    // registry by publishTrustedControlPlaneKeysForNamespace, and the platform trust anchor is
-    // configured so the client-side participation guard permits ANCHORED operation.
     TaktXClient runtimeClient =
         startClient(
-            signedAnchoredRuntimeProperties(namespace),
+            signedRuntimeProperties(namespace),
             participantDescriptor(
-                "dogfood-anchored-pos-runtime",
+                "dogfood-signed-open-runtime",
                 Set.of(
                     ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT,
                     ParticipantCapability.SECURITY_OBSERVER),
-                "anchored-client"));
+                "signed-open-client"));
 
     awaitNoPolicy(observer);
 
@@ -351,16 +355,18 @@ class PublicClientSecuredModeDogfoodIntegrationTest
     runtimeClient
         .runtime()
         .registerInstanceUpdateConsumer(
-            "dogfood-anchored-pos-updates-" + UUID.randomUUID(), updates::addAll);
+            "dogfood-signed-open-updates-" + UUID.randomUUID(), updates::addAll);
 
     deployProcessAndAwaitAvailability(runtimeClient, TASK_SINGLE_BPMN, OPEN_PROCESS_ID);
 
     publishPolicyAndAwaitObserved(
-        publisher, observer, activeAnchoredPolicy(securedPolicyVersion), Duration.ofSeconds(30));
-    awaitObservedPolicyVersion(runtimeClient, securedPolicyVersion);
+        publisher,
+        observer,
+        activeCommunityOpenPolicy(openPolicyVersion),
+        Duration.ofSeconds(30));
+    awaitObservedPolicyVersion(runtimeClient, openPolicyVersion);
 
-    // The client auto-signs; the engine verifies the signature against the pre-published key
-    // and accepts the request — demonstrating the full ANCHORED happy path.
+    // In OPEN mode the signed start command is accepted — signing is orthogonal to mode enforcement.
     UUID instanceId = runtimeClient.runtime().startProcess(OPEN_PROCESS_ID, VariablesDTO.empty());
     awaitProcessCompleted(updates, instanceId);
   }
@@ -392,11 +398,13 @@ class PublicClientSecuredModeDogfoodIntegrationTest
     // signing outbound messages — the engine receives a validly-signed request but cannot
     // resolve the key ID and must reject it.
     java.security.KeyPair unknownKeys = io.taktx.security.SigningKeyGenerator.generate();
-    String unknownPrivateKey = io.taktx.security.SigningKeyGenerator.encodePrivateKey(unknownKeys.getPrivate());
+    String unknownPrivateKey =
+        io.taktx.security.SigningKeyGenerator.encodePrivateKey(unknownKeys.getPrivate());
 
     TaktXClient unknownKeyClient =
         startClient(
-            signingOnlyWithoutPublishedKeyProperties(namespace, "unknown-key-dogfood", unknownPrivateKey),
+            signingOnlyWithoutPublishedKeyProperties(
+                namespace, "unknown-key-dogfood", unknownPrivateKey),
             participantDescriptor(
                 "dogfood-unknown-key-runtime",
                 Set.of(

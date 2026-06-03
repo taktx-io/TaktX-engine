@@ -184,6 +184,16 @@ public class AdminClientHelper {
     return result;
   }
 
+  /** Returns all topic names currently known to the Kafka broker. */
+  public Set<String> listTopicNames() {
+    try {
+      return adminClient.listTopics().names().get();
+    } catch (InterruptedException | ExecutionException e) {
+      LOG.error("Error listing topic names", e);
+      return Collections.emptySet();
+    }
+  }
+
   /** List all consumer groups */
   public Set<String> listConsumerGroups() {
     try {
