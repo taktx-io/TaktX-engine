@@ -11,9 +11,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.taktx.dto.Constants;
-import io.taktx.dto.GlobalConfigurationDTO;
 import io.taktx.dto.NamespaceSecurityPolicyDTO;
-import io.taktx.dto.SecurityActivationState;
 import io.taktx.dto.SecurityMode;
 import io.taktx.dto.SecurityPostureIssueCodes;
 import io.taktx.security.AuthoritativeControlPlaneSecurityProperty;
@@ -208,7 +206,7 @@ class TaktXClientNamespaceSecurityPolicyTest {
     assertThat(TaktXClient.namespaceSecurityPolicyWriterSecurityProperties(policy))
         .contains(
             AuthoritativeControlPlaneSecurityProperty
-                .INTEGRITY_PROTECTION_REQUIRED_IN_SECURED_MODES,
+                .INTEGRITY_PROTECTION_REQUIRED_IN_ANCHORED_MODE,
             AuthoritativeControlPlaneSecurityProperty.BROKER_AUTHORIZATION_REQUIRED,
             AuthoritativeControlPlaneSecurityProperty.TRUSTED_WRITER_PATH_ONLY,
             AuthoritativeControlPlaneSecurityProperty.FIXED_RECORD_KEY_REQUIRED);
@@ -220,45 +218,4 @@ class TaktXClientNamespaceSecurityPolicyTest {
         .isEqualTo(NamespaceSecurityPolicyActivationAuthority.PLATFORM_SERVICE);
   }
 
-  @Test
-  void legacyGlobalSecurityConfigToNamespaceSecurityPolicy_mapsSecurityFlagsToAnchoredMode() {
-    NamespaceSecurityPolicyDTO policy =
-        TaktXClient.legacyGlobalSecurityConfigToNamespaceSecurityPolicy(
-            GlobalConfigurationDTO.builder()
-                .signingEnabled(true)
-                .engineRequiresAuthorization(true)
-                .engineRequiresExternalTaskAuthorization(true)
-                .engineRequiresUserTaskAuthorization(false)
-                .build(),
-            42L);
-
-    assertThat(policy.getMode()).isEqualTo(SecurityMode.ANCHORED);
-    assertThat(policy.getPolicyVersion()).isEqualTo(42L);
-    assertThat(policy.getPolicyHash()).isNotBlank();
-  }
-
-  @Test
-  void legacyGlobalSecurityConfigToNamespaceSecurityPolicy_mapsDefaultOpenMode() {
-    NamespaceSecurityPolicyDTO policy =
-        TaktXClient.legacyGlobalSecurityConfigToNamespaceSecurityPolicy(
-            GlobalConfigurationDTO.builder().build(), 7L, SecurityActivationState.VALIDATING);
-
-    assertThat(policy.getMode()).isEqualTo(SecurityMode.OPEN);
-    assertThat(policy.getPolicyVersion()).isEqualTo(7L);
-    assertThat(policy.getPolicyHash()).isNotBlank();
-  }
-
-  @Test
-  void legacyGlobalSecurityConfigToNamespaceSecurityPolicy_rejectsInvalidInputs() {
-    assertThatThrownBy(
-            () -> TaktXClient.legacyGlobalSecurityConfigToNamespaceSecurityPolicy(null, 1L))
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining("configuration must not be null");
-    assertThatThrownBy(
-            () ->
-                TaktXClient.legacyGlobalSecurityConfigToNamespaceSecurityPolicy(
-                    GlobalConfigurationDTO.builder().build(), 0L))
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining("desiredPolicyVersion must be > 0");
-  }
 }

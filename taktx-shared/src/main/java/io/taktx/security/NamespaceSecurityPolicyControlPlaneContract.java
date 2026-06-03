@@ -45,7 +45,7 @@ public final class NamespaceSecurityPolicyControlPlaneContract {
     }
     if (policy.getMode() == SecurityMode.ANCHORED) {
       requirements.add(
-          AuthoritativeControlPlaneSecurityProperty.INTEGRITY_PROTECTION_REQUIRED_IN_SECURED_MODES);
+          AuthoritativeControlPlaneSecurityProperty.INTEGRITY_PROTECTION_REQUIRED_IN_ANCHORED_MODE);
     }
     return Set.copyOf(requirements);
   }

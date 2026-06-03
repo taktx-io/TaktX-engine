@@ -1167,54 +1167,6 @@ public class TaktXClient {
   }
 
   /**
-   * Bridges legacy global security flags to the explicit namespace security policy model.
-   *
-   * <p>This helps runtime/ingester integrations migrate from config-shaped publication to the
-   * official namespace security policy contract without inventing their own flag-to-policy mapping.
-   */
-  public static NamespaceSecurityPolicyDTO legacyGlobalSecurityConfigToNamespaceSecurityPolicy(
-      GlobalConfigurationDTO configuration, long desiredPolicyVersion) {
-    return legacyGlobalSecurityConfigToNamespaceSecurityPolicy(
-        configuration, desiredPolicyVersion, io.taktx.dto.SecurityActivationState.REQUESTED);
-  }
-
-  /**
-   * Bridges legacy global security flags to the explicit namespace security policy model with an
-   * explicit activation state.
-   */
-  public static NamespaceSecurityPolicyDTO legacyGlobalSecurityConfigToNamespaceSecurityPolicy(
-      GlobalConfigurationDTO configuration,
-      long desiredPolicyVersion,
-      io.taktx.dto.SecurityActivationState activationState) {
-    if (configuration == null) {
-      throw new IllegalArgumentException("configuration must not be null");
-    }
-    if (desiredPolicyVersion <= 0) {
-      throw new IllegalArgumentException("desiredPolicyVersion must be > 0");
-    }
-    if (activationState == null) {
-      throw new IllegalArgumentException("activationState must not be null");
-    }
-
-    boolean anySecurityRequirement =
-        configuration.isSigningEnabled()
-            || configuration.isEngineRequiresAuthorization()
-            || configuration.isEngineRequiresExternalTaskAuthorization()
-            || configuration.isEngineRequiresUserTaskAuthorization();
-
-    NamespaceSecurityPolicyDTO policy =
-        NamespaceSecurityPolicyDTO.builder()
-            .mode(
-                anySecurityRequirement
-                    ? io.taktx.dto.SecurityMode.ANCHORED
-                    : io.taktx.dto.SecurityMode.OPEN)
-            .policyVersion(desiredPolicyVersion)
-            .build();
-
-    return validateNamespaceSecurityPolicy(policy);
-  }
-
-  /**
    * Computes the canonical digest for the effective namespace security policy content.
    *
    * <p>This intentionally ignores desired-vs-active wrapper identity fields so callers can compare

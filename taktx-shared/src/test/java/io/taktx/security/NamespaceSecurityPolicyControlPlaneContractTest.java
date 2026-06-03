@@ -33,7 +33,7 @@ class NamespaceSecurityPolicyControlPlaneContractTest {
     assertThat(NamespaceSecurityPolicyControlPlaneContract.requiredWriterSecurityProperties(policy))
         .contains(
             AuthoritativeControlPlaneSecurityProperty
-                .INTEGRITY_PROTECTION_REQUIRED_IN_SECURED_MODES);
+                .INTEGRITY_PROTECTION_REQUIRED_IN_ANCHORED_MODE);
   }
 
   @Test
@@ -44,6 +44,6 @@ class NamespaceSecurityPolicyControlPlaneContractTest {
     assertThat(NamespaceSecurityPolicyControlPlaneContract.requiredWriterSecurityProperties(policy))
         .doesNotContain(
             AuthoritativeControlPlaneSecurityProperty
-                .INTEGRITY_PROTECTION_REQUIRED_IN_SECURED_MODES);
+                .INTEGRITY_PROTECTION_REQUIRED_IN_ANCHORED_MODE);
   }
 }
