@@ -367,7 +367,7 @@ class SecurityIntegrationTest {
             Date.from(Instant.now().plusSeconds(300)));
 
     UUID instanceId =
-        engine.getTaktClient().startProcess(TASK_SINGLE_PROCESS_ID, -1, VariablesDTO.empty(), jwt);
+        startSignedProcess(TASK_SINGLE_PROCESS_ID, VariablesDTO.empty(), jwt);
 
     await()
         .atMost(Duration.ofSeconds(10))
@@ -415,14 +415,14 @@ class SecurityIntegrationTest {
 
     // First command — should be accepted
     UUID firstId =
-        engine.getTaktClient().startProcess(TASK_SINGLE_PROCESS_ID, -1, VariablesDTO.empty(), jwt);
+        startSignedProcess(TASK_SINGLE_PROCESS_ID, VariablesDTO.empty(), jwt);
     await()
         .atMost(Duration.ofSeconds(10))
         .untilAsserted(() -> assertThat(engine.getProcessInstanceMap()).containsKey(firstId));
 
     // Second command with the same auditId — should be rejected
     UUID secondId =
-        engine.getTaktClient().startProcess(TASK_SINGLE_PROCESS_ID, -1, VariablesDTO.empty(), jwt);
+        startSignedProcess(TASK_SINGLE_PROCESS_ID, VariablesDTO.empty(), jwt);
     await()
         .during(Duration.ofSeconds(3))
         .atMost(Duration.ofSeconds(4))
@@ -452,7 +452,7 @@ class SecurityIntegrationTest {
             "user-1",
             Date.from(Instant.now().plusSeconds(300)));
     UUID validId =
-        engine.getTaktClient().startProcess(TASK_SINGLE_PROCESS_ID, -1, VariablesDTO.empty(), jwt);
+        startSignedProcess(TASK_SINGLE_PROCESS_ID, VariablesDTO.empty(), jwt);
 
     await()
         .atMost(Duration.ofSeconds(10))
@@ -471,10 +471,7 @@ class SecurityIntegrationTest {
             UUID.randomUUID().toString(),
             "user-1",
             Date.from(Instant.now().plusSeconds(300)));
-    UUID instanceId =
-        engine
-            .getTaktClient()
-            .startProcess(USER_TASK_PROCESS_ID, -1, VariablesDTO.empty(), startJwt);
+    UUID instanceId = startSignedProcess(USER_TASK_PROCESS_ID, VariablesDTO.empty(), startJwt);
 
     engine.waitForNewProcessInstance().waitUntilUserTaskIsWaitingForResponse("UserTask_1");
     UserTaskTriggerDTO trigger = engine.getActiveUserTaskTrigger();
@@ -583,10 +580,7 @@ class SecurityIntegrationTest {
             UUID.randomUUID().toString(),
             "user-1",
             Date.from(Instant.now().plusSeconds(300)));
-    UUID instanceId =
-        engine
-            .getTaktClient()
-            .startProcess(USER_TASK_PROCESS_ID, -1, VariablesDTO.empty(), startJwt);
+    UUID instanceId = startSignedProcess(USER_TASK_PROCESS_ID, VariablesDTO.empty(), startJwt);
 
     engine.waitForNewProcessInstance().waitUntilUserTaskIsWaitingForResponse("UserTask_1");
     UserTaskTriggerDTO trigger = engine.getActiveUserTaskTrigger();
@@ -651,7 +645,7 @@ class SecurityIntegrationTest {
     // response with WORKER_KEY_ID Ed25519 via its own isolated KafkaProducer;
     // SigningServiceHolder is never touched so the engine's MessageSigningService
     // registration stays intact.
-    engine.getTaktClient().startProcess(SERVICE_TASK_PROCESS_ID, -1, VariablesDTO.empty(), jwt);
+    startSignedProcess(SERVICE_TASK_PROCESS_ID, VariablesDTO.empty(), jwt);
     engine
         .waitForNewProcessInstance()
         .waitForExternalTaskTrigger(SERVICE_TASK_TYPE)
@@ -688,7 +682,7 @@ class SecurityIntegrationTest {
             UUID.randomUUID().toString(),
             "user-1",
             Date.from(Instant.now().plusSeconds(300)));
-    engine.getTaktClient().startProcess(SUB_PROCESS_ID, -1, VariablesDTO.of("var1", "hello"), jwt);
+    startSignedProcess(SUB_PROCESS_ID, VariablesDTO.of("var1", "hello"), jwt);
 
     engine
         .waitForNewProcessInstance()
@@ -723,7 +717,7 @@ class SecurityIntegrationTest {
             "user-1",
             Date.from(Instant.now().plusSeconds(300)));
     UUID instanceId =
-        engine.getTaktClient().startProcess(SERVICE_TASK_PROCESS_ID, -1, VariablesDTO.empty(), jwt);
+        startSignedProcess(SERVICE_TASK_PROCESS_ID, VariablesDTO.empty(), jwt);
 
     engine.waitForNewProcessInstance();
     engine.waitForExternalTaskTrigger(SERVICE_TASK_TYPE);
@@ -869,9 +863,7 @@ class SecurityIntegrationTest {
             "user-1",
             Date.from(Instant.now().plusSeconds(300)));
     UUID instanceId =
-        engine
-            .getTaktClient()
-            .startProcess(SERVICE_TASK_THEN_TIMER_PROCESS_ID, -1, VariablesDTO.empty(), jwt);
+        startSignedProcess(SERVICE_TASK_THEN_TIMER_PROCESS_ID, VariablesDTO.empty(), jwt);
 
     engine.waitForNewProcessInstance();
     engine.waitForExternalTaskTrigger(SERVICE_TASK_TYPE);
@@ -985,7 +977,7 @@ class SecurityIntegrationTest {
             "user-1",
             Date.from(Instant.now().plusSeconds(300)));
     UUID instanceId =
-        engine.getTaktClient().startProcess(SERVICE_TASK_PROCESS_ID, -1, VariablesDTO.empty(), jwt);
+        startSignedProcess(SERVICE_TASK_PROCESS_ID, VariablesDTO.empty(), jwt);
 
     engine.waitForNewProcessInstance();
 
@@ -1043,7 +1035,7 @@ class SecurityIntegrationTest {
             UUID.randomUUID().toString(),
             "user-1",
             Date.from(Instant.now().plusSeconds(300)));
-    engine.getTaktClient().startProcess(TASK_SINGLE_PROCESS_ID, -1, VariablesDTO.empty(), jwt);
+    startSignedProcess(TASK_SINGLE_PROCESS_ID, VariablesDTO.empty(), jwt);
 
     await()
         .atMost(Duration.ofSeconds(10))
@@ -1070,7 +1062,7 @@ class SecurityIntegrationTest {
             UUID.randomUUID().toString(),
             "user-1",
             Date.from(Instant.now().plusSeconds(300)));
-    engine.getTaktClient().startProcess(TASK_SINGLE_PROCESS_ID, -1, VariablesDTO.empty(), jwt);
+    startSignedProcess(TASK_SINGLE_PROCESS_ID, VariablesDTO.empty(), jwt);
 
     String enginePublicKeyBase64 = SecurityTestConfigResource.enginePublicKeyBase64;
 
@@ -1121,7 +1113,7 @@ class SecurityIntegrationTest {
             UUID.randomUUID().toString(),
             "user-1",
             Date.from(Instant.now().plusSeconds(300)));
-    engine.getTaktClient().startProcess(TASK_SINGLE_PROCESS_ID, -1, VariablesDTO.empty(), jwt);
+    startSignedProcess(TASK_SINGLE_PROCESS_ID, VariablesDTO.empty(), jwt);
 
     // In the security test profile both signingEnabled=true and engineRequiresAuthorization=true
     // are active from @BeforeAll. The BpmnTestEngine's TaktXClient does not own a signing
@@ -1251,7 +1243,7 @@ class SecurityIntegrationTest {
             UUID.randomUUID().toString(),
             "user-1",
             Date.from(Instant.now().plusSeconds(300)));
-    engine.getTaktClient().startProcess(SERVICE_TASK_PROCESS_ID, -1, VariablesDTO.empty(), jwt);
+    startSignedProcess(SERVICE_TASK_PROCESS_ID, VariablesDTO.empty(), jwt);
 
     engine.waitForNewProcessInstance();
     engine.waitForExternalTaskTrigger(SERVICE_TASK_TYPE);
@@ -1342,10 +1334,31 @@ class SecurityIntegrationTest {
             UUID.randomUUID().toString(),
             "user-rotation",
             Date.from(Instant.now().plusSeconds(300)));
-    UUID instanceId =
-        engine.getTaktClient().startProcess(SERVICE_TASK_PROCESS_ID, -1, VariablesDTO.empty(), jwt);
+    UUID instanceId = startSignedProcess(SERVICE_TASK_PROCESS_ID, VariablesDTO.empty(), jwt);
     engine.waitForNewProcessInstance();
     engine.waitForExternalTaskTrigger(SERVICE_TASK_TYPE);
+    return instanceId;
+  }
+
+  /**
+   * Sends a signed {@code StartCommandDTO} directly to the process-instance topic using the
+   * published worker key. This avoids relying on the race between Kafka Streams replaying
+   * {@code signingEnabled=true} from the GlobalConfigStore and the test sending its command —
+   * the signed command is accepted by the engine regardless of replay timing.
+   */
+  private UUID startSignedProcess(
+      String processDefinitionId, VariablesDTO variables, String jwt) {
+    UUID instanceId = UUID.randomUUID();
+    sendSignedProcessInstanceTrigger(
+        new io.taktx.dto.StartCommandDTO(
+            instanceId,
+            null,
+            null,
+            new io.taktx.dto.ProcessDefinitionKey(processDefinitionId, -1),
+            variables),
+        WORKER_KEY_ID,
+        workerPrivateKeyBase64,
+        jwt);
     return instanceId;
   }
 
