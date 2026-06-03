@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions
+    xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+    xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+    xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+    xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+    xmlns:zeebe="http://camunda.org/schema/zeebe/1.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:modeler="http://camunda.org/schema/modeler/1.0"
+    id="Definitions_compensation_simple"
+    targetNamespace="http://bpmn.io/schema/bpmn"
+    exporter="Camunda Modeler"
+    exporterVersion="5.19.0"
+    modeler:executionPlatform="Camunda Cloud"
+    modeler:executionPlatformVersion="8.4.0">
+
+  <bpmn:process id="compensation-simple" isExecutable="true">
+
+    <bpmn:startEvent id="start" name="Start">
+      <bpmn:outgoing>flow-start-to-task</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <bpmn:sequenceFlow id="flow-start-to-task" sourceRef="start" targetRef="task-a" />
+
+    <bpmn:serviceTask id="task-a" name="Task A">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="task-a" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>flow-start-to-task</bpmn:incoming>
+      <bpmn:outgoing>flow-task-to-throw</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:boundaryEvent id="compensate-task-a" attachedToRef="task-a">
+      <bpmn:compensateEventDefinition id="ced-task-a" />
+    </bpmn:boundaryEvent>
+
+    <bpmn:sequenceFlow id="flow-task-to-throw" sourceRef="task-a" targetRef="throw-compensate" />
+
+    <bpmn:intermediateThrowEvent id="throw-compensate" name="Compensate">
+      <bpmn:incoming>flow-task-to-throw</bpmn:incoming>
+      <bpmn:outgoing>flow-throw-to-end</bpmn:outgoing>
+      <bpmn:compensateEventDefinition id="ced-throw" />
+    </bpmn:intermediateThrowEvent>
+
+    <bpmn:sequenceFlow id="flow-throw-to-end" sourceRef="throw-compensate" targetRef="end" />
+
+    <bpmn:endEvent id="end" name="End">
+      <bpmn:incoming>flow-throw-to-end</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:serviceTask id="undo-task-a" name="Undo Task A" isForCompensation="true">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="undo-task-a" />
+      </bpmn:extensionElements>
+    </bpmn:serviceTask>
+
+    <bpmn:association id="assoc-compensate-task-a"
+                      sourceRef="compensate-task-a"
+                      targetRef="undo-task-a" />
+
+  </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="compensation-simple">
+
+      <!-- Start event -->
+      <bpmndi:BPMNShape id="start_di" bpmnElement="start">
+        <dc:Bounds x="152" y="99" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="158" y="142" width="24" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- Task A -->
+      <bpmndi:BPMNShape id="task-a_di" bpmnElement="task-a">
+        <dc:Bounds x="240" y="77" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+
+      <!-- Compensation boundary on Task A (bottom-left) -->
+      <bpmndi:BPMNShape id="compensate-task-a_di" bpmnElement="compensate-task-a">
+        <dc:Bounds x="272" y="139" width="36" height="36" />
+      </bpmndi:BPMNShape>
+
+      <!-- Undo Task A (compensation handler, below Task A) -->
+      <bpmndi:BPMNShape id="undo-task-a_di" bpmnElement="undo-task-a">
+        <dc:Bounds x="240" y="230" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+
+      <!-- Compensation throw event -->
+      <bpmndi:BPMNShape id="throw-compensate_di" bpmnElement="throw-compensate">
+        <dc:Bounds x="402" y="99" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="387" y="142" width="66" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- End event -->
+      <bpmndi:BPMNShape id="end_di" bpmnElement="end">
+        <dc:Bounds x="502" y="99" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="510" y="142" width="20" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- Sequence flows -->
+      <bpmndi:BPMNEdge id="flow-start-to-task_di" bpmnElement="flow-start-to-task">
+        <di:waypoint x="188" y="117" />
+        <di:waypoint x="240" y="117" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="flow-task-to-throw_di" bpmnElement="flow-task-to-throw">
+        <di:waypoint x="340" y="117" />
+        <di:waypoint x="402" y="117" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="flow-throw-to-end_di" bpmnElement="flow-throw-to-end">
+        <di:waypoint x="438" y="117" />
+        <di:waypoint x="502" y="117" />
+      </bpmndi:BPMNEdge>
+
+      <!-- Association: boundary → handler -->
+      <bpmndi:BPMNEdge id="assoc-compensate-task-a_di" bpmnElement="assoc-compensate-task-a">
+        <di:waypoint x="290" y="175" />
+        <di:waypoint x="290" y="230" />
+      </bpmndi:BPMNEdge>
+
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+
+</bpmn:definitions>
