@@ -17,7 +17,6 @@ import io.taktx.engine.dlq.DlqObservabilityService;
 import io.taktx.engine.pi.ProcessingStatistics;
 import io.taktx.engine.security.EngineAuthorizationService;
 import io.taktx.engine.security.ProtectedDataPlaneParticipationGuard;
-import io.taktx.engine.security.VerificationCore;
 import io.taktx.security.AuthorizationTokenException;
 import java.time.Clock;
 import java.util.EnumMap;
@@ -31,7 +30,7 @@ import org.apache.kafka.streams.state.KeyValueStore;
 
 @Slf4j
 public class ScheduleProcessor
-    implements Processor<ScheduleKeyDTO, MessageScheduleDTO, Object, SchedulableMessageDTO> {
+    implements Processor<ScheduleKeyDTO, ScheduleCommandEnvelope, Object, SchedulableMessageDTO> {
 
   private static final String SCHEDULE_COMMANDS_TOPIC_GROUP = "schedule-commands";
 
@@ -87,15 +86,16 @@ public class ScheduleProcessor
   }
 
   @Override
-  public void process(Record<ScheduleKeyDTO, MessageScheduleDTO> scheduleRecord) {
+  public void process(Record<ScheduleKeyDTO, ScheduleCommandEnvelope> scheduleRecord) {
     ScheduleKeyDTO scheduleKey = scheduleRecord.key();
-    MessageScheduleDTO value = scheduleRecord.value();
+    ScheduleCommandEnvelope envelope = scheduleRecord.value();
+    MessageScheduleDTO value = envelope != null ? envelope.value() : null;
 
     try {
       SigningKeyDTO trustedSigner =
           securityServices
               .engineAuthorizationService()
-              .authorizeScheduleCommand(scheduleRecord.headers(), scheduleKey, value);
+              .authorizeScheduleCommand(scheduleKey, envelope);
       if (trustedSigner != null) {
         log.info(
             "Accepted schedule command topic='{}' scheduleKey='{}' signerKeyId='{}' signerRole='{}' outcome='accepted' messageType='{}'",
@@ -189,16 +189,9 @@ public class ScheduleProcessor
       ProtectedDataPlaneParticipationGuard protectedDataPlaneParticipationGuard) {}
 
   private static String extractSignerKeyId(
-      Record<ScheduleKeyDTO, MessageScheduleDTO> scheduleRecord) {
-    var headers = scheduleRecord.headers();
-    if (headers == null) {
-      return null;
-    }
-    var header = headers.lastHeader(io.taktx.dto.Constants.HEADER_ENGINE_SIGNATURE);
-    if (header == null || header.value() == null) {
-      return null;
-    }
-    return VerificationCore.extractKeyId(header);
+      Record<ScheduleKeyDTO, ScheduleCommandEnvelope> scheduleRecord) {
+    ScheduleCommandEnvelope envelope = scheduleRecord.value();
+    return envelope != null ? envelope.signatureKeyId() : null;
   }
 
   private static String scheduleMessageType(MessageScheduleDTO schedule) {

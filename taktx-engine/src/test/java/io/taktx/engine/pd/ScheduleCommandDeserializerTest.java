@@ -20,6 +20,7 @@ import io.taktx.dto.VariablesDTO;
 import io.taktx.security.Ed25519Service;
 import io.taktx.security.EngineSigningKeysHolder;
 import io.taktx.security.SigningKeyGenerator;
+import io.taktx.engine.pd.ScheduleCommandEnvelope;
 import io.taktx.serdes.MessageScheduleProtoMapper;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
@@ -41,12 +42,15 @@ class ScheduleCommandDeserializerTest {
   }
 
   @Test
-  void unsignedScheduleCommand_isRejected() {
+  void unsignedScheduleCommand_returnsUnsignedEnvelope() {
     byte[] payload = serialize(oneTimeSchedule());
 
-    assertThatThrownBy(() -> deserializer.deserialize(TOPIC, new RecordHeaders(), payload))
-        .isInstanceOf(IllegalStateException.class)
-        .hasMessageContaining("no tx-sig header");
+    ScheduleCommandEnvelope result = deserializer.deserialize(TOPIC, new RecordHeaders(), payload);
+
+    assertThat(result.signatureVerified()).isFalse();
+    assertThat(result.signatureKeyId()).isNull();
+    assertThat(result.signatureError()).isNull();
+    assertThat(result.value()).isNotNull();
   }
 
   @Test
@@ -56,13 +60,14 @@ class ScheduleCommandDeserializerTest {
     String keyId = "engine-key-1";
     RecordHeaders headers = signedHeaders(payload, keyId);
 
-    MessageScheduleDTO result = deserializer.deserialize(TOPIC, headers, payload);
+    ScheduleCommandEnvelope result = deserializer.deserialize(TOPIC, headers, payload);
 
-    assertThat(result).isInstanceOf(OneTimeScheduleDTO.class);
-    assertThat((OneTimeScheduleDTO) result)
+    assertThat(result.signatureVerified()).isTrue();
+    assertThat(result.value()).isInstanceOf(OneTimeScheduleDTO.class);
+    assertThat((OneTimeScheduleDTO) result.value())
         .extracting(OneTimeScheduleDTO::getWhen, OneTimeScheduleDTO::getInstantiationTime)
         .containsExactly(schedule.getWhen(), schedule.getInstantiationTime());
-    assertThat(result.getMessage()).isInstanceOf(StartCommandDTO.class);
+    assertThat(result.value().getMessage()).isInstanceOf(StartCommandDTO.class);
   }
 
   @Test
@@ -70,9 +75,10 @@ class ScheduleCommandDeserializerTest {
     String keyId = "engine-key-1";
     RecordHeaders headers = signedHeaders(new byte[0], keyId);
 
-    MessageScheduleDTO result = deserializer.deserialize(TOPIC, headers, (byte[]) null);
+    ScheduleCommandEnvelope result = deserializer.deserialize(TOPIC, headers, (byte[]) null);
 
-    assertThat(result).isNull();
+    assertThat(result.signatureVerified()).isTrue();
+    assertThat(result.value()).isNull();
   }
 
   private RecordHeaders signedHeaders(byte[] payload, String keyId) {

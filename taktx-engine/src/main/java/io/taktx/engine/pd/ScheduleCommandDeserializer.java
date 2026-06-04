@@ -19,32 +19,49 @@ import org.apache.kafka.common.header.Header;
 import org.apache.kafka.common.header.Headers;
 import org.apache.kafka.common.serialization.Deserializer;
 
-public class ScheduleCommandDeserializer implements Deserializer<MessageScheduleDTO> {
+/**
+ * Deserializes {@code schedule-commands} records into a {@link ScheduleCommandEnvelope} that
+ * carries both the payload and the Ed25519 signature verification result.
+ *
+ * <p>Never throws — all error conditions are captured in {@link
+ * ScheduleCommandEnvelope#signatureError()} so the downstream {@code ScheduleProcessor} can decide
+ * how to handle them based on the current namespace security mode:
+ *
+ * <ul>
+ *   <li>OPEN mode — no key resolver is registered; the envelope is returned with {@code
+ *       signatureVerified=false} and no error, and the processor accepts it.
+ *   <li>Signing active — the engine signs its own schedule commands; the deserializer verifies the
+ *       {@code tx-sig} header and the processor enforces the result.
+ * </ul>
+ */
+public class ScheduleCommandDeserializer implements Deserializer<ScheduleCommandEnvelope> {
 
   private final Deserializer<MessageScheduleDTO> delegate = new MessageScheduleDtoDeserializer();
 
   @Override
-  public MessageScheduleDTO deserialize(String topic, byte[] data) {
-    return decode(data);
+  public ScheduleCommandEnvelope deserialize(String topic, byte[] data) {
+    return new ScheduleCommandEnvelope(decode(data), false, null, null);
   }
 
   @Override
-  public MessageScheduleDTO deserialize(String topic, Headers headers, byte[] data) {
+  public ScheduleCommandEnvelope deserialize(String topic, Headers headers, byte[] data) {
+    MessageScheduleDTO value = decode(data);
+
     Header sigHeader =
         headers != null ? headers.lastHeader(Constants.HEADER_ENGINE_SIGNATURE) : null;
     if (sigHeader == null || sigHeader.value() == null) {
-      throw new IllegalStateException(
-          "Inbound record on topic='"
-              + topic
-              + "' has no "
-              + Constants.HEADER_ENGINE_SIGNATURE
-              + " header — rejecting unsigned schedule command");
+      // No signature present — envelope carries unsigned state; mode enforcement happens
+      // downstream.
+      return new ScheduleCommandEnvelope(value, false, null, null);
     }
 
     String headerValue = new String(sigHeader.value(), StandardCharsets.UTF_8);
     int dot = headerValue.indexOf('.');
     if (dot < 0) {
-      throw new IllegalStateException(
+      return new ScheduleCommandEnvelope(
+          value,
+          false,
+          null,
           "Malformed "
               + Constants.HEADER_ENGINE_SIGNATURE
               + " header (expected '<keyId>.<base64sig>'): "
@@ -53,15 +70,22 @@ public class ScheduleCommandDeserializer implements Deserializer<MessageSchedule
 
     String keyId = headerValue.substring(0, dot);
     String base64Sig = headerValue.substring(dot + 1);
+
     EngineSigningKeysHolder.KeyResolver keyResolver = EngineSigningKeysHolder.get();
     if (keyResolver == null) {
-      throw new IllegalStateException(
-          "No EngineSigningKeysHolder key resolver available to verify signed schedule-commands record");
+      return new ScheduleCommandEnvelope(
+          value,
+          false,
+          keyId,
+          "No EngineSigningKeysHolder key resolver available to verify schedule-commands record");
     }
 
     String publicKeyBase64 = keyResolver.resolvePublicKey(keyId);
     if (publicKeyBase64 == null) {
-      throw new IllegalStateException(
+      return new ScheduleCommandEnvelope(
+          value,
+          false,
+          keyId,
           "Unknown or revoked signing keyId='" + keyId + "' — rejecting schedule-commands record");
     }
 
@@ -69,15 +93,21 @@ public class ScheduleCommandDeserializer implements Deserializer<MessageSchedule
       byte[] signatureBytes = Base64.getDecoder().decode(base64Sig);
       byte[] payloadBytes = data != null ? data : new byte[0];
       if (!Ed25519Service.verify(payloadBytes, signatureBytes, publicKeyBase64)) {
-        throw new IllegalStateException(
+        return new ScheduleCommandEnvelope(
+            value,
+            false,
+            keyId,
             "Engine Ed25519 signature verification failed for schedule-commands keyId=" + keyId);
       }
     } catch (IllegalArgumentException e) {
-      throw new IllegalStateException(
-          "Malformed base64 signature for keyId=" + keyId + ": " + e.getMessage(), e);
+      return new ScheduleCommandEnvelope(
+          value,
+          false,
+          keyId,
+          "Malformed base64 signature for keyId=" + keyId + ": " + e.getMessage());
     }
 
-    return decode(data);
+    return new ScheduleCommandEnvelope(value, true, keyId, null);
   }
 
   private MessageScheduleDTO decode(byte[] data) {

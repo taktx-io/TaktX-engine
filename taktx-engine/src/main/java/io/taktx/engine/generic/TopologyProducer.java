@@ -226,10 +226,15 @@ public class TopologyProducer {
           new MessageScheduleDtoDeserializer());
   public static final Serde<MessageScheduleDTO> SIGNED_MESSAGE_SCHEDULE_SERDE =
       MESSAGE_SCHEDULE_SERDE;
-  public static final Serde<MessageScheduleDTO> SCHEDULE_COMMAND_INPUT_SERDE =
-      Serdes.serdeFrom(
-          new ProtoSigningSerializer<>(MessageScheduleProtoMapper::toProto),
-          new ScheduleCommandDeserializer());
+  public static final Serde<io.taktx.engine.pd.ScheduleCommandEnvelope>
+      SCHEDULE_COMMAND_INPUT_SERDE =
+          Serdes.serdeFrom(
+              (topic, envelope) ->
+                  envelope == null || envelope.value() == null
+                      ? null
+                      : new ProtoSigningSerializer<>(MessageScheduleProtoMapper::toProto)
+                          .serialize(topic, envelope.value()),
+              new ScheduleCommandDeserializer());
   public static final Serde<ProcessInstanceTriggerDTO> PROCESS_INSTANCE_TRIGGER_SERDE =
       Serdes.serdeFrom(
           new ProtoSigningSerializer<>(ProcessInstanceTriggerProtoMapper::toProto),
@@ -1056,7 +1061,7 @@ public class TopologyProducer {
                     SCHEDULE_KEY_SERDE,
                     MESSAGE_SCHEDULE_SERDE));
 
-    KStream<ScheduleKeyDTO, MessageScheduleDTO> scheduleCommandStream =
+    KStream<ScheduleKeyDTO, io.taktx.engine.pd.ScheduleCommandEnvelope> scheduleCommandStream =
         stateStore.stream(
             taktConfiguration.getPrefixed(Topics.SCHEDULE_COMMANDS.getTopicName()),
             Consumed.with(SCHEDULE_KEY_SERDE, SCHEDULE_COMMAND_INPUT_SERDE));
