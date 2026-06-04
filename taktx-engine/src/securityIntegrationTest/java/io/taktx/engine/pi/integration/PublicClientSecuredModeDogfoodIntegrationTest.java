@@ -317,7 +317,8 @@ class PublicClientSecuredModeDogfoodIntegrationTest
     // complementary scenario: a TaktXClient that auto-signs (RUNTIME_SIGNER_KEY_ID, pre-published)
     // successfully starts and completes a process in OPEN mode. This verifies that:
     //   1. TaktXClient auto-signs correctly when a signing identity is configured.
-    //   2. A signed request is accepted by the engine in OPEN mode (signing is optional, not forced).
+    //   2. A signed request is accepted by the engine in OPEN mode (signing is optional, not
+    // forced).
     //   3. The pre-published key in the trust registry is correctly resolved.
     long openPolicyVersion = nextPolicyVersion();
     String namespace = newTestNamespace("dogfood-signed-open-positive");
@@ -360,13 +361,11 @@ class PublicClientSecuredModeDogfoodIntegrationTest
     deployProcessAndAwaitAvailability(runtimeClient, TASK_SINGLE_BPMN, OPEN_PROCESS_ID);
 
     publishPolicyAndAwaitObserved(
-        publisher,
-        observer,
-        activeCommunityOpenPolicy(openPolicyVersion),
-        Duration.ofSeconds(30));
+        publisher, observer, activeCommunityOpenPolicy(openPolicyVersion), Duration.ofSeconds(30));
     awaitObservedPolicyVersion(runtimeClient, openPolicyVersion);
 
-    // In OPEN mode the signed start command is accepted — signing is orthogonal to mode enforcement.
+    // In OPEN mode the signed start command is accepted — signing is orthogonal to mode
+    // enforcement.
     UUID instanceId = runtimeClient.runtime().startProcess(OPEN_PROCESS_ID, VariablesDTO.empty());
     awaitProcessCompleted(updates, instanceId);
   }

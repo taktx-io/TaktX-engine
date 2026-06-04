@@ -377,8 +377,7 @@ class SecurityIntegrationTest {
           .atMost(Duration.ofSeconds(30))
           .pollInterval(Duration.ofMillis(100))
           .until(
-              () ->
-                  keyResolver.resolvePublicKey(SecurityTestConfigResource.engineKeyId) != null);
+              () -> keyResolver.resolvePublicKey(SecurityTestConfigResource.engineKeyId) != null);
     }
   }
 
@@ -398,8 +397,7 @@ class SecurityIntegrationTest {
             "user-1",
             Date.from(Instant.now().plusSeconds(300)));
 
-    UUID instanceId =
-        startSignedProcess(TASK_SINGLE_PROCESS_ID, VariablesDTO.empty(), jwt);
+    UUID instanceId = startSignedProcess(TASK_SINGLE_PROCESS_ID, VariablesDTO.empty(), jwt);
 
     await()
         .atMost(Duration.ofSeconds(10))
@@ -446,15 +444,13 @@ class SecurityIntegrationTest {
             Date.from(Instant.now().plusSeconds(300)));
 
     // First command — should be accepted
-    UUID firstId =
-        startSignedProcess(TASK_SINGLE_PROCESS_ID, VariablesDTO.empty(), jwt);
+    UUID firstId = startSignedProcess(TASK_SINGLE_PROCESS_ID, VariablesDTO.empty(), jwt);
     await()
         .atMost(Duration.ofSeconds(10))
         .untilAsserted(() -> assertThat(engine.getProcessInstanceMap()).containsKey(firstId));
 
     // Second command with the same auditId — should be rejected
-    UUID secondId =
-        startSignedProcess(TASK_SINGLE_PROCESS_ID, VariablesDTO.empty(), jwt);
+    UUID secondId = startSignedProcess(TASK_SINGLE_PROCESS_ID, VariablesDTO.empty(), jwt);
     await()
         .during(Duration.ofSeconds(3))
         .atMost(Duration.ofSeconds(4))
@@ -483,8 +479,7 @@ class SecurityIntegrationTest {
             UUID.randomUUID().toString(),
             "user-1",
             Date.from(Instant.now().plusSeconds(300)));
-    UUID validId =
-        startSignedProcess(TASK_SINGLE_PROCESS_ID, VariablesDTO.empty(), jwt);
+    UUID validId = startSignedProcess(TASK_SINGLE_PROCESS_ID, VariablesDTO.empty(), jwt);
 
     await()
         .atMost(Duration.ofSeconds(10))
@@ -746,8 +741,7 @@ class SecurityIntegrationTest {
             UUID.randomUUID().toString(),
             "user-1",
             Date.from(Instant.now().plusSeconds(300)));
-    UUID instanceId =
-        startSignedProcess(SERVICE_TASK_PROCESS_ID, VariablesDTO.empty(), jwt);
+    UUID instanceId = startSignedProcess(SERVICE_TASK_PROCESS_ID, VariablesDTO.empty(), jwt);
 
     engine.waitForNewProcessInstance();
     engine.waitForExternalTaskTrigger(SERVICE_TASK_TYPE);
@@ -1006,8 +1000,7 @@ class SecurityIntegrationTest {
             UUID.randomUUID().toString(),
             "user-1",
             Date.from(Instant.now().plusSeconds(300)));
-    UUID instanceId =
-        startSignedProcess(SERVICE_TASK_PROCESS_ID, VariablesDTO.empty(), jwt);
+    UUID instanceId = startSignedProcess(SERVICE_TASK_PROCESS_ID, VariablesDTO.empty(), jwt);
 
     engine.waitForNewProcessInstance();
 
@@ -1370,12 +1363,11 @@ class SecurityIntegrationTest {
 
   /**
    * Sends a signed {@code StartCommandDTO} directly to the process-instance topic using the
-   * published worker key. This avoids relying on the race between Kafka Streams replaying
-   * {@code signingEnabled=true} from the GlobalConfigStore and the test sending its command —
-   * the signed command is accepted by the engine regardless of replay timing.
+   * published worker key. This avoids relying on the race between Kafka Streams replaying {@code
+   * signingEnabled=true} from the GlobalConfigStore and the test sending its command — the signed
+   * command is accepted by the engine regardless of replay timing.
    */
-  private UUID startSignedProcess(
-      String processDefinitionId, VariablesDTO variables, String jwt) {
+  private UUID startSignedProcess(String processDefinitionId, VariablesDTO variables, String jwt) {
     UUID instanceId = UUID.randomUUID();
     sendSignedProcessInstanceTrigger(
         new io.taktx.dto.StartCommandDTO(
