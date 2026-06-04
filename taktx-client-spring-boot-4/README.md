@@ -99,7 +99,7 @@ The client is ready by the time Spring's `@PostConstruct` phase completes — `s
 When `taktx.client.enabled=true` (the default), `TaktXClientAutoConfiguration`:
 
 1. Builds a `TaktXClient` from all Spring application properties.
-2. Calls `client.start()` — initialises the `SigningKeysStore`, `RuntimeConfigurationStore`, starts all background consumers, and only prepares/publishes worker signing keys when runtime security or namespace posture requires it.
+2. Calls `client.start()` — initialises the `SigningKeysStore`, `RuntimeConfigurationStore`, starts all background consumers, and auto-publishes the worker signing key when the namespace is in ANCHORED mode.
 3. Calls `client.deployTaktDeploymentAnnotatedClasses()` — deploys any classes annotated with `@Deployment`.
 4. Scans for `@ExternalTask`-annotated workers and auto-registers them.
 5. If `taktx.client.instanceupdate.enabled=true` and a `groupId` is configured, registers an instance-update consumer that publishes `InstanceUpdateRecord` objects as Spring application events.
@@ -235,7 +235,7 @@ public class InstanceUpdateListener {
 
 Signing configuration flows through Spring application properties into the underlying `TaktXClient` builder automatically. No extra Spring wiring is needed.
 
-Default `OPEN` posture remains steady-state unsigned. A requested protected posture may still prepare signing infrastructure and pre-publish the worker public key, but outbound client/worker traffic stays unsigned until signing is actually active.
+Signing behavior is determined solely by namespace mode: **`OPEN`** → unsigned, no key publication; **`ANCHORED`** → all traffic auto-signed, public key published on `start()` and re-published on rotation.
 
 ### Source 1 — Environment variables
 
@@ -284,18 +284,12 @@ echo "billing-worker-2026-001" > key-id
 rm /tmp/worker-key.pem
 ```
 
-When a signing identity is available, `start()` automatically publishes the public key to `taktx-signing-keys` only when legacy runtime security toggles are active or the namespace is preparing for / operating under `SECURED` or `ANCHORED_SECURED`. Workers adapt when `signingEnabled` changes in the runtime configuration topic — no restart needed.
+When a signing identity is available, `start()` publishes the worker's public key to `taktx-signing-keys` automatically. The key is re-published whenever it rotates, and the previous key is retired to `TRUSTED` status during the overlap window.
 
-Actual outbound client/worker signing becomes active when either:
+Signing activates solely based on namespace mode:
 
-- `signingEnabled=true` is present in runtime configuration, or
-- the authoritative active namespace policy requires signed `clientCommands` and/or `workerResponses`.
-
-Steady-state behavior:
-
-- **no active policy / `OPEN`** → unsigned, no steady-state key publication
-- **requested `SECURED` / `ANCHORED_SECURED`** → optional preparation/public-key publication, but outbound messages remain unsigned
-- **active `SECURED` / `ANCHORED_SECURED` requiring signing** → client messages are signed and publishable worker keys are kept current
+- **`OPEN`** → unsigned traffic, no key publication
+- **`ANCHORED`** → all client and worker traffic is signed automatically; fails fast if no stable signing identity or platform trust anchor is configured
 
 ---
 
