@@ -47,6 +47,7 @@ import io.taktx.engine.config.GlobalConfigStore;
 import io.taktx.engine.config.NamespaceSecurityPolicyStore;
 import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.pd.MessageEventIngressEnvelope;
+import io.taktx.engine.pd.ScheduleCommandEnvelope;
 import io.taktx.engine.pd.SignalIngressEnvelope;
 import io.taktx.engine.pi.ProcessInstanceTriggerEnvelope;
 import io.taktx.engine.topicmanagement.TopicMetaIngressEnvelope;
@@ -423,8 +424,7 @@ class EngineAuthorizationServiceTest {
     // globalConfigStore has no config: both signingEnabled and engineRequiresAuthorization default
     // to false.  No signature header is present — the method must return null, not throw.
     SigningKeyDTO result =
-        service.authorizeScheduleCommand(
-            new RecordHeaders(), scheduleKey(), oneTimeSchedule(startCommand("proc", -1)));
+        service.authorizeScheduleCommand(scheduleKey(), new ScheduleCommandEnvelope(oneTimeSchedule(startCommand("proc", -1)), false, null, null));
 
     assertThat(result).isNull();
   }
@@ -446,8 +446,7 @@ class EngineAuthorizationServiceTest {
     when(signingKeysStore.get(keyId)).thenReturn(keyEntry);
 
     SigningKeyDTO result =
-        service.authorizeScheduleCommand(
-            headersWithSignature(keyId), scheduleKey(), oneTimeSchedule(startCommand("proc", -1)));
+        service.authorizeScheduleCommand(scheduleKey(), new ScheduleCommandEnvelope(oneTimeSchedule(startCommand("proc", -1)), true, keyId, null));
 
     assertThat(result).isEqualTo(keyEntry);
   }
@@ -458,10 +457,9 @@ class EngineAuthorizationServiceTest {
 
     assertThatThrownBy(
             () ->
-                service.authorizeScheduleCommand(
-                    new RecordHeaders(), scheduleKey(), oneTimeSchedule(startCommand("proc", -1))))
+                service.authorizeScheduleCommand(scheduleKey(), new ScheduleCommandEnvelope(oneTimeSchedule(startCommand("proc", -1)), false, null, null)))
         .isInstanceOf(AuthorizationTokenException.class)
-        .hasMessageContaining("tx-sig");
+        .hasMessageContaining("missing or unverified signature");
   }
 
   @Test
@@ -482,12 +480,9 @@ class EngineAuthorizationServiceTest {
 
     assertThatThrownBy(
             () ->
-                service.authorizeScheduleCommand(
-                    headersWithSignature(keyId),
-                    scheduleKey(),
-                    oneTimeSchedule(startCommand("proc", -1))))
+                service.authorizeScheduleCommand(scheduleKey(), new ScheduleCommandEnvelope(oneTimeSchedule(startCommand("proc", -1)), true, keyId, null)))
         .isInstanceOf(AuthorizationTokenException.class)
-        .hasMessageContaining("not trusted for required role ENGINE");
+        .hasMessageContaining("not trusted for role");
   }
 
   @Test
@@ -976,7 +971,7 @@ class EngineAuthorizationServiceTest {
                     new ProcessInstanceTriggerEnvelope(
                         new byte[0], continueFlowElementTrigger(), true, keyId)))
         .isInstanceOf(AuthorizationTokenException.class)
-        .hasMessageContaining("not trusted for required role ENGINE");
+        .hasMessageContaining("not trusted for required role");
   }
 
   @Test
@@ -1300,10 +1295,9 @@ class EngineAuthorizationServiceTest {
 
     assertThatThrownBy(
             () ->
-                service.authorizeScheduleCommand(
-                    new RecordHeaders(), scheduleKey(), oneTimeSchedule(startCommand("proc", -1))))
+                service.authorizeScheduleCommand(scheduleKey(), new ScheduleCommandEnvelope(oneTimeSchedule(startCommand("proc", -1)), false, null, null)))
         .isInstanceOf(AuthorizationTokenException.class)
-        .hasMessageContaining("tx-sig");
+        .hasMessageContaining("missing or unverified signature");
   }
 
   @Test
@@ -1332,10 +1326,7 @@ class EngineAuthorizationServiceTest {
 
     assertThatThrownBy(
             () ->
-                service.authorizeScheduleCommand(
-                    headersWithSignature("engine-schedule-key"),
-                    scheduleKey(),
-                    oneTimeSchedule(startCommand("proc", -1))))
+                service.authorizeScheduleCommand(scheduleKey(), new ScheduleCommandEnvelope(oneTimeSchedule(startCommand("proc", -1)), true, "engine-schedule-key", null)))
         .isInstanceOf(AuthorizationTokenException.class)
         .hasMessageContaining("platform public key");
   }

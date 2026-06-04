@@ -23,7 +23,6 @@ import io.taktx.dto.MessageScheduleDTO;
 import io.taktx.dto.NamespaceSecurityPolicyDTO;
 import io.taktx.dto.ProcessInstanceTriggerDTO;
 import io.taktx.dto.ReplayProtectionMode;
-import io.taktx.dto.ScheduleKeyDTO;
 import io.taktx.dto.SecurityMode;
 import io.taktx.dto.SetVariableTriggerDTO;
 import io.taktx.dto.SigningKeyDTO;
@@ -372,7 +371,8 @@ public class EngineAuthorizationService {
    * trusted {@code ENGINE} role.
    */
   public SigningKeyDTO authorizeScheduleCommand(
-      Headers headers, ScheduleKeyDTO scheduleKey, MessageScheduleDTO schedule) {
+      io.taktx.dto.ScheduleKeyDTO scheduleKey,
+      io.taktx.engine.pd.ScheduleCommandEnvelope envelope) {
     GlobalConfigurationDTO cfg = effectiveConfig();
     MessageSecurityPolicy policy =
         messageSecurityPolicyRegistry.resolve(
@@ -384,17 +384,33 @@ public class EngineAuthorizationService {
       return null;
     }
 
-    VerifiedMessageContext ctx =
-        verificationCore.verify(lastHeader(headers, SIG_HEADER), requiredRole(policy));
+    // Signature was verified by the deserializer — use the pre-computed result.
+    if (envelope == null || !envelope.signatureVerified()) {
+      String error =
+          envelope != null && envelope.signatureError() != null
+              ? envelope.signatureError()
+              : "missing or unverified signature";
+      throw new io.taktx.security.AuthorizationTokenException(
+          "Rejected schedule-commands record scheduleKey=" + scheduleKey + " — " + error);
+    }
 
+    String keyId = envelope.signatureKeyId();
+    SigningKeyDTO key = verificationCore.resolveKey(keyId);
+    KeyRole required = requiredRole(policy);
+    if (key == null || !keyTrustPolicy.isTrustedForRole(key, required)) {
+      throw new io.taktx.security.AuthorizationTokenException(
+          "schedule-commands keyId='"
+              + keyId
+              + "' is unknown, revoked, or not trusted for role "
+              + required);
+    }
     log.info(
-        "✅ Authorised schedule-commands scheduleKey={} keyId={} owner={} role={} messageType={}",
+        "✅ Authorised schedule-commands scheduleKey={} keyId={} owner={} role={}",
         scheduleKey,
-        ctx.keyId(),
-        ctx.key().getOwner(),
-        ctx.role(),
-        scheduleMessageType(schedule));
-    return ctx.key();
+        keyId,
+        key.getOwner(),
+        key.effectiveRole());
+    return key;
   }
 
   /**
