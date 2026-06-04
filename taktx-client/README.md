@@ -80,7 +80,7 @@ TaktXClient client = TaktXClient.newClientBuilder()
     .withProperties(props)
     .build();
 
-client.start();   // initialises stores, prepares/publishes worker key only when posture or runtime security requires it, starts consumers
+client.start();   // initialises stores, auto-publishes worker signing key when ANCHORED mode is active, starts consumers
 
 UUID instanceId = client.startProcess("invoice-process", -1, VariablesDTO.empty(), null);
 ```
@@ -274,9 +274,12 @@ client.sendSignal("GlobalShutdown");
 
 ## Worker signing
 
-Workers can sign their responses with an Ed25519 key. The engine verifies signatures when `signingEnabled=true` in the runtime configuration topic, or when an active authoritative namespace policy requires signed client/worker traffic.
+Workers can sign their responses with an Ed25519 key. The engine verifies signatures when the namespace security mode is `ANCHORED`.
 
-Default `OPEN` posture remains steady-state unsigned. A requested protected posture may still pre-publish the worker public key as bootstrap preparation, but outbound client traffic stays unsigned until signing is actually active.
+Signing behavior is determined solely by namespace mode:
+
+- **`OPEN`** → unsigned, no key publication
+- **`ANCHORED`** → all client and worker traffic is signed automatically; the public key is published to `taktx-signing-keys` on `start()` and re-published on rotation
 
 ### Source 1 — Environment variables (default)
 
