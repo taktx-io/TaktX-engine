@@ -301,7 +301,6 @@ class EngineAuthorizationServiceTest {
             .publicKeyBase64("dummy")
             .algorithm("Ed25519")
             .status(KeyStatus.ACTIVE)
-            .owner("worker-billing")
             .role(KeyRole.CLIENT)
             .build();
     when(signingKeysStore.get(keyId)).thenReturn(keyEntry);
@@ -344,7 +343,6 @@ class EngineAuthorizationServiceTest {
             .publicKeyBase64("dummy")
             .algorithm("Ed25519")
             .status(KeyStatus.REVOKED)
-            .owner("worker-billing")
             .role(KeyRole.CLIENT)
             .build();
     when(signingKeysStore.get(keyId)).thenReturn(keyEntry);
@@ -381,7 +379,6 @@ class EngineAuthorizationServiceTest {
             .publicKeyBase64("dummy")
             .algorithm("Ed25519")
             .status(KeyStatus.ACTIVE)
-            .owner("worker-billing")
             .role(KeyRole.CLIENT)
             .build();
     when(signingKeysStore.get(keyId)).thenReturn(keyEntry);
@@ -424,7 +421,10 @@ class EngineAuthorizationServiceTest {
     // globalConfigStore has no config: both signingEnabled and engineRequiresAuthorization default
     // to false.  No signature header is present — the method must return null, not throw.
     SigningKeyDTO result =
-        service.authorizeScheduleCommand(scheduleKey(), new ScheduleCommandEnvelope(oneTimeSchedule(startCommand("proc", -1)), false, null, null));
+        service.authorizeScheduleCommand(
+            scheduleKey(),
+            new ScheduleCommandEnvelope(
+                oneTimeSchedule(startCommand("proc", -1)), false, null, null));
 
     assertThat(result).isNull();
   }
@@ -440,13 +440,15 @@ class EngineAuthorizationServiceTest {
             .publicKeyBase64("dummy")
             .algorithm("Ed25519")
             .status(KeyStatus.ACTIVE)
-            .owner("engine")
             .role(KeyRole.ENGINE)
             .build();
     when(signingKeysStore.get(keyId)).thenReturn(keyEntry);
 
     SigningKeyDTO result =
-        service.authorizeScheduleCommand(scheduleKey(), new ScheduleCommandEnvelope(oneTimeSchedule(startCommand("proc", -1)), true, keyId, null));
+        service.authorizeScheduleCommand(
+            scheduleKey(),
+            new ScheduleCommandEnvelope(
+                oneTimeSchedule(startCommand("proc", -1)), true, keyId, null));
 
     assertThat(result).isEqualTo(keyEntry);
   }
@@ -457,7 +459,10 @@ class EngineAuthorizationServiceTest {
 
     assertThatThrownBy(
             () ->
-                service.authorizeScheduleCommand(scheduleKey(), new ScheduleCommandEnvelope(oneTimeSchedule(startCommand("proc", -1)), false, null, null)))
+                service.authorizeScheduleCommand(
+                    scheduleKey(),
+                    new ScheduleCommandEnvelope(
+                        oneTimeSchedule(startCommand("proc", -1)), false, null, null)))
         .isInstanceOf(AuthorizationTokenException.class)
         .hasMessageContaining("missing or unverified signature");
   }
@@ -473,14 +478,16 @@ class EngineAuthorizationServiceTest {
             .publicKeyBase64("dummy")
             .algorithm("Ed25519")
             .status(KeyStatus.ACTIVE)
-            .owner("worker-billing")
             .role(KeyRole.CLIENT)
             .build();
     when(signingKeysStore.get(keyId)).thenReturn(keyEntry);
 
     assertThatThrownBy(
             () ->
-                service.authorizeScheduleCommand(scheduleKey(), new ScheduleCommandEnvelope(oneTimeSchedule(startCommand("proc", -1)), true, keyId, null)))
+                service.authorizeScheduleCommand(
+                    scheduleKey(),
+                    new ScheduleCommandEnvelope(
+                        oneTimeSchedule(startCommand("proc", -1)), true, keyId, null)))
         .isInstanceOf(AuthorizationTokenException.class)
         .hasMessageContaining("not trusted for role");
   }
@@ -509,7 +516,6 @@ class EngineAuthorizationServiceTest {
             .publicKeyBase64("dummy")
             .algorithm("Ed25519")
             .status(KeyStatus.ACTIVE)
-            .owner("console")
             .role(KeyRole.CLIENT)
             .build();
     when(signingKeysStore.get(keyId)).thenReturn(keyEntry);
@@ -568,7 +574,6 @@ class EngineAuthorizationServiceTest {
             .publicKeyBase64("dummy")
             .algorithm("Ed25519")
             .status(KeyStatus.ACTIVE)
-            .owner("console")
             .role(KeyRole.CLIENT)
             .build();
     when(signingKeysStore.get(keyId)).thenReturn(keyEntry);
@@ -612,7 +617,6 @@ class EngineAuthorizationServiceTest {
             .publicKeyBase64(publicKeyBase64)
             .algorithm("Ed25519")
             .status(KeyStatus.ACTIVE)
-            .owner("platform-service")
             .role(KeyRole.PLATFORM)
             .build();
     when(signingKeysStore.get(keyId)).thenReturn(keyEntry);
@@ -661,7 +665,6 @@ class EngineAuthorizationServiceTest {
             .publicKeyBase64(publicKeyBase64)
             .algorithm("Ed25519")
             .status(KeyStatus.ACTIVE)
-            .owner("console")
             .role(KeyRole.CLIENT)
             .build();
     when(signingKeysStore.get(keyId)).thenReturn(keyEntry);
@@ -694,7 +697,6 @@ class EngineAuthorizationServiceTest {
             .publicKeyBase64(publicKeyBase64)
             .algorithm("Ed25519")
             .status(KeyStatus.ACTIVE)
-            .owner("console")
             .role(KeyRole.CLIENT)
             .build();
     when(signingKeysStore.get(keyId)).thenReturn(keyEntry);
@@ -734,7 +736,6 @@ class EngineAuthorizationServiceTest {
             .keyId(keyId)
             .publicKeyBase64("dummy")
             .status(KeyStatus.ACTIVE)
-            .owner("worker-billing")
             .role(KeyRole.CLIENT)
             .build();
     when(signingKeysStore.get(keyId)).thenReturn(keyEntry);
@@ -752,7 +753,7 @@ class EngineAuthorizationServiceTest {
     assertThat(result.getAuthMethod()).isEqualTo(CommandAuthMethod.ED25519);
     assertThat(result.getTrusted()).isTrue();
     assertThat(result.getSignerKeyId()).isEqualTo(keyId);
-    assertThat(result.getSignerOwner()).isEqualTo("worker-billing");
+    assertThat(result.getSignerOwner()).isEqualTo("worker-test-001");
   }
 
   @Test
@@ -765,7 +766,6 @@ class EngineAuthorizationServiceTest {
             .keyId(keyId)
             .publicKeyBase64("dummy")
             .status(KeyStatus.ACTIVE)
-            .owner("engine")
             .role(KeyRole.ENGINE)
             .build();
     when(signingKeysStore.get(keyId)).thenReturn(keyEntry);
@@ -782,7 +782,7 @@ class EngineAuthorizationServiceTest {
     assertThat(result.getAuthMethod()).isEqualTo(CommandAuthMethod.ED25519);
     assertThat(result.getTrusted()).isTrue();
     assertThat(result.getSignerKeyId()).isEqualTo(keyId);
-    assertThat(result.getSignerOwner()).isEqualTo("engine");
+    assertThat(result.getSignerOwner()).isEqualTo("engine-test-key-1");
   }
 
   @Test
@@ -792,8 +792,7 @@ class EngineAuthorizationServiceTest {
     String keyId = "legacy-key-001";
     // No role set → defaults to null in builder → effectiveRole() returns CLIENT
     SigningKeyDTO nullRoleKey =
-        new SigningKeyDTO(
-            keyId, "dummy", "Ed25519", null, KeyStatus.ACTIVE, "legacy-worker", null, null);
+        new SigningKeyDTO(keyId, "dummy", "Ed25519", null, KeyStatus.ACTIVE, null, null);
     when(signingKeysStore.get(keyId)).thenReturn(nullRoleKey);
 
     RecordHeaders headers = new RecordHeaders();
@@ -809,7 +808,7 @@ class EngineAuthorizationServiceTest {
     assertThat(result.getAuthMethod()).isEqualTo(CommandAuthMethod.ED25519);
     assertThat(result.getTrusted()).isTrue();
     assertThat(result.getSignerKeyId()).isEqualTo(keyId);
-    assertThat(result.getSignerOwner()).isEqualTo("legacy-worker");
+    assertThat(result.getSignerOwner()).isEqualTo("legacy-key-001");
   }
 
   @Test
@@ -822,7 +821,6 @@ class EngineAuthorizationServiceTest {
             .keyId(keyId)
             .publicKeyBase64("dummy")
             .status(KeyStatus.ACTIVE)
-            .owner("engine")
             .role(KeyRole.ENGINE)
             .build();
     when(signingKeysStore.get(keyId)).thenReturn(keyEntry);
@@ -897,7 +895,6 @@ class EngineAuthorizationServiceTest {
                 .keyId(keyId)
                 .publicKeyBase64("dummy")
                 .status(KeyStatus.ACTIVE)
-                .owner("worker-billing")
                 .role(KeyRole.CLIENT)
                 .build());
 
@@ -923,7 +920,6 @@ class EngineAuthorizationServiceTest {
                 .keyId(keyId)
                 .publicKeyBase64("dummy")
                 .status(KeyStatus.ACTIVE)
-                .owner("engine")
                 .role(KeyRole.ENGINE)
                 .build());
 
@@ -942,7 +938,7 @@ class EngineAuthorizationServiceTest {
                 .verificationResult(CommandTrustVerificationResult.ENGINE_SIGNED)
                 .trusted(true)
                 .signerKeyId(keyId)
-                .signerOwner("engine")
+                .signerOwner("engine-test-key-1")
                 .build());
   }
 
@@ -957,7 +953,6 @@ class EngineAuthorizationServiceTest {
                 .keyId(keyId)
                 .publicKeyBase64("dummy")
                 .status(KeyStatus.ACTIVE)
-                .owner("worker-billing")
                 .role(KeyRole.CLIENT)
                 .build());
 
@@ -1012,7 +1007,6 @@ class EngineAuthorizationServiceTest {
                 .keyId(keyId)
                 .publicKeyBase64("dummy")
                 .status(KeyStatus.ACTIVE)
-                .owner("worker-billing")
                 .build());
 
     RecordHeaders headers = new RecordHeaders();
@@ -1061,7 +1055,6 @@ class EngineAuthorizationServiceTest {
                 .keyId(keyId)
                 .publicKeyBase64("dummy")
                 .status(KeyStatus.ACTIVE)
-                .owner("engine")
                 .role(KeyRole.ENGINE)
                 .build());
 
@@ -1077,7 +1070,7 @@ class EngineAuthorizationServiceTest {
     assertThat(result.getAuthMethod()).isEqualTo(CommandAuthMethod.ED25519);
     assertThat(result.getTrusted()).isTrue();
     assertThat(result.getSignerKeyId()).isEqualTo(keyId);
-    assertThat(result.getSignerOwner()).isEqualTo("engine");
+    assertThat(result.getSignerOwner()).isEqualTo("engine-test-key-3");
   }
 
   @Test
@@ -1135,7 +1128,6 @@ class EngineAuthorizationServiceTest {
                 .keyId(keyId)
                 .publicKeyBase64("dummy")
                 .status(KeyStatus.ACTIVE)
-                .owner("worker-billing")
                 .role(KeyRole.CLIENT)
                 .build());
 
@@ -1193,7 +1185,6 @@ class EngineAuthorizationServiceTest {
                 .keyId(keyId)
                 .publicKeyBase64("dummy")
                 .status(KeyStatus.ACTIVE)
-                .owner("console")
                 .role(KeyRole.CLIENT)
                 .build());
 
@@ -1234,7 +1225,6 @@ class EngineAuthorizationServiceTest {
                 .keyId(keyId)
                 .publicKeyBase64("dummy")
                 .status(KeyStatus.ACTIVE)
-                .owner("worker-billing")
                 .role(KeyRole.CLIENT)
                 .build());
 
@@ -1295,7 +1285,10 @@ class EngineAuthorizationServiceTest {
 
     assertThatThrownBy(
             () ->
-                service.authorizeScheduleCommand(scheduleKey(), new ScheduleCommandEnvelope(oneTimeSchedule(startCommand("proc", -1)), false, null, null)))
+                service.authorizeScheduleCommand(
+                    scheduleKey(),
+                    new ScheduleCommandEnvelope(
+                        oneTimeSchedule(startCommand("proc", -1)), false, null, null)))
         .isInstanceOf(AuthorizationTokenException.class)
         .hasMessageContaining("missing or unverified signature");
   }
@@ -1326,7 +1319,13 @@ class EngineAuthorizationServiceTest {
 
     assertThatThrownBy(
             () ->
-                service.authorizeScheduleCommand(scheduleKey(), new ScheduleCommandEnvelope(oneTimeSchedule(startCommand("proc", -1)), true, "engine-schedule-key", null)))
+                service.authorizeScheduleCommand(
+                    scheduleKey(),
+                    new ScheduleCommandEnvelope(
+                        oneTimeSchedule(startCommand("proc", -1)),
+                        true,
+                        "engine-schedule-key",
+                        null)))
         .isInstanceOf(AuthorizationTokenException.class)
         .hasMessageContaining("platform public key");
   }

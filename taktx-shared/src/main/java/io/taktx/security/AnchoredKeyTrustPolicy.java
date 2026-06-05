@@ -58,14 +58,14 @@ import java.util.Base64;
  * (PKCS#1 v1.5) signature produced by the platform's root private key over the pipe-delimited UTF-8
  * canonical payload:
  *
- * <pre>{@code keyId|publicKeyBase64|algorithm|owner|role}</pre>
+ * <pre>{@code keyId|publicKeyBase64|algorithm|role}</pre>
  *
  * <p>Shell equivalent (operator workflow):
  *
  * <pre>{@code
  * # 1. Compute the canonical payload
- * PAYLOAD=$(printf '%s|%s|%s|%s|%s' \
- *   "$KEY_ID" "$PUBLIC_KEY_BASE64" "$ALGORITHM" "$OWNER" "$ROLE")
+ * PAYLOAD=$(printf '%s|%s|%s|%s' \
+ *   "$KEY_ID" "$PUBLIC_KEY_BASE64" "$ALGORITHM" "$ROLE")
  *
  * # 2. Sign with RSA SHA-256 (PKCS#1 v1.5) and base64-encode
  * REGISTRATION_SIGNATURE=$(printf '%s' "$PAYLOAD" \

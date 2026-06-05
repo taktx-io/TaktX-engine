@@ -44,7 +44,6 @@ import org.apache.kafka.streams.processor.Cancellable;
 import org.apache.kafka.streams.processor.PunctuationType;
 import org.apache.kafka.streams.processor.Punctuator;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
-import io.taktx.engine.pd.ScheduleCommandEnvelope;
 import org.apache.kafka.streams.processor.api.Record;
 import org.apache.kafka.streams.state.KeyValueIterator;
 import org.apache.kafka.streams.state.KeyValueStore;
@@ -116,7 +115,12 @@ class ScheduleProcessorTest {
     when(engineAuthorizationService.authorizeScheduleCommand(any(), any()))
         .thenReturn(activeEngineKey("engine-key-1"));
 
-    scheduleProcessor.process(new Record<>(scheduleKey, new ScheduleCommandEnvelope(schedule, true, null, null), 999_000L, headers));
+    scheduleProcessor.process(
+        new Record<>(
+            scheduleKey,
+            new ScheduleCommandEnvelope(schedule, true, null, null),
+            999_000L,
+            headers));
 
     verify(store).put(scheduleKey, schedule);
     verify(processingStatistics).recordScheduleLatency(999_000L, "DefinitionScheduleKeyDTO_CREATE");
@@ -130,7 +134,12 @@ class ScheduleProcessorTest {
     when(engineAuthorizationService.authorizeScheduleCommand(any(), any()))
         .thenThrow(new AuthorizationTokenException("client signer not allowed"));
 
-    scheduleProcessor.process(new Record<>(scheduleKey, new ScheduleCommandEnvelope(schedule, true, null, null), 999_000L, headers));
+    scheduleProcessor.process(
+        new Record<>(
+            scheduleKey,
+            new ScheduleCommandEnvelope(schedule, true, null, null),
+            999_000L,
+            headers));
 
     verify(store, never()).put(any(), any());
     verify(processingStatistics, never()).recordScheduleLatency(any(Long.class), any());
@@ -149,7 +158,12 @@ class ScheduleProcessorTest {
                 ProtectedDataPlaneParticipationGuard.POLICY_NOT_ACTIVE_HINT,
                 "policy still validating"));
 
-    scheduleProcessor.process(new Record<>(scheduleKey, new ScheduleCommandEnvelope(schedule, true, null, null), 999_000L, headers));
+    scheduleProcessor.process(
+        new Record<>(
+            scheduleKey,
+            new ScheduleCommandEnvelope(schedule, true, null, null),
+            999_000L,
+            headers));
 
     verify(store, never()).put(any(), any());
     verify(processingStatistics, never()).recordScheduleLatency(any(Long.class), any());
@@ -184,7 +198,6 @@ class ScheduleProcessorTest {
         .keyId(keyId)
         .publicKeyBase64("dummy")
         .algorithm("Ed25519")
-        .owner("engine")
         .role(KeyRole.ENGINE)
         .build();
   }

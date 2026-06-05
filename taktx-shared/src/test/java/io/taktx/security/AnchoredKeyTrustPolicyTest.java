@@ -85,14 +85,12 @@ class AnchoredKeyTrustPolicyTest {
 
   @Test
   void revokedKey_alwaysRejected_evenWithValidSignature() throws Exception {
-    SigningKeyDTO key =
-        countersigned("revoked-key", "pubkey-b64", "Ed25519", "owner", KeyRole.CLIENT);
+    SigningKeyDTO key = countersigned("revoked-key", "pubkey-b64", "Ed25519", KeyRole.CLIENT);
     SigningKeyDTO revoked =
         SigningKeyDTO.builder()
             .keyId(key.getKeyId())
             .publicKeyBase64(key.getPublicKeyBase64())
             .algorithm(key.getAlgorithm())
-            .owner(key.getOwner())
             .role(key.getRole())
             .status(KeyStatus.REVOKED) // ← override to REVOKED
             .registrationSignature(key.getRegistrationSignature())
@@ -104,14 +102,14 @@ class AnchoredKeyTrustPolicyTest {
 
   @Test
   void engineKey_noRegistrationSignature_rejected() {
-    SigningKeyDTO key = unsigned("engine-key", "pubkey-b64", "Ed25519", "engine", KeyRole.ENGINE);
+    SigningKeyDTO key = unsigned("engine-key", "pubkey-b64", "Ed25519", KeyRole.ENGINE);
     assertThat(policy.isTrustedForRole(key, KeyRole.ENGINE)).isFalse();
   }
 
   @Test
   void clientKey_noRegistrationSignature_rejected() {
     // In anchored mode, CLIENT keys without a countersignature are also rejected.
-    SigningKeyDTO key = unsigned("worker-key", "pubkey-b64", "Ed25519", "worker", KeyRole.CLIENT);
+    SigningKeyDTO key = unsigned("worker-key", "pubkey-b64", "Ed25519", KeyRole.CLIENT);
     assertThat(policy.isTrustedForRole(key, KeyRole.CLIENT)).isFalse();
   }
 
@@ -122,7 +120,6 @@ class AnchoredKeyTrustPolicyTest {
             .keyId("engine-key")
             .publicKeyBase64("pubkey-b64")
             .algorithm("Ed25519")
-            .owner("engine")
             .role(KeyRole.ENGINE)
             .status(KeyStatus.ACTIVE)
             .registrationSignature("   ") // blank
@@ -136,22 +133,19 @@ class AnchoredKeyTrustPolicyTest {
   void engineKey_signedByWrongRootKey_rejected() throws Exception {
     // Sign with wrongPrivateKey — verification against rootPublicKey must fail.
     SigningKeyDTO key =
-        countersignedWith(
-            "engine-key", "pubkey-b64", "Ed25519", "engine", KeyRole.ENGINE, wrongPrivateKey);
+        countersignedWith("engine-key", "pubkey-b64", "Ed25519", KeyRole.ENGINE, wrongPrivateKey);
     assertThat(policy.isTrustedForRole(key, KeyRole.ENGINE)).isFalse();
   }
 
   @Test
   void engineKey_tamperedPayload_rejected() throws Exception {
     // Sign the correct payload, then tamper with the publicKeyBase64.
-    SigningKeyDTO original =
-        countersigned("engine-key", "pubkey-b64", "Ed25519", "engine", KeyRole.ENGINE);
+    SigningKeyDTO original = countersigned("engine-key", "pubkey-b64", "Ed25519", KeyRole.ENGINE);
     SigningKeyDTO tampered =
         SigningKeyDTO.builder()
             .keyId(original.getKeyId())
             .publicKeyBase64("TAMPERED-pubkey") // different from signed payload
             .algorithm(original.getAlgorithm())
-            .owner(original.getOwner())
             .role(original.getRole())
             .status(KeyStatus.ACTIVE)
             .registrationSignature(original.getRegistrationSignature())
@@ -166,7 +160,6 @@ class AnchoredKeyTrustPolicyTest {
             .keyId("engine-key")
             .publicKeyBase64("pubkey-b64")
             .algorithm("Ed25519")
-            .owner("engine")
             .role(KeyRole.ENGINE)
             .status(KeyStatus.ACTIVE)
             .registrationSignature("not-valid-base64!!!")
@@ -178,54 +171,47 @@ class AnchoredKeyTrustPolicyTest {
 
   @Test
   void engineKey_validSignature_trustedForEngine() throws Exception {
-    SigningKeyDTO key =
-        countersigned("engine-key", "pubkey-b64", "Ed25519", "engine", KeyRole.ENGINE);
+    SigningKeyDTO key = countersigned("engine-key", "pubkey-b64", "Ed25519", KeyRole.ENGINE);
     assertThat(policy.isTrustedForRole(key, KeyRole.ENGINE)).isTrue();
   }
 
   @Test
   void engineKey_validSignature_trustedForClient() throws Exception {
     // ENGINE role satisfies CLIENT (role hierarchy: ENGINE ⊇ CLIENT)
-    SigningKeyDTO key =
-        countersigned("engine-key", "pubkey-b64", "Ed25519", "engine", KeyRole.ENGINE);
+    SigningKeyDTO key = countersigned("engine-key", "pubkey-b64", "Ed25519", KeyRole.ENGINE);
     assertThat(policy.isTrustedForRole(key, KeyRole.CLIENT)).isTrue();
   }
 
   @Test
   void engineKey_validSignature_notTrustedForPlatform() throws Exception {
     // ENGINE is below PLATFORM in the hierarchy
-    SigningKeyDTO key =
-        countersigned("engine-key", "pubkey-b64", "Ed25519", "engine", KeyRole.ENGINE);
+    SigningKeyDTO key = countersigned("engine-key", "pubkey-b64", "Ed25519", KeyRole.ENGINE);
     assertThat(policy.isTrustedForRole(key, KeyRole.PLATFORM)).isFalse();
   }
 
   @Test
   void clientKey_validSignature_trustedForClient() throws Exception {
-    SigningKeyDTO key =
-        countersigned("worker-key", "pubkey-b64", "Ed25519", "worker", KeyRole.CLIENT);
+    SigningKeyDTO key = countersigned("worker-key", "pubkey-b64", "Ed25519", KeyRole.CLIENT);
     assertThat(policy.isTrustedForRole(key, KeyRole.CLIENT)).isTrue();
   }
 
   @Test
   void clientKey_validSignature_notTrustedForEngine() throws Exception {
     // CLIENT cannot produce entry commands even with a valid countersignature
-    SigningKeyDTO key =
-        countersigned("worker-key", "pubkey-b64", "Ed25519", "worker", KeyRole.CLIENT);
+    SigningKeyDTO key = countersigned("worker-key", "pubkey-b64", "Ed25519", KeyRole.CLIENT);
     assertThat(policy.isTrustedForRole(key, KeyRole.ENGINE)).isFalse();
   }
 
   @Test
   void platformKey_validSignature_trustedForEngine() throws Exception {
     // PLATFORM ⊇ ENGINE ⊇ CLIENT
-    SigningKeyDTO key =
-        countersigned("platform-key", "pubkey-b64", "RSA", "platform", KeyRole.PLATFORM);
+    SigningKeyDTO key = countersigned("platform-key", "pubkey-b64", "RSA", KeyRole.PLATFORM);
     assertThat(policy.isTrustedForRole(key, KeyRole.ENGINE)).isTrue();
   }
 
   @Test
   void platformKey_validSignature_trustedForPlatform() throws Exception {
-    SigningKeyDTO key =
-        countersigned("platform-key", "pubkey-b64", "RSA", "platform", KeyRole.PLATFORM);
+    SigningKeyDTO key = countersigned("platform-key", "pubkey-b64", "RSA", KeyRole.PLATFORM);
     assertThat(policy.isTrustedForRole(key, KeyRole.PLATFORM)).isTrue();
   }
 
@@ -235,14 +221,12 @@ class AnchoredKeyTrustPolicyTest {
   void trustedStatusKey_validSignature_stillAccepted() throws Exception {
     // TRUSTED keys are accepted for verification (not REVOKED); AnchoredKeyTrustPolicy
     // delegates the status check to OpenKeyTrustPolicy which allows TRUSTED.
-    SigningKeyDTO key =
-        countersigned("retiring-key", "pubkey-b64", "Ed25519", "engine", KeyRole.ENGINE);
+    SigningKeyDTO key = countersigned("retiring-key", "pubkey-b64", "Ed25519", KeyRole.ENGINE);
     SigningKeyDTO trustedStatus =
         SigningKeyDTO.builder()
             .keyId(key.getKeyId())
             .publicKeyBase64(key.getPublicKeyBase64())
             .algorithm(key.getAlgorithm())
-            .owner(key.getOwner())
             .role(key.getRole())
             .status(KeyStatus.TRUSTED) // rotating out but still valid for verification
             .registrationSignature(key.getRegistrationSignature())
@@ -254,11 +238,10 @@ class AnchoredKeyTrustPolicyTest {
 
   @Test
   void computeCanonicalPayload_matchesExpectedFormat() throws Exception {
-    SigningKeyDTO key =
-        countersigned("my-key-1", "abc123==", "Ed25519", "worker-billing", KeyRole.CLIENT);
+    SigningKeyDTO key = countersigned("my-key-1", "abc123==", "Ed25519", KeyRole.CLIENT);
     byte[] payload = SigningKeyRegistrar.computeCanonicalPayload(key);
     String payloadStr = new String(payload, java.nio.charset.StandardCharsets.UTF_8);
-    assertThat(payloadStr).isEqualTo("my-key-1|abc123==|Ed25519|worker-billing|CLIENT");
+    assertThat(payloadStr).isEqualTo("my-key-1|abc123==|Ed25519|CLIENT");
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
@@ -271,18 +254,12 @@ class AnchoredKeyTrustPolicyTest {
    * base64-encode the result, and store it as {@code registrationSignature}.
    */
   private SigningKeyDTO countersigned(
-      String keyId, String publicKeyBase64, String algorithm, String owner, KeyRole role)
-      throws Exception {
-    return countersignedWith(keyId, publicKeyBase64, algorithm, owner, role, rootPrivateKey);
+      String keyId, String publicKeyBase64, String algorithm, KeyRole role) throws Exception {
+    return countersignedWith(keyId, publicKeyBase64, algorithm, role, rootPrivateKey);
   }
 
   private SigningKeyDTO countersignedWith(
-      String keyId,
-      String publicKeyBase64,
-      String algorithm,
-      String owner,
-      KeyRole role,
-      PrivateKey signingKey)
+      String keyId, String publicKeyBase64, String algorithm, KeyRole role, PrivateKey signingKey)
       throws Exception {
     // Build the key first (without signature) to derive the canonical payload
     SigningKeyDTO unsignedKey =
@@ -290,7 +267,6 @@ class AnchoredKeyTrustPolicyTest {
             .keyId(keyId)
             .publicKeyBase64(publicKeyBase64)
             .algorithm(algorithm)
-            .owner(owner)
             .role(role)
             .status(KeyStatus.ACTIVE)
             .build();
@@ -306,7 +282,6 @@ class AnchoredKeyTrustPolicyTest {
         .keyId(keyId)
         .publicKeyBase64(publicKeyBase64)
         .algorithm(algorithm)
-        .owner(owner)
         .role(role)
         .status(KeyStatus.ACTIVE)
         .registrationSignature(registrationSignature)
@@ -314,12 +289,11 @@ class AnchoredKeyTrustPolicyTest {
   }
 
   private static SigningKeyDTO unsigned(
-      String keyId, String publicKeyBase64, String algorithm, String owner, KeyRole role) {
+      String keyId, String publicKeyBase64, String algorithm, KeyRole role) {
     return SigningKeyDTO.builder()
         .keyId(keyId)
         .publicKeyBase64(publicKeyBase64)
         .algorithm(algorithm)
-        .owner(owner)
         .role(role)
         .status(KeyStatus.ACTIVE)
         .build();

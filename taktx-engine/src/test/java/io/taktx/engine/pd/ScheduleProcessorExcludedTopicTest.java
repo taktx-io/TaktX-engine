@@ -41,7 +41,6 @@ import org.apache.kafka.streams.processor.Cancellable;
 import org.apache.kafka.streams.processor.PunctuationType;
 import org.apache.kafka.streams.processor.Punctuator;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
-import io.taktx.engine.pd.ScheduleCommandEnvelope;
 import org.apache.kafka.streams.processor.api.Record;
 import org.apache.kafka.streams.state.KeyValueStore;
 import org.junit.jupiter.api.BeforeEach;
@@ -113,7 +112,12 @@ class ScheduleProcessorExcludedTopicTest {
         .thenReturn(activeEngineKey("engine-key-1"));
     doThrow(new RuntimeException("simulated bucket defect")).when(store).get(any());
 
-    scheduleProcessor.process(new Record<>(scheduleKey, new ScheduleCommandEnvelope(schedule, true, null, null), 999_000L, headers));
+    scheduleProcessor.process(
+        new Record<>(
+            scheduleKey,
+            new ScheduleCommandEnvelope(schedule, true, null, null),
+            999_000L,
+            headers));
 
     // DLQ-018A: the excluded-topic failure counter must be incremented once
     verify(dlqObservabilityService).recordExcludedTopicFailure("schedule-commands");
@@ -130,7 +134,12 @@ class ScheduleProcessorExcludedTopicTest {
     when(engineAuthorizationService.authorizeScheduleCommand(any(), any()))
         .thenReturn(activeEngineKey("engine-key-2"));
 
-    scheduleProcessor.process(new Record<>(scheduleKey, new ScheduleCommandEnvelope(schedule, true, null, null), 999_000L, headers));
+    scheduleProcessor.process(
+        new Record<>(
+            scheduleKey,
+            new ScheduleCommandEnvelope(schedule, true, null, null),
+            999_000L,
+            headers));
 
     verify(dlqObservabilityService, never()).recordExcludedTopicFailure(any());
   }
@@ -144,7 +153,12 @@ class ScheduleProcessorExcludedTopicTest {
     when(engineAuthorizationService.authorizeScheduleCommand(any(), any()))
         .thenThrow(new AuthorizationTokenException("client signer not allowed"));
 
-    scheduleProcessor.process(new Record<>(scheduleKey, new ScheduleCommandEnvelope(schedule, true, null, null), 999_000L, headers));
+    scheduleProcessor.process(
+        new Record<>(
+            scheduleKey,
+            new ScheduleCommandEnvelope(schedule, true, null, null),
+            999_000L,
+            headers));
 
     verify(dlqObservabilityService).recordExcludedTopicFailure("schedule-commands");
     verify(context, never()).forward(any());
@@ -163,7 +177,12 @@ class ScheduleProcessorExcludedTopicTest {
             ProtectedDataPlaneParticipationGuard.Decision.blocked(
                 ProtectedDataPlaneParticipationGuard.POLICY_NOT_READY_HINT, "engine not ready"));
 
-    scheduleProcessor.process(new Record<>(scheduleKey, new ScheduleCommandEnvelope(schedule, true, null, null), 999_000L, headers));
+    scheduleProcessor.process(
+        new Record<>(
+            scheduleKey,
+            new ScheduleCommandEnvelope(schedule, true, null, null),
+            999_000L,
+            headers));
 
     verify(dlqObservabilityService).recordExcludedTopicFailure("schedule-commands");
     verify(context, never()).forward(any());
@@ -199,7 +218,6 @@ class ScheduleProcessorExcludedTopicTest {
         .keyId(keyId)
         .publicKeyBase64("dummy")
         .algorithm("Ed25519")
-        .owner("engine")
         .role(KeyRole.ENGINE)
         .build();
   }

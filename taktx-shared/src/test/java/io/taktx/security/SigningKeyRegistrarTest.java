@@ -30,13 +30,12 @@ class SigningKeyRegistrarTest {
   void buildDto_withEngineRole_setsRoleEngine() {
     SigningKeyDTO dto =
         SigningKeyRegistrar.buildSigningKeyDto(
-            "engine-001", "pubkey", "engine", "Ed25519", KeyRole.ENGINE, null);
+            "engine-001", "pubkey", "Ed25519", KeyRole.ENGINE, null);
 
     assertThat(dto.getKeyId()).isEqualTo("engine-001");
     assertThat(dto.getRole()).isEqualTo(KeyRole.ENGINE);
     assertThat(dto.effectiveRole()).isEqualTo(KeyRole.ENGINE);
     assertThat(dto.getStatus()).isEqualTo(KeyStatus.ACTIVE);
-    assertThat(dto.getOwner()).isEqualTo("engine");
     assertThat(dto.getAlgorithm()).isEqualTo("Ed25519");
     assertThat(dto.getRegistrationSignature()).isNull();
   }
@@ -45,7 +44,7 @@ class SigningKeyRegistrarTest {
   void buildDto_withClientRole_setsRoleClient() {
     SigningKeyDTO dto =
         SigningKeyRegistrar.buildSigningKeyDto(
-            "worker-001", "pubkey", "billing-worker", "Ed25519", KeyRole.CLIENT, null);
+            "worker-001", "pubkey", "Ed25519", KeyRole.CLIENT, null);
 
     assertThat(dto.getRole()).isEqualTo(KeyRole.CLIENT);
     assertThat(dto.effectiveRole()).isEqualTo(KeyRole.CLIENT);
@@ -54,8 +53,7 @@ class SigningKeyRegistrarTest {
   @Test
   void buildDto_withNullRole_defaultsToClient() {
     SigningKeyDTO dto =
-        SigningKeyRegistrar.buildSigningKeyDto(
-            "legacy-001", "pubkey", "legacy-worker", "Ed25519", null, null);
+        SigningKeyRegistrar.buildSigningKeyDto("legacy-001", "pubkey", "Ed25519", null, null);
 
     // null role → @Builder.Default or explicit null check → CLIENT
     assertThat(dto.getRole()).isEqualTo(KeyRole.CLIENT);
@@ -65,8 +63,7 @@ class SigningKeyRegistrarTest {
   @Test
   void buildDto_withNullAlgorithm_defaultsToEd25519() {
     SigningKeyDTO dto =
-        SigningKeyRegistrar.buildSigningKeyDto(
-            "k-001", "pubkey", "owner", null, KeyRole.CLIENT, null);
+        SigningKeyRegistrar.buildSigningKeyDto("k-001", "pubkey", null, KeyRole.CLIENT, null);
 
     assertThat(dto.getAlgorithm()).isEqualTo("Ed25519");
   }
@@ -75,7 +72,7 @@ class SigningKeyRegistrarTest {
   void buildDto_withRegistrationSignature_preservesSig() {
     SigningKeyDTO dto =
         SigningKeyRegistrar.buildSigningKeyDto(
-            "anchored-key", "pubkey", "engine", "Ed25519", KeyRole.ENGINE, "base64sig==");
+            "anchored-key", "pubkey", "Ed25519", KeyRole.ENGINE, "base64sig==");
 
     assertThat(dto.getRegistrationSignature()).isEqualTo("base64sig==");
   }
@@ -84,7 +81,7 @@ class SigningKeyRegistrarTest {
   void buildDto_withPlatformRole_setsRolePlatform() {
     SigningKeyDTO dto =
         SigningKeyRegistrar.buildSigningKeyDto(
-            "platform-001", "pubkey", "platform", "RSA", KeyRole.PLATFORM, "sig==");
+            "platform-001", "pubkey", "RSA", KeyRole.PLATFORM, "sig==");
 
     assertThat(dto.getRole()).isEqualTo(KeyRole.PLATFORM);
     assertThat(dto.effectiveRole()).isEqualTo(KeyRole.PLATFORM);
@@ -101,7 +98,6 @@ class SigningKeyRegistrarTest {
             .algorithm("Ed25519")
             .createdAt(Instant.parse("2026-01-01T00:00:00Z"))
             .status(KeyStatus.ACTIVE)
-            .owner("engine")
             .role(KeyRole.ENGINE)
             .registrationSignature("sig==")
             .build();
@@ -116,7 +112,6 @@ class SigningKeyRegistrarTest {
             .algorithm(existing.getAlgorithm())
             .createdAt(existing.getCreatedAt())
             .status(KeyStatus.REVOKED)
-            .owner(existing.getOwner())
             .role(existing.effectiveRole())
             .registrationSignature(existing.getRegistrationSignature())
             .build();
@@ -137,12 +132,11 @@ class SigningKeyRegistrarTest {
             .keyId("engine-001")
             .publicKeyBase64("AAAA")
             .algorithm("Ed25519")
-            .owner("engine")
             .role(KeyRole.ENGINE)
             .build();
 
     String payload = new String(SigningKeyRegistrar.computeCanonicalPayload(key));
-    assertThat(payload).isEqualTo("engine-001|AAAA|Ed25519|engine|ENGINE");
+    assertThat(payload).isEqualTo("engine-001|AAAA|Ed25519|ENGINE");
   }
 
   @Test
@@ -152,12 +146,11 @@ class SigningKeyRegistrarTest {
             .keyId("worker-001")
             .publicKeyBase64("BBBB")
             .algorithm("Ed25519")
-            .owner("billing-worker")
             .role(KeyRole.CLIENT)
             .build();
 
     String payload = new String(SigningKeyRegistrar.computeCanonicalPayload(key));
-    assertThat(payload).isEqualTo("worker-001|BBBB|Ed25519|billing-worker|CLIENT");
+    assertThat(payload).isEqualTo("worker-001|BBBB|Ed25519|CLIENT");
   }
 
   @Test
@@ -168,12 +161,11 @@ class SigningKeyRegistrarTest {
             .keyId("legacy-001")
             .publicKeyBase64("CCCC")
             .algorithm("Ed25519")
-            .owner("legacy")
             .role(null)
             .build();
 
     String payload = new String(SigningKeyRegistrar.computeCanonicalPayload(key));
-    assertThat(payload).isEqualTo("legacy-001|CCCC|Ed25519|legacy|CLIENT");
+    assertThat(payload).isEqualTo("legacy-001|CCCC|Ed25519|CLIENT");
   }
 
   @Test
@@ -183,11 +175,10 @@ class SigningKeyRegistrarTest {
             .keyId("plat-001")
             .publicKeyBase64("DDDD")
             .algorithm("RSA")
-            .owner("platform-service")
             .role(KeyRole.PLATFORM)
             .build();
 
     String payload = new String(SigningKeyRegistrar.computeCanonicalPayload(key));
-    assertThat(payload).isEqualTo("plat-001|DDDD|RSA|platform-service|PLATFORM");
+    assertThat(payload).isEqualTo("plat-001|DDDD|RSA|PLATFORM");
   }
 }

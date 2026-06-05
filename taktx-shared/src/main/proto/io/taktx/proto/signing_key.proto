@@ -58,7 +58,7 @@ message SigningKeyMessage {
   string algorithm = 3;
   optional sint64 created_at = 4;
   KeyStatus status = 5;
-  string    owner  = 6;
+  // field 6 (owner) removed in 0.8.0 — keyId is now the participant identity
   KeyRole   role   = 7;
   string registration_signature = 8;
 }

@@ -71,18 +71,16 @@ class TaktXClientIdentityRotationTest {
             invokeDeclaredMethod(
                 client,
                 "workerIdentityPublicationDescriptor",
-                new Class<?>[] {SigningIdentity.class, String.class},
-                SigningIdentity.of("worker-a", "private-a", "public-a", "Ed25519"),
-                "worker-a");
+                new Class<?>[] {SigningIdentity.class},
+                SigningIdentity.of("worker-a", "private-a", "public-a", "Ed25519"));
 
     String rotatedDescriptor =
         (String)
             invokeDeclaredMethod(
                 client,
                 "workerIdentityPublicationDescriptor",
-                new Class<?>[] {SigningIdentity.class, String.class},
-                SigningIdentity.of("worker-a", "private-a-2", "public-b", "Ed25519"),
-                "worker-a");
+                new Class<?>[] {SigningIdentity.class},
+                SigningIdentity.of("worker-a", "private-a-2", "public-b", "Ed25519"));
 
     assertThat(originalDescriptor).isNotEqualTo(rotatedDescriptor);
     assertThat(originalDescriptor).contains("worker-a").contains("public-a");

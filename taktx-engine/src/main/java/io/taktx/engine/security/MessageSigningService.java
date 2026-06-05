@@ -145,7 +145,6 @@ public class MessageSigningService {
           topic,
           identity.getKeyId(),
           identity.getPublicKeyBase64(),
-          "engine",
           identity.getAlgorithm(),
           KeyRole.ENGINE,
           config.getEngineKeyRegistrationSignature()); // null in community mode → omitted from DTO
@@ -335,7 +334,6 @@ public class MessageSigningService {
                     .publicKeyBase64(prev.getPublicKeyBase64())
                     .algorithm(prev.getAlgorithm())
                     .status(KeyStatus.TRUSTED)
-                    .owner("engine")
                     .role(KeyRole.ENGINE)
                     .build();
             SigningKeyRegistrar.publishKeyWithStatus(

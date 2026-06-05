@@ -241,11 +241,7 @@ public class SigningKeysStore implements AutoCloseable {
       SigningKeyDTO dto =
           SigningKeyProtoMapper.toDto(SigningKeyMessage.parseFrom(consumerRecord.value()));
       keys.put(dto.getKeyId(), dto);
-      log.debug(
-          "SigningKeysStore: loaded keyId={} status={} owner={}",
-          dto.getKeyId(),
-          dto.getStatus(),
-          dto.getOwner());
+      log.debug("SigningKeysStore: loaded keyId={} status={}", dto.getKeyId(), dto.getStatus());
     } catch (Exception e) {
       log.warn(
           "SigningKeysStore: failed to deserialise key record keyId={}: {}",

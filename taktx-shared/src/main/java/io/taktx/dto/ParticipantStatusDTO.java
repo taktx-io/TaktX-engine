@@ -7,6 +7,7 @@
  */
 package io.taktx.dto;
 
+import jakarta.annotation.Nullable;
 import java.util.List;
 import java.util.Set;
 import lombok.AllArgsConstructor;
@@ -43,4 +44,7 @@ public class ParticipantStatusDTO {
   private String observedPolicyHash;
 
   @Builder.Default private List<PolicyMismatchReasonDTO> mismatchReasons = List.of();
+
+  /** The key ID this participant is currently signing messages with. Null if unsigned. */
+  @Nullable private String currentSigningKeyId;
 }

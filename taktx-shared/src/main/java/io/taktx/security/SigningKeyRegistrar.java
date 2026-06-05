@@ -47,29 +47,28 @@ public class SigningKeyRegistrar {
    * Returns the canonical payload bytes that the platform root key signs when countersigning a key
    * registration.
    *
-   * <p>Format: {@code keyId|publicKeyBase64|algorithm|owner|role} — pipe-delimited UTF-8. The
-   * {@code role} token is the {@link KeyRole#name()} string (e.g. {@code "ENGINE"}, {@code
-   * "CLIENT"}).
+   * <p>Format: {@code keyId|publicKeyBase64|algorithm|role} — pipe-delimited UTF-8. The {@code
+   * role} token is the {@link KeyRole#name()} string (e.g. {@code "ENGINE"}, {@code "CLIENT"}).
    *
    * <p>Reproducible in a shell script:
    *
    * <pre>{@code
-   * printf '%s|%s|%s|%s|%s' "$KEY_ID" "$PUBLIC_KEY_BASE64" "$ALGORITHM" "$OWNER" "$ROLE"
+   * printf '%s|%s|%s|%s' "$KEY_ID" "$PUBLIC_KEY_BASE64" "$ALGORITHM" "$ROLE"
    * }</pre>
    *
    * <p>To sign and base64-encode (for {@code TAKTX_ENGINE_KEY_REGISTRATION_SIGNATURE} / {@code
    * TAKTX_SIGNING_REGISTRATION_SIGNATURE}):
    *
    * <pre>{@code
-   * printf '%s|%s|%s|%s|%s' "$KEY_ID" "$PUBLIC_KEY_BASE64" "$ALGORITHM" "$OWNER" "$ROLE" \
+   * printf '%s|%s|%s|%s' "$KEY_ID" "$PUBLIC_KEY_BASE64" "$ALGORITHM" "$ROLE" \
    *   | openssl dgst -sha256 -sign platform-private.pem \
    *   | base64
    * }</pre>
    *
    * See {@code scripts/generate_trust_anchor.sh} for the complete operator workflow.
    *
-   * @param key a fully-populated {@link SigningKeyDTO} (keyId, publicKeyBase64, algorithm, owner,
-   *     and role must all be non-null)
+   * @param key a fully-populated {@link SigningKeyDTO} (keyId, publicKeyBase64, algorithm, and role
+   *     must all be non-null)
    * @return UTF-8 bytes of the pipe-delimited canonical payload
    */
   public static byte[] computeCanonicalPayload(SigningKeyDTO key) {
@@ -79,8 +78,6 @@ public class SigningKeyRegistrar {
             + key.getPublicKeyBase64()
             + "|"
             + key.getAlgorithm()
-            + "|"
-            + key.getOwner()
             + "|"
             + key.effectiveRole().name();
     return payload.getBytes(StandardCharsets.UTF_8);
@@ -104,23 +101,22 @@ public class SigningKeyRegistrar {
    * Publishes the given public key with the default Ed25519 algorithm, {@link KeyRole#CLIENT} role,
    * and no registration signature (community mode).
    */
-  public void publishPublicKey(String keyId, String publicKeyBase64, String owner) {
-    publishPublicKey(keyId, publicKeyBase64, owner, DEFAULT_ED25519_ALGORITHM);
+  public void publishPublicKey(String keyId, String publicKeyBase64) {
+    publishPublicKey(keyId, publicKeyBase64, DEFAULT_ED25519_ALGORITHM);
   }
 
   /**
    * Publishes the given public key with an explicit algorithm label, {@link KeyRole#CLIENT} role,
    * and no registration signature (community mode).
    */
-  public void publishPublicKey(
-      String keyId, String publicKeyBase64, String owner, String algorithm) {
-    publishPublicKey(keyId, publicKeyBase64, owner, algorithm, KeyRole.CLIENT);
+  public void publishPublicKey(String keyId, String publicKeyBase64, String algorithm) {
+    publishPublicKey(keyId, publicKeyBase64, algorithm, KeyRole.CLIENT);
   }
 
   /** Publishes the given public key with an explicit algorithm label and role (community mode). */
   public void publishPublicKey(
-      String keyId, String publicKeyBase64, String owner, String algorithm, KeyRole role) {
-    publishPublicKey(keyId, publicKeyBase64, owner, algorithm, role, null);
+      String keyId, String publicKeyBase64, String algorithm, KeyRole role) {
+    publishPublicKey(keyId, publicKeyBase64, algorithm, role, null);
   }
 
   /**
@@ -135,7 +131,6 @@ public class SigningKeyRegistrar {
   public void publishPublicKey(
       String keyId,
       String publicKeyBase64,
-      String owner,
       String algorithm,
       KeyRole role,
       String registrationSignature) {
@@ -146,7 +141,6 @@ public class SigningKeyRegistrar {
         topic,
         keyId,
         publicKeyBase64,
-        owner,
         algorithm,
         role,
         registrationSignature);
@@ -159,9 +153,8 @@ public class SigningKeyRegistrar {
    * and no registration signature (community mode).
    */
   public static void publishPublicKey(
-      String bootstrapServers, String topic, String keyId, String publicKeyBase64, String owner) {
-    publishPublicKey(
-        bootstrapServers, topic, keyId, publicKeyBase64, owner, DEFAULT_ED25519_ALGORITHM);
+      String bootstrapServers, String topic, String keyId, String publicKeyBase64) {
+    publishPublicKey(bootstrapServers, topic, keyId, publicKeyBase64, DEFAULT_ED25519_ALGORITHM);
   }
 
   /** Publishes the given public key with an explicit algorithm and {@link KeyRole#CLIENT} role. */
@@ -170,10 +163,8 @@ public class SigningKeyRegistrar {
       String topic,
       String keyId,
       String publicKeyBase64,
-      String owner,
       String algorithm) {
-    publishPublicKey(
-        bootstrapServers, topic, keyId, publicKeyBase64, owner, algorithm, KeyRole.CLIENT);
+    publishPublicKey(bootstrapServers, topic, keyId, publicKeyBase64, algorithm, KeyRole.CLIENT);
   }
 
   /** Publishes the given public key with an explicit algorithm and role (community mode). */
@@ -182,10 +173,9 @@ public class SigningKeyRegistrar {
       String topic,
       String keyId,
       String publicKeyBase64,
-      String owner,
       String algorithm,
       KeyRole role) {
-    publishPublicKey(bootstrapServers, topic, keyId, publicKeyBase64, owner, algorithm, role, null);
+    publishPublicKey(bootstrapServers, topic, keyId, publicKeyBase64, algorithm, role, null);
   }
 
   /**
@@ -201,7 +191,6 @@ public class SigningKeyRegistrar {
       String topic,
       String keyId,
       String publicKeyBase64,
-      String owner,
       String algorithm,
       KeyRole role,
       String registrationSignature) {
@@ -226,7 +215,6 @@ public class SigningKeyRegistrar {
             .publicKeyBase64(publicKeyBase64)
             .algorithm(algorithm)
             .status(KeyStatus.ACTIVE)
-            .owner(owner)
             .role(role != null ? role : KeyRole.CLIENT)
             .registrationSignature(registrationSignature)
             .build());
@@ -241,7 +229,6 @@ public class SigningKeyRegistrar {
       String topic,
       String keyId,
       String publicKeyBase64,
-      String owner,
       String algorithm,
       KeyRole role,
       String registrationSignature) {
@@ -256,7 +243,6 @@ public class SigningKeyRegistrar {
             .publicKeyBase64(publicKeyBase64)
             .algorithm(algorithm)
             .status(KeyStatus.ACTIVE)
-            .owner(owner)
             .role(role != null ? role : KeyRole.CLIENT)
             .registrationSignature(registrationSignature)
             .build());
@@ -271,7 +257,6 @@ public class SigningKeyRegistrar {
   static SigningKeyDTO buildSigningKeyDto(
       String keyId,
       String publicKeyBase64,
-      String owner,
       String algorithm,
       KeyRole role,
       String registrationSignature) {
@@ -280,7 +265,6 @@ public class SigningKeyRegistrar {
         .publicKeyBase64(publicKeyBase64)
         .algorithm(algorithm != null ? algorithm : DEFAULT_ED25519_ALGORITHM)
         .status(KeyStatus.ACTIVE)
-        .owner(owner)
         .role(role != null ? role : KeyRole.CLIENT)
         .registrationSignature(registrationSignature)
         .build();
@@ -319,7 +303,6 @@ public class SigningKeyRegistrar {
             .algorithm(existingKey.getAlgorithm())
             .createdAt(existingKey.getCreatedAt())
             .status(KeyStatus.REVOKED)
-            .owner(existingKey.getOwner())
             .role(existingKey.effectiveRole())
             .registrationSignature(existingKey.getRegistrationSignature())
             .build();
@@ -366,7 +349,6 @@ public class SigningKeyRegistrar {
             .algorithm(dto.getAlgorithm())
             .createdAt(dto.getCreatedAt() != null ? dto.getCreatedAt() : Instant.now())
             .status(dto.getStatus() != null ? dto.getStatus() : KeyStatus.ACTIVE)
-            .owner(dto.getOwner())
             .role(dto.effectiveRole())
             .registrationSignature(dto.getRegistrationSignature())
             .build();
@@ -377,9 +359,8 @@ public class SigningKeyRegistrar {
       producer.send(new ProducerRecord<>(topic, keyId, valueBytes));
       producer.flush();
       log.info(
-          "✅ Published signing key: keyId={} owner={} algorithm={} role={} status={} topic={}",
+          "✅ Published signing key: keyId={} algorithm={} role={} status={} topic={}",
           keyId,
-          keyToPublish.getOwner(),
           keyToPublish.getAlgorithm(),
           keyToPublish.getRole(),
           keyToPublish.getStatus(),
@@ -396,8 +377,8 @@ public class SigningKeyRegistrar {
    * the {@code publicKeyBase64} for further use.
    */
   public static String publishFromKeyPair(
-      String bootstrapServers, String topic, String keyId, KeyPair keyPair, String owner) {
-    return publishFromKeyPair(bootstrapServers, topic, keyId, keyPair, owner, KeyRole.CLIENT);
+      String bootstrapServers, String topic, String keyId, KeyPair keyPair) {
+    return publishFromKeyPair(bootstrapServers, topic, keyId, keyPair, KeyRole.CLIENT);
   }
 
   /**
@@ -405,13 +386,8 @@ public class SigningKeyRegistrar {
    * {@code publicKeyBase64} for further use.
    */
   public static String publishFromKeyPair(
-      String bootstrapServers,
-      String topic,
-      String keyId,
-      KeyPair keyPair,
-      String owner,
-      KeyRole role) {
-    return publishFromKeyPair(bootstrapServers, topic, keyId, keyPair, owner, role, null);
+      String bootstrapServers, String topic, String keyId, KeyPair keyPair, KeyRole role) {
+    return publishFromKeyPair(bootstrapServers, topic, keyId, keyPair, role, null);
   }
 
   /**
@@ -423,7 +399,6 @@ public class SigningKeyRegistrar {
       String topic,
       String keyId,
       KeyPair keyPair,
-      String owner,
       KeyRole role,
       String registrationSignature) {
     String publicKeyBase64 = SigningKeyGenerator.encodePublicKey(keyPair.getPublic());
@@ -432,7 +407,6 @@ public class SigningKeyRegistrar {
         topic,
         keyId,
         publicKeyBase64,
-        owner,
         DEFAULT_ED25519_ALGORITHM,
         role,
         registrationSignature);

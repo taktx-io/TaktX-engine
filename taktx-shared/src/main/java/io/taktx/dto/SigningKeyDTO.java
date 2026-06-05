@@ -57,12 +57,6 @@ public class SigningKeyDTO {
   @Builder.Default private KeyStatus status = KeyStatus.ACTIVE;
 
   /**
-   * Human-readable owner label, e.g. {@code "engine"}, {@code "worker-billing"}, {@code
-   * "platform"}.
-   */
-  private String owner;
-
-  /**
    * Actor role of this key — determines what operations the key is trusted to authorize.
    *
    * <p>Matches {@code signing_key.proto} / {@code SigningKeyMessage.role = 7}. Pre-role legacy

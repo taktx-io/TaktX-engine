@@ -77,6 +77,9 @@ public final class ParticipantStatusProtoMapper {
       builder.addAllMismatchReasons(
           dto.getMismatchReasons().stream().map(ParticipantStatusProtoMapper::toProto).toList());
     }
+    if (dto.getCurrentSigningKeyId() != null) {
+      builder.setCurrentSigningKeyId(dto.getCurrentSigningKeyId());
+    }
     return builder.build();
   }
 
@@ -113,6 +116,8 @@ public final class ParticipantStatusProtoMapper {
             message.getMismatchReasonsList().stream()
                 .map(ParticipantStatusProtoMapper::toDto)
                 .toList())
+        .currentSigningKeyId(
+            message.hasCurrentSigningKeyId() ? emptyToNull(message.getCurrentSigningKeyId()) : null)
         .build();
   }
 

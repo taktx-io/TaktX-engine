@@ -9,7 +9,6 @@
 package io.taktx.engine.pd;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.taktx.dto.Constants;
 import io.taktx.dto.MessageScheduleDTO;
@@ -20,7 +19,6 @@ import io.taktx.dto.VariablesDTO;
 import io.taktx.security.Ed25519Service;
 import io.taktx.security.EngineSigningKeysHolder;
 import io.taktx.security.SigningKeyGenerator;
-import io.taktx.engine.pd.ScheduleCommandEnvelope;
 import io.taktx.serdes.MessageScheduleProtoMapper;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;

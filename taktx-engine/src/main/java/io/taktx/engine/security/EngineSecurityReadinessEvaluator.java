@@ -115,11 +115,12 @@ public class EngineSecurityReadinessEvaluator {
       }
     }
 
+    String signingKeyId = messageSigningService.getKeyId();
     return ParticipantStatusDTO.builder()
-        .participantId(participantId())
+        .participantId(participantId(signingKeyId))
         .participantInstanceId(participantInstanceId())
         .participantKind(ParticipantKind.ENGINE)
-        .componentType("engine")
+        .componentType(componentType(signingKeyId))
         .capabilities(ENGINE_CAPABILITIES)
         .supportedModes(runtimeSupportedModes(anchoredModeSupported))
         .namespace(configuration.getNamespace())
@@ -132,17 +133,29 @@ public class EngineSecurityReadinessEvaluator {
         .observedPolicyVersion(observedPolicyVersion)
         .observedPolicyHash(observedPolicyHash)
         .mismatchReasons(List.copyOf(mismatchReasons))
+        .currentSigningKeyId(signingKeyId)
         .build();
   }
 
-  private String participantId() {
-    return configuration.getTenantId() + "." + configuration.getNamespace() + ".engine";
+  private String participantId(String signingKeyId) {
+    // When a signing key is configured, the key ID IS the participant ID.
+    // Fallback for unsigned / unconfigured engines: namespace.engine
+    if (signingKeyId != null && !signingKeyId.isBlank()) {
+      return signingKeyId;
+    }
+    return configuration.getNamespace() + ".engine";
+  }
+
+  private static String componentType(String signingKeyId) {
+    // Derive component type from first dash-segment of key ID (e.g. "engine-a3f2" → "engine").
+    if (signingKeyId != null && !signingKeyId.isBlank()) {
+      return signingKeyId.split("-", 2)[0];
+    }
+    return "engine";
   }
 
   private String participantInstanceId() {
-    return configuration.getTenantId()
-        + "."
-        + configuration.getNamespace()
+    return configuration.getNamespace()
         + "@"
         + configuration.getHost()
         + ":"
