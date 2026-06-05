@@ -405,10 +405,9 @@ public class EngineAuthorizationService {
               + required);
     }
     log.info(
-        "✅ Authorised schedule-commands scheduleKey={} keyId={} owner={} role={}",
+        "✅ Authorised schedule-commands scheduleKey={} keyId={} role={}",
         scheduleKey,
         keyId,
-        key.getOwner(),
         key.effectiveRole());
     return key;
   }
@@ -481,9 +480,8 @@ public class EngineAuthorizationService {
     }
 
     log.info(
-        "✅ Authorised namespace-security-policy mutation keyId={} owner={} role={}",
+        "✅ Authorised namespace-security-policy mutation keyId={} role={}",
         keyId,
-        key.getOwner(),
         key.effectiveRole());
     return key;
   }
@@ -609,10 +607,9 @@ public class EngineAuthorizationService {
 
     boolean isEngine = keyTrustPolicy.isTrustedForRole(ctx.key(), KeyRole.ENGINE);
     log.info(
-        "✅ Authorised (Ed25519) command={} keyId={} owner={} roleRequired={} derivedRole={}",
+        "✅ Authorised (Ed25519) command={} keyId={} roleRequired={} derivedRole={}",
         triggerEnvelope.trigger().getClass().getSimpleName(),
         ctx.keyId(),
-        ctx.key().getOwner(),
         requiredRole,
         ctx.role());
 
@@ -624,7 +621,7 @@ public class EngineAuthorizationService {
                 : CommandTrustVerificationResult.SIGNATURE_VERIFIED)
         .trusted(true)
         .signerKeyId(ctx.keyId())
-        .signerOwner(ctx.key().getOwner())
+        .signerOwner(ctx.key().getKeyId())
         .signerAlgorithm(ctx.key().getAlgorithm())
         .build();
   }

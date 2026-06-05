@@ -122,7 +122,7 @@ public record SimplifiedSecurityPostureSnapshot(
         continue;
       }
       ParticipantStatusDTO status = snapshot.participantStatus(mismatch.participantInstanceId());
-      if (!isBlockingRelevant(status)) {
+      if (!isBlockingRelevant(status) || !isCurrentlyBlocking(status, nowMs)) {
         continue;
       }
       addIssue(
@@ -206,6 +206,29 @@ public record SimplifiedSecurityPostureSnapshot(
                   "effectiveState", String.valueOf(status.getEffectiveState()),
                   "readyForDataPlane", Boolean.toString(status.isReadyForDataPlane()))));
     }
+  }
+
+  /**
+   * Whether a participant's self-reported mismatch reasons should be treated as <em>current</em>
+   * blocking issues.
+   *
+   * <p>Expired or {@code STALE} statuses are excluded here — staleness is reported separately as a
+   * single derived {@code PARTICIPANT_STATUS_STALE} issue (see {@link #addStatusIssues}), so
+   * surfacing their leftover (possibly ANCHORED-era) mismatch reasons as live blockers would be
+   * misleading. A participant that is {@code READY} and {@code readyForDataPlane} reports its
+   * mismatch reasons as informational warnings (e.g. OPEN-mode signing gaps that would only matter
+   * under ANCHORED), not as conditions blocking it right now.
+   */
+  private static boolean isCurrentlyBlocking(@Nullable ParticipantStatusDTO status, long nowMs) {
+    if (status == null) {
+      return false;
+    }
+    if (ParticipantStatusSupport.isExpired(status, nowMs)
+        || status.getEffectiveState() == ParticipantEffectiveState.STALE) {
+      return false;
+    }
+    return !(status.isReadyForDataPlane()
+        && status.getEffectiveState() == ParticipantEffectiveState.READY);
   }
 
   private static boolean isBlockingRelevant(@Nullable ParticipantStatusDTO status) {

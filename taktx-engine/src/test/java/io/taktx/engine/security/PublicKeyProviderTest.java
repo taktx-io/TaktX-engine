@@ -105,7 +105,6 @@ class PublicKeyProviderTest {
             .keyId(KID)
             .publicKeyBase64(base64)
             .algorithm("RSA")
-            .owner("platform")
             .role(KeyRole.PLATFORM)
             .status(SigningKeyDTO.KeyStatus.REVOKED)
             .build();
@@ -130,7 +129,6 @@ class PublicKeyProviderTest {
             .keyId(KID)
             .publicKeyBase64(base64)
             .algorithm("RSA")
-            .owner("platform")
             .role(KeyRole.PLATFORM)
             .status(SigningKeyDTO.KeyStatus.ACTIVE)
             .build();
@@ -158,7 +156,6 @@ class PublicKeyProviderTest {
                 .keyId(kid1)
                 .publicKeyBase64(Base64.getEncoder().encodeToString(kp1.getPublic().getEncoded()))
                 .algorithm("RSA")
-                .owner("platform")
                 .role(KeyRole.PLATFORM)
                 .status(SigningKeyDTO.KeyStatus.ACTIVE)
                 .build());
@@ -168,7 +165,6 @@ class PublicKeyProviderTest {
                 .keyId(kid2)
                 .publicKeyBase64(Base64.getEncoder().encodeToString(kp2.getPublic().getEncoded()))
                 .algorithm("RSA")
-                .owner("platform")
                 .role(KeyRole.PLATFORM)
                 .status(SigningKeyDTO.KeyStatus.ACTIVE)
                 .build());
@@ -187,7 +183,6 @@ class PublicKeyProviderTest {
                 .keyId(KID)
                 .publicKeyBase64(Base64.getEncoder().encodeToString(kp.getPublic().getEncoded()))
                 .algorithm("RSA")
-                .owner("platform")
                 .role(KeyRole.CLIENT)
                 .status(KeyStatus.ACTIVE)
                 .build());
@@ -210,7 +205,6 @@ class PublicKeyProviderTest {
                 .keyId(KID)
                 .publicKeyBase64(Base64.getEncoder().encodeToString(kp.getPublic().getEncoded()))
                 .algorithm("RSA")
-                .owner("platform")
                 .role(KeyRole.PLATFORM)
                 .status(KeyStatus.ACTIVE)
                 .build());
@@ -233,7 +227,6 @@ class PublicKeyProviderTest {
                 .keyId(KID)
                 .publicKeyBase64(Base64.getEncoder().encodeToString(kp.getPublic().getEncoded()))
                 .algorithm("Ed25519")
-                .owner("platform")
                 .role(KeyRole.PLATFORM)
                 .status(KeyStatus.ACTIVE)
                 .build());

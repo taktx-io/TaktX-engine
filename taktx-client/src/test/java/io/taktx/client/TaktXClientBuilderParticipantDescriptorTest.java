@@ -27,7 +27,7 @@ class TaktXClientBuilderParticipantDescriptorTest {
     SecurityParticipantDescriptor descriptor =
         builder.resolveParticipantDescriptor(baseProperties());
 
-    assertThat(descriptor.participantId()).isEqualTo("tenant.default.client");
+    assertThat(descriptor.participantId()).isEqualTo("default.client");
     assertThat(descriptor.kind()).isEqualTo(ParticipantKind.CLIENT);
     assertThat(descriptor.componentType()).isEqualTo("generic-client");
     assertThat(descriptor.capabilities())
@@ -129,6 +129,64 @@ class TaktXClientBuilderParticipantDescriptorTest {
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining(
             "AUTHORITATIVE_POLICY_PUBLISHER requires an explicit authoritative signing identity");
+  }
+
+  @Test
+  void defaultClientParticipantDescriptor_usesSigningKeyIdAsParticipantId() {
+    Properties properties = baseProperties();
+    properties.setProperty("taktx.signing.key-id", "engine-a3f2b1c4");
+
+    SecurityParticipantDescriptor descriptor =
+        TaktXClient.defaultClientParticipantDescriptor(properties);
+
+    assertThat(descriptor.participantId()).isEqualTo("engine-a3f2b1c4");
+    assertThat(descriptor.componentType()).isEqualTo("engine");
+  }
+
+  @Test
+  void defaultClientParticipantDescriptor_multiSegmentKeyIdDerivesFirstSegmentAsComponentType() {
+    Properties properties = baseProperties();
+    properties.setProperty("taktx.signing.key-id", "billing-worker-a3f2");
+
+    SecurityParticipantDescriptor descriptor =
+        TaktXClient.defaultClientParticipantDescriptor(properties);
+
+    assertThat(descriptor.participantId()).isEqualTo("billing-worker-a3f2");
+    assertThat(descriptor.componentType()).isEqualTo("billing");
+  }
+
+  @Test
+  void defaultClientParticipantDescriptor_explicitParticipantIdTakesPriorityOverSigningKeyId() {
+    Properties properties = baseProperties();
+    properties.setProperty("taktx.signing.key-id", "engine-a3f2b1c4");
+    properties.setProperty("taktx.client.participant-id", "my-explicit-participant");
+
+    SecurityParticipantDescriptor descriptor =
+        TaktXClient.defaultClientParticipantDescriptor(properties);
+
+    assertThat(descriptor.participantId()).isEqualTo("my-explicit-participant");
+  }
+
+  @Test
+  void defaultClientParticipantDescriptor_fallsBackToNamespacePrefixWhenNoSigningKeyId() {
+    SecurityParticipantDescriptor descriptor =
+        TaktXClient.defaultClientParticipantDescriptor(baseProperties());
+
+    assertThat(descriptor.participantId()).isEqualTo("default.generic-client");
+    assertThat(descriptor.componentType()).isEqualTo("generic-client");
+  }
+
+  @Test
+  void defaultClientParticipantDescriptor_explicitComponentTypeTakesPriorityOverKeyIdDerived() {
+    Properties properties = baseProperties();
+    properties.setProperty("taktx.signing.key-id", "engine-a3f2b1c4");
+    properties.setProperty("taktx.client.component-type", "my-component");
+
+    SecurityParticipantDescriptor descriptor =
+        TaktXClient.defaultClientParticipantDescriptor(properties);
+
+    assertThat(descriptor.participantId()).isEqualTo("engine-a3f2b1c4");
+    assertThat(descriptor.componentType()).isEqualTo("my-component");
   }
 
   private Properties baseProperties() {

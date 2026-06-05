@@ -80,6 +80,7 @@ message ParticipantStatusMessage {
   string component_type = 14;
   repeated ParticipantCapabilityMessage capabilities = 15;
   repeated SecurityModeMessage supported_modes = 16;
+  optional string current_signing_key_id = 17;
 }
 
 message SecurityEventMessage {

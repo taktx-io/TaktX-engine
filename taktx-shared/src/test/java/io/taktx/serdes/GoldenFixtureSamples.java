@@ -326,7 +326,6 @@ final class GoldenFixtureSamples {
             .algorithm("RSA")
             .createdAt(Instant.parse("2026-05-19T10:00:00Z"))
             .status(SigningKeyDTO.KeyStatus.TRUSTED)
-            .owner("platform")
             .role(KeyRole.PLATFORM)
             .registrationSignature("sig==")
             .build();

@@ -108,7 +108,6 @@ class OpenKeyTrustPolicyTest {
             .publicKeyBase64("pubkey")
             .algorithm("Ed25519")
             .status(KeyStatus.ACTIVE)
-            .owner("owner")
             .role(null)
             .build();
     assertThat(policy.isTrustedForRole(nullRoleKey, KeyRole.CLIENT)).isTrue();
@@ -122,7 +121,6 @@ class OpenKeyTrustPolicyTest {
             .publicKeyBase64("pubkey")
             .algorithm("Ed25519")
             .status(KeyStatus.ACTIVE)
-            .owner("owner")
             .role(null)
             .build();
     assertThat(policy.isTrustedForRole(nullRoleKey, KeyRole.ENGINE)).isFalse();
@@ -145,7 +143,6 @@ class OpenKeyTrustPolicyTest {
         .publicKeyBase64("dummy")
         .algorithm("Ed25519")
         .status(status)
-        .owner("test")
         .role(role)
         .build();
   }

@@ -37,9 +37,6 @@ public final class SigningKeyProtoMapper {
     if (dto.getStatus() != null) {
       builder.setStatus(toProto(dto.getStatus()));
     }
-    if (dto.getOwner() != null) {
-      builder.setOwner(dto.getOwner());
-    }
     builder.setRole(toProto(dto.effectiveRole()));
     if (dto.getRegistrationSignature() != null) {
       builder.setRegistrationSignature(dto.getRegistrationSignature());
@@ -57,7 +54,6 @@ public final class SigningKeyProtoMapper {
         .algorithm(emptyToNull(message.getAlgorithm()))
         .createdAt(message.hasCreatedAt() ? Instant.ofEpochMilli(message.getCreatedAt()) : null)
         .status(toDto(message.getStatus()))
-        .owner(emptyToNull(message.getOwner()))
         .role(toDto(message.getRole()))
         .registrationSignature(emptyToNull(message.getRegistrationSignature()))
         .build();

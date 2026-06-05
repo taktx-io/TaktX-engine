@@ -69,7 +69,6 @@ class VerificationCoreTest {
                 .keyId(CLIENT_KEY_ID)
                 .publicKeyBase64("dummy-client-key")
                 .algorithm("Ed25519")
-                .owner("billing-worker")
                 .role(KeyRole.CLIENT)
                 .status(KeyStatus.ACTIVE)
                 .build());
@@ -81,7 +80,6 @@ class VerificationCoreTest {
                 .keyId(ENGINE_KEY_ID)
                 .publicKeyBase64("dummy-engine-key")
                 .algorithm("Ed25519")
-                .owner("engine")
                 .role(KeyRole.ENGINE)
                 .status(KeyStatus.ACTIVE)
                 .build());
@@ -93,7 +91,6 @@ class VerificationCoreTest {
                 .keyId(REVOKED_KEY_ID)
                 .publicKeyBase64("dummy-revoked-key")
                 .algorithm("Ed25519")
-                .owner("old-worker")
                 .role(KeyRole.CLIENT)
                 .status(KeyStatus.REVOKED)
                 .build());
@@ -214,7 +211,7 @@ class VerificationCoreTest {
     assertThat(ctx.role()).isEqualTo(KeyRole.CLIENT);
     assertThat(ctx.signatureValid()).isTrue();
     assertThat(ctx.key()).isNotNull();
-    assertThat(ctx.key().getOwner()).isEqualTo("billing-worker");
+    assertThat(ctx.key().getKeyId()).isEqualTo(CLIENT_KEY_ID);
   }
 
   // ── verify — success: ENGINE key with CLIENT requirement ─────────────────────
@@ -240,7 +237,7 @@ class VerificationCoreTest {
     assertThat(ctx.keyId()).isEqualTo(ENGINE_KEY_ID);
     assertThat(ctx.role()).isEqualTo(KeyRole.ENGINE);
     assertThat(ctx.signatureValid()).isTrue();
-    assertThat(ctx.key().getOwner()).isEqualTo("engine");
+    assertThat(ctx.key().getKeyId()).isEqualTo(ENGINE_KEY_ID);
   }
 
   // ── extractKeyId ─────────────────────────────────────────────────────────────

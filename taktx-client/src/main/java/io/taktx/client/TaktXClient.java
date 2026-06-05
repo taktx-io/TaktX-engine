@@ -125,6 +125,7 @@ public class TaktXClient {
   private final @Nullable AuthorizationTokenProvider authorizationTokenProvider;
   private final SecurityParticipantDescriptor participantDescriptor;
   private final ClientProtectedDataPlaneParticipationGuard protectedDataPlaneParticipationGuard;
+  private final ClientParticipantStatusPublisher participantStatusPublisher;
 
   // ── DLQ client (lazily initialised on first use) ──────────────────────────────
   private DlqEntryConsumer dlqEntryConsumer;
@@ -229,6 +230,16 @@ public class TaktXClient {
             this::hasPublishedSigningCapability,
             this::resolvePlatformPublicKey,
             Clock.systemUTC());
+    this.participantStatusPublisher =
+        new ClientParticipantStatusPublisher(
+            taktPropertiesHelper,
+            participantDescriptor,
+            this::currentObservedPolicySnapshot,
+            this::clientSigningConfigured,
+            this::clientSigningKeyPublished,
+            this::clientSigningKeyCountersigned,
+            this::currentSigningKeyIdString,
+            Clock.systemUTC());
     ProtectedClientDataPlaneGuard guard = this::ensureProtectedDataPlaneOperationAllowed;
     this.processInstanceProducer.setProtectedDataPlaneGuard(guard);
     this.messageEventSender.setProtectedDataPlaneGuard(guard);
@@ -272,14 +283,32 @@ public class TaktXClient {
       throw new IllegalArgumentException("properties must not be null");
     }
     TaktPropertiesHelper helper = new TaktPropertiesHelper(properties);
-    String componentType =
+
+    // Resolve signing key ID: property > system property > env var
+    String signingKeyId =
         TaktXClientBuilder.firstNonBlank(
-            properties.getProperty("taktx.client.component-type"),
-            preferredComponentType,
-            properties.getProperty("quarkus.application.name"),
-            properties.getProperty("spring.application.name"),
-            properties.getProperty("application.name"),
-            "generic-client");
+            properties.getProperty("taktx.signing.key-id"),
+            System.getProperty("taktx.signing.key-id"),
+            System.getenv("TAKTX_SIGNING_KEY_ID"));
+
+    // When a signing key ID is configured, derive componentType from its first dash-segment.
+    // Otherwise fall back to the application name / explicit override.
+    String componentType;
+    if (signingKeyId != null
+        && !signingKeyId.isBlank()
+        && properties.getProperty("taktx.client.component-type") == null
+        && preferredComponentType == null) {
+      componentType = signingKeyId.split("-", 2)[0];
+    } else {
+      componentType =
+          TaktXClientBuilder.firstNonBlank(
+              properties.getProperty("taktx.client.component-type"),
+              preferredComponentType,
+              properties.getProperty("quarkus.application.name"),
+              properties.getProperty("spring.application.name"),
+              properties.getProperty("application.name"),
+              "generic-client");
+    }
     String normalizedComponentType =
         componentType != null ? componentType.trim() : "generic-client";
     Set<ParticipantCapability> capabilities = new LinkedHashSet<>();
@@ -291,20 +320,22 @@ public class TaktXClient {
       capabilities.add(ParticipantCapability.AUTHORITATIVE_POLICY_PUBLISHER);
     }
 
+    // Participant ID priority:
+    // 1. taktx.client.participant-id  (explicit override)
+    // 2. taktx.participant.id          (explicit override)
+    // 3. taktx.signing.key-id          (when signing is configured — IS the participant ID)
+    // 4. tenantId.namespace.componentType  (unsigned / fallback)
+    String participantId =
+        TaktXClientBuilder.firstNonBlank(
+            properties.getProperty("taktx.client.participant-id"),
+            properties.getProperty("taktx.participant.id"),
+            signingKeyId,
+            helper.getNamespace() + "." + normalizeParticipantIdSegment(normalizedComponentType));
+
     SecurityParticipantDescriptor descriptor =
         SecurityParticipantDescriptorSupport.requireValid(
             new SecurityParticipantDescriptor(
-                TaktXClientBuilder.firstNonBlank(
-                    properties.getProperty("taktx.client.participant-id"),
-                    properties.getProperty("taktx.participant.id"),
-                    helper.getTenantId()
-                        + "."
-                        + helper.getNamespace()
-                        + "."
-                        + normalizeParticipantIdSegment(normalizedComponentType)),
-                ParticipantKind.CLIENT,
-                capabilities,
-                normalizedComponentType));
+                participantId, ParticipantKind.CLIENT, capabilities, normalizedComponentType));
     return builder.validateClientParticipantDescriptor(properties, descriptor);
   }
 
@@ -333,6 +364,21 @@ public class TaktXClient {
     this.xmlByDmnDefinitionIdConsumer.subscribeToTopic();
     if (declaresCapability(ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT)) {
       publishWorkerSigningKeyIfConfigured();
+      startParticipantStatusPublisher();
+    }
+  }
+
+  private void startParticipantStatusPublisher() {
+    String bootstrapServers = taktPropertiesHelper.getBootstrapServers();
+    if (bootstrapServers == null || bootstrapServers.isBlank()) {
+      log.debug(
+          "No bootstrap.servers configured — skipping ClientParticipantStatusPublisher start");
+      return;
+    }
+    try {
+      participantStatusPublisher.start();
+    } catch (Exception e) {
+      log.warn("Failed to start client participant status publisher: {}", e.getMessage());
     }
   }
 
@@ -970,10 +1016,9 @@ public class TaktXClient {
    * @param keyId unique identifier for this key (e.g. {@code "worker-billing-1"}, {@code
    *     "platform"})
    * @param publicKeyBase64 X.509 DER public key, base64-encoded
-   * @param owner human-readable label, e.g. {@code "worker"}, {@code "platform"}, {@code "engine"}
    */
-  public void publishSigningKey(String keyId, String publicKeyBase64, String owner) {
-    publishSigningKey(keyId, publicKeyBase64, owner, "Ed25519");
+  public void publishSigningKey(String keyId, String publicKeyBase64) {
+    publishSigningKey(keyId, publicKeyBase64, "Ed25519");
   }
 
   /**
@@ -981,12 +1026,10 @@ public class TaktXClient {
    *
    * @param keyId unique identifier for this key
    * @param publicKeyBase64 X.509 DER public key, base64-encoded
-   * @param owner human-readable owner label
    * @param algorithm key algorithm label such as {@code Ed25519} or {@code RSA}
    */
-  public void publishSigningKey(
-      String keyId, String publicKeyBase64, String owner, String algorithm) {
-    publishSigningKey(keyId, publicKeyBase64, owner, algorithm, KeyRole.CLIENT);
+  public void publishSigningKey(String keyId, String publicKeyBase64, String algorithm) {
+    publishSigningKey(keyId, publicKeyBase64, algorithm, KeyRole.CLIENT);
   }
 
   /**
@@ -996,13 +1039,12 @@ public class TaktXClient {
    *
    * @param keyId unique identifier for this key
    * @param publicKeyBase64 X.509 DER public key, base64-encoded
-   * @param owner human-readable owner label
    * @param algorithm key algorithm label such as {@code Ed25519} or {@code RSA}
    * @param role trust role under which the key should be published
    */
   public void publishSigningKey(
-      String keyId, String publicKeyBase64, String owner, String algorithm, KeyRole role) {
-    publishSigningKey(keyId, publicKeyBase64, owner, algorithm, role, null);
+      String keyId, String publicKeyBase64, String algorithm, KeyRole role) {
+    publishSigningKey(keyId, publicKeyBase64, algorithm, role, null);
   }
 
   /**
@@ -1012,7 +1054,7 @@ public class TaktXClient {
    * engine). The {@code registrationSignature} must be the base64-encoded RSA/SHA-256 signature
    * produced by the platform root private key over the key's canonical payload:
    *
-   * <pre>{@code keyId|publicKeyBase64|algorithm|owner|role}</pre>
+   * <pre>{@code keyId|publicKeyBase64|algorithm|role}</pre>
    *
    * <p>Generate with {@code scripts/generate_trust_anchor.sh --worker}. Without a valid
    * countersignature, the engine will reject all commands signed by this worker key when anchored
@@ -1020,7 +1062,6 @@ public class TaktXClient {
    *
    * @param keyId unique identifier for this key
    * @param publicKeyBase64 X.509 DER public key, base64-encoded
-   * @param owner human-readable owner label
    * @param algorithm key algorithm label such as {@code Ed25519} or {@code RSA}
    * @param role trust role under which the key should be published
    * @param registrationSignature base64-encoded RSA/SHA-256 countersignature, or {@code null} in
@@ -1029,16 +1070,14 @@ public class TaktXClient {
   public void publishSigningKey(
       String keyId,
       String publicKeyBase64,
-      String owner,
       String algorithm,
       KeyRole role,
       @Nullable String registrationSignature) {
     new SigningKeyRegistrar(taktPropertiesHelper)
-        .publishPublicKey(keyId, publicKeyBase64, owner, algorithm, role, registrationSignature);
+        .publishPublicKey(keyId, publicKeyBase64, algorithm, role, registrationSignature);
     log.info(
-        "✅ Signing key published: keyId={} owner={} algorithm={} role={} countersigned={}",
+        "✅ Signing key published: keyId={} algorithm={} role={} countersigned={}",
         keyId,
-        owner,
         algorithm,
         role,
         registrationSignature != null);
@@ -1048,19 +1087,14 @@ public class TaktXClient {
    * Static convenience overload for callers that do not yet have a running {@link TaktXClient}
    * instance — e.g. test setup code or platform bootstrap that runs before the client is started.
    *
-   * <p>Builds a temporary {@link TaktPropertiesHelper} from {@code properties} so the topic name is
-   * prefixed consistently with any running client using the same properties: {@code
-   * [<tenantId>.]<namespace>.taktx-signing-keys}.
-   *
-   * @param properties must contain {@code bootstrap.servers}, {@code taktx.engine.tenant-id}, and
-   *     {@code taktx.engine.namespace} — all three are required
+   * @param properties must contain {@code bootstrap.servers} and {@code taktx.engine.namespace} —
+   *     both are required
    * @param keyId unique identifier for this key
    * @param publicKeyBase64 X.509 DER public key, base64-encoded
-   * @param owner human-readable label, e.g. {@code "worker"}, {@code "platform"}
    */
   public static void publishSigningKey(
-      Properties properties, String keyId, String publicKeyBase64, String owner) {
-    publishSigningKey(properties, keyId, publicKeyBase64, owner, "Ed25519");
+      Properties properties, String keyId, String publicKeyBase64) {
+    publishSigningKey(properties, keyId, publicKeyBase64, "Ed25519");
   }
 
   /**
@@ -1070,12 +1104,11 @@ public class TaktXClient {
    * @param properties client/cluster properties used to resolve Kafka connectivity and topic prefix
    * @param keyId unique identifier for this key
    * @param publicKeyBase64 X.509 DER public key, base64-encoded
-   * @param owner human-readable owner label
    * @param algorithm key algorithm label such as {@code Ed25519} or {@code RSA}
    */
   public static void publishSigningKey(
-      Properties properties, String keyId, String publicKeyBase64, String owner, String algorithm) {
-    publishSigningKey(properties, keyId, publicKeyBase64, owner, algorithm, KeyRole.CLIENT);
+      Properties properties, String keyId, String publicKeyBase64, String algorithm) {
+    publishSigningKey(properties, keyId, publicKeyBase64, algorithm, KeyRole.CLIENT);
   }
 
   /**
@@ -1084,18 +1117,12 @@ public class TaktXClient {
    * @param properties client/cluster properties used to resolve Kafka connectivity and topic prefix
    * @param keyId unique identifier for this key
    * @param publicKeyBase64 X.509 DER public key, base64-encoded
-   * @param owner human-readable owner label
    * @param algorithm key algorithm label such as {@code Ed25519} or {@code RSA}
    * @param role trust role under which the key should be published
    */
   public static void publishSigningKey(
-      Properties properties,
-      String keyId,
-      String publicKeyBase64,
-      String owner,
-      String algorithm,
-      KeyRole role) {
-    publishSigningKey(properties, keyId, publicKeyBase64, owner, algorithm, role, null);
+      Properties properties, String keyId, String publicKeyBase64, String algorithm, KeyRole role) {
+    publishSigningKey(properties, keyId, publicKeyBase64, algorithm, role, null);
   }
 
   /**
@@ -1103,12 +1130,11 @@ public class TaktXClient {
    *
    * <p>Use this overload in anchored mode. The {@code registrationSignature} must be the
    * base64-encoded RSA/SHA-256 signature produced by the platform root private key over {@code
-   * keyId|publicKeyBase64|algorithm|owner|role}. Pass {@code null} in community mode.
+   * keyId|publicKeyBase64|algorithm|role}. Pass {@code null} in community mode.
    *
    * @param properties client/cluster properties used to resolve Kafka connectivity and topic prefix
    * @param keyId unique identifier for this key
    * @param publicKeyBase64 X.509 DER public key, base64-encoded
-   * @param owner human-readable owner label
    * @param algorithm key algorithm label such as {@code Ed25519} or {@code RSA}
    * @param role trust role under which the key should be published
    * @param registrationSignature base64-encoded RSA/SHA-256 countersignature, or {@code null} in
@@ -1118,7 +1144,6 @@ public class TaktXClient {
       Properties properties,
       String keyId,
       String publicKeyBase64,
-      String owner,
       String algorithm,
       KeyRole role,
       @Nullable String registrationSignature) {
@@ -1129,26 +1154,23 @@ public class TaktXClient {
         topic,
         keyId,
         publicKeyBase64,
-        owner,
         algorithm,
         role,
         registrationSignature);
     boolean countersigned = registrationSignature != null && !registrationSignature.isBlank();
     if (countersigned) {
       log.info(
-          "✅ Signing key published: keyId={} owner={} algorithm={} role={} countersigned=true"
+          "✅ Signing key published: keyId={} algorithm={} role={} countersigned=true"
               + " trustMode=anchored-ready",
           keyId,
-          owner,
           algorithm,
           role);
     } else {
       log.warn(
-          "Signing key published without a registration signature: keyId={} owner={} algorithm={}"
+          "Signing key published without a registration signature: keyId={} algorithm={}"
               + " role={} countersigned=false trustMode=community-only. Anchored engines will"
               + " reject this key; Kafka ACLs must protect taktx-signing-keys in community mode.",
           keyId,
-          owner,
           algorithm,
           role);
     }
@@ -1306,8 +1328,7 @@ public class TaktXClient {
               + " (set TAKTX_SIGNING_PUBLIC_KEY or taktx.signing.public-key)");
       return true;
     }
-    String owner = resolveWorkerSigningOwner(identity);
-    String descriptor = workerIdentityPublicationDescriptor(identity, owner);
+    String descriptor = workerIdentityPublicationDescriptor(identity);
     if (descriptor.equals(publishedWorkerIdentityDescriptor)) {
       return true;
     }
@@ -1316,7 +1337,6 @@ public class TaktXClient {
       publishSigningKey(
           identity.getKeyId(),
           identity.getPublicKeyBase64(),
-          owner,
           identity.getAlgorithm(),
           KeyRole.CLIENT,
           workerKeyRegistrationSignature);
@@ -1327,7 +1347,6 @@ public class TaktXClient {
               .keyId(identity.getKeyId())
               .publicKeyBase64(identity.getPublicKeyBase64())
               .algorithm(identity.getAlgorithm())
-              .owner(owner)
               .role(KeyRole.CLIENT)
               .registrationSignature(workerKeyRegistrationSignature)
               .status(SigningKeyDTO.KeyStatus.ACTIVE)
@@ -1351,7 +1370,6 @@ public class TaktXClient {
                   .keyId(previousKey.getKeyId())
                   .publicKeyBase64(previousKey.getPublicKeyBase64())
                   .algorithm(previousKey.getAlgorithm())
-                  .owner(previousKey.getOwner())
                   .role(previousKey.effectiveRole())
                   .registrationSignature(previousKey.getRegistrationSignature())
                   .status(SigningKeyDTO.KeyStatus.TRUSTED)
@@ -1454,13 +1472,12 @@ public class TaktXClient {
         safe(identity.getAlgorithm()));
   }
 
-  private String workerIdentityPublicationDescriptor(SigningIdentity identity, String owner) {
+  private String workerIdentityPublicationDescriptor(SigningIdentity identity) {
     return String.join(
         "|",
         safe(identity.getKeyId()),
         safe(identity.getPublicKeyBase64()),
         safe(identity.getAlgorithm()),
-        safe(owner),
         KeyRole.CLIENT.name(),
         safe(workerKeyRegistrationSignature));
   }
@@ -1482,23 +1499,6 @@ public class TaktXClient {
 
   private static String safe(@Nullable String value) {
     return value != null ? value : "";
-  }
-
-  private String resolveWorkerSigningOwner(SigningIdentity identity) {
-    if (identity == null) {
-      return "worker";
-    }
-    String configuredOwner =
-        TaktXClientBuilder.firstNonBlank(
-            taktPropertiesHelper.getTaktProperties().getProperty("taktx.signing.owner"),
-            System.getProperty("taktx.signing.owner"),
-            System.getenv("TAKTX_SIGNING_OWNER"),
-            taktPropertiesHelper.getTaktProperties().getProperty("quarkus.application.name"),
-            taktPropertiesHelper.getTaktProperties().getProperty("spring.application.name"),
-            taktPropertiesHelper.getTaktProperties().getProperty("application.name"));
-    return configuredOwner != null && !configuredOwner.isBlank()
-        ? configuredOwner
-        : identity.getKeyId();
   }
 
   private String signWorkerPayload(byte[] payload) {
@@ -1558,6 +1558,41 @@ public class TaktXClient {
     return ensureWorkerKeyPublished(identity);
   }
 
+  @Nullable
+  private String currentSigningKeyIdString() {
+    SigningIdentity identity = currentSigningIdentity();
+    return identity != null ? identity.getKeyId() : null;
+  }
+
+  /** Whether a signing identity with a private key is currently loaded from the identity source. */
+  private boolean clientSigningConfigured() {
+    SigningIdentity identity = currentSigningIdentity();
+    return identity != null
+        && identity.getPrivateKeyBase64() != null
+        && !identity.getPrivateKeyBase64().isBlank();
+  }
+
+  /** Whether the current signing key is visible (non-revoked) in the signing-keys registry. */
+  private boolean clientSigningKeyPublished() {
+    SigningIdentity identity = currentSigningIdentity();
+    if (identity == null || signingKeysStore == null) {
+      return false;
+    }
+    return signingKeysStore.getPublicKeyBase64(identity.getKeyId()) != null;
+  }
+
+  /** Whether the current signing key entry carries a platform registration countersignature. */
+  private boolean clientSigningKeyCountersigned() {
+    SigningIdentity identity = currentSigningIdentity();
+    if (identity == null || signingKeysStore == null) {
+      return false;
+    }
+    SigningKeyDTO entry = signingKeysStore.get(identity.getKeyId());
+    return entry != null
+        && entry.getRegistrationSignature() != null
+        && !entry.getRegistrationSignature().isBlank();
+  }
+
   boolean shouldPrepareSigningInfrastructure() {
     return isAnchoredMode(currentNamespaceSecurityPolicy())
         || isAnchoredMode(authoritativeNamespaceSecurityPolicy());
@@ -1611,6 +1646,7 @@ public class TaktXClient {
 
   /** Stops the TaktXClient, which unsubscribes from process definition records and process */
   public void stop() {
+    this.participantStatusPublisher.stop();
     this.processDefinitionConsumer.stop();
     this.externalTaskTriggerTopicConsumer.stop();
     this.processInstanceUpdateConsumer.stop();
@@ -2650,20 +2686,32 @@ public class TaktXClient {
         inferredCapabilities.add(ParticipantCapability.AUTHORITATIVE_POLICY_PUBLISHER);
       }
 
+      String inferredSigningKeyId =
+          firstNonBlank(
+              properties.getProperty("taktx.signing.key-id"),
+              System.getProperty("taktx.signing.key-id"),
+              System.getenv("TAKTX_SIGNING_KEY_ID"));
+      String inferredComponentType =
+          inferredSigningKeyId != null
+                  && !inferredSigningKeyId.isBlank()
+                  && properties.getProperty("taktx.client.component-type") == null
+              ? inferredSigningKeyId.split("-", 2)[0]
+              : firstNonBlank(
+                  properties.getProperty("taktx.client.component-type"),
+                  properties.getProperty("quarkus.application.name"),
+                  properties.getProperty("spring.application.name"),
+                  properties.getProperty("application.name"),
+                  "generic-client");
       SecurityParticipantDescriptor inferredDescriptor =
           new SecurityParticipantDescriptor(
               firstNonBlank(
                   properties.getProperty("taktx.client.participant-id"),
                   properties.getProperty("taktx.participant.id"),
-                  helper.getTenantId() + "." + helper.getNamespace() + ".client"),
+                  inferredSigningKeyId,
+                  helper.getNamespace() + ".client"),
               ParticipantKind.CLIENT,
               inferredCapabilities,
-              firstNonBlank(
-                  properties.getProperty("taktx.client.component-type"),
-                  properties.getProperty("quarkus.application.name"),
-                  properties.getProperty("spring.application.name"),
-                  properties.getProperty("application.name"),
-                  "generic-client"));
+              inferredComponentType);
       return validateClientParticipantDescriptor(
           properties, SecurityParticipantDescriptorSupport.requireValid(inferredDescriptor));
     }

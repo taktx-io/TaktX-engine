@@ -132,7 +132,6 @@ class EngineAuthorizationServiceMatrixTest {
                 .keyId(WORKER_KEY_ID)
                 .publicKeyBase64("dummy")
                 .status(KeyStatus.ACTIVE)
-                .owner("billing-worker")
                 .role(KeyRole.CLIENT)
                 .build());
 
@@ -142,7 +141,6 @@ class EngineAuthorizationServiceMatrixTest {
                 .keyId(ENGINE_KEY_ID)
                 .publicKeyBase64("dummy")
                 .status(KeyStatus.ACTIVE)
-                .owner("engine")
                 .role(KeyRole.ENGINE)
                 .build());
   }
@@ -288,7 +286,7 @@ class EngineAuthorizationServiceMatrixTest {
         .isEqualTo(CommandTrustVerificationResult.ENGINE_SIGNED);
     assertThat(result.getTrusted()).isTrue();
     assertThat(result.getSignerKeyId()).isEqualTo(ENGINE_KEY_ID);
-    assertThat(result.getSignerOwner()).isEqualTo("engine");
+    assertThat(result.getSignerOwner()).isEqualTo(ENGINE_KEY_ID);
   }
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -323,7 +321,7 @@ class EngineAuthorizationServiceMatrixTest {
     assertThat(result.getAuthMethod()).isEqualTo(CommandAuthMethod.ED25519);
     assertThat(result.getTrusted()).isTrue();
     assertThat(result.getSignerKeyId()).isEqualTo(ENGINE_KEY_ID);
-    assertThat(result.getSignerOwner()).isEqualTo("engine");
+    assertThat(result.getSignerOwner()).isEqualTo(ENGINE_KEY_ID);
   }
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -556,7 +554,7 @@ class EngineAuthorizationServiceMatrixTest {
     assertThat(result.getUserId()).isEqualTo("user-matrix");
     assertThat(result.getIssuer()).isEqualTo(ISSUER);
     assertThat(result.getSignerKeyId()).isEqualTo(WORKER_KEY_ID);
-    assertThat(result.getSignerOwner()).isEqualTo("billing-worker");
+    assertThat(result.getSignerOwner()).isEqualTo(WORKER_KEY_ID);
   }
 
   // Row 23 — C-ERA=T, C-SE=T
@@ -603,7 +601,6 @@ class EngineAuthorizationServiceMatrixTest {
                 .keyId(revokedKeyId)
                 .publicKeyBase64("dummy")
                 .status(KeyStatus.REVOKED)
-                .owner("former-worker")
                 .role(KeyRole.CLIENT)
                 .build());
 
@@ -703,6 +700,6 @@ class EngineAuthorizationServiceMatrixTest {
     assertThat(result.getTrusted()).isTrue();
     assertThat(result.getUserId()).isEqualTo("user-matrix");
     assertThat(result.getSignerKeyId()).isEqualTo(WORKER_KEY_ID);
-    assertThat(result.getSignerOwner()).isEqualTo("billing-worker");
+    assertThat(result.getSignerOwner()).isEqualTo(WORKER_KEY_ID);
   }
 }
