@@ -60,8 +60,7 @@ public record ParticipantSummary(
               || ParticipantStatusSupport.isExpired(status, nowMs);
       boolean mismatch = status.getEffectiveState() == ParticipantEffectiveState.MISMATCH;
       boolean allowedForProtectedRuntime =
-          ParticipantStatusSupport.allowsProtectedDataPlaneParticipation(
-              status, activePolicyVersion, activePolicyHash, nowMs);
+          ParticipantStatusSupport.allowsProtectedDataPlaneParticipation(status, nowMs);
 
       if (activationRelevant) {
         activationRelevantParticipants++;

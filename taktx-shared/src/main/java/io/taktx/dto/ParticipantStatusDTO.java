@@ -40,8 +40,6 @@ public class ParticipantStatusDTO {
   private StatusVerificationLevel statusVerificationLevel;
   private ParticipantEffectiveState effectiveState;
   @Builder.Default private boolean readyForDataPlane = false;
-  private Long observedPolicyVersion;
-  private String observedPolicyHash;
 
   @Builder.Default private List<PolicyMismatchReasonDTO> mismatchReasons = List.of();
 

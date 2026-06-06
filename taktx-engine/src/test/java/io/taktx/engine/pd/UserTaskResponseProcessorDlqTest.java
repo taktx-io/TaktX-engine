@@ -17,22 +17,16 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import io.taktx.dto.NamespaceSecurityPolicyDTO;
 import io.taktx.dto.ProcessDefinitionKey;
-import io.taktx.dto.SecurityMode;
 import io.taktx.dto.StartCommandDTO;
 import io.taktx.dto.UserTaskResponseDlqEntryDTO;
 import io.taktx.dto.UserTaskResponseResultDTO;
 import io.taktx.dto.UserTaskResponseTriggerDTO;
 import io.taktx.dto.UserTaskResponseType;
 import io.taktx.dto.VariablesDTO;
-import io.taktx.engine.config.NamespaceSecurityPolicyStore;
-import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.pi.ProcessInstanceTriggerEnvelope;
-import io.taktx.engine.security.EngineSecurityReadinessEvaluator;
 import io.taktx.engine.security.MessageSigningService;
 import io.taktx.engine.security.ProtectedDataPlaneParticipationGuard;
-import io.taktx.security.NamespaceSecurityPolicySupport;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Instant;
@@ -50,22 +44,12 @@ import org.mockito.ArgumentCaptor;
 class UserTaskResponseProcessorDlqTest {
 
   private ProcessorContext<Object, Object> context;
-  private TaktConfiguration configuration;
   private UserTaskResponseProcessor processor;
   private final Clock clock = Clock.fixed(Instant.ofEpochMilli(1_700_000_000_000L), ZoneOffset.UTC);
 
   @BeforeEach
   void setUp() {
     context = mock(ProcessorContext.class);
-    configuration = mock(TaktConfiguration.class);
-    when(configuration.getTenantId()).thenReturn("tenant");
-    when(configuration.getNamespace()).thenReturn("bank.payments");
-    when(configuration.getHost()).thenReturn("engine-host");
-    when(configuration.getPort()).thenReturn(8080);
-    when(configuration.getSigningIdentitySourceType()).thenReturn("file");
-    when(configuration.getEngineKeyRegistrationSignature())
-        .thenReturn("engine-registration-signature");
-    when(configuration.getPlatformPublicKey()).thenReturn(null);
     processor = new UserTaskResponseProcessor(clock);
     processor.init(context);
   }
@@ -160,12 +144,12 @@ class UserTaskResponseProcessorDlqTest {
   }
 
   @Test
-  void process_authoritativeAnchoredPolicyWithoutTrustAnchor_emitsDlq() {
+  void process_unpublishedSigningKey_emitsDlq() {
     UUID processInstanceId = UUID.randomUUID();
     UserTaskResponseResultDTO result =
         new UserTaskResponseResultDTO(UserTaskResponseType.COMPLETED, null, null);
     UserTaskResponseTriggerDTO response = userTaskResponse(processInstanceId, List.of(3L), result);
-    UserTaskResponseProcessor guardedProcessor = guardedProcessorWithPolicy(anchoredPolicy(42L));
+    UserTaskResponseProcessor guardedProcessor = guardedProcessorWithUnpublishedKey();
 
     guardedProcessor.process(
         new Record<>(
@@ -181,9 +165,7 @@ class UserTaskResponseProcessorDlqTest {
     assertThat(forwarded.value()).isInstanceOf(UserTaskResponseDlqEntryDTO.class);
     UserTaskResponseDlqEntryDTO dlqEntry = (UserTaskResponseDlqEntryDTO) forwarded.value();
     assertThat(new String(dlqEntry.getHeaders().get(REASON_HINT), StandardCharsets.UTF_8))
-        .isEqualTo("TRUST_ANCHOR_MISSING");
-    assertThat(new String(dlqEntry.getHeaders().get(REASON_TEXT), StandardCharsets.UTF_8))
-        .contains("platform public key");
+        .isEqualTo(ProtectedDataPlaneParticipationGuard.ENGINE_SIGNING_UNAVAILABLE);
   }
 
   @Test
@@ -192,7 +174,7 @@ class UserTaskResponseProcessorDlqTest {
     UserTaskResponseResultDTO result =
         new UserTaskResponseResultDTO(UserTaskResponseType.COMPLETED, null, null);
     UserTaskResponseTriggerDTO response = userTaskResponse(processInstanceId, List.of(4L), result);
-    UserTaskResponseProcessor guardedProcessor = guardedProcessorWithPolicy(null);
+    UserTaskResponseProcessor guardedProcessor = guardedProcessorWithOpenMode();
     ProcessInstanceTriggerEnvelope envelope =
         new ProcessInstanceTriggerEnvelope(new byte[] {10, 11}, response, true, "user-key");
 
@@ -237,31 +219,28 @@ class UserTaskResponseProcessorDlqTest {
     return new UserTaskResponseTriggerDTO(processInstanceId, path, result, VariablesDTO.empty());
   }
 
-  private UserTaskResponseProcessor guardedProcessorWithPolicy(
-      NamespaceSecurityPolicyDTO authoritativePolicy) {
-    NamespaceSecurityPolicyStore policyStore = new NamespaceSecurityPolicyStore();
-    policyStore.update(authoritativePolicy);
+  private UserTaskResponseProcessor guardedProcessorWithUnpublishedKey() {
     MessageSigningService messageSigningService = mock(MessageSigningService.class);
-    when(messageSigningService.getKeyId()).thenReturn("engine-key-1");
+    when(messageSigningService.getKeyId()).thenReturn(null);
+    when(messageSigningService.isPublicKeyPublished()).thenReturn(false);
+
+    UserTaskResponseProcessor guardedProcessor =
+        new UserTaskResponseProcessor(
+            clock,
+            new ProtectedDataPlaneParticipationGuard(true, messageSigningService));
+    guardedProcessor.init(context);
+    return guardedProcessor;
+  }
+
+  private UserTaskResponseProcessor guardedProcessorWithOpenMode() {
+    MessageSigningService messageSigningService = mock(MessageSigningService.class);
     when(messageSigningService.isPublicKeyPublished()).thenReturn(true);
 
     UserTaskResponseProcessor guardedProcessor =
         new UserTaskResponseProcessor(
             clock,
-            new ProtectedDataPlaneParticipationGuard(
-                policyStore,
-                new EngineSecurityReadinessEvaluator(
-                    configuration, policyStore, messageSigningService, clock),
-                clock));
+            new ProtectedDataPlaneParticipationGuard(false, messageSigningService));
     guardedProcessor.init(context);
     return guardedProcessor;
-  }
-
-  private static NamespaceSecurityPolicyDTO anchoredPolicy(long version) {
-    return NamespaceSecurityPolicySupport.requireValid(
-        NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.ANCHORED)
-            .policyVersion(version)
-            .build());
   }
 }

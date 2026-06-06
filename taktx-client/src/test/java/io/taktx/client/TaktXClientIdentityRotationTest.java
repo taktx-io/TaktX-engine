@@ -99,19 +99,6 @@ class TaktXClientIdentityRotationTest {
         .build();
   }
 
-  private static void setAnchoredPolicies(TaktXClient client) throws Exception {
-    ClientNamespaceSecurityPolicyStore store = new ClientNamespaceSecurityPolicyStore();
-    io.taktx.dto.NamespaceSecurityPolicyDTO anchored =
-        io.taktx.dto.NamespaceSecurityPolicyDTO.builder()
-            .mode(io.taktx.dto.SecurityMode.ANCHORED)
-            .policyVersion(1L)
-            .policyHash("anchored-policy-1")
-            .build();
-    store.setCurrentPolicy(anchored);
-    store.setActivePolicy(anchored);
-    setField(client, "namespaceSecurityPolicyStore", store);
-  }
-
   private static Object invokeCurrentSigningIdentity(TaktXClient client) throws Exception {
     return invokeDeclaredMethod(client, "currentSigningIdentity", new Class<?>[0]);
   }

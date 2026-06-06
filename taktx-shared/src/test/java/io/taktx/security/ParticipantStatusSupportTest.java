@@ -93,12 +93,9 @@ class ParticipantStatusSupportTest {
                 .statusVerificationLevel(StatusVerificationLevel.LOCALLY_VERIFIED_STATUS)
                 .effectiveState(ParticipantEffectiveState.READY)
                 .readyForDataPlane(true)
-                .observedPolicyVersion(42L)
-                .observedPolicyHash("abc123")
                 .build());
 
     assertThat(validated.isReadyForDataPlane()).isTrue();
-    assertThat(validated.getObservedPolicyVersion()).isEqualTo(42L);
     assertThat(validated.getSupportedModes())
         .containsExactlyInAnyOrder(SecurityMode.OPEN, SecurityMode.ANCHORED);
   }
@@ -261,7 +258,7 @@ class ParticipantStatusSupportTest {
   }
 
   @Test
-  void allowsProtectedDataPlaneParticipation_requiresReadyNonExpiredExactActiveIdentity() {
+  void allowsProtectedDataPlaneParticipation_requiresReadyNonExpired() {
     ParticipantStatusDTO status =
         ParticipantStatusDTO.builder()
             .participantId("client-1")
@@ -276,25 +273,12 @@ class ParticipantStatusSupportTest {
             .statusVerificationLevel(StatusVerificationLevel.LOCALLY_VERIFIED_STATUS)
             .effectiveState(ParticipantEffectiveState.READY)
             .readyForDataPlane(true)
-            .observedPolicyVersion(42L)
-            .observedPolicyHash("abc123")
             .build();
 
-    assertThat(
-            ParticipantStatusSupport.allowsProtectedDataPlaneParticipation(
-                status, 42L, "abc123", 199L))
+    assertThat(ParticipantStatusSupport.allowsProtectedDataPlaneParticipation(status, 199L))
         .isTrue();
-    assertThat(
-            ParticipantStatusSupport.allowsProtectedDataPlaneParticipation(
-                status, 43L, "abc123", 199L))
-        .isFalse();
-    assertThat(
-            ParticipantStatusSupport.allowsProtectedDataPlaneParticipation(
-                status, 42L, "different", 199L))
-        .isFalse();
-    assertThat(
-            ParticipantStatusSupport.allowsProtectedDataPlaneParticipation(
-                status, 42L, "abc123", 200L))
+    // expired
+    assertThat(ParticipantStatusSupport.allowsProtectedDataPlaneParticipation(status, 200L))
         .isFalse();
   }
 
@@ -314,8 +298,6 @@ class ParticipantStatusSupportTest {
             .statusVerificationLevel(StatusVerificationLevel.UNVERIFIED_STATUS)
             .effectiveState(ParticipantEffectiveState.READY)
             .readyForDataPlane(true)
-            .observedPolicyVersion(42L)
-            .observedPolicyHash("abc123")
             .build();
     ParticipantStatusDTO verifiedNotReady =
         unverifiedReady.toBuilder()
@@ -324,13 +306,9 @@ class ParticipantStatusSupportTest {
             .readyForDataPlane(false)
             .build();
 
-    assertThat(
-            ParticipantStatusSupport.allowsProtectedDataPlaneParticipation(
-                unverifiedReady, 42L, "abc123", 199L))
+    assertThat(ParticipantStatusSupport.allowsProtectedDataPlaneParticipation(unverifiedReady, 199L))
         .isTrue();
-    assertThat(
-            ParticipantStatusSupport.allowsProtectedDataPlaneParticipation(
-                verifiedNotReady, 42L, "abc123", 199L))
+    assertThat(ParticipantStatusSupport.allowsProtectedDataPlaneParticipation(verifiedNotReady, 199L))
         .isFalse();
   }
 
@@ -338,13 +316,12 @@ class ParticipantStatusSupportTest {
   void supportHelpers_distinguishSupportInPrincipleFromCurrentReadiness() {
     ParticipantStatusDTO status =
         ParticipantStatusDTO.builder()
-            .participantId("console-1")
-            .participantInstanceId("console-1#1")
+            .participantId("worker-1")
+            .participantInstanceId("worker-1#1")
             .participantKind(ParticipantKind.CLIENT)
-            .componentType("console")
+            .componentType("worker")
             .capabilities(
                 Set.of(
-                    ParticipantCapability.AUTHORITATIVE_POLICY_PUBLISHER,
                     ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT,
                     ParticipantCapability.SECURITY_OBSERVER))
             .namespace("bank.payments")
@@ -359,11 +336,8 @@ class ParticipantStatusSupportTest {
 
     assertThat(ParticipantStatusSupport.supportsMode(status, SecurityMode.ANCHORED)).isTrue();
     assertThat(ParticipantStatusSupport.supportsProtectedRuntimeParticipation(status)).isTrue();
-    assertThat(ParticipantStatusSupport.supportsAuthoritativePolicyPublication(status)).isTrue();
     assertThat(ParticipantStatusSupport.supportsTrustAnchorValidation(status)).isTrue();
-    assertThat(
-            ParticipantStatusSupport.allowsProtectedDataPlaneParticipation(
-                status, 42L, "abc123", 199L))
+    assertThat(ParticipantStatusSupport.allowsProtectedDataPlaneParticipation(status, 199L))
         .isFalse();
   }
 }

@@ -11,12 +11,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
-import io.taktx.dto.NamespaceSecurityPolicyDTO;
 import io.taktx.dto.ParticipantCapability;
 import io.taktx.dto.ParticipantEffectiveState;
 import io.taktx.dto.ParticipantKind;
 import io.taktx.dto.ParticipantStatusDTO;
-import io.taktx.dto.SecurityMode;
 import io.taktx.dto.SecurityParticipantDescriptor;
 import io.taktx.dto.StatusVerificationLevel;
 import io.taktx.serdes.ParticipantStatusProtoMapper;
@@ -27,7 +25,6 @@ import java.time.ZoneOffset;
 import java.util.Properties;
 import java.util.Set;
 import java.util.function.BooleanSupplier;
-import java.util.function.Supplier;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.junit.jupiter.api.BeforeEach;
@@ -54,19 +51,11 @@ class ClientParticipantStatusPublisherTest {
   @Test
   void evaluate_openModeProtectedParticipantFullySigningReady_isReadyWithNoReasons() {
     ParticipantStatusDTO status =
-        publisher(
-                runtimeDescriptor(),
-                () -> snapshot(SecurityMode.OPEN, 5L, "hash-open-5"),
-                true,
-                true,
-                true)
-            .evaluateCurrentStatus();
+        publisher(runtimeDescriptor(), false, true, true, true).evaluateCurrentStatus();
 
     assertThat(status.getEffectiveState()).isEqualTo(ParticipantEffectiveState.READY);
     assertThat(status.isReadyForDataPlane()).isTrue();
     assertThat(status.getMismatchReasons()).isEmpty();
-    assertThat(status.getObservedPolicyVersion()).isEqualTo(5L);
-    assertThat(status.getObservedPolicyHash()).isEqualTo("hash-open-5");
     assertThat(status.getStatusVerificationLevel())
         .isEqualTo(StatusVerificationLevel.LOCALLY_VERIFIED_STATUS);
     assertThat(status.getStartedAt()).isEqualTo(NOW_MS);
@@ -81,13 +70,7 @@ class ClientParticipantStatusPublisherTest {
   @Test
   void evaluate_openModeWithSigningGaps_reportsNonBlockingWarningsButStaysReady() {
     ParticipantStatusDTO status =
-        publisher(
-                runtimeDescriptor(),
-                () -> snapshot(SecurityMode.OPEN, 6L, "hash-open-6"),
-                false,
-                false,
-                false)
-            .evaluateCurrentStatus();
+        publisher(runtimeDescriptor(), false, false, false, false).evaluateCurrentStatus();
 
     assertThat(status.getEffectiveState()).isEqualTo(ParticipantEffectiveState.READY);
     assertThat(status.isReadyForDataPlane()).isTrue();
@@ -101,13 +84,7 @@ class ClientParticipantStatusPublisherTest {
   @Test
   void evaluate_openModeKeyPublishedButNotCountersigned_warnsRegistrationSignatureMissing() {
     ParticipantStatusDTO status =
-        publisher(
-                runtimeDescriptor(),
-                () -> snapshot(SecurityMode.OPEN, 7L, "hash-open-7"),
-                true,
-                true,
-                false)
-            .evaluateCurrentStatus();
+        publisher(runtimeDescriptor(), false, true, true, false).evaluateCurrentStatus();
 
     assertThat(status.isReadyForDataPlane()).isTrue();
     assertThat(status.getMismatchReasons().getFirst().getCode())
@@ -119,13 +96,7 @@ class ClientParticipantStatusPublisherTest {
   @Test
   void evaluate_anchoredModeFullySigningReady_isReady() {
     ParticipantStatusDTO status =
-        publisher(
-                runtimeDescriptor(),
-                () -> snapshot(SecurityMode.ANCHORED, 8L, "hash-anchored-8"),
-                true,
-                true,
-                true)
-            .evaluateCurrentStatus();
+        publisher(runtimeDescriptor(), true, true, true, true).evaluateCurrentStatus();
 
     assertThat(status.getEffectiveState()).isEqualTo(ParticipantEffectiveState.READY);
     assertThat(status.isReadyForDataPlane()).isTrue();
@@ -135,13 +106,7 @@ class ClientParticipantStatusPublisherTest {
   @Test
   void evaluate_anchoredModeWithSigningGap_isMismatchAndNotReady() {
     ParticipantStatusDTO status =
-        publisher(
-                runtimeDescriptor(),
-                () -> snapshot(SecurityMode.ANCHORED, 9L, "hash-anchored-9"),
-                true,
-                false,
-                false)
-            .evaluateCurrentStatus();
+        publisher(runtimeDescriptor(), true, true, false, false).evaluateCurrentStatus();
 
     assertThat(status.getEffectiveState()).isEqualTo(ParticipantEffectiveState.MISMATCH);
     assertThat(status.isReadyForDataPlane()).isFalse();
@@ -152,43 +117,19 @@ class ClientParticipantStatusPublisherTest {
   }
 
   @Test
-  void evaluate_noObservedPolicyDefaultsToOpenMode() {
+  void evaluate_openModeDefaultsToReady() {
+    // OPEN mode (anchored=false) → ready regardless of signing
     ParticipantStatusDTO status =
-        publisher(runtimeDescriptor(), ObservedPolicySnapshot::empty, true, true, true)
-            .evaluateCurrentStatus();
+        publisher(runtimeDescriptor(), false, true, true, true).evaluateCurrentStatus();
 
     assertThat(status.getEffectiveState()).isEqualTo(ParticipantEffectiveState.READY);
     assertThat(status.isReadyForDataPlane()).isTrue();
-    assertThat(status.getObservedPolicyVersion()).isNull();
-    assertThat(status.getObservedPolicyHash()).isNull();
   }
 
   @Test
   void evaluate_securityObserverOnly_reportsPresentButNotDataPlane() {
     ParticipantStatusDTO status =
-        publisher(
-                observerDescriptor(),
-                () -> snapshot(SecurityMode.ANCHORED, 1L, "h"),
-                false,
-                false,
-                false)
-            .evaluateCurrentStatus();
-
-    assertThat(status.getEffectiveState()).isEqualTo(ParticipantEffectiveState.READY);
-    assertThat(status.isReadyForDataPlane()).isFalse();
-    assertThat(status.getMismatchReasons()).isEmpty();
-  }
-
-  @Test
-  void evaluate_authoritativePolicyPublisherOnly_reportsControlPlaneNotDataPlane() {
-    ParticipantStatusDTO status =
-        publisher(
-                authoritativeDescriptor(),
-                () -> snapshot(SecurityMode.ANCHORED, 1L, "h"),
-                false,
-                false,
-                false)
-            .evaluateCurrentStatus();
+        publisher(observerDescriptor(), true, false, false, false).evaluateCurrentStatus();
 
     assertThat(status.getEffectiveState()).isEqualTo(ParticipantEffectiveState.READY);
     assertThat(status.isReadyForDataPlane()).isFalse();
@@ -204,7 +145,7 @@ class ClientParticipantStatusPublisherTest {
         new ClientParticipantStatusPublisher(
             propertiesHelper,
             runtimeDescriptor(),
-            () -> snapshot(SecurityMode.OPEN, 3L, "hash-open-3"),
+            false, // OPEN
             () -> true,
             () -> true,
             () -> true,
@@ -225,7 +166,7 @@ class ClientParticipantStatusPublisherTest {
     ParticipantStatusDTO roundTripped =
         ParticipantStatusProtoMapper.toDto(
             io.taktx.proto.ParticipantStatusMessage.parseFrom(record.value()));
-    assertThat(roundTripped.getParticipantId()).isEqualTo("tenant.default.client");
+    assertThat(roundTripped.getParticipantId()).isEqualTo("tenant.default.client"); // explicit descriptor in test
     assertThat(roundTripped.getEffectiveState()).isEqualTo(ParticipantEffectiveState.READY);
     assertThat(roundTripped.isReadyForDataPlane()).isTrue();
   }
@@ -236,7 +177,7 @@ class ClientParticipantStatusPublisherTest {
         new ClientParticipantStatusPublisher(
                 propertiesHelper,
                 runtimeDescriptor(),
-                () -> snapshot(SecurityMode.OPEN, 1L, "h"),
+                false,
                 () -> true,
                 () -> true,
                 () -> true,
@@ -250,36 +191,25 @@ class ClientParticipantStatusPublisherTest {
   @Test
   void evaluate_currentSigningKeyIdIsNullWhenNotSupplied() {
     ParticipantStatusDTO status =
-        publisher(runtimeDescriptor(), () -> snapshot(SecurityMode.OPEN, 1L, "h"), true, true, true)
-            .evaluateCurrentStatus();
+        publisher(runtimeDescriptor(), false, true, true, true).evaluateCurrentStatus();
 
     assertThat(status.getCurrentSigningKeyId()).isNull();
   }
 
   private ClientParticipantStatusPublisher publisher(
       SecurityParticipantDescriptor descriptor,
-      Supplier<ObservedPolicySnapshot> observedPolicy,
+      boolean anchored,
       boolean signingConfigured,
       boolean keyPublished,
       boolean keyCountersigned) {
     return new ClientParticipantStatusPublisher(
         propertiesHelper,
         descriptor,
-        observedPolicy,
+        anchored,
         (BooleanSupplier) () -> signingConfigured,
         (BooleanSupplier) () -> keyPublished,
         (BooleanSupplier) () -> keyCountersigned,
         clock);
-  }
-
-  private static ObservedPolicySnapshot snapshot(SecurityMode mode, long version, String hash) {
-    NamespaceSecurityPolicyDTO policy =
-        NamespaceSecurityPolicyDTO.builder()
-            .mode(mode)
-            .policyVersion(version)
-            .policyHash(hash)
-            .build();
-    return new ObservedPolicySnapshot(policy, policy);
   }
 
   private static SecurityParticipantDescriptor runtimeDescriptor() {
@@ -296,15 +226,5 @@ class ClientParticipantStatusPublisherTest {
         ParticipantKind.CLIENT,
         Set.of(ParticipantCapability.SECURITY_OBSERVER),
         "observer");
-  }
-
-  private static SecurityParticipantDescriptor authoritativeDescriptor() {
-    return new SecurityParticipantDescriptor(
-        "tenant.default.console",
-        ParticipantKind.CLIENT,
-        Set.of(
-            ParticipantCapability.AUTHORITATIVE_POLICY_PUBLISHER,
-            ParticipantCapability.SECURITY_OBSERVER),
-        "console");
   }
 }

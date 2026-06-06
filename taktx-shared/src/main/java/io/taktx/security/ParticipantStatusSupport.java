@@ -118,15 +118,6 @@ public final class ParticipantStatusSupport {
       errors.add("readyForDataPlane=true requires effectiveState=READY");
     }
 
-    boolean hasObservedVersion = normalized.getObservedPolicyVersion() != null;
-    boolean hasObservedHash = !isBlank(normalized.getObservedPolicyHash());
-    if (hasObservedVersion != hasObservedHash) {
-      errors.add("observedPolicyVersion and observedPolicyHash must be provided together");
-    }
-    if (hasObservedVersion && normalized.getObservedPolicyVersion() <= 0) {
-      errors.add("observedPolicyVersion must be > 0");
-    }
-
     for (PolicyMismatchReasonDTO reason : normalized.getMismatchReasons()) {
       if (isBlank(reason.getCode())) {
         errors.add("mismatchReasons[].code must not be blank");
@@ -152,27 +143,20 @@ public final class ParticipantStatusSupport {
   }
 
   /**
-   * Returns whether a participant may take part in protected data-plane behavior for the supplied
-   * active policy identity.
+   * Returns whether a participant may take part in protected data-plane behavior.
    *
-   * <p>This deliberately treats participant status as posture/telemetry rather than trust. The
-   * decision is based on non-expired status, `READY` posture, the participant's explicit
-   * `readyForDataPlane` flag, and an exact match to the active policy identity. Verification level
-   * is intentionally not used as a trust shortcut.
+   * <p>Based on non-expired status, {@code READY} effective state, and the participant's explicit
+   * {@code readyForDataPlane} flag. Mode version/hash matching was removed in 0.8.0 — mode is now
+   * startup-static and cannot differ between participants.
    */
   public static boolean allowsProtectedDataPlaneParticipation(
-      ParticipantStatusDTO status, Long activePolicyVersion, String activePolicyHash, long nowMs) {
+      ParticipantStatusDTO status, long nowMs) {
     if (isExpired(status, nowMs)) {
-      return false;
-    }
-    if (activePolicyVersion == null || isBlank(activePolicyHash)) {
       return false;
     }
     ParticipantStatusDTO normalized = normalize(status);
     return normalized.getEffectiveState() == ParticipantEffectiveState.READY
-        && normalized.isReadyForDataPlane()
-        && java.util.Objects.equals(activePolicyVersion, normalized.getObservedPolicyVersion())
-        && java.util.Objects.equals(activePolicyHash, normalized.getObservedPolicyHash());
+        && normalized.isReadyForDataPlane();
   }
 
   /** Returns the explicit support-in-principle modes for the participant. */
@@ -197,13 +181,6 @@ public final class ParticipantStatusSupport {
         || status.getCapabilities().contains(ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT);
   }
 
-  /** Returns whether the participant can publish authoritative policy mutations in principle. */
-  public static boolean supportsAuthoritativePolicyPublication(ParticipantStatusDTO status) {
-    return status != null
-        && status.getCapabilities() != null
-        && status.getCapabilities().contains(ParticipantCapability.AUTHORITATIVE_POLICY_PUBLISHER);
-  }
-
   /** Returns whether the participant can validate anchored trust requirements in principle. */
   public static boolean supportsTrustAnchorValidation(ParticipantStatusDTO status) {
     return supportsMode(status, SecurityMode.ANCHORED);
@@ -217,8 +194,7 @@ public final class ParticipantStatusSupport {
       return Set.copyOf(supportedModes);
     }
     if (capabilities.contains(ParticipantCapability.ENFORCER)
-        || capabilities.contains(ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT)
-        || capabilities.contains(ParticipantCapability.AUTHORITATIVE_POLICY_PUBLISHER)) {
+        || capabilities.contains(ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT)) {
       supportedModes.add(SecurityMode.ANCHORED);
     }
     return Set.copyOf(supportedModes);

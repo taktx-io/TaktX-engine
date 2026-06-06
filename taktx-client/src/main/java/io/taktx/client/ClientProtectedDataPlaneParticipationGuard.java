@@ -7,123 +7,68 @@
  */
 package io.taktx.client;
 
-import io.taktx.dto.NamespaceSecurityPolicyDTO;
 import io.taktx.dto.ParticipantCapability;
-import io.taktx.dto.ParticipantEffectiveState;
-import io.taktx.dto.ParticipantStatusDTO;
-import io.taktx.dto.PolicyMismatchReasonDTO;
-import io.taktx.dto.SecurityMode;
 import io.taktx.dto.SecurityParticipantDescriptor;
-import io.taktx.dto.SecurityPostureIssueCodes;
-import io.taktx.dto.StatusVerificationLevel;
-import io.taktx.security.ParticipantStatusSupport;
-import io.taktx.security.SecurityParticipantDescriptorSupport;
-import io.taktx.security.SigningIdentity;
-import io.taktx.util.TaktPropertiesHelper;
 import jakarta.annotation.Nullable;
 import java.time.Clock;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.function.BooleanSupplier;
-import java.util.function.Supplier;
 
 /**
- * Decides whether the local client may participate in protected runtime traffic for the current
- * authoritative namespace security policy.
+ * Decides whether the local client may participate in protected runtime traffic.
+ *
+ * <p>In OPEN mode: always permitted. In ANCHORED mode: permitted once the worker signing key has
+ * been published (transient window only — fail-fast startup guarantees the identity material
+ * exists). The data-plane guard does NOT need to read a policy topic; mode is startup-static.
  */
 final class ClientProtectedDataPlaneParticipationGuard {
 
-  static final String POLICY_NOT_READY_HINT = "SECURITY_POLICY_NOT_READY";
-  static final String TRUST_ANCHOR_MISSING = SecurityPostureIssueCodes.TRUST_ANCHOR_MISSING;
-  static final String STABLE_SIGNING_SOURCE_REQUIRED = "CLIENT_STABLE_SIGNING_SOURCE_REQUIRED";
-  static final String CLIENT_COMMAND_SIGNING_UNAVAILABLE = "CLIENT_COMMAND_SIGNING_UNAVAILABLE";
   static final String WORKER_RESPONSE_SIGNING_UNAVAILABLE = "WORKER_RESPONSE_SIGNING_UNAVAILABLE";
+  static final String CLIENT_COMMAND_SIGNING_UNAVAILABLE = "CLIENT_COMMAND_SIGNING_UNAVAILABLE";
   static final String PROTECTED_RUNTIME_CAPABILITY_MISSING = "PROTECTED_RUNTIME_CAPABILITY_MISSING";
 
-  private final TaktPropertiesHelper taktPropertiesHelper;
+  private final boolean anchored;
   private final SecurityParticipantDescriptor participantDescriptor;
-  private final Supplier<ClientNamespaceSecurityPolicyStore> policyStoreSupplier;
-  private final Supplier<SigningIdentity> signingIdentitySupplier;
-  private final BooleanSupplier signingIdentityRestartStableSupplier;
   private final BooleanSupplier signingReadySupplier;
-  private final Supplier<String> platformPublicKeySupplier;
   private final Clock clock;
-  private final long startedAtMs;
 
   ClientProtectedDataPlaneParticipationGuard(
-      TaktPropertiesHelper taktPropertiesHelper,
+      boolean anchored,
       SecurityParticipantDescriptor participantDescriptor,
-      Supplier<ClientNamespaceSecurityPolicyStore> policyStoreSupplier,
-      Supplier<SigningIdentity> signingIdentitySupplier,
       BooleanSupplier signingReadySupplier,
-      Supplier<String> platformPublicKeySupplier,
       Clock clock) {
-    this(
-        taktPropertiesHelper,
-        participantDescriptor,
-        policyStoreSupplier,
-        signingIdentitySupplier,
-        () -> true,
-        signingReadySupplier,
-        platformPublicKeySupplier,
-        clock);
-  }
-
-  ClientProtectedDataPlaneParticipationGuard(
-      TaktPropertiesHelper taktPropertiesHelper,
-      SecurityParticipantDescriptor participantDescriptor,
-      Supplier<ClientNamespaceSecurityPolicyStore> policyStoreSupplier,
-      Supplier<SigningIdentity> signingIdentitySupplier,
-      BooleanSupplier signingIdentityRestartStableSupplier,
-      BooleanSupplier signingReadySupplier,
-      Supplier<String> platformPublicKeySupplier,
-      Clock clock) {
-    this.taktPropertiesHelper = taktPropertiesHelper;
-    this.participantDescriptor =
-        SecurityParticipantDescriptorSupport.requireValid(participantDescriptor);
-    this.policyStoreSupplier = policyStoreSupplier;
-    this.signingIdentitySupplier = signingIdentitySupplier;
-    this.signingIdentityRestartStableSupplier = signingIdentityRestartStableSupplier;
+    this.anchored = anchored;
+    this.participantDescriptor = participantDescriptor;
     this.signingReadySupplier = signingReadySupplier;
-    this.platformPublicKeySupplier = platformPublicKeySupplier;
     this.clock = clock;
-    this.startedAtMs = clock.millis();
   }
 
   Decision evaluate(
       ProtectedClientDataPlaneOperation operation, @Nullable String explicitAuthorizationToken) {
-    ClientNamespaceSecurityPolicyStore policyStore = policyStoreSupplier.get();
-    if (policyStore == null) {
+    if (!participantDescriptor
+        .capabilities()
+        .contains(ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT)) {
+      return Decision.blocked(
+          PROTECTED_RUNTIME_CAPABILITY_MISSING,
+          "Participant descriptor "
+              + participantDescriptor.participantId()
+              + " does not declare PROTECTED_RUNTIME_PARTICIPANT and therefore cannot perform"
+              + " protected runtime operation "
+              + operation.name());
+    }
+    if (!anchored) {
       return Decision.permit();
     }
-
-    NamespaceSecurityPolicyDTO authoritativePolicy = policyStore.getAuthoritativePolicy();
-    if (authoritativePolicy == null) {
+    // Anchored mode: permit only once signing key is published (transient window).
+    if (signingReadySupplier.getAsBoolean()) {
       return Decision.permit();
     }
-
-    ParticipantStatusDTO status =
-        evaluateCurrentStatus(authoritativePolicy, operation, explicitAuthorizationToken);
-    if (ParticipantStatusSupport.allowsProtectedDataPlaneParticipation(
-        status,
-        authoritativePolicy.getPolicyVersion(),
-        authoritativePolicy.getPolicyHash(),
-        clock.millis())) {
-      return Decision.permit();
-    }
-
-    PolicyMismatchReasonDTO firstMismatch =
-        status.getMismatchReasons() == null || status.getMismatchReasons().isEmpty()
-            ? null
-            : status.getMismatchReasons().getFirst();
+    String code =
+        switch (operation) {
+          case START_COMMAND, CLIENT_COMMAND -> CLIENT_COMMAND_SIGNING_UNAVAILABLE;
+          default -> WORKER_RESPONSE_SIGNING_UNAVAILABLE;
+        };
     return Decision.blocked(
-        firstMismatch != null && !isBlank(firstMismatch.getCode())
-            ? firstMismatch.getCode()
-            : POLICY_NOT_READY_HINT,
-        firstMismatch != null && !isBlank(firstMismatch.getMessage())
-            ? firstMismatch.getMessage()
-            : "Protected data-plane participation is blocked because the client is not READY"
-                + " for the authoritative namespace security policy");
+        code, "Anchored mode active but client signing key is not yet published");
   }
 
   void check(
@@ -134,142 +79,13 @@ final class ClientProtectedDataPlaneParticipationGuard {
     }
   }
 
-  ParticipantStatusDTO evaluateCurrentStatus(
-      NamespaceSecurityPolicyDTO policy,
-      ProtectedClientDataPlaneOperation operation,
-      @Nullable String explicitAuthorizationToken) {
-    long nowMs = clock.millis();
-    List<PolicyMismatchReasonDTO> mismatchReasons = new ArrayList<>();
-    ParticipantEffectiveState effectiveState = ParticipantEffectiveState.READY;
-    boolean readyForDataPlane = true;
+  public record Decision(boolean permitted, String reasonHint, String reasonText) {
 
-    if (!participantDescriptor
-        .capabilities()
-        .contains(ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT)) {
-      effectiveState = ParticipantEffectiveState.MISMATCH;
-      readyForDataPlane = false;
-      mismatchReasons.add(
-          mismatchReason(
-              PROTECTED_RUNTIME_CAPABILITY_MISSING,
-              "Participant descriptor "
-                  + participantDescriptor.participantId()
-                  + " does not declare PROTECTED_RUNTIME_PARTICIPANT and therefore cannot"
-                  + " perform protected runtime operation "
-                  + operation.name()));
-    }
-
-    if (policy.getMode() == SecurityMode.ANCHORED) {
-      if (!signingIdentityRestartStableSupplier.getAsBoolean()) {
-        effectiveState = ParticipantEffectiveState.MISMATCH;
-        readyForDataPlane = false;
-        mismatchReasons.add(
-            mismatchReason(
-                STABLE_SIGNING_SOURCE_REQUIRED,
-                "Namespace requires anchored trust but the client is not configured with a"
-                    + " restart-stable signing identity source"));
-      }
-
-      if (isBlank(platformPublicKeySupplier.get())) {
-        effectiveState = ParticipantEffectiveState.MISMATCH;
-        readyForDataPlane = false;
-        mismatchReasons.add(
-            mismatchReason(
-                TRUST_ANCHOR_MISSING,
-                "Namespace requires anchored trust but no platform public key is configured"));
-      }
-
-      boolean signingReady = hasSigningReadyCapability();
-
-      switch (operation) {
-        case START_COMMAND, CLIENT_COMMAND -> {
-          if (!signingReady) {
-            effectiveState = ParticipantEffectiveState.MISMATCH;
-            readyForDataPlane = false;
-            mismatchReasons.add(
-                mismatchReason(
-                    CLIENT_COMMAND_SIGNING_UNAVAILABLE,
-                    "Namespace requires protected client commands but no publishable client signing"
-                        + " identity is ready"));
-          }
-        }
-        case EXTERNAL_TASK_RESPONSE, EXTERNAL_TASK_CONSUME -> {
-          if (!signingReady) {
-            effectiveState = ParticipantEffectiveState.MISMATCH;
-            readyForDataPlane = false;
-            mismatchReasons.add(
-                mismatchReason(
-                    WORKER_RESPONSE_SIGNING_UNAVAILABLE,
-                    "Namespace requires protected worker responses but no publishable worker signing"
-                        + " identity is ready"));
-          }
-        }
-        case USER_TASK_RESPONSE, USER_TASK_CONSUME -> {
-          if (!signingReady) {
-            effectiveState = ParticipantEffectiveState.MISMATCH;
-            readyForDataPlane = false;
-            mismatchReasons.add(
-                mismatchReason(
-                    WORKER_RESPONSE_SIGNING_UNAVAILABLE,
-                    "Namespace requires protected worker responses but no publishable worker signing"
-                        + " identity is ready"));
-          }
-        }
-        case MESSAGE_EVENT, SIGNAL_EVENT -> {
-          // Anchored trust posture is the only local precondition for ingress event paths here.
-        }
-      }
-    }
-
-    return ParticipantStatusDTO.builder()
-        .participantId(participantDescriptor.participantId())
-        .participantInstanceId(participantInstanceId())
-        .participantKind(participantDescriptor.kind())
-        .componentType(participantDescriptor.componentType())
-        .capabilities(participantDescriptor.capabilities())
-        .supportedModes(
-            ParticipantStatusSupport.supportedModesForCapabilities(
-                participantDescriptor.capabilities()))
-        .namespace(taktPropertiesHelper.getNamespace())
-        .startedAt(startedAtMs)
-        .lastSeenAt(nowMs)
-        .statusExpiresAt(nowMs + 30_000L)
-        .statusVerificationLevel(StatusVerificationLevel.LOCALLY_VERIFIED_STATUS)
-        .effectiveState(effectiveState)
-        .readyForDataPlane(readyForDataPlane)
-        .observedPolicyVersion(policy.getPolicyVersion())
-        .observedPolicyHash(policy.getPolicyHash())
-        .mismatchReasons(List.copyOf(mismatchReasons))
-        .build();
-  }
-
-  private boolean hasSigningReadyCapability() {
-    SigningIdentity identity = signingIdentitySupplier.get();
-    return identity != null && signingReadySupplier.getAsBoolean();
-  }
-
-  private String participantId() {
-    return participantDescriptor.participantId();
-  }
-
-  private String participantInstanceId() {
-    return participantId() + "#" + ProcessHandle.current().pid();
-  }
-
-  private static PolicyMismatchReasonDTO mismatchReason(String code, String message) {
-    return PolicyMismatchReasonDTO.builder().code(code).message(message).build();
-  }
-
-  private static boolean isBlank(@Nullable String value) {
-    return value == null || value.isBlank();
-  }
-
-  record Decision(boolean permitted, @Nullable String reasonHint, @Nullable String reasonText) {
-
-    static Decision permit() {
+    public static Decision permit() {
       return new Decision(true, null, null);
     }
 
-    static Decision blocked(String reasonHint, String reasonText) {
+    public static Decision blocked(String reasonHint, String reasonText) {
       return new Decision(false, reasonHint, reasonText);
     }
   }

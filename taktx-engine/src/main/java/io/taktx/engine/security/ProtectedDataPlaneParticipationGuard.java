@@ -7,70 +7,38 @@
  */
 package io.taktx.engine.security;
 
-import io.taktx.dto.NamespaceSecurityPolicyDTO;
-import io.taktx.dto.ParticipantStatusDTO;
-import io.taktx.dto.PolicyMismatchReasonDTO;
-import io.taktx.engine.config.NamespaceSecurityPolicyStore;
-import io.taktx.security.ParticipantStatusSupport;
-import java.time.Clock;
-
 /**
  * Decides whether the local engine may participate in protected data-plane processing.
  *
- * <p>Control-plane traffic remains available, but protected runtime work must fail closed unless
- * there is either no explicit authoritative policy (default community-open) or the engine is READY
- * for that authoritative policy identity.
+ * <p>In OPEN mode: always permitted. In ANCHORED mode: permitted once the engine's own signing key
+ * has been published to {@code taktx-signing-keys} (transient window only — fail-fast startup
+ * guarantees the identity material exists before any processing begins).
  */
 public class ProtectedDataPlaneParticipationGuard {
 
-  public static final String POLICY_NOT_ACTIVE_HINT = "POLICY_NOT_ACTIVE";
-  public static final String POLICY_NOT_READY_HINT = "SECURITY_POLICY_NOT_READY";
+  public static final String ENGINE_SIGNING_UNAVAILABLE =
+      EngineSecurityReadinessEvaluator.ENGINE_SIGNING_UNAVAILABLE;
 
-  private final NamespaceSecurityPolicyStore namespaceSecurityPolicyStore;
-  private final EngineSecurityReadinessEvaluator readinessEvaluator;
-  private final Clock clock;
+  private final boolean anchored;
+  private final MessageSigningService messageSigningService;
 
   public ProtectedDataPlaneParticipationGuard(
-      NamespaceSecurityPolicyStore namespaceSecurityPolicyStore,
-      EngineSecurityReadinessEvaluator readinessEvaluator,
-      Clock clock) {
-    this.namespaceSecurityPolicyStore = namespaceSecurityPolicyStore;
-    this.readinessEvaluator = readinessEvaluator;
-    this.clock = clock;
+      boolean anchored, MessageSigningService messageSigningService) {
+    this.anchored = anchored;
+    this.messageSigningService = messageSigningService;
   }
 
   public Decision evaluate() {
-    NamespaceSecurityPolicyDTO authoritativePolicy =
-        namespaceSecurityPolicyStore.getAuthoritativePolicy();
-
-    if (authoritativePolicy == null) {
+    if (!anchored) {
       return Decision.permit();
     }
-
-    ParticipantStatusDTO status = readinessEvaluator.evaluateCurrentStatus();
-    if (ParticipantStatusSupport.allowsProtectedDataPlaneParticipation(
-        status,
-        authoritativePolicy.getPolicyVersion(),
-        authoritativePolicy.getPolicyHash(),
-        clock.millis())) {
+    if (messageSigningService.isPublicKeyPublished()) {
       return Decision.permit();
     }
-
-    PolicyMismatchReasonDTO firstMismatch =
-        status.getMismatchReasons() == null || status.getMismatchReasons().isEmpty()
-            ? null
-            : status.getMismatchReasons().getFirst();
     return Decision.blocked(
-        firstMismatch != null
-                && firstMismatch.getCode() != null
-                && !firstMismatch.getCode().isBlank()
-            ? firstMismatch.getCode()
-            : POLICY_NOT_READY_HINT,
-        firstMismatch != null
-                && firstMismatch.getMessage() != null
-                && !firstMismatch.getMessage().isBlank()
-            ? firstMismatch.getMessage()
-            : "Protected data-plane participation is blocked because the engine is not READY for the authoritative namespace security policy");
+        ENGINE_SIGNING_UNAVAILABLE,
+        "Protected data-plane participation is blocked: anchored mode active but engine signing"
+            + " key has not been published yet");
   }
 
   public record Decision(boolean permitted, String reasonHint, String reasonText) {

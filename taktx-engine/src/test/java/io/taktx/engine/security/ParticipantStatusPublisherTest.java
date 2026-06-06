@@ -14,7 +14,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import io.taktx.dto.NamespaceSecurityPolicyDTO;
 import io.taktx.dto.ParticipantCapability;
 import io.taktx.dto.ParticipantEffectiveState;
 import io.taktx.dto.ParticipantKind;
@@ -22,11 +21,8 @@ import io.taktx.dto.ParticipantStatusDTO;
 import io.taktx.dto.PolicyMismatchReasonDTO;
 import io.taktx.dto.SecurityEventDTO;
 import io.taktx.dto.SecurityEventType;
-import io.taktx.dto.SecurityMode;
 import io.taktx.dto.StatusVerificationLevel;
-import io.taktx.engine.config.NamespaceSecurityPolicyStore;
 import io.taktx.engine.config.TaktConfiguration;
-import io.taktx.security.NamespaceSecurityPolicySupport;
 import io.taktx.serdes.ParticipantStatusProtoMapper;
 import java.util.Set;
 import org.apache.kafka.clients.producer.KafkaProducer;
@@ -44,7 +40,6 @@ class ParticipantStatusPublisherTest {
       Set.of(ParticipantCapability.ENFORCER, ParticipantCapability.SECURITY_OBSERVER);
 
   private TaktConfiguration configuration;
-  private NamespaceSecurityPolicyStore namespaceSecurityPolicyStore;
   private EngineSecurityReadinessEvaluator readinessEvaluator;
   private SecurityEventPublisher securityEventPublisher;
   private KafkaProducer<String, byte[]> producer;
@@ -55,7 +50,6 @@ class ParticipantStatusPublisherTest {
     configuration = Mockito.mock(TaktConfiguration.class);
     when(configuration.getPrefixed("taktx-participant-status"))
         .thenReturn("tenant.bank.payments.taktx-participant-status");
-    namespaceSecurityPolicyStore = new NamespaceSecurityPolicyStore();
     readinessEvaluator = Mockito.mock(EngineSecurityReadinessEvaluator.class);
     securityEventPublisher = Mockito.mock(SecurityEventPublisher.class);
     producer = mock(KafkaProducer.class);
@@ -94,7 +88,6 @@ class ParticipantStatusPublisherTest {
     ParticipantStatusPublisher publisher =
         new ParticipantStatusPublisher(
             configuration,
-            namespaceSecurityPolicyStore,
             readinessEvaluator,
             securityEventPublisher,
             producer);
@@ -111,7 +104,6 @@ class ParticipantStatusPublisherTest {
     ParticipantStatusPublisher publisher =
         new ParticipantStatusPublisher(
             configuration,
-            namespaceSecurityPolicyStore,
             readinessEvaluator,
             securityEventPublisher,
             producer);
@@ -123,20 +115,10 @@ class ParticipantStatusPublisherTest {
 
   @Test
   void publishCurrentStatus_emitsDataPlaneBlockedEventForBlockedAnchoredPolicy() {
-    NamespaceSecurityPolicyDTO requested =
-        NamespaceSecurityPolicySupport.requireValid(
-            NamespaceSecurityPolicyDTO.builder()
-                .mode(SecurityMode.ANCHORED)
-                .policyVersion(42L)
-                .build());
-    namespaceSecurityPolicyStore.update(requested);
-
     ParticipantStatusDTO status =
         readyEngineStatus().toBuilder()
             .effectiveState(ParticipantEffectiveState.MISMATCH)
             .readyForDataPlane(false)
-            .observedPolicyVersion(42L)
-            .observedPolicyHash(requested.getPolicyHash())
             .mismatchReasons(
                 java.util.List.of(
                     PolicyMismatchReasonDTO.builder()
@@ -149,7 +131,6 @@ class ParticipantStatusPublisherTest {
     ParticipantStatusPublisher publisher =
         new ParticipantStatusPublisher(
             configuration,
-            namespaceSecurityPolicyStore,
             readinessEvaluator,
             securityEventPublisher,
             producer);
@@ -161,7 +142,6 @@ class ParticipantStatusPublisherTest {
     assertThat(eventCaptor.getValue().getEventType())
         .isEqualTo(SecurityEventType.DATA_PLANE_BLOCKED);
     assertThat(eventCaptor.getValue().getCode()).isEqualTo("TRUST_ANCHOR_MISSING");
-    assertThat(eventCaptor.getValue().getDesiredPolicyVersion()).isEqualTo(42L);
   }
 
   @Test
@@ -170,8 +150,6 @@ class ParticipantStatusPublisherTest {
         readyEngineStatus().toBuilder()
             .effectiveState(ParticipantEffectiveState.MISMATCH)
             .readyForDataPlane(false)
-            .observedPolicyVersion(41L)
-            .observedPolicyHash("abc123")
             .mismatchReasons(
                 java.util.List.of(
                     PolicyMismatchReasonDTO.builder()
@@ -191,7 +169,6 @@ class ParticipantStatusPublisherTest {
     ParticipantStatusPublisher publisher =
         new ParticipantStatusPublisher(
             configuration,
-            namespaceSecurityPolicyStore,
             readinessEvaluator,
             securityEventPublisher,
             producer);

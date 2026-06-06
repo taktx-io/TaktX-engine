@@ -15,7 +15,8 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 
-/** Authoritative namespace-level security policy contract. */
+
+/** Namespace-level security mode — resolved once at startup, published for Console observability. */
 @Getter
 @Setter
 @NoArgsConstructor
@@ -25,6 +26,4 @@ import lombok.ToString;
 @ToString
 public class NamespaceSecurityPolicyDTO {
   private SecurityMode mode;
-  private Long policyVersion;
-  private String policyHash;
 }

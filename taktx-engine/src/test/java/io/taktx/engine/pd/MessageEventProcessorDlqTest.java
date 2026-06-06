@@ -23,19 +23,14 @@ import io.taktx.dto.DefinitionMessageEventTriggerDTO;
 import io.taktx.dto.DefinitionMessageSubscriptionDTO;
 import io.taktx.dto.MessageEventDlqEntryDTO;
 import io.taktx.dto.MessageEventKeyDTO;
-import io.taktx.dto.NamespaceSecurityPolicyDTO;
 import io.taktx.dto.ProcessDefinitionKey;
-import io.taktx.dto.SecurityMode;
 import io.taktx.dto.VariablesDTO;
-import io.taktx.engine.config.NamespaceSecurityPolicyStore;
 import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.pi.ProcessingStatistics;
 import io.taktx.engine.security.EngineAuthorizationService;
-import io.taktx.engine.security.EngineSecurityReadinessEvaluator;
 import io.taktx.engine.security.MessageSigningService;
 import io.taktx.engine.security.ProtectedDataPlaneParticipationGuard;
 import io.taktx.security.AuthorizationTokenException;
-import io.taktx.security.NamespaceSecurityPolicySupport;
 import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
@@ -172,8 +167,8 @@ class MessageEventProcessorDlqTest {
   }
 
   @Test
-  void process_messageTriggerUnderAnchoredPolicyWithoutTrustAnchor_emitsDlq() {
-    MessageEventProcessor guardedProcessor = guardedProcessorWithPolicy(anchoredPolicy(42L));
+  void process_messageTriggerWithUnpublishedSigningKey_emitsDlq() {
+    MessageEventProcessor guardedProcessor = guardedProcessorWithUnpublishedKey();
     MessageEventKeyDTO key = new MessageEventKeyDTO("pay");
     DefinitionMessageEventTriggerDTO trigger =
         new DefinitionMessageEventTriggerDTO("pay", VariablesDTO.empty());
@@ -184,14 +179,12 @@ class MessageEventProcessorDlqTest {
     verify(context).forward(captor.capture());
     MessageEventDlqEntryDTO dlqEntry = (MessageEventDlqEntryDTO) captor.getValue().value();
     assertThat(new String(dlqEntry.getHeaders().get(REASON_HINT), StandardCharsets.UTF_8))
-        .isEqualTo("TRUST_ANCHOR_MISSING");
-    assertThat(new String(dlqEntry.getHeaders().get(REASON_TEXT), StandardCharsets.UTF_8))
-        .contains("platform public key");
+        .isEqualTo(ProtectedDataPlaneParticipationGuard.ENGINE_SIGNING_UNAVAILABLE);
   }
 
   @Test
-  void process_subscriptionMutationUnderAnchoredPolicy_remainsAllowed() {
-    MessageEventProcessor guardedProcessor = guardedProcessorWithPolicy(anchoredPolicy(42L));
+  void process_subscriptionMutationWithUnpublishedKey_remainsAllowed() {
+    MessageEventProcessor guardedProcessor = guardedProcessorWithUnpublishedKey();
     MessageEventKeyDTO key = new MessageEventKeyDTO("pay");
     DefinitionMessageSubscriptionDTO subscription =
         new DefinitionMessageSubscriptionDTO(new ProcessDefinitionKey("proc", 1), "start", "pay");
@@ -229,24 +222,17 @@ class MessageEventProcessorDlqTest {
         .isEqualTo("AUTHORIZATION");
   }
 
-  private MessageEventProcessor guardedProcessorWithPolicy(
-      NamespaceSecurityPolicyDTO authoritativePolicy) {
-    NamespaceSecurityPolicyStore policyStore = new NamespaceSecurityPolicyStore();
-    policyStore.update(authoritativePolicy);
+  private MessageEventProcessor guardedProcessorWithUnpublishedKey() {
     MessageSigningService messageSigningService = mock(MessageSigningService.class);
-    when(messageSigningService.getKeyId()).thenReturn("engine-key-1");
-    when(messageSigningService.isPublicKeyPublished()).thenReturn(true);
+    when(messageSigningService.getKeyId()).thenReturn(null);
+    when(messageSigningService.isPublicKeyPublished()).thenReturn(false);
 
     MessageEventProcessor guardedProcessor =
         new MessageEventProcessor(
             taktConfiguration,
             clock,
             processingStatistics,
-            new ProtectedDataPlaneParticipationGuard(
-                policyStore,
-                new EngineSecurityReadinessEvaluator(
-                    taktConfiguration, policyStore, messageSigningService, clock),
-                clock),
+            new ProtectedDataPlaneParticipationGuard(true, messageSigningService),
             null);
     guardedProcessor.init(context);
     return guardedProcessor;
@@ -254,13 +240,5 @@ class MessageEventProcessorDlqTest {
 
   private static MessageEventIngressEnvelope envelope(io.taktx.dto.MessageEventDTO value) {
     return new MessageEventIngressEnvelope(new byte[0], value, false, null, null);
-  }
-
-  private static NamespaceSecurityPolicyDTO anchoredPolicy(long version) {
-    return NamespaceSecurityPolicySupport.requireValid(
-        NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.ANCHORED)
-            .policyVersion(version)
-            .build());
   }
 }

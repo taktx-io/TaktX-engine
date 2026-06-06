@@ -9,13 +9,11 @@ package io.taktx.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import io.taktx.dto.NamespaceSecurityPolicyDTO;
 import io.taktx.dto.ParticipantCapability;
 import io.taktx.dto.ParticipantEffectiveState;
 import io.taktx.dto.ParticipantKind;
 import io.taktx.dto.ParticipantStatusDTO;
 import io.taktx.dto.PolicyMismatchReasonDTO;
-import io.taktx.dto.SecurityMode;
 import io.taktx.dto.SecurityPostureIssueCodes;
 import io.taktx.dto.StatusVerificationLevel;
 import java.util.List;
@@ -99,8 +97,6 @@ class SimplifiedSecurityPostureSnapshotBlockingIssuesTest {
     SimplifiedSecurityPostureSnapshot simplified =
         SimplifiedSecurityPostureSnapshot.from(
             SecurityPostureSnapshot.from(
-                new ObservedPolicySnapshot(
-                    policy(9L, SecurityMode.ANCHORED), policy(9L, SecurityMode.ANCHORED)),
                 Map.of(blockedWorker.getParticipantInstanceId(), blockedWorker),
                 List.of()));
 
@@ -110,8 +106,6 @@ class SimplifiedSecurityPostureSnapshotBlockingIssuesTest {
   private static SimplifiedSecurityPostureSnapshot simplifiedOpen(ParticipantStatusDTO status) {
     return SimplifiedSecurityPostureSnapshot.from(
         SecurityPostureSnapshot.from(
-            new ObservedPolicySnapshot(
-                policy(3L, SecurityMode.OPEN), policy(3L, SecurityMode.OPEN)),
             Map.of(status.getParticipantInstanceId(), status),
             List.of()));
   }
@@ -139,14 +133,6 @@ class SimplifiedSecurityPostureSnapshotBlockingIssuesTest {
         .code(code)
         .message(message)
         .metadata(Map.of("severity", severity))
-        .build();
-  }
-
-  private static NamespaceSecurityPolicyDTO policy(long version, SecurityMode mode) {
-    return NamespaceSecurityPolicyDTO.builder()
-        .mode(mode)
-        .policyVersion(version)
-        .policyHash("hash-" + version)
         .build();
   }
 

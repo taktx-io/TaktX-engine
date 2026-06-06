@@ -112,9 +112,6 @@ public class TaktConfiguration {
   @ConfigProperty(name = "taktx.engine.key-registration-signature")
   Optional<String> engineKeyRegistrationSignature;
 
-  @ConfigProperty(name = "taktx.security.production-mode", defaultValue = "false")
-  String securityProductionMode;
-
   public boolean inTestMode() {
     return Boolean.parseBoolean(isTest);
   }
@@ -171,8 +168,12 @@ public class TaktConfiguration {
     return normalized(engineKeyRegistrationSignature);
   }
 
-  public boolean isSecurityProductionMode() {
-    return Boolean.parseBoolean(securityProductionMode);
+  /**
+   * Returns {@code true} when this engine is configured for anchored mode, i.e. the platform
+   * public key is set. Anchored mode is resolved once at startup and never changes at runtime.
+   */
+  public boolean isAnchored() {
+    return getPlatformPublicKey() != null && !getPlatformPublicKey().isBlank();
   }
 
   private static String normalized(Optional<String> value) {

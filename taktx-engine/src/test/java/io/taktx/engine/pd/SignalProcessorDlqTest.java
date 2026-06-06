@@ -18,22 +18,17 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import io.taktx.dto.NamespaceSecurityPolicyDTO;
 import io.taktx.dto.NewDefinitionSignalSubscriptionDTO;
 import io.taktx.dto.ProcessDefinitionKey;
-import io.taktx.dto.SecurityMode;
 import io.taktx.dto.SignalDTO;
 import io.taktx.dto.SignalDlqEntryDTO;
-import io.taktx.engine.config.NamespaceSecurityPolicyStore;
 import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.generic.SignalDefinitionSubscriptionKeyDTO;
 import io.taktx.engine.generic.SignalInstanceSubscriptionKeyDTO;
 import io.taktx.engine.security.EngineAuthorizationService;
-import io.taktx.engine.security.EngineSecurityReadinessEvaluator;
 import io.taktx.engine.security.MessageSigningService;
 import io.taktx.engine.security.ProtectedDataPlaneParticipationGuard;
 import io.taktx.security.AuthorizationTokenException;
-import io.taktx.security.NamespaceSecurityPolicySupport;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Instant;
@@ -148,8 +143,8 @@ class SignalProcessorDlqTest {
   }
 
   @Test
-  void process_signalTriggerUnderAnchoredPolicyWithoutTrustAnchor_emitsDlq() {
-    SignalProcessor guardedProcessor = guardedProcessorWithPolicy(anchoredPolicy(42L));
+  void process_signalTriggerWithUnpublishedSigningKey_emitsDlq() {
+    SignalProcessor guardedProcessor = guardedProcessorWithUnpublishedKey();
     SignalDTO signal = new SignalDTO("order-placed");
 
     guardedProcessor.process(
@@ -159,14 +154,12 @@ class SignalProcessorDlqTest {
     verify(context).forward(captor.capture());
     SignalDlqEntryDTO dlqEntry = (SignalDlqEntryDTO) captor.getValue().value();
     assertThat(new String(dlqEntry.getHeaders().get(REASON_HINT), StandardCharsets.UTF_8))
-        .isEqualTo("TRUST_ANCHOR_MISSING");
-    assertThat(new String(dlqEntry.getHeaders().get(REASON_TEXT), StandardCharsets.UTF_8))
-        .contains("platform public key");
+        .isEqualTo(ProtectedDataPlaneParticipationGuard.ENGINE_SIGNING_UNAVAILABLE);
   }
 
   @Test
-  void process_subscriptionMutationUnderAnchoredPolicy_remainsAllowed() {
-    SignalProcessor guardedProcessor = guardedProcessorWithPolicy(anchoredPolicy(42L));
+  void process_subscriptionMutationWithUnpublishedKey_remainsAllowed() {
+    SignalProcessor guardedProcessor = guardedProcessorWithUnpublishedKey();
     NewDefinitionSignalSubscriptionDTO subscription =
         new NewDefinitionSignalSubscriptionDTO(
             new ProcessDefinitionKey("proc", 1), "start", "order-placed");
@@ -202,23 +195,16 @@ class SignalProcessorDlqTest {
         .isEqualTo("AUTHORIZATION");
   }
 
-  private SignalProcessor guardedProcessorWithPolicy(
-      NamespaceSecurityPolicyDTO authoritativePolicy) {
-    NamespaceSecurityPolicyStore policyStore = new NamespaceSecurityPolicyStore();
-    policyStore.update(authoritativePolicy);
+  private SignalProcessor guardedProcessorWithUnpublishedKey() {
     MessageSigningService messageSigningService = mock(MessageSigningService.class);
-    when(messageSigningService.getKeyId()).thenReturn("engine-key-1");
-    when(messageSigningService.isPublicKeyPublished()).thenReturn(true);
+    when(messageSigningService.getKeyId()).thenReturn(null);
+    when(messageSigningService.isPublicKeyPublished()).thenReturn(false);
 
     SignalProcessor guardedProcessor =
         new SignalProcessor(
             taktConfiguration,
             clock,
-            new ProtectedDataPlaneParticipationGuard(
-                policyStore,
-                new EngineSecurityReadinessEvaluator(
-                    taktConfiguration, policyStore, messageSigningService, clock),
-                clock),
+            new ProtectedDataPlaneParticipationGuard(true, messageSigningService),
             null);
     guardedProcessor.init(context);
     return guardedProcessor;
@@ -226,13 +212,5 @@ class SignalProcessorDlqTest {
 
   private static SignalIngressEnvelope envelope(SignalDTO value) {
     return new SignalIngressEnvelope(new byte[0], value, false, null, null);
-  }
-
-  private static NamespaceSecurityPolicyDTO anchoredPolicy(long version) {
-    return NamespaceSecurityPolicySupport.requireValid(
-        NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.ANCHORED)
-            .policyVersion(version)
-            .build());
   }
 }

@@ -36,22 +36,17 @@ import io.taktx.dto.ProcessInstanceTriggerDTO;
 import io.taktx.dto.SecurityEventDTO;
 import io.taktx.dto.SecurityEventSeverity;
 import io.taktx.dto.SecurityEventType;
-import io.taktx.dto.SecurityMode;
 import io.taktx.dto.SecurityParticipantDescriptor;
 import io.taktx.dto.SecurityPostureIssueCodes;
 import io.taktx.dto.SignalDTO;
 import io.taktx.dto.SigningKeyDTO;
 import io.taktx.dto.UserTaskTriggerDTO;
 import io.taktx.dto.VariablesDTO;
-import io.taktx.security.AuthoritativeControlPlaneSecurityProperty;
 import io.taktx.security.Ed25519Service;
 import io.taktx.security.EnvironmentWorkerSigningIdentitySource;
 import io.taktx.security.FileSigningIdentitySource;
 import io.taktx.security.GeneratedSigningIdentitySource;
 import io.taktx.security.LocalPersistentSigningIdentitySource;
-import io.taktx.security.NamespaceSecurityPolicyActivationAuthority;
-import io.taktx.security.NamespaceSecurityPolicyActivationAuthorityContract;
-import io.taktx.security.NamespaceSecurityPolicyControlPlaneContract;
 import io.taktx.security.NamespaceSecurityPolicySupport;
 import io.taktx.security.RuntimeConfigurationHolder;
 import io.taktx.security.SecurityParticipantDescriptorSupport;
@@ -99,8 +94,6 @@ import org.slf4j.Logger;
  */
 public class TaktXClient {
 
-  public static final String NAMESPACE_SECURITY_POLICY_RECORD_KEY =
-      NamespaceSecurityPolicyControlPlaneContract.POLICY_RECORD_KEY;
   private static final int DEFAULT_SECURITY_EVENT_HISTORY_SIZE = 256;
 
   private static final Logger log = org.slf4j.LoggerFactory.getLogger(TaktXClient.class);
@@ -121,6 +114,7 @@ public class TaktXClient {
   private final ExternalTaskTopicRequester externalTaskTopicRequester;
   private final ResultProcessorFactory resultProcessorFactory;
   private final TaktPropertiesHelper taktPropertiesHelper;
+  private final boolean anchored;
   private final SigningIdentitySource signingIdentitySource;
   private final @Nullable AuthorizationTokenProvider authorizationTokenProvider;
   private final SecurityParticipantDescriptor participantDescriptor;
@@ -152,18 +146,14 @@ public class TaktXClient {
 
   private SigningKeysStore signingKeysStore;
   private RuntimeConfigurationStore runtimeConfigurationStore;
-  private ClientNamespaceSecurityPolicyStore namespaceSecurityPolicyStore;
-  private NamespaceSecurityPolicyTopicStore namespaceSecurityPolicyTopicStore;
   private ClientParticipantStatusStore participantStatusStore;
   private ParticipantStatusTopicStore participantStatusTopicStore;
   private ClientSecurityEventStore securityEventStore;
   private SecurityEventTopicStore securityEventTopicStore;
-  private SecurityClient securityClient;
   private RuntimeClient runtimeClient;
   private WorkersClient workersClient;
   private DlqClient dlqClient;
   private SecurityObservabilityClient securityObservabilityClient;
-  private volatile AuthoritativePolicyMutationAvailability authoritativePolicyMutationAvailability;
   private final CopyOnWriteArrayList<NamespaceSecurityPolicyConsumer>
       namespaceSecurityPolicyConsumers = new CopyOnWriteArrayList<>();
   private final CopyOnWriteArrayList<ParticipantStatusConsumer> participantStatusConsumers =
@@ -191,6 +181,7 @@ public class TaktXClient {
     Executor executor = Executors.newVirtualThreadPerTaskExecutor();
 
     this.taktPropertiesHelper = taktPropertiesHelper;
+    this.anchored = resolvePlatformPublicKey(taktPropertiesHelper.getTaktProperties()) != null;
     this.participantDescriptor = participantDescriptor;
     this.signingIdentitySource = signingIdentitySource;
     this.authorizationTokenProvider = authorizationTokenProvider;
@@ -222,19 +213,15 @@ public class TaktXClient {
         new UserTaskTriggerTopicConsumer(taktPropertiesHelper, executor, processInstanceResponder);
     this.protectedDataPlaneParticipationGuard =
         new ClientProtectedDataPlaneParticipationGuard(
-            taktPropertiesHelper,
+            anchored,
             participantDescriptor,
-            () -> namespaceSecurityPolicyStore,
-            this::currentSigningIdentity,
-            () -> signingIdentitySource != null && signingIdentitySource.isRestartStable(),
             this::hasPublishedSigningCapability,
-            this::resolvePlatformPublicKey,
             Clock.systemUTC());
     this.participantStatusPublisher =
         new ClientParticipantStatusPublisher(
             taktPropertiesHelper,
             participantDescriptor,
-            this::currentObservedPolicySnapshot,
+            anchored,
             this::clientSigningConfigured,
             this::clientSigningKeyPublished,
             this::clientSigningKeyCountersigned,
@@ -316,9 +303,6 @@ public class TaktXClient {
     capabilities.add(ParticipantCapability.SECURITY_OBSERVER);
 
     TaktXClientBuilder builder = new TaktXClientBuilder();
-    if (builder.resolveAuthoritativeControlPlaneSigningIdentityIfAvailable(properties) != null) {
-      capabilities.add(ParticipantCapability.AUTHORITATIVE_POLICY_PUBLISHER);
-    }
 
     // Participant ID priority:
     // 1. taktx.client.participant-id  (explicit override)
@@ -357,7 +341,10 @@ public class TaktXClient {
   public void start() {
     initRuntimeConfigurationStore();
     ensureObservabilityStoresInitialized();
-    refreshWorkerSigningFunctionRegistration();
+    if (anchored && declaresCapability(ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT)) {
+      // Register signing function once at startup — no policy-driven re-registration.
+      refreshWorkerSigningFunctionRegistration();
+    }
     initSigningKeysStore();
     this.processDefinitionConsumer.subscribeToDefinitionRecords();
     this.xmlByProcessDefinitionIdConsumer.subscribeToTopic();
@@ -383,7 +370,6 @@ public class TaktXClient {
   }
 
   private synchronized void ensureObservabilityStoresInitialized() {
-    initNamespaceSecurityPolicyStore();
     initParticipantStatusStore();
     initSecurityEventStore();
   }
@@ -406,8 +392,7 @@ public class TaktXClient {
               org.apache.kafka.common.serialization.ByteArrayDeserializer.class,
               "earliest");
       runtimeConfigurationStore =
-          new RuntimeConfigurationStore(
-              consumerProps, topic, this::refreshWorkerSigningFunctionRegistration);
+          new RuntimeConfigurationStore(consumerProps, topic, () -> {});
       runtimeConfigurationStore.awaitReady(java.time.Duration.ofSeconds(10));
       log.info(
           "✅ RuntimeConfigurationStore ready — signingEnabled={} engineRequiresAuthorization={} engineRequiresExternalTaskAuthorization={} engineRequiresUserTaskAuthorization={} replayProtectionMode={} replayProtectionRetentionMs={}",
@@ -421,61 +406,6 @@ public class TaktXClient {
       RuntimeConfigurationHolder.clear();
       log.warn(
           "RuntimeConfigurationStore initialisation failed — using default runtime config: {}",
-          e.getMessage());
-    }
-  }
-
-  private void initNamespaceSecurityPolicyStore() {
-    if (namespaceSecurityPolicyStore != null && namespaceSecurityPolicyTopicStore != null) {
-      return;
-    }
-    String bootstrapServers = taktPropertiesHelper.getBootstrapServers();
-    if (bootstrapServers == null || bootstrapServers.isBlank()) {
-      log.debug(
-          "No bootstrap.servers configured — skipping NamespaceSecurityPolicyTopicStore initialisation");
-      return;
-    }
-    String topic =
-        taktPropertiesHelper.getPrefixedTopicName(
-            io.taktx.Topics.SECURITY_POLICY_TOPIC.getTopicName());
-    try {
-      Properties consumerProps =
-          taktPropertiesHelper.getKafkaConsumerProperties(
-              "namespace-security-policy-store-" + ProcessHandle.current().pid(),
-              org.apache.kafka.common.serialization.StringDeserializer.class,
-              org.apache.kafka.common.serialization.ByteArrayDeserializer.class,
-              "earliest");
-      namespaceSecurityPolicyStore = new ClientNamespaceSecurityPolicyStore();
-      namespaceSecurityPolicyTopicStore =
-          new NamespaceSecurityPolicyTopicStore(
-              consumerProps,
-              topic,
-              namespaceSecurityPolicyStore,
-              () -> {
-                refreshWorkerSigningFunctionRegistration();
-                notifyNamespaceSecurityPolicyConsumers();
-              });
-      namespaceSecurityPolicyTopicStore.awaitReady(java.time.Duration.ofSeconds(10));
-      NamespaceSecurityPolicyDTO currentPolicy = namespaceSecurityPolicyStore.get();
-      NamespaceSecurityPolicyDTO authoritativePolicy =
-          namespaceSecurityPolicyStore.getAuthoritativePolicy();
-      log.info(
-          "✅ NamespaceSecurityPolicyTopicStore ready — currentMode={} policyVersion={} policyHash={}",
-          currentPolicy != null ? currentPolicy.getMode() : null,
-          authoritativePolicy != null ? authoritativePolicy.getPolicyVersion() : null,
-          authoritativePolicy != null ? authoritativePolicy.getPolicyHash() : null);
-    } catch (Exception e) {
-      namespaceSecurityPolicyStore = null;
-      if (namespaceSecurityPolicyTopicStore != null) {
-        try {
-          namespaceSecurityPolicyTopicStore.close();
-        } catch (Exception closeEx) {
-          log.debug("Error closing failed NamespaceSecurityPolicyTopicStore", closeEx);
-        }
-      }
-      namespaceSecurityPolicyTopicStore = null;
-      log.warn(
-          "NamespaceSecurityPolicyTopicStore initialisation failed — using default open behavior: {}",
           e.getMessage());
     }
   }
@@ -695,307 +625,6 @@ public class TaktXClient {
     }
   }
 
-  /**
-   * Publishes an authoritative namespace security policy to the compacted security-policy topic.
-   */
-  public void publishNamespaceSecurityPolicy(NamespaceSecurityPolicyDTO policy) {
-    ensureParticipantCapability(
-        ParticipantCapability.AUTHORITATIVE_POLICY_PUBLISHER,
-        "publish authoritative namespace security policy");
-    try {
-      publishNamespaceSecurityPolicy(taktPropertiesHelper.getTaktProperties(), policy);
-      authoritativePolicyMutationAvailability =
-          AuthoritativePolicyMutationAvailability.availableNow();
-    } catch (SecurityControlPlaneMutationException e) {
-      authoritativePolicyMutationAvailability =
-          AuthoritativePolicyMutationAvailability.blockedNow(
-              e.code(), e.getMessage(), e.metadata());
-      throw e;
-    }
-  }
-
-  /**
-   * Static convenience overload for publishing a namespace security policy without a running client
-   * instance.
-   */
-  public static void publishNamespaceSecurityPolicy(
-      Properties properties, NamespaceSecurityPolicyDTO policy) {
-    NamespaceSecurityPolicyDTO validated = validateNamespaceSecurityPolicy(policy);
-    SigningIdentity signingIdentity =
-        requireAuthoritativeControlPlaneSigningIdentity(
-            properties, "publish authoritative namespace security policy");
-    String topic =
-        new TaktPropertiesHelper(properties)
-            .getPrefixedTopicName(io.taktx.Topics.SECURITY_POLICY_TOPIC.getTopicName());
-
-    java.util.Properties producerProps =
-        new TaktPropertiesHelper(properties).getKafkaProducerProperties();
-    producerProps.put("max.block.ms", "10000");
-    producerProps.put("delivery.timeout.ms", "10000");
-    producerProps.put("request.timeout.ms", "8000");
-
-    try (org.apache.kafka.clients.producer.KafkaProducer<String, byte[]> producer =
-        new org.apache.kafka.clients.producer.KafkaProducer<>(
-            producerProps,
-            new org.apache.kafka.common.serialization.StringSerializer(),
-            new org.apache.kafka.common.serialization.ByteArraySerializer())) {
-      producer.send(buildNamespaceSecurityPolicyRecord(topic, validated, signingIdentity));
-      producer.flush();
-      log.info(
-          "✅ Namespace security policy published to security policy topic: topic={} policyVersion={} mode={} signerKeyId={}",
-          topic,
-          validated.getPolicyVersion(),
-          validated.getMode(),
-          signingIdentity.getKeyId());
-    } catch (SecurityControlPlaneMutationException e) {
-      throw e;
-    } catch (Exception e) {
-      throw mutationUnavailable(
-          "publish authoritative namespace security policy",
-          e,
-          Map.of("topic", topic, "policyVersion", String.valueOf(validated.getPolicyVersion())));
-    }
-  }
-
-  /**
-   * Clears the authoritative namespace security policy by publishing a tombstone under key
-   * `policy`.
-   */
-  public void clearNamespaceSecurityPolicy() {
-    ensureParticipantCapability(
-        ParticipantCapability.AUTHORITATIVE_POLICY_PUBLISHER,
-        "clear authoritative namespace security policy");
-    try {
-      clearNamespaceSecurityPolicy(taktPropertiesHelper.getTaktProperties());
-      authoritativePolicyMutationAvailability =
-          AuthoritativePolicyMutationAvailability.availableNow();
-    } catch (SecurityControlPlaneMutationException e) {
-      authoritativePolicyMutationAvailability =
-          AuthoritativePolicyMutationAvailability.blockedNow(
-              e.code(), e.getMessage(), e.metadata());
-      throw e;
-    }
-  }
-
-  /** Static convenience overload for clearing the authoritative namespace security policy. */
-  public static void clearNamespaceSecurityPolicy(Properties properties) {
-    SigningIdentity signingIdentity =
-        requireAuthoritativeControlPlaneSigningIdentity(
-            properties, "clear authoritative namespace security policy");
-    String topic =
-        new TaktPropertiesHelper(properties)
-            .getPrefixedTopicName(io.taktx.Topics.SECURITY_POLICY_TOPIC.getTopicName());
-
-    java.util.Properties producerProps =
-        new TaktPropertiesHelper(properties).getKafkaProducerProperties();
-    producerProps.put("max.block.ms", "10000");
-    producerProps.put("delivery.timeout.ms", "10000");
-    producerProps.put("request.timeout.ms", "8000");
-
-    try (org.apache.kafka.clients.producer.KafkaProducer<String, byte[]> producer =
-        new org.apache.kafka.clients.producer.KafkaProducer<>(
-            producerProps,
-            new org.apache.kafka.common.serialization.StringSerializer(),
-            new org.apache.kafka.common.serialization.ByteArraySerializer())) {
-      producer.send(buildNamespaceSecurityPolicyTombstoneRecord(topic, signingIdentity));
-      producer.flush();
-      log.info(
-          "✅ Namespace security policy tombstone published to security policy topic: topic={} signerKeyId={}",
-          topic,
-          signingIdentity.getKeyId());
-    } catch (SecurityControlPlaneMutationException e) {
-      throw e;
-    } catch (Exception e) {
-      throw mutationUnavailable(
-          "clear authoritative namespace security policy", e, Map.of("topic", topic));
-    }
-  }
-
-  /** Returns structured local availability for authoritative namespace security-policy mutation. */
-  public AuthoritativePolicyMutationAvailability authoritativePolicyMutationAvailability() {
-    if (!participantDescriptor
-        .capabilities()
-        .contains(ParticipantCapability.AUTHORITATIVE_POLICY_PUBLISHER)) {
-      return AuthoritativePolicyMutationAvailability.notObserved();
-    }
-    AuthoritativePolicyMutationAvailability configuredAvailability =
-        authoritativePolicyMutationAvailability(taktPropertiesHelper.getTaktProperties());
-    if (!configuredAvailability.available()) {
-      return configuredAvailability;
-    }
-    AuthoritativePolicyMutationAvailability current = authoritativePolicyMutationAvailability;
-    if (current != null
-        && current.observed()
-        && !current.available()
-        && SecurityPostureIssueCodes.AUTHORITATIVE_WRITER_UNAVAILABLE.equals(current.code())) {
-      return current;
-    }
-    return configuredAvailability;
-  }
-
-  /** Returns structured authoritative mutation availability for the supplied properties. */
-  public static AuthoritativePolicyMutationAvailability authoritativePolicyMutationAvailability(
-      Properties properties) {
-    try {
-      return resolveAuthoritativeControlPlaneSigningIdentity(properties) != null
-          ? AuthoritativePolicyMutationAvailability.availableNow()
-          : mutationUnconfiguredAvailability();
-    } catch (IllegalArgumentException e) {
-      return AuthoritativePolicyMutationAvailability.blockedNow(
-          SecurityPostureIssueCodes.AUTHORITATIVE_WRITER_UNCONFIGURED,
-          e.getMessage(),
-          Map.of("reason", "identity-source-invalid"));
-    }
-  }
-
-  /**
-   * Returns the authoritative control-plane writer security properties for namespace policy
-   * mutation.
-   */
-  public static Set<AuthoritativeControlPlaneSecurityProperty>
-      namespaceSecurityPolicyWriterSecurityProperties() {
-    return NamespaceSecurityPolicyControlPlaneContract.requiredWriterSecurityProperties();
-  }
-
-  /**
-   * Returns the authoritative control-plane writer security properties for the supplied namespace
-   * policy mutation.
-   */
-  public static Set<AuthoritativeControlPlaneSecurityProperty>
-      namespaceSecurityPolicyWriterSecurityProperties(NamespaceSecurityPolicyDTO policy) {
-    return NamespaceSecurityPolicyControlPlaneContract.requiredWriterSecurityProperties(policy);
-  }
-
-  /** Returns the sole first-slice activation authority for namespace security policy lifecycle. */
-  public static NamespaceSecurityPolicyActivationAuthority
-      namespaceSecurityPolicyActivationAuthority() {
-    return NamespaceSecurityPolicyActivationAuthorityContract.soleActivationAuthority();
-  }
-
-  static org.apache.kafka.clients.producer.ProducerRecord<String, byte[]>
-      buildNamespaceSecurityPolicyRecord(String topic, NamespaceSecurityPolicyDTO policy) {
-    return buildNamespaceSecurityPolicyRecord(topic, policy, null);
-  }
-
-  static ProducerRecord<String, byte[]> buildNamespaceSecurityPolicyRecord(
-      String topic, NamespaceSecurityPolicyDTO policy, SigningIdentity signingIdentity) {
-    if (topic == null || topic.isBlank()) {
-      throw new IllegalArgumentException("topic must not be blank");
-    }
-    NamespaceSecurityPolicyDTO validated = validateNamespaceSecurityPolicy(policy);
-    return buildSignedNamespaceSecurityPolicyRecord(
-        topic,
-        NamespaceSecurityPolicyProtoMapper.toProto(validated).toByteArray(),
-        signingIdentity);
-  }
-
-  static org.apache.kafka.clients.producer.ProducerRecord<String, byte[]>
-      buildNamespaceSecurityPolicyTombstoneRecord(String topic) {
-    return buildNamespaceSecurityPolicyTombstoneRecord(topic, null);
-  }
-
-  static ProducerRecord<String, byte[]> buildNamespaceSecurityPolicyTombstoneRecord(
-      String topic, SigningIdentity signingIdentity) {
-    if (topic == null || topic.isBlank()) {
-      throw new IllegalArgumentException("topic must not be blank");
-    }
-    return buildSignedNamespaceSecurityPolicyRecord(topic, null, signingIdentity);
-  }
-
-  private static ProducerRecord<String, byte[]> buildSignedNamespaceSecurityPolicyRecord(
-      String topic, byte[] value, SigningIdentity signingIdentity) {
-    ProducerRecord<String, byte[]> record =
-        new ProducerRecord<>(topic, NAMESPACE_SECURITY_POLICY_RECORD_KEY, value);
-    if (signingIdentity != null) {
-      signAuthoritativeControlPlaneRecord(record, signingIdentity);
-    }
-    return record;
-  }
-
-  private static void signAuthoritativeControlPlaneRecord(
-      ProducerRecord<String, byte[]> record, SigningIdentity signingIdentity) {
-    byte[] payload = record.value() != null ? record.value() : new byte[0];
-    try {
-      byte[] signatureBytes = Ed25519Service.sign(payload, signingIdentity.getPrivateKeyBase64());
-      record.headers().remove(Constants.HEADER_ENGINE_SIGNATURE);
-      record
-          .headers()
-          .add(
-              Constants.HEADER_ENGINE_SIGNATURE,
-              signingIdentity.toHeaderValue(signatureBytes).getBytes(StandardCharsets.UTF_8));
-    } catch (Exception e) {
-      throw new IllegalStateException(
-          "Failed to sign authoritative namespace security policy record with keyId="
-              + signingIdentity.getKeyId(),
-          e);
-    }
-  }
-
-  private static SigningIdentity requireAuthoritativeControlPlaneSigningIdentity(
-      Properties properties, String operationDescription) {
-    SigningIdentity signingIdentity = resolveAuthoritativeControlPlaneSigningIdentity(properties);
-    if (signingIdentity == null) {
-      throw new SecurityControlPlaneMutationException(
-          SecurityPostureIssueCodes.AUTHORITATIVE_WRITER_UNCONFIGURED,
-          "Cannot "
-              + operationDescription
-              + " without an explicit signing identity. Configure taktx.signing.private-key +"
-              + " taktx.signing.key-id (or taktx.signing.file.* equivalents) for the trusted"
-              + " authoritative writer.",
-          Map.of("reason", "signing-identity-missing"));
-    }
-    return signingIdentity;
-  }
-
-  private static SecurityControlPlaneMutationException mutationUnavailable(
-      String operationDescription, Exception cause, Map<String, String> metadata) {
-    return new SecurityControlPlaneMutationException(
-        SecurityPostureIssueCodes.AUTHORITATIVE_WRITER_UNAVAILABLE,
-        "Cannot "
-            + operationDescription
-            + " because the authoritative writer path is currently unavailable: "
-            + cause.getMessage(),
-        metadata,
-        cause);
-  }
-
-  private static AuthoritativePolicyMutationAvailability mutationUnconfiguredAvailability() {
-    return AuthoritativePolicyMutationAvailability.blockedNow(
-        SecurityPostureIssueCodes.AUTHORITATIVE_WRITER_UNCONFIGURED,
-        "No explicit authoritative signing identity is configured for namespace security-policy mutation.",
-        Map.of("reason", "signing-identity-missing"));
-  }
-
-  private static SigningIdentity resolveAuthoritativeControlPlaneSigningIdentity(
-      Properties properties) {
-    String sourceType =
-        TaktXClientBuilder.firstNonBlank(
-            properties.getProperty("taktx.signing.identity-source"),
-            System.getProperty("taktx.signing.identity-source"),
-            System.getenv("TAKTX_SIGNING_IDENTITY_SOURCE"));
-    if (sourceType == null || sourceType.isBlank()) {
-      SigningIdentity environmentIdentity =
-          new EnvironmentWorkerSigningIdentitySource(
-                  properties, properties.getProperty("taktx.signing.key-id"))
-              .currentIdentity();
-      if (environmentIdentity != null) {
-        return environmentIdentity;
-      }
-      return new FileSigningIdentitySource(properties).currentIdentity();
-    }
-    if ("env".equalsIgnoreCase(sourceType) || "environment".equalsIgnoreCase(sourceType)) {
-      return new EnvironmentWorkerSigningIdentitySource(
-              properties, properties.getProperty("taktx.signing.key-id"))
-          .currentIdentity();
-    }
-    if ("file".equalsIgnoreCase(sourceType)) {
-      return new FileSigningIdentitySource(properties).currentIdentity();
-    }
-    throw new IllegalArgumentException(
-        "Unsupported taktx.signing.identity-source='"
-            + sourceType
-            + "' for authoritative namespace security policy publication. Supported values: env, file");
-  }
 
   /**
    * Publishes an Ed25519 or RSA public key to the {@code taktx-signing-keys} compacted topic so
@@ -1188,40 +817,6 @@ public class TaktXClient {
         .build();
   }
 
-  /**
-   * Computes the canonical digest for the effective namespace security policy content.
-   *
-   * <p>This intentionally ignores desired-vs-active wrapper identity fields so callers can compare
-   * whether two policies describe the same effective posture.
-   */
-  public static String canonicalNamespaceSecurityPolicyHash(NamespaceSecurityPolicyDTO policy) {
-    return NamespaceSecurityPolicySupport.canonicalHash(policy);
-  }
-
-  /**
-   * Normalizes a namespace security policy before transport or persistence.
-   *
-   * <p>This fills migration aliases, ensures nested requirement DTOs are present, and computes a
-   * canonical requested policy hash when one is absent.
-   */
-  public static NamespaceSecurityPolicyDTO normalizeNamespaceSecurityPolicy(
-      NamespaceSecurityPolicyDTO policy) {
-    return NamespaceSecurityPolicySupport.normalize(policy);
-  }
-
-  /**
-   * Validates and normalizes a namespace security policy.
-   *
-   * <p>Use this helper before authoritative publication once the final control-plane topic and
-   * activation-authority decisions are in place.
-   *
-   * @throws IllegalArgumentException when the policy is structurally invalid
-   */
-  public static NamespaceSecurityPolicyDTO validateNamespaceSecurityPolicy(
-      NamespaceSecurityPolicyDTO policy) {
-    return NamespaceSecurityPolicySupport.requireValid(policy);
-  }
-
   private SigningIdentity currentSigningIdentity() {
     SigningIdentity identity =
         signingIdentitySource != null ? signingIdentitySource.currentIdentity() : null;
@@ -1230,79 +825,31 @@ public class TaktXClient {
   }
 
   void refreshWorkerSigningFunctionRegistration() {
-    if (!declaresCapability(ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT)) {
-      logWorkerSigningRegistrationState(
-          "runtime-capability-disabled",
-          "Worker response signing inactive — participant descriptor {} does not declare {}",
-          participantDescriptor.participantId(),
-          ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT);
+    // Mode is startup-static: only register if anchored and the capability is declared.
+    if (!anchored || !declaresCapability(ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT)) {
       return;
     }
-
-    boolean signingPrepared = shouldPrepareSigningInfrastructure();
-    boolean signingEnabled = shouldSignClientMessages();
-
-    // ── Signing gate check ────────────────────────────────────────────────
-    if (!signingEnabled) {
-      if (signingPrepared) {
-        SigningIdentity identity = currentSigningIdentity();
-        if (identity == null) {
-          String sourceType =
-              signingIdentitySource != null ? signingIdentitySource.getSourceType() : "none";
-          logWorkerSigningRegistrationState(
-              "preparing-waiting-for-identity:" + sourceType,
-              "Worker signing preparation active for requested/protected posture but no signing"
-                  + " identity is available yet from source={}",
-              sourceType);
-        } else {
-          ensureWorkerKeyPublished(identity);
-          logWorkerSigningRegistrationState(
-              "prepared:" + identity.getKeyId(),
-              "Worker signing prepared for pending anchored posture — public key publication"
-                  + " may proceed while outbound client traffic remains unsigned until the"
-                  + " authoritative policy becomes anchored. source={} keyId={}",
-              signingIdentitySource.getSourceType(),
-              identity.getKeyId());
-        }
-      } else {
-        logWorkerSigningRegistrationState(
-            "runtime-disabled",
-            "Worker response signing inactive — authoritative namespace posture is OPEN");
-      }
-      return;
-    }
-
     SigningIdentity identity = currentSigningIdentity();
     if (identity == null) {
-      String sourceType =
-          signingIdentitySource != null ? signingIdentitySource.getSourceType() : "none";
+      String sourceType = signingIdentitySource != null ? signingIdentitySource.getSourceType() : "none";
       logWorkerSigningRegistrationState(
           "waiting-for-identity:" + sourceType,
-          "Worker response signing enabled by runtime configuration but no signing identity is"
-              + " available yet from source={}",
+          "Worker response signing: anchored mode but no signing identity available from source={}",
           sourceType);
       return;
     }
-
-    SigningServiceHolder.SigningFunction existingGlobalSigningFunction = SigningServiceHolder.get();
-    if (existingGlobalSigningFunction == null) {
+    SigningServiceHolder.SigningFunction existing = SigningServiceHolder.get();
+    if (existing == null) {
       SigningServiceHolder.set(globalWorkerSigningFunction);
       globalWorkerSigningFunctionRegistered = true;
-    } else if (existingGlobalSigningFunction == globalWorkerSigningFunction) {
+    } else if (existing == globalWorkerSigningFunction) {
       globalWorkerSigningFunctionRegistered = true;
     } else {
       globalWorkerSigningFunctionRegistered = false;
-      logWorkerSigningRegistrationState(
-          "local-only:" + identity.getKeyId(),
-          "Worker response signing active for this client only — source={} keyId={} while an"
-              + " existing process-wide signing function remains registered",
-          signingIdentitySource.getSourceType(),
-          identity.getKeyId());
-      return;
     }
     logWorkerSigningRegistrationState(
         "active:" + identity.getKeyId(),
-        "Worker response signing active for authoritative anchored posture — source={} keyId={}",
+        "Worker response signing registered — source={} keyId={}",
         signingIdentitySource.getSourceType(),
         identity.getKeyId());
   }
@@ -1319,7 +866,7 @@ public class TaktXClient {
     if (identity == null) {
       return false;
     }
-    if (!shouldPrepareSigningInfrastructure()) {
+    if (!anchored) {
       return false;
     }
     if (!identity.hasPublicKey()) {
@@ -1502,8 +1049,7 @@ public class TaktXClient {
   }
 
   private String signWorkerPayload(byte[] payload) {
-    if (!declaresCapability(ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT)
-        || !shouldSignClientMessages()) {
+    if (!anchored || !declaresCapability(ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT)) {
       return null;
     }
     SigningIdentity identity = currentSigningIdentity();
@@ -1545,10 +1091,7 @@ public class TaktXClient {
   }
 
   private boolean hasPublishedSigningCapability() {
-    if (!declaresCapability(ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT)) {
-      return false;
-    }
-    if (!shouldPrepareSigningInfrastructure()) {
+    if (!anchored || !declaresCapability(ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT)) {
       return false;
     }
     SigningIdentity identity = currentSigningIdentity();
@@ -1593,35 +1136,12 @@ public class TaktXClient {
         && !entry.getRegistrationSignature().isBlank();
   }
 
-  boolean shouldPrepareSigningInfrastructure() {
-    return isAnchoredMode(currentNamespaceSecurityPolicy())
-        || isAnchoredMode(authoritativeNamespaceSecurityPolicy());
-  }
-
-  boolean shouldSignClientMessages() {
-    return isAnchoredMode(authoritativeNamespaceSecurityPolicy());
-  }
-
-  private @Nullable NamespaceSecurityPolicyDTO authoritativeNamespaceSecurityPolicy() {
-    return namespaceSecurityPolicyStore != null
-        ? namespaceSecurityPolicyStore.getAuthoritativePolicy()
-        : null;
-  }
-
-  private @Nullable NamespaceSecurityPolicyDTO currentNamespaceSecurityPolicy() {
-    return namespaceSecurityPolicyStore != null ? namespaceSecurityPolicyStore.get() : null;
-  }
-
-  private static boolean isAnchoredMode(@Nullable NamespaceSecurityPolicyDTO policy) {
-    if (policy == null || policy.getMode() == null) {
-      return false;
-    }
-    return policy.getMode() == SecurityMode.ANCHORED;
-  }
-
   private @Nullable String resolvePlatformPublicKey() {
-    String configured =
-        taktPropertiesHelper.getTaktProperties().getProperty("taktx.platform.public-key");
+    return resolvePlatformPublicKey(taktPropertiesHelper.getTaktProperties());
+  }
+
+  private static @Nullable String resolvePlatformPublicKey(Properties properties) {
+    String configured = properties.getProperty("taktx.platform.public-key");
     if (configured != null && !configured.isBlank()) {
       return configured;
     }
@@ -1673,11 +1193,6 @@ public class TaktXClient {
       runtimeConfigurationStore.close();
       runtimeConfigurationStore = null;
     }
-    if (namespaceSecurityPolicyTopicStore != null) {
-      namespaceSecurityPolicyTopicStore.close();
-      namespaceSecurityPolicyTopicStore = null;
-    }
-    namespaceSecurityPolicyStore = null;
     if (participantStatusTopicStore != null) {
       participantStatusTopicStore.close();
       participantStatusTopicStore = null;
@@ -1701,14 +1216,6 @@ public class TaktXClient {
     globalWorkerSigningFunctionRegistered = false;
   }
 
-  private ObservedPolicySnapshot currentObservedPolicySnapshot() {
-    if (namespaceSecurityPolicyStore == null) {
-      return ObservedPolicySnapshot.empty();
-    }
-    return new ObservedPolicySnapshot(
-        namespaceSecurityPolicyStore.get(), namespaceSecurityPolicyStore.getAuthoritativePolicy());
-  }
-
   private Map<String, ParticipantStatusDTO> currentParticipantStatusSnapshot() {
     if (participantStatusStore == null) {
       return Map.of();
@@ -1730,17 +1237,6 @@ public class TaktXClient {
 
   private void registerSecurityEventConsumer(SecurityEventConsumer consumer) {
     securityEventConsumers.add(consumer);
-  }
-
-  private void notifyNamespaceSecurityPolicyConsumers() {
-    ObservedPolicySnapshot snapshot = currentObservedPolicySnapshot();
-    for (NamespaceSecurityPolicyConsumer consumer : namespaceSecurityPolicyConsumers) {
-      try {
-        consumer.accept(snapshot);
-      } catch (Exception e) {
-        log.warn("Namespace security policy consumer callback failed: {}", e.getMessage());
-      }
-    }
   }
 
   private void notifyParticipantStatusConsumers() {
@@ -2514,22 +2010,13 @@ public class TaktXClient {
   }
 
   /** Returns the focused security facet for namespace security-policy mutation operations. */
-  public synchronized SecurityClient security() {
-    if (securityClient == null) {
-      securityClient = new SecurityClient(this);
-    }
-    return securityClient;
-  }
-
-  /** Returns the public observability facade backed by namespace control-plane topics only. */
+  /** Returns the public observability facade for participant and key visibility. */
   public synchronized SecurityObservabilityClient observability() {
     if (securityObservabilityClient == null) {
       securityObservabilityClient =
           new SecurityObservabilityClient(
-              this::currentObservedPolicySnapshot,
               this::currentParticipantStatusSnapshot,
               this::currentSecurityEventSnapshot,
-              this::authoritativePolicyMutationAvailability,
               new SecurityObservabilityClient.ConsumerRegistrars(
                   this::registerNamespaceSecurityPolicyConsumer,
                   this::registerParticipantStatusConsumer,
@@ -2642,6 +2129,29 @@ public class TaktXClient {
           this.resultProcessorFactory != null
               ? this.resultProcessorFactory
               : new DefaultResultProcessorFactory();
+      // Fail fast when anchored intent is detected but prerequisites are missing.
+      boolean anchored = resolvePlatformPublicKey(properties) != null;
+      if (anchored) {
+        if (effectiveSigningIdentitySource == null || !effectiveSigningIdentitySource.isRestartStable()) {
+          throw new IllegalStateException(
+              "ANCHORED mode (TAKTX_PLATFORM_PUBLIC_KEY is set) requires a restart-stable signing"
+                  + " identity source (env or file, not generated). Configure"
+                  + " taktx.signing.identity-source=env or =file.");
+        }
+        if (effectiveSigningIdentitySource.currentIdentity() == null) {
+          throw new IllegalStateException(
+              "ANCHORED mode is configured but no signing identity is resolvable from source="
+                  + effectiveSigningIdentitySource.getSourceType()
+                  + ". Check TAKTX_SIGNING_PRIVATE_KEY, TAKTX_SIGNING_KEY_ID, etc.");
+        }
+        if (effectiveRegistrationSignature == null || effectiveRegistrationSignature.isBlank()) {
+          throw new IllegalStateException(
+              "ANCHORED mode requires taktx.signing.registration-signature"
+                  + " (TAKTX_SIGNING_REGISTRATION_SIGNATURE) — the worker key must be"
+                  + " countersigned by the platform root key.");
+        }
+      }
+
       TaktXClient client =
           new TaktXClient(
               taktPropertiesHelper,
@@ -2682,9 +2192,6 @@ public class TaktXClient {
       Set<ParticipantCapability> inferredCapabilities = new LinkedHashSet<>();
       inferredCapabilities.add(ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT);
       inferredCapabilities.add(ParticipantCapability.SECURITY_OBSERVER);
-      if (resolveAuthoritativeControlPlaneSigningIdentityIfAvailable(properties) != null) {
-        inferredCapabilities.add(ParticipantCapability.AUTHORITATIVE_POLICY_PUBLISHER);
-      }
 
       String inferredSigningKeyId =
           firstNonBlank(
@@ -2879,23 +2386,7 @@ public class TaktXClient {
         throw new IllegalArgumentException(
             "TaktXClient participant descriptor must not declare ENFORCER");
       }
-      if (descriptor.capabilities().contains(ParticipantCapability.AUTHORITATIVE_POLICY_PUBLISHER)
-          && resolveAuthoritativeControlPlaneSigningIdentityIfAvailable(properties) == null) {
-        throw new IllegalArgumentException(
-            "AUTHORITATIVE_POLICY_PUBLISHER requires an explicit authoritative signing identity"
-                + " configured via taktx.signing.private-key + taktx.signing.key-id or"
-                + " taktx.signing.file.* properties");
-      }
       return descriptor;
-    }
-
-    private SigningIdentity resolveAuthoritativeControlPlaneSigningIdentityIfAvailable(
-        Properties properties) {
-      try {
-        return resolveAuthoritativeControlPlaneSigningIdentity(properties);
-      } catch (IllegalArgumentException e) {
-        return null;
-      }
     }
 
     /**

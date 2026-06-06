@@ -17,7 +17,7 @@ enum ParticipantKindMessage {
 enum ParticipantCapabilityMessage {
   PARTICIPANT_CAPABILITY_UNSPECIFIED = 0;
   ENFORCER = 1;
-  AUTHORITATIVE_POLICY_PUBLISHER = 2;
+  // value 2 (AUTHORITATIVE_POLICY_PUBLISHER) removed in 0.8.0
   PROTECTED_RUNTIME_PARTICIPANT = 3;
   SECURITY_OBSERVER = 4;
 }
@@ -74,8 +74,7 @@ message ParticipantStatusMessage {
   StatusVerificationLevelMessage status_verification_level = 8;
   ParticipantEffectiveStateMessage effective_state = 9;
   bool ready_for_data_plane = 10;
-  optional int64 observed_policy_version = 11;
-  string observed_policy_hash = 12;
+  // fields 11 (observed_policy_version) and 12 (observed_policy_hash) removed in 0.8.0
   repeated PolicyMismatchReasonMessage mismatch_reasons = 13;
   string component_type = 14;
   repeated ParticipantCapabilityMessage capabilities = 15;

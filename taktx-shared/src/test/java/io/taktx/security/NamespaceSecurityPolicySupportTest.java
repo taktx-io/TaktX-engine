@@ -17,78 +17,46 @@ import org.junit.jupiter.api.Test;
 class NamespaceSecurityPolicySupportTest {
 
   @Test
-  void normalize_computesCanonicalPolicyHashWhenMissing() {
+  void normalize_returnsPassedPolicy() {
     NamespaceSecurityPolicyDTO policy =
-        NamespaceSecurityPolicyDTO.builder().mode(SecurityMode.OPEN).policyVersion(42L).build();
-
-    NamespaceSecurityPolicyDTO normalized = NamespaceSecurityPolicySupport.normalize(policy);
-
-    assertThat(normalized.getPolicyVersion()).isEqualTo(42L);
-    assertThat(normalized.getPolicyHash()).isNotBlank();
+        NamespaceSecurityPolicyDTO.builder().mode(SecurityMode.OPEN).build();
+    assertThat(NamespaceSecurityPolicySupport.normalize(policy)).isSameAs(policy);
   }
 
   @Test
-  void canonicalHash_dependsOnlyOnAuthoritativePolicyContent() {
-    NamespaceSecurityPolicyDTO baseline =
-        NamespaceSecurityPolicyDTO.builder().mode(SecurityMode.ANCHORED).policyVersion(5L).build();
-
-    NamespaceSecurityPolicyDTO sameEffectiveContentDifferentHashWrapper =
-        baseline.toBuilder().policyHash("manually-supplied-hash").build();
-
-    assertThat(NamespaceSecurityPolicySupport.canonicalHash(baseline))
-        .isEqualTo(
-            NamespaceSecurityPolicySupport.canonicalHash(sameEffectiveContentDifferentHashWrapper));
+  void normalize_nullReturnsNull() {
+    assertThat(NamespaceSecurityPolicySupport.normalize(null)).isNull();
   }
 
   @Test
   void validationErrors_rejectMissingMode() {
-    NamespaceSecurityPolicyDTO policy =
-        NamespaceSecurityPolicyDTO.builder().policyVersion(1L).build();
-
+    NamespaceSecurityPolicyDTO policy = NamespaceSecurityPolicyDTO.builder().build();
     assertThat(NamespaceSecurityPolicySupport.validationErrors(policy))
         .contains("mode must not be null");
   }
 
   @Test
-  void requireValid_rejectsMissingPolicyVersion() {
+  void requireValid_rejectsMissingMode() {
+    NamespaceSecurityPolicyDTO policy = NamespaceSecurityPolicyDTO.builder().build();
+    assertThatThrownBy(() -> NamespaceSecurityPolicySupport.requireValid(policy))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("mode must not be null");
+  }
+
+  @Test
+  void requireValid_acceptsOpenPolicy() {
     NamespaceSecurityPolicyDTO policy =
         NamespaceSecurityPolicyDTO.builder().mode(SecurityMode.OPEN).build();
-
-    assertThatThrownBy(() -> NamespaceSecurityPolicySupport.requireValid(policy))
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining("policyVersion must not be null");
+    NamespaceSecurityPolicyDTO validated = NamespaceSecurityPolicySupport.requireValid(policy);
+    assertThat(validated.getMode()).isEqualTo(SecurityMode.OPEN);
   }
 
   @Test
-  void requireValid_acceptsOpenPolicyAndComputesHash() {
+  void requireValid_acceptsAnchoredPolicy() {
     NamespaceSecurityPolicyDTO policy =
-        NamespaceSecurityPolicyDTO.builder().mode(SecurityMode.OPEN).policyVersion(10L).build();
-
+        NamespaceSecurityPolicyDTO.builder().mode(SecurityMode.ANCHORED).build();
     NamespaceSecurityPolicyDTO validated = NamespaceSecurityPolicySupport.requireValid(policy);
-
-    assertThat(validated.getPolicyHash()).isNotBlank();
-  }
-
-  @Test
-  void requireValid_acceptsAnchoredPolicyPayload() {
-    NamespaceSecurityPolicyDTO policy =
-        NamespaceSecurityPolicyDTO.builder().mode(SecurityMode.ANCHORED).policyVersion(11L).build();
-
-    NamespaceSecurityPolicyDTO validated = NamespaceSecurityPolicySupport.requireValid(policy);
-
     assertThat(validated.getMode()).isEqualTo(SecurityMode.ANCHORED);
-    assertThat(validated.getPolicyVersion()).isEqualTo(11L);
-    assertThat(validated.getPolicyHash()).isNotBlank();
-  }
-
-  @Test
-  void requireValid_rejectsNonPositivePolicyVersion() {
-    NamespaceSecurityPolicyDTO policy =
-        NamespaceSecurityPolicyDTO.builder().mode(SecurityMode.OPEN).policyVersion(0L).build();
-
-    assertThatThrownBy(() -> NamespaceSecurityPolicySupport.requireValid(policy))
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining("policyVersion must be > 0");
   }
 
   @Test
@@ -102,9 +70,6 @@ class NamespaceSecurityPolicySupportTest {
   @Test
   void parseHelpers_rejectUnsupportedModes() {
     assertThatThrownBy(() -> NamespaceSecurityPolicySupport.parseSecurityMode("secured"))
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining("Unsupported security mode");
-    assertThatThrownBy(() -> NamespaceSecurityPolicySupport.parseSecurityMode("anchored secured"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("Unsupported security mode");
   }

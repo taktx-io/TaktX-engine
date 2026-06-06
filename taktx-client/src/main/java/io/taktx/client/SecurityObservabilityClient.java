@@ -22,10 +22,11 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 /**
- * Public observability facade backed only by namespace control-plane topics.
+ * Public observability facade for participant and key visibility — participant-status snapshots,
+ * recent security events, and polling helpers suitable for integration tests and Console display.
  *
- * <p>This slice exposes policy snapshots, participant-status snapshots, recent security events, and
- * simple polling helpers suitable for focused integration tests.
+ * <p>Namespace mode is startup-static; it is published to {@code taktx-security-policy} by the
+ * engine and may be read directly from that topic. This facade focuses on runtime readiness state.
  */
 public class SecurityObservabilityClient {
 
@@ -33,61 +34,41 @@ public class SecurityObservabilityClient {
   private static final String CONSUMER_ARGUMENT = "consumer";
   private static final String PREDICATE_ARGUMENT = "predicate";
 
-  private final Supplier<ObservedPolicySnapshot> observedPolicySnapshotSupplier;
   private final Supplier<Map<String, ParticipantStatusDTO>> participantStatusSnapshotSupplier;
   private final Supplier<List<SecurityEventDTO>> recentSecurityEventsSupplier;
-  private final Supplier<AuthoritativePolicyMutationAvailability> mutationAvailabilitySupplier;
   private final ConsumerRegistrars consumerRegistrars;
   private final Runnable initializer;
   private final Duration pollInterval;
 
   SecurityObservabilityClient(
-      Supplier<ObservedPolicySnapshot> observedPolicySnapshotSupplier,
       Supplier<Map<String, ParticipantStatusDTO>> participantStatusSnapshotSupplier,
       Supplier<List<SecurityEventDTO>> recentSecurityEventsSupplier,
-      Supplier<AuthoritativePolicyMutationAvailability> mutationAvailabilitySupplier,
       ConsumerRegistrars consumerRegistrars,
       Runnable initializer) {
     this(
-        observedPolicySnapshotSupplier,
         participantStatusSnapshotSupplier,
         recentSecurityEventsSupplier,
-        mutationAvailabilitySupplier,
         consumerRegistrars,
         initializer,
         DEFAULT_POLL_INTERVAL);
   }
 
   SecurityObservabilityClient(
-      Supplier<ObservedPolicySnapshot> observedPolicySnapshotSupplier,
       Supplier<Map<String, ParticipantStatusDTO>> participantStatusSnapshotSupplier,
       Supplier<List<SecurityEventDTO>> recentSecurityEventsSupplier,
-      Supplier<AuthoritativePolicyMutationAvailability> mutationAvailabilitySupplier,
       ConsumerRegistrars consumerRegistrars,
       Runnable initializer,
       Duration pollInterval) {
-    this.observedPolicySnapshotSupplier =
-        Objects.requireNonNull(observedPolicySnapshotSupplier, "observedPolicySnapshotSupplier");
     this.participantStatusSnapshotSupplier =
-        Objects.requireNonNull(
-            participantStatusSnapshotSupplier, "participantStatusSnapshotSupplier");
+        Objects.requireNonNull(participantStatusSnapshotSupplier, "participantStatusSnapshotSupplier");
     this.recentSecurityEventsSupplier =
         Objects.requireNonNull(recentSecurityEventsSupplier, "recentSecurityEventsSupplier");
-    this.mutationAvailabilitySupplier =
-        Objects.requireNonNull(mutationAvailabilitySupplier, "mutationAvailabilitySupplier");
     this.consumerRegistrars = Objects.requireNonNull(consumerRegistrars, "consumerRegistrars");
     this.initializer = Objects.requireNonNull(initializer, "initializer");
     if (pollInterval == null || pollInterval.isZero() || pollInterval.isNegative()) {
       throw new IllegalArgumentException("pollInterval must be > 0");
     }
     this.pollInterval = pollInterval;
-  }
-
-  /** Returns the latest observed policy posture snapshot. */
-  public ObservedPolicySnapshot getObservedPolicySnapshot() {
-    ensureInitialized();
-    ObservedPolicySnapshot snapshot = observedPolicySnapshotSupplier.get();
-    return snapshot != null ? snapshot : ObservedPolicySnapshot.empty();
   }
 
   /** Returns the latest unexpired participant-status snapshot keyed by participant instance ID. */
@@ -100,37 +81,16 @@ public class SecurityObservabilityClient {
     return Collections.unmodifiableMap(new LinkedHashMap<>(snapshot));
   }
 
-  /** Returns the bounded recent security-event history observed from the public event topic. */
+  /** Returns the bounded recent security-event history. */
   public List<SecurityEventDTO> getRecentSecurityEvents() {
     ensureInitialized();
     List<SecurityEventDTO> events = recentSecurityEventsSupplier.get();
     return events == null || events.isEmpty() ? List.of() : List.copyOf(events);
   }
 
-  /**
-   * Returns a combined console-grade posture snapshot assembled from the public policy, participant
-   * status, and security-event topics only.
-   */
+  /** Returns a combined posture snapshot from participant-status and security-event data. */
   public SecurityPostureSnapshot getPostureSnapshot() {
-    return SecurityPostureSnapshot.from(
-        getObservedPolicySnapshot(), getParticipantStatusSnapshot(), getRecentSecurityEvents());
-  }
-
-  /**
-   * Returns a simplified operator-facing posture view that separates requested posture from
-   * effective active posture.
-   */
-  public SimplifiedSecurityPostureSnapshot getSimplifiedPostureSnapshot() {
-    return SimplifiedSecurityPostureSnapshot.from(
-        getPostureSnapshot(), mutationAvailabilitySupplier.get());
-  }
-
-  /** Registers a callback and immediately replays the current policy snapshot. */
-  public void registerNamespaceSecurityPolicyConsumer(NamespaceSecurityPolicyConsumer consumer) {
-    Objects.requireNonNull(consumer, CONSUMER_ARGUMENT);
-    ensureInitialized();
-    consumerRegistrars.namespaceSecurityPolicyConsumerRegistrar().accept(consumer);
-    consumer.accept(getObservedPolicySnapshot());
+    return SecurityPostureSnapshot.from(getParticipantStatusSnapshot(), getRecentSecurityEvents());
   }
 
   /** Registers a callback and immediately replays the current participant-status snapshot. */
@@ -157,13 +117,6 @@ public class SecurityObservabilityClient {
     return getRecentSecurityEvents().stream().filter(predicate).findFirst();
   }
 
-  /** Polls until the observed policy snapshot satisfies the supplied predicate. */
-  public ObservedPolicySnapshot awaitObservedPolicy(
-      Predicate<ObservedPolicySnapshot> predicate, Duration timeout) {
-    Objects.requireNonNull(predicate, PREDICATE_ARGUMENT);
-    return awaitSnapshot("observed policy", this::getObservedPolicySnapshot, predicate, timeout);
-  }
-
   /** Polls until the participant-status snapshot satisfies the supplied predicate. */
   public Map<String, ParticipantStatusDTO> awaitParticipantStatusSnapshot(
       Predicate<Map<String, ParticipantStatusDTO>> predicate, Duration timeout) {
@@ -177,17 +130,6 @@ public class SecurityObservabilityClient {
       Predicate<SecurityPostureSnapshot> predicate, Duration timeout) {
     Objects.requireNonNull(predicate, PREDICATE_ARGUMENT);
     return awaitSnapshot("security posture snapshot", this::getPostureSnapshot, predicate, timeout);
-  }
-
-  /** Polls until the simplified posture snapshot satisfies the supplied predicate. */
-  public SimplifiedSecurityPostureSnapshot awaitSimplifiedPostureSnapshot(
-      Predicate<SimplifiedSecurityPostureSnapshot> predicate, Duration timeout) {
-    Objects.requireNonNull(predicate, PREDICATE_ARGUMENT);
-    return awaitSnapshot(
-        "simplified security posture snapshot",
-        this::getSimplifiedPostureSnapshot,
-        predicate,
-        timeout);
   }
 
   /** Polls until a matching security event appears in the bounded recent event history. */

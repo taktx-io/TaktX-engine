@@ -155,7 +155,7 @@ class ScheduleProcessorTest {
     when(protectedDataPlaneParticipationGuard.evaluate())
         .thenReturn(
             ProtectedDataPlaneParticipationGuard.Decision.blocked(
-                ProtectedDataPlaneParticipationGuard.POLICY_NOT_ACTIVE_HINT,
+                ProtectedDataPlaneParticipationGuard.ENGINE_SIGNING_UNAVAILABLE,
                 "policy still validating"));
 
     scheduleProcessor.process(

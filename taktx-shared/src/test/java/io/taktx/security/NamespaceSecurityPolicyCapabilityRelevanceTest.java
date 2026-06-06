@@ -26,46 +26,29 @@ class NamespaceSecurityPolicyCapabilityRelevanceTest {
   }
 
   @Test
-  void relevantPolicyForCapabilities_returnsNormalizedAuthoritativePolicy() {
+  void relevantPolicyForCapabilities_returnsPolicy() {
     NamespaceSecurityPolicyDTO policy =
-        NamespaceSecurityPolicyDTO.builder().mode(SecurityMode.ANCHORED).policyVersion(42L).build();
+        NamespaceSecurityPolicyDTO.builder().mode(SecurityMode.ANCHORED).build();
 
     NamespaceSecurityPolicyDTO relevant =
         NamespaceSecurityPolicyCapabilityRelevance.relevantPolicyForCapabilities(
             Set.of(ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT), policy);
 
     assertThat(relevant.getMode()).isEqualTo(SecurityMode.ANCHORED);
-    assertThat(relevant.getPolicyVersion()).isEqualTo(42L);
-    assertThat(relevant.getPolicyHash()).isNotBlank();
   }
 
   @Test
   void relevantPolicyForCapabilities_doesNotVaryByCapabilitiesInModeOnlyModel() {
     NamespaceSecurityPolicyDTO policy =
-        NamespaceSecurityPolicyDTO.builder().mode(SecurityMode.OPEN).policyVersion(42L).build();
+        NamespaceSecurityPolicyDTO.builder().mode(SecurityMode.OPEN).build();
 
-    NamespaceSecurityPolicyDTO controlPlaneRelevant =
+    NamespaceSecurityPolicyDTO runtimeRelevant =
         NamespaceSecurityPolicyCapabilityRelevance.relevantPolicyForCapabilities(
-            Set.of(
-                ParticipantCapability.AUTHORITATIVE_POLICY_PUBLISHER,
-                ParticipantCapability.SECURITY_OBSERVER),
-            policy);
-    NamespaceSecurityPolicyDTO publisherRelevant =
-        NamespaceSecurityPolicyCapabilityRelevance.relevantPolicyForCapabilities(
-            Set.of(ParticipantCapability.AUTHORITATIVE_POLICY_PUBLISHER), policy);
+            Set.of(ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT), policy);
     NamespaceSecurityPolicyDTO observerRelevant =
         NamespaceSecurityPolicyCapabilityRelevance.relevantPolicyForCapabilities(
             Set.of(ParticipantCapability.SECURITY_OBSERVER), policy);
 
-    NamespaceSecurityPolicyDTO mixedRelevant =
-        NamespaceSecurityPolicyCapabilityRelevance.relevantPolicyForCapabilities(
-            Set.of(
-                ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT,
-                ParticipantCapability.SECURITY_OBSERVER),
-            policy);
-
-    assertThat(controlPlaneRelevant).isEqualTo(publisherRelevant);
-    assertThat(controlPlaneRelevant).isEqualTo(observerRelevant);
-    assertThat(controlPlaneRelevant).isEqualTo(mixedRelevant);
+    assertThat(runtimeRelevant).isEqualTo(observerRelevant);
   }
 }

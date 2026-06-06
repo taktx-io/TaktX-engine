@@ -9,7 +9,6 @@ package io.taktx.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import io.taktx.dto.NamespaceSecurityPolicyDTO;
 import io.taktx.dto.ParticipantCapability;
 import io.taktx.dto.ParticipantEffectiveState;
 import io.taktx.dto.ParticipantKind;
@@ -19,7 +18,6 @@ import io.taktx.dto.SecurityEventDTO;
 import io.taktx.dto.SecurityEventSeverity;
 import io.taktx.dto.SecurityEventType;
 import io.taktx.dto.SecurityMode;
-import io.taktx.dto.SecurityPostureIssueCodes;
 import io.taktx.dto.StatusVerificationLevel;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -32,161 +30,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 
 class SecurityObservabilityClientTest {
-
-  @Test
-  void observedPolicySnapshot_prefersAuthoritativePolicyForEffectiveHelpers() {
-    ObservedPolicySnapshot snapshot =
-        new ObservedPolicySnapshot(
-            policy(11L, SecurityMode.OPEN), policy(7L, SecurityMode.ANCHORED));
-
-    assertThat(snapshot.hasCurrentPolicy()).isTrue();
-    assertThat(snapshot.hasAuthoritativePolicy()).isTrue();
-    assertThat(snapshot.currentActivationState()).isNull();
-    assertThat(snapshot.requestedMode()).isEqualTo(SecurityMode.OPEN);
-    assertThat(snapshot.requestedPolicyVersion()).isEqualTo(11L);
-    assertThat(snapshot.requestedPolicyHash()).isEqualTo("policy-11");
-    assertThat(snapshot.activeMode()).isEqualTo(SecurityMode.ANCHORED);
-    assertThat(snapshot.activePolicyVersion()).isEqualTo(7L);
-    assertThat(snapshot.activePolicyHash()).isEqualTo("policy-7");
-    assertThat(snapshot.effectiveMode()).isEqualTo(SecurityMode.ANCHORED);
-    assertThat(snapshot.effectivePolicyVersion()).isEqualTo(7L);
-    assertThat(snapshot.effectivePolicyHash()).isEqualTo("policy-7");
-  }
-
-  @Test
-  void getSimplifiedPostureSnapshot_keepsRequestedAnchoredPostureSeparateFromEffectiveOpen() {
-    TestHarness harness = new TestHarness();
-    harness.observedPolicySnapshot.set(
-        new ObservedPolicySnapshot(
-            policy(12L, SecurityMode.ANCHORED), policy(11L, SecurityMode.OPEN)));
-
-    SimplifiedSecurityPostureSnapshot snapshot = harness.client.getSimplifiedPostureSnapshot();
-
-    assertThat(snapshot.requestedPosture()).isEqualTo(SecurityMode.ANCHORED);
-    assertThat(snapshot.effectivePosture()).isEqualTo(SecurityMode.OPEN);
-    assertThat(snapshot.requestStatus()).isEqualTo(SecurityRequestStatus.IN_SYNC);
-    assertThat(snapshot.protectedRuntimeAllowed()).isTrue();
-    assertThat(snapshot.blockingIssues()).isEmpty();
-  }
-
-  @Test
-  void getSimplifiedPostureSnapshot_surfacesBlockingIssuesAndParticipantSummary() {
-    TestHarness harness = new TestHarness();
-    harness.observedPolicySnapshot.set(
-        new ObservedPolicySnapshot(
-            policy(7L, SecurityMode.ANCHORED), policy(7L, SecurityMode.ANCHORED)));
-    harness.participantStatuses.set(
-        Map.of(
-            "client#7",
-            participantStatus(
-                "client#7",
-                Set.of(ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT),
-                List.of(mismatchReason("TRUST_ANCHOR_MISSING", "Platform trust anchor missing"))),
-            "engine#1",
-            participantStatus("engine#1", Set.of(ParticipantCapability.ENFORCER))));
-    harness.securityEvents.set(
-        List.of(
-            SecurityEventDTO.builder()
-                .eventType(SecurityEventType.DATA_PLANE_BLOCKED)
-                .severity(SecurityEventSeverity.WARNING)
-                .occurredAtMs(7L)
-                .namespace("tenant.default")
-                .participantId("tenant.default.client")
-                .participantInstanceId("client#7")
-                .activePolicyVersion(7L)
-                .activePolicyHash("policy-7")
-                .code("TRUST_ANCHOR_MISSING")
-                .message("Platform trust anchor missing")
-                .build()));
-
-    SimplifiedSecurityPostureSnapshot snapshot = harness.client.getSimplifiedPostureSnapshot();
-
-    assertThat(snapshot.requestedPosture()).isEqualTo(SecurityMode.ANCHORED);
-    assertThat(snapshot.effectivePosture()).isEqualTo(SecurityMode.ANCHORED);
-    assertThat(snapshot.requestStatus()).isEqualTo(SecurityRequestStatus.IN_SYNC);
-    assertThat(snapshot.protectedRuntimeAllowed()).isFalse();
-    assertThat(snapshot.participantSummary().totalParticipants()).isEqualTo(2);
-    assertThat(snapshot.participantSummary().activationRelevantParticipants()).isEqualTo(1);
-    assertThat(snapshot.participantSummary().protectedRuntimeParticipants()).isEqualTo(2);
-    assertThat(snapshot.participantSummary().protectedRuntimeBlockingParticipants()).isEqualTo(1);
-    assertThat(snapshot.blockingIssues())
-        .extracting(BlockingIssue::code)
-        .contains(SecurityPostureIssueCodes.TRUST_ANCHOR_MISSING);
-    assertThat(snapshot.targetModeFeasibility(SecurityMode.ANCHORED).feasibleNow()).isFalse();
-    assertThat(snapshot.targetModeFeasibility(SecurityMode.ANCHORED).blockers())
-        .extracting(BlockingIssue::code)
-        .contains(SecurityPostureIssueCodes.TRUST_ANCHOR_MISSING);
-  }
-
-  @Test
-  void
-      targetModeFeasibility_surfacesExplicitAuthoritativeWriterBlockerWithoutAffectingOpenRuntime() {
-    TestHarness harness = new TestHarness();
-    harness.observedPolicySnapshot.set(
-        new ObservedPolicySnapshot(
-            policy(15L, SecurityMode.ANCHORED), policy(14L, SecurityMode.OPEN)));
-    harness.mutationAvailability.set(
-        AuthoritativePolicyMutationAvailability.blockedNow(
-            SecurityPostureIssueCodes.AUTHORITATIVE_WRITER_UNCONFIGURED,
-            "No explicit authoritative signing identity is configured for namespace security-policy mutation.",
-            Map.of("reason", "signing-identity-missing")));
-
-    SimplifiedSecurityPostureSnapshot snapshot = harness.client.getSimplifiedPostureSnapshot();
-
-    assertThat(snapshot.requestedPosture()).isEqualTo(SecurityMode.ANCHORED);
-    assertThat(snapshot.effectivePosture()).isEqualTo(SecurityMode.OPEN);
-    assertThat(snapshot.protectedRuntimeAllowed()).isTrue();
-    assertThat(snapshot.targetModeFeasibility(SecurityMode.ANCHORED).feasibleNow()).isFalse();
-    assertThat(snapshot.targetModeFeasibility(SecurityMode.ANCHORED).blockers())
-        .extracting(BlockingIssue::code)
-        .containsExactly(SecurityPostureIssueCodes.AUTHORITATIVE_WRITER_UNCONFIGURED);
-  }
-
-  @Test
-  void targetModeFeasibility_usesSupportedModesInsteadOfCurrentReadiness() {
-    TestHarness harness = new TestHarness();
-    harness.observedPolicySnapshot.set(
-        new ObservedPolicySnapshot(
-            policy(21L, SecurityMode.ANCHORED), policy(21L, SecurityMode.OPEN)));
-    harness.participantStatuses.set(
-        Map.of(
-            "client#7",
-            participantStatus(
-                "client#7",
-                Set.of(ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT),
-                Set.of(SecurityMode.OPEN),
-                List.of())));
-
-    SimplifiedSecurityPostureSnapshot snapshot = harness.client.getSimplifiedPostureSnapshot();
-
-    assertThat(snapshot.targetModeFeasibility(SecurityMode.OPEN).feasibleNow()).isTrue();
-    assertThat(snapshot.targetModeFeasibility(SecurityMode.ANCHORED).feasibleNow()).isFalse();
-    assertThat(snapshot.targetModeFeasibility(SecurityMode.ANCHORED).blockers())
-        .extracting(BlockingIssue::code)
-        .contains(SecurityPostureIssueCodes.TARGET_MODE_UNSUPPORTED);
-  }
-
-  @Test
-  void registerNamespaceSecurityPolicyConsumer_replaysCurrentSnapshotAndUpdates() {
-    TestHarness harness = new TestHarness();
-    harness.observedPolicySnapshot.set(
-        new ObservedPolicySnapshot(policy(4L, SecurityMode.OPEN), null));
-
-    List<ObservedPolicySnapshot> observedSnapshots = new ArrayList<>();
-    harness.client.registerNamespaceSecurityPolicyConsumer(observedSnapshots::add);
-
-    assertThat(observedSnapshots).hasSize(1);
-    assertThat(observedSnapshots.getFirst().effectivePolicyVersion()).isEqualTo(4L);
-
-    harness.observedPolicySnapshot.set(
-        new ObservedPolicySnapshot(
-            policy(5L, SecurityMode.ANCHORED), policy(5L, SecurityMode.ANCHORED)));
-    harness.emitPolicySnapshot();
-
-    assertThat(observedSnapshots).hasSize(2);
-    assertThat(observedSnapshots.getLast().effectivePolicyVersion()).isEqualTo(5L);
-    assertThat(observedSnapshots.getLast().effectivePolicyHash()).isEqualTo("policy-5");
-  }
 
   @Test
   void registerParticipantStatusConsumer_replaysCurrentSnapshotAndUpdates() {
@@ -243,11 +86,8 @@ class SecurityObservabilityClientTest {
   }
 
   @Test
-  void getPostureSnapshot_assemblesPolicyStatusesMismatchesAndEvents() {
+  void getPostureSnapshot_assemblesStatusesMismatchesAndEvents() {
     TestHarness harness = new TestHarness();
-    harness.observedPolicySnapshot.set(
-        new ObservedPolicySnapshot(
-            policy(12L, SecurityMode.OPEN), policy(11L, SecurityMode.ANCHORED)));
     harness.participantStatuses.set(
         Map.of(
             "client#7",
@@ -259,9 +99,6 @@ class SecurityObservabilityClientTest {
 
     SecurityPostureSnapshot snapshot = harness.client.getPostureSnapshot();
 
-    assertThat(snapshot.effectiveMode()).isEqualTo(SecurityMode.ANCHORED);
-    assertThat(snapshot.effectivePolicyVersion()).isEqualTo(11L);
-    assertThat(snapshot.effectivePolicyHash()).isEqualTo("policy-11");
     assertThat(snapshot.participantStatuses()).containsOnlyKeys("client#7");
     assertThat(snapshot.mismatchReasons()).hasSize(1);
     assertThat(snapshot.mismatchReasons().getFirst().participantInstanceId()).isEqualTo("client#7");
@@ -275,8 +112,6 @@ class SecurityObservabilityClientTest {
   @Test
   void getPostureSnapshot_keepsMismatchVisibilitySeparateFromEventHistory() {
     TestHarness harness = new TestHarness();
-    harness.observedPolicySnapshot.set(
-        new ObservedPolicySnapshot(policy(6L, SecurityMode.OPEN), policy(6L, SecurityMode.OPEN)));
     harness.participantStatuses.set(
         Map.of(
             "client#2",
@@ -298,23 +133,15 @@ class SecurityObservabilityClientTest {
   void snapshotHelpers_defaultToEmptyStateWhenNothingHasBeenObserved() {
     TestHarness harness = new TestHarness();
     SecurityPostureSnapshot postureSnapshot = harness.client.getPostureSnapshot();
-    SimplifiedSecurityPostureSnapshot simplifiedSnapshot =
-        harness.client.getSimplifiedPostureSnapshot();
 
-    assertThat(harness.client.getObservedPolicySnapshot())
-        .isEqualTo(ObservedPolicySnapshot.empty());
     assertThat(harness.client.getParticipantStatusSnapshot()).isEmpty();
     assertThat(harness.client.getRecentSecurityEvents()).isEmpty();
     assertThat(postureSnapshot).isEqualTo(SecurityPostureSnapshot.empty());
-    assertThat(simplifiedSnapshot.requestedPosture()).isEqualTo(SecurityMode.OPEN);
-    assertThat(simplifiedSnapshot.effectivePosture()).isEqualTo(SecurityMode.OPEN);
-    assertThat(simplifiedSnapshot.requestStatus()).isEqualTo(SecurityRequestStatus.IN_SYNC);
-    assertThat(simplifiedSnapshot.protectedRuntimeAllowed()).isTrue();
-    assertThat(harness.initializerCalls.get()).isGreaterThanOrEqualTo(5);
+    assertThat(harness.initializerCalls.get()).isGreaterThanOrEqualTo(2);
   }
 
   @Test
-  void awaitHelpers_pollUntilPolicyStatusesEventsAndPostureAppear() throws Exception {
+  void awaitHelpers_pollUntilStatusesAndEventsAppear() throws Exception {
     TestHarness harness = new TestHarness();
 
     Thread updater =
@@ -327,9 +154,6 @@ class SecurityObservabilityClientTest {
                     Thread.currentThread().interrupt();
                     throw new RuntimeException(e);
                   }
-                  harness.observedPolicySnapshot.set(
-                      new ObservedPolicySnapshot(
-                          policy(9L, SecurityMode.ANCHORED), policy(9L, SecurityMode.ANCHORED)));
                   harness.participantStatuses.set(
                       Map.of(
                           "engine#1",
@@ -340,10 +164,6 @@ class SecurityObservabilityClientTest {
                   harness.securityEvents.set(List.of(securityEvent("POLICY_ACTIVE", 9L)));
                 });
 
-    ObservedPolicySnapshot policySnapshot =
-        harness.client.awaitObservedPolicy(
-            snapshot -> Long.valueOf(9L).equals(snapshot.effectivePolicyVersion()),
-            Duration.ofSeconds(1));
     Map<String, ParticipantStatusDTO> statuses =
         harness.client.awaitParticipantStatusSnapshot(
             snapshot -> snapshot.containsKey("engine#1"), Duration.ofSeconds(1));
@@ -356,48 +176,24 @@ class SecurityObservabilityClientTest {
                 snapshot.hasMismatchReasons()
                     && snapshot.participantStatuses().containsKey("engine#1"),
             Duration.ofSeconds(1));
-    SimplifiedSecurityPostureSnapshot simplifiedSnapshot =
-        harness.client.awaitSimplifiedPostureSnapshot(
-            snapshot -> snapshot.hasBlockingIssues(), Duration.ofSeconds(1));
 
     updater.join();
 
-    assertThat(policySnapshot.effectivePolicyHash()).isEqualTo("policy-9");
     assertThat(statuses).containsKey("engine#1");
     assertThat(event.getOccurredAtMs()).isEqualTo(9L);
     assertThat(postureSnapshot.mismatchReasons())
         .extracting(mismatch -> mismatch.mismatchReason().getCode())
         .containsExactly("ENGINE_SYNC_PENDING");
-    assertThat(simplifiedSnapshot.requestStatus()).isEqualTo(SecurityRequestStatus.IN_SYNC);
-    assertThat(simplifiedSnapshot.blockingIssues())
-        .extracting(BlockingIssue::code)
-        .contains("ENGINE_SYNC_PENDING");
-  }
-
-  private static NamespaceSecurityPolicyDTO policy(long version, SecurityMode mode) {
-    return NamespaceSecurityPolicyDTO.builder()
-        .mode(mode)
-        .policyVersion(version)
-        .policyHash("policy-" + version)
-        .build();
   }
 
   private static ParticipantStatusDTO participantStatus(
       String participantInstanceId, Set<ParticipantCapability> capabilities) {
-    return participantStatus(participantInstanceId, capabilities, null, List.of());
+    return participantStatus(participantInstanceId, capabilities, List.of());
   }
 
   private static ParticipantStatusDTO participantStatus(
       String participantInstanceId,
       Set<ParticipantCapability> capabilities,
-      List<PolicyMismatchReasonDTO> mismatchReasons) {
-    return participantStatus(participantInstanceId, capabilities, null, mismatchReasons);
-  }
-
-  private static ParticipantStatusDTO participantStatus(
-      String participantInstanceId,
-      Set<ParticipantCapability> capabilities,
-      Set<SecurityMode> supportedModes,
       List<PolicyMismatchReasonDTO> mismatchReasons) {
     return ParticipantStatusDTO.builder()
         .participantId(participantInstanceId.substring(0, participantInstanceId.indexOf('#')))
@@ -405,7 +201,6 @@ class SecurityObservabilityClientTest {
         .participantKind(ParticipantKind.CLIENT)
         .componentType("test-component")
         .capabilities(capabilities)
-        .supportedModes(supportedModes)
         .namespace("tenant.default")
         .startedAt(1L)
         .lastSeenAt(System.currentTimeMillis())
@@ -416,8 +211,6 @@ class SecurityObservabilityClientTest {
                 ? ParticipantEffectiveState.READY
                 : ParticipantEffectiveState.MISMATCH)
         .readyForDataPlane(mismatchReasons == null || mismatchReasons.isEmpty())
-        .observedPolicyVersion(7L)
-        .observedPolicyHash("policy-7")
         .mismatchReasons(mismatchReasons == null ? List.of() : List.copyOf(mismatchReasons))
         .build();
   }
@@ -443,35 +236,23 @@ class SecurityObservabilityClientTest {
 
   private static final class TestHarness {
 
-    private final AtomicReference<ObservedPolicySnapshot> observedPolicySnapshot =
-        new AtomicReference<>(ObservedPolicySnapshot.empty());
     private final AtomicReference<Map<String, ParticipantStatusDTO>> participantStatuses =
         new AtomicReference<>(Map.of());
     private final AtomicReference<List<SecurityEventDTO>> securityEvents =
         new AtomicReference<>(List.of());
-    private final AtomicReference<AuthoritativePolicyMutationAvailability> mutationAvailability =
-        new AtomicReference<>(AuthoritativePolicyMutationAvailability.notObserved());
-    private final List<NamespaceSecurityPolicyConsumer> policyConsumers = new ArrayList<>();
     private final List<ParticipantStatusConsumer> participantStatusConsumers = new ArrayList<>();
     private final List<SecurityEventConsumer> securityEventConsumers = new ArrayList<>();
     private final AtomicInteger initializerCalls = new AtomicInteger();
     private final SecurityObservabilityClient client =
         new SecurityObservabilityClient(
-            observedPolicySnapshot::get,
             participantStatuses::get,
             securityEvents::get,
-            mutationAvailability::get,
             new SecurityObservabilityClient.ConsumerRegistrars(
-                policyConsumers::add, participantStatusConsumers::add, securityEventConsumers::add),
+                consumer -> {},
+                participantStatusConsumers::add,
+                securityEventConsumers::add),
             initializerCalls::incrementAndGet,
             Duration.ofMillis(10));
-
-    private void emitPolicySnapshot() {
-      ObservedPolicySnapshot snapshot = observedPolicySnapshot.get();
-      for (NamespaceSecurityPolicyConsumer consumer : policyConsumers) {
-        consumer.accept(snapshot);
-      }
-    }
 
     private void emitParticipantStatuses() {
       Map<String, ParticipantStatusDTO> snapshot = participantStatuses.get();

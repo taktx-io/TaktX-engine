@@ -80,8 +80,6 @@ class ParticipantStatusProcessorTest {
   void statusRecord_updatesStore() {
     ParticipantStatusDTO status =
         engineStatus("engine-2-pod-7f8c4d", ParticipantEffectiveState.MISMATCH).toBuilder()
-            .observedPolicyVersion(42L)
-            .observedPolicyHash("abc123")
             .mismatchReasons(
                 List.of(
                     PolicyMismatchReasonDTO.builder()
@@ -119,8 +117,6 @@ class ParticipantStatusProcessorTest {
     ParticipantStatusDTO valid =
         engineStatus("engine-2-pod-7f8c4d", ParticipantEffectiveState.READY).toBuilder()
             .readyForDataPlane(true)
-            .observedPolicyVersion(42L)
-            .observedPolicyHash("abc123")
             .build();
 
     statusTopic.pipeInput(
@@ -147,8 +143,6 @@ class ParticipantStatusProcessorTest {
         engineStatus("engine-2-expired", ParticipantEffectiveState.READY).toBuilder()
             .statusExpiresAt(1716450060001L)
             .readyForDataPlane(true)
-            .observedPolicyVersion(42L)
-            .observedPolicyHash("abc123")
             .build();
     ParticipantStatusDTO current =
         expired.toBuilder()

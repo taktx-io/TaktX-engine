@@ -44,8 +44,6 @@ class SecurityObservabilityProtoMapperTest {
             .statusVerificationLevel(StatusVerificationLevel.UNVERIFIED_STATUS)
             .effectiveState(ParticipantEffectiveState.MISMATCH)
             .readyForDataPlane(false)
-            .observedPolicyVersion(42L)
-            .observedPolicyHash("abc123")
             .mismatchReasons(
                 List.of(
                     PolicyMismatchReasonDTO.builder()
