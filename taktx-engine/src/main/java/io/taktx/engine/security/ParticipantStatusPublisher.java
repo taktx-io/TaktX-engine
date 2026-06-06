@@ -9,12 +9,10 @@ package io.taktx.engine.security;
 
 import io.quarkus.runtime.Startup;
 import io.taktx.Topics;
-import io.taktx.dto.NamespaceSecurityPolicyDTO;
 import io.taktx.dto.ParticipantStatusDTO;
 import io.taktx.dto.SecurityEventDTO;
 import io.taktx.dto.SecurityEventSeverity;
 import io.taktx.dto.SecurityEventType;
-import io.taktx.engine.config.NamespaceSecurityPolicyStore;
 import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.generic.KafkaClientsConfig;
 import io.taktx.serdes.ParticipantStatusProtoMapper;
@@ -42,7 +40,6 @@ public class ParticipantStatusPublisher {
 
   private final TaktConfiguration configuration;
   private final KafkaClientsConfig kafkaClientsConfig;
-  private final NamespaceSecurityPolicyStore namespaceSecurityPolicyStore;
   private final EngineSecurityReadinessEvaluator readinessEvaluator;
   private final SecurityEventPublisher securityEventPublisher;
   private final AtomicReference<String> lastBlockedEventFingerprint = new AtomicReference<>(null);
@@ -52,25 +49,21 @@ public class ParticipantStatusPublisher {
   public ParticipantStatusPublisher(
       TaktConfiguration configuration,
       KafkaClientsConfig kafkaClientsConfig,
-      NamespaceSecurityPolicyStore namespaceSecurityPolicyStore,
       SecurityEventPublisher securityEventPublisher,
       EngineSecurityReadinessEvaluator readinessEvaluator) {
     this.configuration = configuration;
     this.kafkaClientsConfig = kafkaClientsConfig;
-    this.namespaceSecurityPolicyStore = namespaceSecurityPolicyStore;
     this.securityEventPublisher = securityEventPublisher;
     this.readinessEvaluator = readinessEvaluator;
   }
 
   ParticipantStatusPublisher(
       TaktConfiguration configuration,
-      NamespaceSecurityPolicyStore namespaceSecurityPolicyStore,
       EngineSecurityReadinessEvaluator readinessEvaluator,
       SecurityEventPublisher securityEventPublisher,
       KafkaProducer<String, byte[]> producer) {
     this.configuration = configuration;
     this.kafkaClientsConfig = null;
-    this.namespaceSecurityPolicyStore = namespaceSecurityPolicyStore;
     this.readinessEvaluator = readinessEvaluator;
     this.securityEventPublisher = securityEventPublisher;
     this.producer = producer;
@@ -124,11 +117,6 @@ public class ParticipantStatusPublisher {
   }
 
   private void publishBlockedEventIfNeeded(ParticipantStatusDTO status) {
-    NamespaceSecurityPolicyDTO authoritativePolicy =
-        namespaceSecurityPolicyStore != null
-            ? namespaceSecurityPolicyStore.getAuthoritativePolicy()
-            : null;
-
     String code = null;
     String message = null;
     Map<String, String> metadata = new LinkedHashMap<>();
@@ -151,10 +139,6 @@ public class ParticipantStatusPublisher {
               .distinct()
               .reduce((left, right) -> left + "," + right)
               .orElse(""));
-      if (authoritativePolicy != null) {
-        metadata.put("policyVersion", String.valueOf(authoritativePolicy.getPolicyVersion()));
-        metadata.put("policyHash", String.valueOf(authoritativePolicy.getPolicyHash()));
-      }
     }
 
     if (code == null || securityEventPublisher == null || status == null) {
@@ -165,25 +149,11 @@ public class ParticipantStatusPublisher {
     metadata.put("participantId", status.getParticipantId());
     metadata.put("participantInstanceId", status.getParticipantInstanceId());
     metadata.put("readyForDataPlane", Boolean.toString(status.isReadyForDataPlane()));
-    if (status.getObservedPolicyVersion() != null) {
-      metadata.put("observedPolicyVersion", String.valueOf(status.getObservedPolicyVersion()));
-    }
-    if (status.getObservedPolicyHash() != null) {
-      metadata.put("observedPolicyHash", status.getObservedPolicyHash());
-    }
 
     String fingerprint =
         code
             + "|"
             + metadata.getOrDefault("effectiveState", "")
-            + "|"
-            + metadata.getOrDefault("policyVersion", "")
-            + "|"
-            + metadata.getOrDefault("policyHash", "")
-            + "|"
-            + metadata.getOrDefault("observedPolicyVersion", "")
-            + "|"
-            + metadata.getOrDefault("observedPolicyHash", "")
             + "|"
             + metadata.getOrDefault("mismatchCodes", "");
     if (fingerprint.equals(lastBlockedEventFingerprint.get())) {
@@ -198,22 +168,6 @@ public class ParticipantStatusPublisher {
             .namespace(status.getNamespace())
             .participantId(status.getParticipantId())
             .participantInstanceId(status.getParticipantInstanceId())
-            .desiredPolicyVersion(
-                authoritativePolicy != null
-                    ? authoritativePolicy.getPolicyVersion()
-                    : status.getObservedPolicyVersion())
-            .desiredPolicyHash(
-                authoritativePolicy != null
-                    ? authoritativePolicy.getPolicyHash()
-                    : status.getObservedPolicyHash())
-            .activePolicyVersion(
-                authoritativePolicy != null
-                    ? authoritativePolicy.getPolicyVersion()
-                    : status.getObservedPolicyVersion())
-            .activePolicyHash(
-                authoritativePolicy != null
-                    ? authoritativePolicy.getPolicyHash()
-                    : status.getObservedPolicyHash())
             .code(code)
             .message(message)
             .metadata(Map.copyOf(metadata))

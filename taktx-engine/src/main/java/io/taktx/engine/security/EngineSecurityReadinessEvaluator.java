@@ -7,57 +7,53 @@
  */
 package io.taktx.engine.security;
 
-import io.taktx.dto.NamespaceSecurityPolicyDTO;
 import io.taktx.dto.ParticipantCapability;
 import io.taktx.dto.ParticipantEffectiveState;
 import io.taktx.dto.ParticipantKind;
 import io.taktx.dto.ParticipantStatusDTO;
 import io.taktx.dto.PolicyMismatchReasonDTO;
 import io.taktx.dto.SecurityMode;
-import io.taktx.dto.SecurityPostureIssueCodes;
 import io.taktx.dto.StatusVerificationLevel;
-import io.taktx.engine.config.NamespaceSecurityPolicyStore;
 import io.taktx.engine.config.TaktConfiguration;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import java.time.Clock;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 
-/** Evaluates the engine's current readiness against the authoritative namespace security policy. */
+/**
+ * Evaluates the engine's current readiness. With mode resolved at startup the only transient
+ * mismatch is the async key-publication window after a cold start in anchored mode.
+ */
 @ApplicationScoped
 public class EngineSecurityReadinessEvaluator {
 
-  static final String TRUST_ANCHOR_MISSING = SecurityPostureIssueCodes.TRUST_ANCHOR_MISSING;
   static final String ENGINE_SIGNING_UNAVAILABLE = "ENGINE_SIGNING_UNAVAILABLE";
-  static final String STABLE_SIGNING_SOURCE_REQUIRED = "ENGINE_STABLE_SIGNING_SOURCE_REQUIRED";
-  static final String ENGINE_KEY_REGISTRATION_SIGNATURE_MISSING =
-      "ENGINE_KEY_REGISTRATION_SIGNATURE_MISSING";
   static final long STATUS_TTL_MS = 30_000L;
   private static final Set<ParticipantCapability> ENGINE_CAPABILITIES =
       Set.of(ParticipantCapability.ENFORCER, ParticipantCapability.SECURITY_OBSERVER);
 
   private final TaktConfiguration configuration;
-  private final NamespaceSecurityPolicyStore namespaceSecurityPolicyStore;
   private final MessageSigningService messageSigningService;
   private final Clock clock;
   private final long startedAtMs;
+  private final boolean anchored;
 
+  @Inject
   public EngineSecurityReadinessEvaluator(
       TaktConfiguration configuration,
-      NamespaceSecurityPolicyStore namespaceSecurityPolicyStore,
       MessageSigningService messageSigningService,
       Clock clock) {
     this.configuration = configuration;
-    this.namespaceSecurityPolicyStore = namespaceSecurityPolicyStore;
     this.messageSigningService = messageSigningService;
     this.clock = clock;
     this.startedAtMs = clock.millis();
+    this.anchored = configuration.isAnchored();
   }
 
   public ParticipantStatusDTO evaluateCurrentStatus() {
-    NamespaceSecurityPolicyDTO policy = namespaceSecurityPolicyStore.getAuthoritativePolicy();
     messageSigningService.ensureSigningPreparationIfNeeded();
     boolean anchoredModeSupported = supportsAnchoredModeNow();
     long nowMs = clock.millis();
@@ -65,53 +61,16 @@ public class EngineSecurityReadinessEvaluator {
 
     ParticipantEffectiveState effectiveState = ParticipantEffectiveState.READY;
     boolean readyForDataPlane = true;
-    Long observedPolicyVersion = null;
-    String observedPolicyHash = null;
 
-    if (policy != null) {
-      observedPolicyVersion = policy.getPolicyVersion();
-      observedPolicyHash = policy.getPolicyHash();
-
-      if (policy.getMode() == SecurityMode.ANCHORED) {
-        // Trust anchor is the primary architectural prerequisite — check it first so that
-        // the first mismatch reason (used as the security-event code) reflects the most
-        // significant missing piece when multiple conditions are unmet simultaneously.
-        if (!hasPlatformTrustAnchorConfigured()) {
-          effectiveState = ParticipantEffectiveState.MISMATCH;
-          readyForDataPlane = false;
-          mismatchReasons.add(
-              mismatchReason(
-                  TRUST_ANCHOR_MISSING,
-                  "Namespace requires anchored trust but no platform public key is configured"));
-        }
-
-        if (!hasStableSigningSourceConfigured()) {
-          effectiveState = ParticipantEffectiveState.MISMATCH;
-          readyForDataPlane = false;
-          mismatchReasons.add(
-              mismatchReason(
-                  STABLE_SIGNING_SOURCE_REQUIRED,
-                  "Namespace requires anchored trust but the engine is not configured with a stable signing identity source (env/file)"));
-        }
-
-        if (messageSigningService.getKeyId() == null
-            || !messageSigningService.isPublicKeyPublished()) {
-          effectiveState = ParticipantEffectiveState.MISMATCH;
-          readyForDataPlane = false;
-          mismatchReasons.add(
-              mismatchReason(
-                  ENGINE_SIGNING_UNAVAILABLE,
-                  "Namespace requires anchored posture but the engine signing identity is not yet available and published"));
-        }
-
-        if (!hasEngineKeyRegistrationSignatureConfigured()) {
-          effectiveState = ParticipantEffectiveState.MISMATCH;
-          readyForDataPlane = false;
-          mismatchReasons.add(
-              mismatchReason(
-                  ENGINE_KEY_REGISTRATION_SIGNATURE_MISSING,
-                  "Namespace requires anchored trust but no engine key registration signature is configured"));
-        }
+    if (anchored) {
+      // Only transient reason: own key not yet published after cold start.
+      if (messageSigningService.getKeyId() == null || !messageSigningService.isPublicKeyPublished()) {
+        effectiveState = ParticipantEffectiveState.MISMATCH;
+        readyForDataPlane = false;
+        mismatchReasons.add(
+            mismatchReason(
+                ENGINE_SIGNING_UNAVAILABLE,
+                "Anchored mode active but the engine signing key has not been published yet"));
       }
     }
 
@@ -130,16 +89,12 @@ public class EngineSecurityReadinessEvaluator {
         .statusVerificationLevel(StatusVerificationLevel.LOCALLY_VERIFIED_STATUS)
         .effectiveState(effectiveState)
         .readyForDataPlane(readyForDataPlane)
-        .observedPolicyVersion(observedPolicyVersion)
-        .observedPolicyHash(observedPolicyHash)
         .mismatchReasons(List.copyOf(mismatchReasons))
         .currentSigningKeyId(signingKeyId)
         .build();
   }
 
   private String participantId(String signingKeyId) {
-    // When a signing key is configured, the key ID IS the participant ID.
-    // Fallback for unsigned / unconfigured engines: namespace.engine
     if (signingKeyId != null && !signingKeyId.isBlank()) {
       return signingKeyId;
     }
@@ -147,7 +102,6 @@ public class EngineSecurityReadinessEvaluator {
   }
 
   private static String componentType(String signingKeyId) {
-    // Derive component type from first dash-segment of key ID (e.g. "engine-a3f2" → "engine").
     if (signingKeyId != null && !signingKeyId.isBlank()) {
       return signingKeyId.split("-", 2)[0];
     }
@@ -173,34 +127,7 @@ public class EngineSecurityReadinessEvaluator {
   }
 
   private boolean supportsAnchoredModeNow() {
-    if (!messageSigningService.hasPublishableSigningIdentity()) {
-      return false;
-    }
-    return hasStableSigningSourceConfigured()
-        && hasPlatformTrustAnchorConfigured()
-        && hasEngineKeyRegistrationSignatureConfigured();
-  }
-
-  private boolean hasStableSigningSourceConfigured() {
-    String sourceType = configuration.getSigningIdentitySourceType();
-    if (isBlank(sourceType)) {
-      return false;
-    }
-    return "env".equalsIgnoreCase(sourceType)
-        || "environment".equalsIgnoreCase(sourceType)
-        || "file".equalsIgnoreCase(sourceType);
-  }
-
-  private boolean hasPlatformTrustAnchorConfigured() {
-    return !isBlank(configuration.getPlatformPublicKey());
-  }
-
-  private boolean hasEngineKeyRegistrationSignatureConfigured() {
-    return !isBlank(configuration.getEngineKeyRegistrationSignature());
-  }
-
-  private static boolean isBlank(String value) {
-    return value == null || value.isBlank();
+    return anchored && messageSigningService.hasPublishableSigningIdentity();
   }
 
   private static PolicyMismatchReasonDTO mismatchReason(String code, String message) {

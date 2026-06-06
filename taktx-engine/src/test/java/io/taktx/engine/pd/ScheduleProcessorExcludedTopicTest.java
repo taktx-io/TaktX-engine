@@ -175,7 +175,7 @@ class ScheduleProcessorExcludedTopicTest {
     when(protectedDataPlaneParticipationGuard.evaluate())
         .thenReturn(
             ProtectedDataPlaneParticipationGuard.Decision.blocked(
-                ProtectedDataPlaneParticipationGuard.POLICY_NOT_READY_HINT, "engine not ready"));
+                ProtectedDataPlaneParticipationGuard.ENGINE_SIGNING_UNAVAILABLE, "engine not ready"));
 
     scheduleProcessor.process(
         new Record<>(

@@ -30,8 +30,6 @@ import io.taktx.dto.NamespaceSecurityPolicyDTO;
 import io.taktx.dto.OneTimeScheduleDTO;
 import io.taktx.dto.ProcessDefinitionKey;
 import io.taktx.dto.ReplayProtectionMode;
-import io.taktx.dto.RequiredAuthorizationDTO;
-import io.taktx.dto.RequiredSigningDTO;
 import io.taktx.dto.SetVariableTriggerDTO;
 import io.taktx.dto.SignalDTO;
 import io.taktx.dto.SigningKeyDTO;
@@ -44,7 +42,6 @@ import io.taktx.dto.UserTaskResponseTriggerDTO;
 import io.taktx.dto.UserTaskResponseType;
 import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.config.GlobalConfigStore;
-import io.taktx.engine.config.NamespaceSecurityPolicyStore;
 import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.pd.MessageEventIngressEnvelope;
 import io.taktx.engine.pd.ScheduleCommandEnvelope;
@@ -54,7 +51,6 @@ import io.taktx.engine.topicmanagement.TopicMetaIngressEnvelope;
 import io.taktx.security.AuthorizationTokenException;
 import io.taktx.security.Ed25519Service;
 import io.taktx.security.SigningKeyGenerator;
-import io.taktx.serdes.NamespaceSecurityPolicyProtoMapper;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyPairGenerator;
 import java.time.Instant;
@@ -76,7 +72,6 @@ class EngineAuthorizationServiceTest {
 
   private TaktConfiguration config;
   private GlobalConfigStore globalConfigStore;
-  private NamespaceSecurityPolicyStore namespaceSecurityPolicyStore;
   private PublicKeyProvider publicKeyProvider;
   private KafkaStreams kafkaStreams;
   private ReadOnlyKeyValueStore<String, SigningKeyDTO> signingKeysStore;
@@ -89,8 +84,8 @@ class EngineAuthorizationServiceTest {
     rsaKeyPair = KeyPairGenerator.getInstance("RSA").generateKeyPair();
 
     config = mock(TaktConfiguration.class);
+    when(config.isAnchored()).thenReturn(false);
     globalConfigStore = new GlobalConfigStore();
-    namespaceSecurityPolicyStore = new NamespaceSecurityPolicyStore();
     publicKeyProvider = mock(PublicKeyProvider.class);
     kafkaStreams = mock(KafkaStreams.class);
     signingKeysStore = mock(ReadOnlyKeyValueStore.class);
@@ -104,7 +99,6 @@ class EngineAuthorizationServiceTest {
         new EngineAuthorizationService(
             config,
             globalConfigStore,
-            namespaceSecurityPolicyStore,
             publicKeyProvider,
             kafkaStreams);
   }
@@ -367,7 +361,6 @@ class EngineAuthorizationServiceTest {
         new EngineAuthorizationService(
             config,
             globalConfigStore,
-            namespaceSecurityPolicyStore,
             publicKeyProvider,
             kafkaStreams,
             (_, _) -> false);
@@ -534,12 +527,8 @@ class EngineAuthorizationServiceTest {
 
   @Test
   void messageEventIngress_anchoredPolicy_missingSignatureRejected() {
-    when(config.getPlatformPublicKey()).thenReturn("platform-public-key");
-    namespaceSecurityPolicyStore.update(
-        NamespaceSecurityPolicyDTO.builder()
-            .mode(io.taktx.dto.SecurityMode.ANCHORED)
-            .policyVersion(66L)
-            .build());
+    when(config.isAnchored()).thenReturn(true);
+    service = new EngineAuthorizationService(config, globalConfigStore, publicKeyProvider, kafkaStreams);
     DefinitionMessageEventTriggerDTO messageEvent =
         new DefinitionMessageEventTriggerDTO("payment-received", VariablesDTO.empty());
 
@@ -603,118 +592,6 @@ class EngineAuthorizationServiceTest {
                         "Malformed base64 signature for keyId=signal-client-key")))
         .isInstanceOf(AuthorizationTokenException.class)
         .hasMessageContaining("Malformed base64 signature");
-  }
-
-  @Test
-  void namespaceSecurityPolicyMutation_platformKeyAccepted() {
-    java.security.KeyPair ed25519KeyPair = SigningKeyGenerator.generate();
-    String privateKeyBase64 = SigningKeyGenerator.encodePrivateKey(ed25519KeyPair.getPrivate());
-    String publicKeyBase64 = SigningKeyGenerator.encodePublicKey(ed25519KeyPair.getPublic());
-    String keyId = "platform-policy-key";
-    SigningKeyDTO keyEntry =
-        SigningKeyDTO.builder()
-            .keyId(keyId)
-            .publicKeyBase64(publicKeyBase64)
-            .algorithm("Ed25519")
-            .status(KeyStatus.ACTIVE)
-            .role(KeyRole.PLATFORM)
-            .build();
-    when(signingKeysStore.get(keyId)).thenReturn(keyEntry);
-
-    byte[] payload =
-        NamespaceSecurityPolicyProtoMapper.toProto(
-                NamespaceSecurityPolicyDTO.builder()
-                    .mode(io.taktx.dto.SecurityMode.ANCHORED)
-                    .policyVersion(42L)
-                    .build())
-            .toByteArray();
-
-    SigningKeyDTO result =
-        service.authorizeNamespaceSecurityPolicyMutation(
-            headersWithSignedPayload(keyId, privateKeyBase64, payload), payload);
-
-    assertThat(result).isEqualTo(keyEntry);
-  }
-
-  @Test
-  void namespaceSecurityPolicyMutation_missingSignatureRejected() {
-    byte[] payload =
-        NamespaceSecurityPolicyProtoMapper.toProto(
-                NamespaceSecurityPolicyDTO.builder()
-                    .mode(io.taktx.dto.SecurityMode.OPEN)
-                    .policyVersion(1L)
-                    .build())
-            .toByteArray();
-
-    assertThatThrownBy(
-            () -> service.authorizeNamespaceSecurityPolicyMutation(new RecordHeaders(), payload))
-        .isInstanceOf(AuthorizationTokenException.class)
-        .hasMessageContaining("namespace security policy mutation")
-        .hasMessageContaining("tx-sig");
-  }
-
-  @Test
-  void namespaceSecurityPolicyMutation_clientKeyRejected() {
-    java.security.KeyPair ed25519KeyPair = SigningKeyGenerator.generate();
-    String privateKeyBase64 = SigningKeyGenerator.encodePrivateKey(ed25519KeyPair.getPrivate());
-    String publicKeyBase64 = SigningKeyGenerator.encodePublicKey(ed25519KeyPair.getPublic());
-    String keyId = "client-policy-key";
-    SigningKeyDTO keyEntry =
-        SigningKeyDTO.builder()
-            .keyId(keyId)
-            .publicKeyBase64(publicKeyBase64)
-            .algorithm("Ed25519")
-            .status(KeyStatus.ACTIVE)
-            .role(KeyRole.CLIENT)
-            .build();
-    when(signingKeysStore.get(keyId)).thenReturn(keyEntry);
-
-    byte[] payload =
-        NamespaceSecurityPolicyProtoMapper.toProto(
-                NamespaceSecurityPolicyDTO.builder()
-                    .mode(io.taktx.dto.SecurityMode.OPEN)
-                    .policyVersion(9L)
-                    .build())
-            .toByteArray();
-
-    assertThatThrownBy(
-            () ->
-                service.authorizeNamespaceSecurityPolicyMutation(
-                    headersWithSignedPayload(keyId, privateKeyBase64, payload), payload))
-        .isInstanceOf(AuthorizationTokenException.class)
-        .hasMessageContaining("required role PLATFORM");
-  }
-
-  @Test
-  void namespaceSecurityPolicyMutation_breakGlassDowngradeStillRequiresPlatformRole() {
-    java.security.KeyPair ed25519KeyPair = SigningKeyGenerator.generate();
-    String privateKeyBase64 = SigningKeyGenerator.encodePrivateKey(ed25519KeyPair.getPrivate());
-    String publicKeyBase64 = SigningKeyGenerator.encodePublicKey(ed25519KeyPair.getPublic());
-    String keyId = "client-break-glass-key";
-    SigningKeyDTO keyEntry =
-        SigningKeyDTO.builder()
-            .keyId(keyId)
-            .publicKeyBase64(publicKeyBase64)
-            .algorithm("Ed25519")
-            .status(KeyStatus.ACTIVE)
-            .role(KeyRole.CLIENT)
-            .build();
-    when(signingKeysStore.get(keyId)).thenReturn(keyEntry);
-
-    byte[] payload =
-        NamespaceSecurityPolicyProtoMapper.toProto(
-                NamespaceSecurityPolicyDTO.builder()
-                    .mode(io.taktx.dto.SecurityMode.OPEN)
-                    .policyVersion(77L)
-                    .build())
-            .toByteArray();
-
-    assertThatThrownBy(
-            () ->
-                service.authorizeNamespaceSecurityPolicyMutation(
-                    headersWithSignedPayload(keyId, privateKeyBase64, payload), payload))
-        .isInstanceOf(AuthorizationTokenException.class)
-        .hasMessageContaining("required role PLATFORM");
   }
 
   // ── missing header ─────────────────────────────────────────────────────────
@@ -1157,11 +1034,8 @@ class EngineAuthorizationServiceTest {
 
   @Test
   void authoritativeAnchoredPolicy_startCommandRequiresSignatureNotJwt() {
-    when(config.getPlatformPublicKey()).thenReturn("platform-public-key");
-    namespaceSecurityPolicyStore.update(
-        activeAuthoritativePolicy(
-            RequiredAuthorizationDTO.builder().startCommands(true).build(),
-            RequiredSigningDTO.builder().build()));
+    when(config.isAnchored()).thenReturn(true);
+    service = new EngineAuthorizationService(config, globalConfigStore, publicKeyProvider, kafkaStreams);
 
     assertThatThrownBy(
             () -> service.authorize(new RecordHeaders(), envelope(startCommand("proc", -1))))
@@ -1172,11 +1046,8 @@ class EngineAuthorizationServiceTest {
 
   @Test
   void authoritativeAnchoredPolicy_clientSignedStartCommandAcceptedWithoutJwt() {
-    when(config.getPlatformPublicKey()).thenReturn("platform-public-key");
-    namespaceSecurityPolicyStore.update(
-        activeAuthoritativePolicy(
-            RequiredAuthorizationDTO.builder().startCommands(true).build(),
-            RequiredSigningDTO.builder().build()));
+    when(config.isAnchored()).thenReturn(true);
+    service = new EngineAuthorizationService(config, globalConfigStore, publicKeyProvider, kafkaStreams);
 
     String keyId = "anchored-client-key";
     when(signingKeysStore.get(keyId))
@@ -1201,22 +1072,14 @@ class EngineAuthorizationServiceTest {
 
   @Test
   void openAuthoritativePolicy_doesNotEnableAuthorization() {
-    namespaceSecurityPolicyStore.update(
-        NamespaceSecurityPolicyDTO.builder()
-            .mode(io.taktx.dto.SecurityMode.OPEN)
-            .policyVersion(55L)
-            .build());
-
+    // OPEN mode (default) — no signing/authorization required
     assertThat(service.authorize(new RecordHeaders(), envelope(startCommand("proc", -1)))).isNull();
   }
 
   @Test
   void authoritativePolicy_doesNotEnableTaskCompletionJwtRequirement() {
-    when(config.getPlatformPublicKey()).thenReturn("platform-public-key");
-    namespaceSecurityPolicyStore.update(
-        activeAuthoritativePolicy(
-            RequiredAuthorizationDTO.builder().userTaskCompletion(true).build(),
-            RequiredSigningDTO.builder().build()));
+    when(config.isAnchored()).thenReturn(true);
+    service = new EngineAuthorizationService(config, globalConfigStore, publicKeyProvider, kafkaStreams);
 
     String keyId = "anchored-task-key";
     when(signingKeysStore.get(keyId))
@@ -1249,11 +1112,8 @@ class EngineAuthorizationServiceTest {
 
   @Test
   void authoritativePolicy_clientCommandSigningRejectsUnsignedStartCommand() {
-    when(config.getPlatformPublicKey()).thenReturn("platform-public-key");
-    namespaceSecurityPolicyStore.update(
-        activeAuthoritativePolicy(
-            RequiredAuthorizationDTO.builder().build(),
-            RequiredSigningDTO.builder().clientCommands(true).build()));
+    when(config.isAnchored()).thenReturn(true);
+    service = new EngineAuthorizationService(config, globalConfigStore, publicKeyProvider, kafkaStreams);
 
     assertThatThrownBy(
             () -> service.authorize(new RecordHeaders(), envelope(startCommand("proc", -1))))
@@ -1263,11 +1123,8 @@ class EngineAuthorizationServiceTest {
 
   @Test
   void authoritativePolicy_workerResponseSigningRejectsUnsignedUserTaskCompletion() {
-    when(config.getPlatformPublicKey()).thenReturn("platform-public-key");
-    namespaceSecurityPolicyStore.update(
-        activeAuthoritativePolicy(
-            RequiredAuthorizationDTO.builder().build(),
-            RequiredSigningDTO.builder().workerResponses(true).build()));
+    when(config.isAnchored()).thenReturn(true);
+    service = new EngineAuthorizationService(config, globalConfigStore, publicKeyProvider, kafkaStreams);
 
     assertThatThrownBy(
             () -> service.authorize(new RecordHeaders(), envelope(userTaskResponseTrigger())))
@@ -1277,11 +1134,8 @@ class EngineAuthorizationServiceTest {
 
   @Test
   void authoritativePolicy_engineOutboundSigningRejectsUnsignedScheduleCommand() {
-    when(config.getPlatformPublicKey()).thenReturn("platform-public-key");
-    namespaceSecurityPolicyStore.update(
-        activeAuthoritativePolicy(
-            RequiredAuthorizationDTO.builder().build(),
-            RequiredSigningDTO.builder().engineOutbound(true).build()));
+    when(config.isAnchored()).thenReturn(true);
+    service = new EngineAuthorizationService(config, globalConfigStore, publicKeyProvider, kafkaStreams);
 
     assertThatThrownBy(
             () ->
@@ -1291,43 +1145,6 @@ class EngineAuthorizationServiceTest {
                         oneTimeSchedule(startCommand("proc", -1)), false, null, null)))
         .isInstanceOf(AuthorizationTokenException.class)
         .hasMessageContaining("missing or unverified signature");
-  }
-
-  @Test
-  void authoritativeAnchoredPolicy_blocksStartCommandWhenTrustAnchorMissing() {
-    namespaceSecurityPolicyStore.update(
-        activeAuthoritativePolicy(
-            RequiredAuthorizationDTO.builder().startCommands(true).build(),
-            RequiredSigningDTO.builder().clientCommands(true).build(),
-            true));
-
-    String jwt = buildJwt("START", "proc", -1, UUID.randomUUID().toString(), futureExpiry());
-
-    assertThatThrownBy(
-            () -> service.authorize(headersWithAuth(jwt), envelope(startCommand("proc", -1))))
-        .isInstanceOf(AuthorizationTokenException.class)
-        .hasMessageContaining("platform public key");
-  }
-
-  @Test
-  void authoritativeAnchoredPolicy_blocksScheduleCommandWhenTrustAnchorMissing() {
-    namespaceSecurityPolicyStore.update(
-        activeAuthoritativePolicy(
-            RequiredAuthorizationDTO.builder().build(),
-            RequiredSigningDTO.builder().engineOutbound(true).build(),
-            true));
-
-    assertThatThrownBy(
-            () ->
-                service.authorizeScheduleCommand(
-                    scheduleKey(),
-                    new ScheduleCommandEnvelope(
-                        oneTimeSchedule(startCommand("proc", -1)),
-                        true,
-                        "engine-schedule-key",
-                        null)))
-        .isInstanceOf(AuthorizationTokenException.class)
-        .hasMessageContaining("platform public key");
   }
 
   private GlobalConfigurationDTO authorizationConfig() {
@@ -1368,32 +1185,6 @@ class EngineAuthorizationServiceTest {
 
   private GlobalConfigurationDTO externalTaskAuthorizationConfig(boolean signingEnabled) {
     return config(false, true, false, signingEnabled, ReplayProtectionMode.COMPAT);
-  }
-
-  private NamespaceSecurityPolicyDTO activeAuthoritativePolicy(
-      RequiredAuthorizationDTO requiredAuthorization, RequiredSigningDTO requiredSigning) {
-    return activeAuthoritativePolicy(requiredAuthorization, requiredSigning, false);
-  }
-
-  private NamespaceSecurityPolicyDTO activeAuthoritativePolicy(
-      RequiredAuthorizationDTO requiredAuthorization,
-      RequiredSigningDTO requiredSigning,
-      boolean trustAnchorRequired) {
-    boolean anchored =
-        trustAnchorRequired
-            || (requiredAuthorization != null
-                && (requiredAuthorization.isStartCommands()
-                    || requiredAuthorization.isExternalTaskCompletion()
-                    || requiredAuthorization.isUserTaskCompletion()))
-            || (requiredSigning != null
-                && (requiredSigning.isClientCommands()
-                    || requiredSigning.isWorkerResponses()
-                    || requiredSigning.isEngineOutbound()));
-    return NamespaceSecurityPolicyDTO.builder()
-        .mode(anchored ? io.taktx.dto.SecurityMode.ANCHORED : io.taktx.dto.SecurityMode.OPEN)
-        .policyVersion(42L)
-        .policyHash("policy-hash-42")
-        .build();
   }
 
   // ── helpers ────────────────────────────────────────────────────────────────
@@ -1438,17 +1229,6 @@ class EngineAuthorizationServiceTest {
   private Headers headersWithSignature(String keyId) {
     RecordHeaders headers = new RecordHeaders();
     headers.add("tx-sig", (keyId + ".AABB").getBytes(StandardCharsets.UTF_8));
-    return headers;
-  }
-
-  private Headers headersWithSignedPayload(String keyId, String privateKeyBase64, byte[] payload) {
-    RecordHeaders headers = new RecordHeaders();
-    byte[] signatureBytes =
-        Ed25519Service.sign(payload != null ? payload : new byte[0], privateKeyBase64);
-    headers.add(
-        "tx-sig",
-        (keyId + "." + java.util.Base64.getEncoder().encodeToString(signatureBytes))
-            .getBytes(StandardCharsets.UTF_8));
     return headers;
   }
 

@@ -58,9 +58,8 @@ class SharedParticipantIdentityContractTest {
         .extracting(Enum::name)
         .containsExactly(
             "ENFORCER",
-            "AUTHORITATIVE_POLICY_PUBLISHER",
             "PROTECTED_RUNTIME_PARTICIPANT",
             "SECURITY_OBSERVER")
-        .doesNotContain("ENGINE", "INGESTER", "CONSOLE", "CLIENT");
+        .doesNotContain("AUTHORITATIVE_POLICY_PUBLISHER", "ENGINE", "INGESTER", "CONSOLE", "CLIENT");
   }
 }

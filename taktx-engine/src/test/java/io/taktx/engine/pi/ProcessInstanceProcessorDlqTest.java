@@ -36,17 +36,14 @@ import io.taktx.dto.UserTaskResponseResultDTO;
 import io.taktx.dto.UserTaskResponseTriggerDTO;
 import io.taktx.dto.UserTaskResponseType;
 import io.taktx.dto.VariablesDTO;
-import io.taktx.engine.config.NamespaceSecurityPolicyStore;
 import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.pi.processor.IoMappingProcessor;
 import io.taktx.engine.security.EngineAuthorizationService;
-import io.taktx.engine.security.EngineSecurityReadinessEvaluator;
 import io.taktx.engine.security.MessageSigningService;
 import io.taktx.engine.security.ProtectedDataPlaneParticipationGuard;
 import io.taktx.engine.security.SecurityEventPublisher;
 import io.taktx.engine.topicmanagement.DynamicTopicManager;
 import io.taktx.security.AuthorizationTokenException;
-import io.taktx.security.NamespaceSecurityPolicySupport;
 import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
@@ -274,11 +271,11 @@ class ProcessInstanceProcessorDlqTest {
     when(engineAuthorizationService.authorize(headers, envelope)).thenReturn(null);
 
     ProcessInstanceProcessor guardedProcessor =
-        guardedProcessorWithPolicy(anchoredPolicy(42L), null, true);
+        guardedProcessorWithPolicy(anchoredPolicy(42L), null, false);
 
     guardedProcessor.process(new Record<>(processInstanceId, envelope, 42L, headers));
 
-    assertSecurityEvent(processInstanceId, "TRUST_ANCHOR_MISSING", "READINESS");
+    assertSecurityEvent(processInstanceId, ProtectedDataPlaneParticipationGuard.ENGINE_SIGNING_UNAVAILABLE, "READINESS");
     verifyNoInteractions(definitionsCache);
     verify(context, never()).forward(any());
   }
@@ -301,11 +298,11 @@ class ProcessInstanceProcessorDlqTest {
 
     NamespaceSecurityPolicyDTO activeAnchored = anchoredPolicy(42L);
     ProcessInstanceProcessor guardedProcessor =
-        guardedProcessorWithPolicy(activeAnchored, null, true);
+        guardedProcessorWithPolicy(activeAnchored, null, false);
 
     guardedProcessor.process(new Record<>(processInstanceId, envelope, 42L, headers));
 
-    assertSecurityEvent(processInstanceId, "TRUST_ANCHOR_MISSING", "READINESS");
+    assertSecurityEvent(processInstanceId, ProtectedDataPlaneParticipationGuard.ENGINE_SIGNING_UNAVAILABLE, "READINESS");
     verifyNoInteractions(definitionsCache);
     verify(context, never()).forward(any());
   }
@@ -416,14 +413,17 @@ class ProcessInstanceProcessorDlqTest {
     verify(context, never()).forward(any());
   }
 
+  /**
+   * Creates a guarded processor. When {@code signingAvailable=false} and anchored policy is set,
+   * the guard will block processing with ENGINE_SIGNING_UNAVAILABLE (replacing old
+   * TRUST_ANCHOR_MISSING logic).
+   */
   private ProcessInstanceProcessor guardedProcessorWithPolicy(
       NamespaceSecurityPolicyDTO authoritativePolicy,
       String platformPublicKey,
       boolean signingAvailable) {
-    NamespaceSecurityPolicyStore policyStore = new NamespaceSecurityPolicyStore();
-    policyStore.update(authoritativePolicy);
-    when(taktConfiguration.getSigningIdentitySourceType()).thenReturn("file");
-    when(taktConfiguration.getPlatformPublicKey()).thenReturn(platformPublicKey);
+    boolean anchored = authoritativePolicy != null
+        && io.taktx.dto.SecurityMode.ANCHORED == authoritativePolicy.getMode();
 
     MessageSigningService messageSigningService = mock(MessageSigningService.class);
     when(messageSigningService.getKeyId()).thenReturn(signingAvailable ? "engine-key-1" : null);
@@ -443,11 +443,7 @@ class ProcessInstanceProcessorDlqTest {
             mock(ProcessingStatistics.class),
             mock(DynamicTopicManager.class),
             engineAuthorizationService,
-            new ProtectedDataPlaneParticipationGuard(
-                policyStore,
-                new EngineSecurityReadinessEvaluator(
-                    taktConfiguration, policyStore, messageSigningService, clock),
-                clock),
+            new ProtectedDataPlaneParticipationGuard(anchored, messageSigningService),
             securityEventPublisher);
     setField(guardedProcessor, "context", context);
     setField(guardedProcessor, "processInstanceStore", mock(KeyValueStore.class));
@@ -455,11 +451,9 @@ class ProcessInstanceProcessorDlqTest {
   }
 
   private static NamespaceSecurityPolicyDTO anchoredPolicy(long version) {
-    return NamespaceSecurityPolicySupport.requireValid(
-        NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.ANCHORED)
-            .policyVersion(version)
-            .build());
+    return NamespaceSecurityPolicyDTO.builder()
+        .mode(SecurityMode.ANCHORED)
+        .build();
   }
 
   private void assertSecurityEvent(UUID processInstanceId, String expectedCode, String stage) {

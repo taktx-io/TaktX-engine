@@ -10,7 +10,6 @@ package io.taktx.dto;
 /** Declared participant capabilities used for policy relevance and posture interpretation. */
 public enum ParticipantCapability {
   ENFORCER,
-  AUTHORITATIVE_POLICY_PUBLISHER,
   PROTECTED_RUNTIME_PARTICIPANT,
   SECURITY_OBSERVER
 }

@@ -37,7 +37,7 @@ class TaktXClientBuilderParticipantDescriptorTest {
   }
 
   @Test
-  void resolveParticipantDescriptor_addsAuthoritativePublisherWhenExplicitWriterIdentityExists() {
+  void resolveParticipantDescriptor_addsSigningKeyIdAsParticipantIdWhenConfigured() {
     Properties properties = baseProperties();
     properties.setProperty("taktx.signing.private-key", "private-key");
     properties.setProperty("taktx.signing.key-id", "publisher-key");
@@ -49,14 +49,13 @@ class TaktXClientBuilderParticipantDescriptorTest {
     assertThat(descriptor.capabilities())
         .contains(
             ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT,
-            ParticipantCapability.SECURITY_OBSERVER,
-            ParticipantCapability.AUTHORITATIVE_POLICY_PUBLISHER);
+            ParticipantCapability.SECURITY_OBSERVER);
+    assertThat(descriptor.participantId()).isEqualTo("publisher-key");
   }
 
   @Test
   void resolveParticipantDescriptor_preservesExplicitMixedCapabilityDescriptor() {
     Set<ParticipantCapability> capabilities = new LinkedHashSet<>();
-    capabilities.add(ParticipantCapability.AUTHORITATIVE_POLICY_PUBLISHER);
     capabilities.add(ParticipantCapability.SECURITY_OBSERVER);
     capabilities.add(ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT);
 
@@ -69,11 +68,7 @@ class TaktXClientBuilderParticipantDescriptorTest {
                     capabilities,
                     " admin-console "));
 
-    Properties properties = baseProperties();
-    properties.setProperty("taktx.signing.private-key", "private-key");
-    properties.setProperty("taktx.signing.key-id", "publisher-key");
-
-    SecurityParticipantDescriptor descriptor = builder.resolveParticipantDescriptor(properties);
+    SecurityParticipantDescriptor descriptor = builder.resolveParticipantDescriptor(baseProperties());
 
     assertThat(descriptor.participantId()).isEqualTo("tenant.default.admin-console");
     assertThat(descriptor.componentType()).isEqualTo("admin-console");
@@ -110,25 +105,6 @@ class TaktXClientBuilderParticipantDescriptorTest {
     assertThatThrownBy(() -> builder.resolveParticipantDescriptor(baseProperties()))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("must not declare ENFORCER");
-  }
-
-  @Test
-  void resolveParticipantDescriptor_rejectsPublisherCapabilityWithoutExplicitWriterIdentity() {
-    TaktXClient.TaktXClientBuilder builder =
-        TaktXClient.newClientBuilder()
-            .withParticipantDescriptor(
-                new SecurityParticipantDescriptor(
-                    "tenant.default.console",
-                    ParticipantKind.CLIENT,
-                    Set.of(
-                        ParticipantCapability.AUTHORITATIVE_POLICY_PUBLISHER,
-                        ParticipantCapability.SECURITY_OBSERVER),
-                    "console"));
-
-    assertThatThrownBy(() -> builder.resolveParticipantDescriptor(baseProperties()))
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining(
-            "AUTHORITATIVE_POLICY_PUBLISHER requires an explicit authoritative signing identity");
   }
 
   @Test

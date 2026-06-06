@@ -67,12 +67,6 @@ public final class ParticipantStatusProtoMapper {
       builder.setEffectiveState(toProto(dto.getEffectiveState()));
     }
     builder.setReadyForDataPlane(dto.isReadyForDataPlane());
-    if (dto.getObservedPolicyVersion() != null) {
-      builder.setObservedPolicyVersion(dto.getObservedPolicyVersion());
-    }
-    if (dto.getObservedPolicyHash() != null) {
-      builder.setObservedPolicyHash(dto.getObservedPolicyHash());
-    }
     if (dto.getMismatchReasons() != null) {
       builder.addAllMismatchReasons(
           dto.getMismatchReasons().stream().map(ParticipantStatusProtoMapper::toProto).toList());
@@ -109,9 +103,6 @@ public final class ParticipantStatusProtoMapper {
         .statusVerificationLevel(toDto(message.getStatusVerificationLevel()))
         .effectiveState(toDto(message.getEffectiveState()))
         .readyForDataPlane(message.getReadyForDataPlane())
-        .observedPolicyVersion(
-            message.hasObservedPolicyVersion() ? message.getObservedPolicyVersion() : null)
-        .observedPolicyHash(emptyToNull(message.getObservedPolicyHash()))
         .mismatchReasons(
             message.getMismatchReasonsList().stream()
                 .map(ParticipantStatusProtoMapper::toDto)
@@ -165,8 +156,6 @@ public final class ParticipantStatusProtoMapper {
   private static ParticipantCapabilityMessage toProto(ParticipantCapability capability) {
     return switch (capability) {
       case ENFORCER -> ParticipantCapabilityMessage.ENFORCER;
-      case AUTHORITATIVE_POLICY_PUBLISHER ->
-          ParticipantCapabilityMessage.AUTHORITATIVE_POLICY_PUBLISHER;
       case PROTECTED_RUNTIME_PARTICIPANT ->
           ParticipantCapabilityMessage.PROTECTED_RUNTIME_PARTICIPANT;
       case SECURITY_OBSERVER -> ParticipantCapabilityMessage.SECURITY_OBSERVER;
@@ -176,7 +165,6 @@ public final class ParticipantStatusProtoMapper {
   private static ParticipantCapability toDto(ParticipantCapabilityMessage capability) {
     return switch (capability) {
       case ENFORCER -> ParticipantCapability.ENFORCER;
-      case AUTHORITATIVE_POLICY_PUBLISHER -> ParticipantCapability.AUTHORITATIVE_POLICY_PUBLISHER;
       case PROTECTED_RUNTIME_PARTICIPANT -> ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT;
       case SECURITY_OBSERVER -> ParticipantCapability.SECURITY_OBSERVER;
       case PARTICIPANT_CAPABILITY_UNSPECIFIED, UNRECOGNIZED -> null;

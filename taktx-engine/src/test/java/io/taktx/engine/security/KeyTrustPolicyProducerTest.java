@@ -24,23 +24,8 @@ import org.junit.jupiter.api.Test;
 class KeyTrustPolicyProducerTest {
 
   @Test
-  void productionMode_requiresPlatformPublicKey() {
+  void noPlatformPublicKey_usesOpenTrustPolicy() {
     TaktConfiguration config = mock(TaktConfiguration.class);
-    when(config.isSecurityProductionMode()).thenReturn(true);
-    when(config.getPlatformPublicKey()).thenReturn(null);
-
-    KeyTrustPolicyProducer producer = new KeyTrustPolicyProducer(config);
-
-    assertThatThrownBy(producer::keyTrustPolicy)
-        .isInstanceOf(IllegalStateException.class)
-        .hasMessageContaining("production-mode=true")
-        .hasMessageContaining("TAKTX_PLATFORM_PUBLIC_KEY");
-  }
-
-  @Test
-  void communityMode_withoutPlatformPublicKey_usesOpenTrustPolicy() {
-    TaktConfiguration config = mock(TaktConfiguration.class);
-    when(config.isSecurityProductionMode()).thenReturn(false);
     when(config.getPlatformPublicKey()).thenReturn(null);
 
     KeyTrustPolicy policy = new KeyTrustPolicyProducer(config).keyTrustPolicy();
@@ -49,14 +34,38 @@ class KeyTrustPolicyProducerTest {
   }
 
   @Test
-  void productionMode_withPlatformPublicKey_usesAnchoredTrustPolicy() throws Exception {
+  void platformPublicKeyPresent_withStableSigningSource_usesAnchoredTrustPolicy() throws Exception {
     TaktConfiguration config = mock(TaktConfiguration.class);
-    when(config.isSecurityProductionMode()).thenReturn(true);
     when(config.getPlatformPublicKey()).thenReturn(validPlatformPublicKeyBase64());
+    when(config.getSigningIdentitySourceType()).thenReturn("file");
+    when(config.getEngineKeyRegistrationSignature()).thenReturn("registration-signature");
 
     KeyTrustPolicy policy = new KeyTrustPolicyProducer(config).keyTrustPolicy();
 
     assertThat(policy).isInstanceOf(AnchoredKeyTrustPolicy.class);
+  }
+
+  @Test
+  void platformPublicKeyPresent_withGeneratedSigningSource_failsFast() throws Exception {
+    TaktConfiguration config = mock(TaktConfiguration.class);
+    when(config.getPlatformPublicKey()).thenReturn(validPlatformPublicKeyBase64());
+    when(config.getSigningIdentitySourceType()).thenReturn("generated");
+
+    assertThatThrownBy(() -> new KeyTrustPolicyProducer(config).keyTrustPolicy())
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("TAKTX_SIGNING_IDENTITY_SOURCE");
+  }
+
+  @Test
+  void platformPublicKeyPresent_withMissingRegistrationSignature_failsFast() throws Exception {
+    TaktConfiguration config = mock(TaktConfiguration.class);
+    when(config.getPlatformPublicKey()).thenReturn(validPlatformPublicKeyBase64());
+    when(config.getSigningIdentitySourceType()).thenReturn("env");
+    when(config.getEngineKeyRegistrationSignature()).thenReturn(null);
+
+    assertThatThrownBy(() -> new KeyTrustPolicyProducer(config).keyTrustPolicy())
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("TAKTX_ENGINE_KEY_REGISTRATION_SIGNATURE");
   }
 
   private static String validPlatformPublicKeyBase64() throws Exception {

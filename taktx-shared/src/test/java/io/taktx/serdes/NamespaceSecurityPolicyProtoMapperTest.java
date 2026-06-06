@@ -18,11 +18,7 @@ class NamespaceSecurityPolicyProtoMapperTest {
   @Test
   void namespaceSecurityPolicy_roundTripsThroughProto() {
     NamespaceSecurityPolicyDTO dto =
-        NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.ANCHORED)
-            .policyVersion(42L)
-            .policyHash("abc123")
-            .build();
+        NamespaceSecurityPolicyDTO.builder().mode(SecurityMode.ANCHORED).build();
 
     assertThat(
             NamespaceSecurityPolicyProtoMapper.toDto(
@@ -31,16 +27,13 @@ class NamespaceSecurityPolicyProtoMapperTest {
   }
 
   @Test
-  void namespaceSecurityPolicy_mapsMinimalPolicyWhenOptionalFieldsAreAbsent() {
+  void namespaceSecurityPolicy_mapsOpenMode() {
     NamespaceSecurityPolicyDTO dto =
         NamespaceSecurityPolicyProtoMapper.toDto(
             io.taktx.proto.NamespaceSecurityPolicyMessage.newBuilder()
                 .setMode(io.taktx.proto.SecurityModeMessage.OPEN)
-                .setPolicyVersion(1L)
                 .build());
 
     assertThat(dto.getMode()).isEqualTo(SecurityMode.OPEN);
-    assertThat(dto.getPolicyVersion()).isEqualTo(1L);
-    assertThat(dto.getPolicyHash()).isNull();
   }
 }

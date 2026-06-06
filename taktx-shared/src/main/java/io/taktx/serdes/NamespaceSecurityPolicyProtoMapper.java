@@ -25,12 +25,6 @@ public final class NamespaceSecurityPolicyProtoMapper {
     if (dto.getMode() != null) {
       builder.setMode(toProto(dto.getMode()));
     }
-    if (dto.getPolicyVersion() != null) {
-      builder.setPolicyVersion(dto.getPolicyVersion());
-    }
-    if (dto.getPolicyHash() != null) {
-      builder.setPolicyHash(dto.getPolicyHash());
-    }
     return builder.build();
   }
 
@@ -40,8 +34,6 @@ public final class NamespaceSecurityPolicyProtoMapper {
     }
     return NamespaceSecurityPolicyDTO.builder()
         .mode(toDto(message.getMode()))
-        .policyVersion(message.hasPolicyVersion() ? message.getPolicyVersion() : null)
-        .policyHash(emptyToNull(message.getPolicyHash()))
         .build();
   }
 
@@ -60,7 +52,4 @@ public final class NamespaceSecurityPolicyProtoMapper {
     };
   }
 
-  private static String emptyToNull(String value) {
-    return value == null || value.isEmpty() ? null : value;
-  }
 }

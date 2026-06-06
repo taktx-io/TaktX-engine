@@ -10,8 +10,6 @@ package io.taktx.client;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import io.taktx.dto.GlobalConfigurationDTO;
-import io.taktx.dto.NamespaceSecurityPolicyDTO;
-import io.taktx.dto.SecurityMode;
 import io.taktx.security.RuntimeConfigurationHolder;
 import io.taktx.security.SigningIdentity;
 import io.taktx.security.SigningKeyGenerator;
@@ -57,23 +55,17 @@ class TaktXClientWorkerSigningTest {
 
   @Test
   void shouldKeepDefaultOpenClientSigningInactive() {
-    TaktXClient client = clientWithSigningIdentity();
+    TaktXClient client = clientWithSigningIdentity(false);
 
-    assertThat(client.shouldPrepareSigningInfrastructure()).isFalse();
-    assertThat(client.shouldSignClientMessages()).isFalse();
-
+    // Without anchored mode (no platform key), signing should not be activated
     client.refreshWorkerSigningFunctionRegistration();
 
     assertThat(SigningServiceHolder.get()).isNull();
   }
 
   @Test
-  void currentAnchoredPolicy_preparesAndActivatesClientSigning() throws Exception {
-    TaktXClient client = clientWithSigningIdentity();
-    setNamespaceSecurityPolicies(client, anchoredPolicy(42L, "policy-42"), null);
-
-    assertThat(client.shouldPrepareSigningInfrastructure()).isTrue();
-    assertThat(client.shouldSignClientMessages()).isTrue();
+  void anchoredClient_preparesAndActivatesClientSigning() throws Exception {
+    TaktXClient client = clientWithSigningIdentity(true);
 
     client.refreshWorkerSigningFunctionRegistration();
 
@@ -83,13 +75,8 @@ class TaktXClientWorkerSigningTest {
   }
 
   @Test
-  void activeAnchoredPolicy_reactivatesClientSigningWithoutLegacyRuntimeToggle() throws Exception {
-    TaktXClient client = clientWithSigningIdentity();
-    NamespaceSecurityPolicyDTO anchored = anchoredPolicy(42L, "policy-42");
-    setNamespaceSecurityPolicies(client, anchored, anchored);
-
-    assertThat(client.shouldPrepareSigningInfrastructure()).isTrue();
-    assertThat(client.shouldSignClientMessages()).isTrue();
+  void anchoredClient_reactivatesClientSigningWithoutLegacyRuntimeToggle() throws Exception {
+    TaktXClient client = clientWithSigningIdentity(true);
 
     client.refreshWorkerSigningFunctionRegistration();
 
@@ -103,19 +90,13 @@ class TaktXClientWorkerSigningTest {
       throws Exception {
     SigningIdentity signingIdentity = signingIdentity("worker-key");
 
-    Properties props = new Properties();
-    props.setProperty("bootstrap.servers", "localhost:9092");
-    props.setProperty("taktx.engine.tenant-id", "test-tenant");
-    props.setProperty("taktx.engine.namespace", "default");
+    Properties props = anchoredProperties();
 
     TaktXClient client =
         TaktXClient.newClientBuilder()
             .withProperties(props)
             .withSigningIdentitySource(() -> signingIdentity)
             .build();
-
-    NamespaceSecurityPolicyDTO anchored = anchoredPolicy(44L, "policy-44");
-    setNamespaceSecurityPolicies(client, anchored, anchored);
 
     RuntimeConfigurationHolder.set(GlobalConfigurationDTO.builder().signingEnabled(true).build());
     client.refreshWorkerSigningFunctionRegistration();
@@ -132,26 +113,14 @@ class TaktXClientWorkerSigningTest {
   void refreshWorkerSigningFunctionRegistration_doesNotOverrideExistingGlobalSigner() {
     SigningIdentity signingIdentity = signingIdentity("worker-key");
 
-    Properties props = new Properties();
-    props.setProperty("bootstrap.servers", "localhost:9092");
-    props.setProperty("taktx.engine.tenant-id", "test-tenant");
-    props.setProperty("taktx.engine.namespace", "default");
-
     SigningServiceHolder.SigningFunction existingGlobalSigner = payload -> "engine-key.stub";
     SigningServiceHolder.set(existingGlobalSigner);
 
     TaktXClient client =
         TaktXClient.newClientBuilder()
-            .withProperties(props)
+            .withProperties(anchoredProperties())
             .withSigningIdentitySource(() -> signingIdentity)
             .build();
-
-    try {
-      NamespaceSecurityPolicyDTO anchored = anchoredPolicy(43L, "policy-43");
-      setNamespaceSecurityPolicies(client, anchored, anchored);
-    } catch (Exception e) {
-      throw new RuntimeException(e);
-    }
 
     RuntimeConfigurationHolder.set(GlobalConfigurationDTO.builder().signingEnabled(true).build());
     client.refreshWorkerSigningFunctionRegistration();
@@ -159,13 +128,10 @@ class TaktXClientWorkerSigningTest {
     assertThat(SigningServiceHolder.get()).isSameAs(existingGlobalSigner);
   }
 
-  private static TaktXClient clientWithSigningIdentity() {
+  private static TaktXClient clientWithSigningIdentity(boolean anchored) {
     SigningIdentity signingIdentity = signingIdentity("worker-key");
 
-    Properties props = new Properties();
-    props.setProperty("bootstrap.servers", "localhost:9092");
-    props.setProperty("taktx.engine.tenant-id", "test-tenant");
-    props.setProperty("taktx.engine.namespace", "default");
+    Properties props = anchored ? anchoredProperties() : openProperties();
 
     return TaktXClient.newClientBuilder()
         .withProperties(props)
@@ -173,26 +139,24 @@ class TaktXClientWorkerSigningTest {
         .build();
   }
 
-  private static void setNamespaceSecurityPolicies(
-      TaktXClient client,
-      NamespaceSecurityPolicyDTO currentPolicy,
-      NamespaceSecurityPolicyDTO activePolicy)
-      throws Exception {
-    ClientNamespaceSecurityPolicyStore store = new ClientNamespaceSecurityPolicyStore();
-    store.setCurrentPolicy(currentPolicy);
-    store.setActivePolicy(activePolicy);
-
-    Field field = TaktXClient.class.getDeclaredField("namespaceSecurityPolicyStore");
-    field.setAccessible(true);
-    field.set(client, store);
+  private static Properties openProperties() {
+    Properties props = new Properties();
+    props.setProperty("bootstrap.servers", "localhost:9092");
+    props.setProperty("taktx.engine.tenant-id", "test-tenant");
+    props.setProperty("taktx.engine.namespace", "default");
+    return props;
   }
 
-  private static NamespaceSecurityPolicyDTO anchoredPolicy(long version, String hash) {
-    return NamespaceSecurityPolicyDTO.builder()
-        .mode(SecurityMode.ANCHORED)
-        .policyVersion(version)
-        .policyHash(hash)
-        .build();
+  private static Properties anchoredProperties() {
+    KeyPair platformKeyPair = SigningKeyGenerator.generate();
+    Properties props = openProperties();
+    props.setProperty(
+        "taktx.platform.public-key",
+        SigningKeyGenerator.encodePublicKey(platformKeyPair.getPublic()));
+    // Fail-fast requires a registration signature when anchored.
+    // These unit tests don't do actual countersignature verification, so any non-blank value works.
+    props.setProperty("taktx.signing.registration-signature", "dGVzdC1yZWdpc3RyYXRpb24tc2ln");
+    return props;
   }
 
   private static SigningIdentity signingIdentity(String keyId) {

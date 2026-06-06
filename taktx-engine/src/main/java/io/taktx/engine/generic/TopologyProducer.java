@@ -46,8 +46,6 @@ import io.taktx.dto.UserTaskTriggerDTO;
 import io.taktx.dto.VariableKeyDTO;
 import io.taktx.dto.XmlDmnDefinitionsDTO;
 import io.taktx.engine.config.GlobalConfigStore;
-import io.taktx.engine.config.NamespaceSecurityPolicyProcessor;
-import io.taktx.engine.config.NamespaceSecurityPolicyStore;
 import io.taktx.engine.config.ParticipantStatusProcessor;
 import io.taktx.engine.config.ParticipantStatusStore;
 import io.taktx.engine.config.TaktConfiguration;
@@ -90,7 +88,6 @@ import io.taktx.engine.pi.processor.IoMappingProcessor;
 import io.taktx.engine.security.EngineAuthorizationService;
 import io.taktx.engine.security.EngineSecurityReadinessEvaluator;
 import io.taktx.engine.security.MessageSigningService;
-import io.taktx.engine.security.NamespaceSecurityPolicyActivationService;
 import io.taktx.engine.security.ProcessInstanceResponseDedupProcessor;
 import io.taktx.engine.security.ProtectedDataPlaneParticipationGuard;
 import io.taktx.engine.security.ReplayProtectionProcessor;
@@ -371,9 +368,7 @@ public class TopologyProducer {
   private final EngineAuthorizationService engineAuthorizationService;
   private final LicenseManager licenseManager;
   private final GlobalConfigStore globalConfigStore;
-  private final NamespaceSecurityPolicyStore namespaceSecurityPolicyStore;
   private final ParticipantStatusStore participantStatusStore;
-  private final NamespaceSecurityPolicyActivationService namespaceSecurityPolicyActivationService;
   private final DlqPublisher dlqPublisher;
   private final MessageSigningService messageSigningService;
   private final DlqObservabilityService dlqObservabilityService;
@@ -556,21 +551,6 @@ public class TopologyProducer {
         taktConfiguration.getPrefixed(Topics.CONFIGURATION_TOPIC.getTopicName()),
         Consumed.with(Serdes.String(), Serdes.ByteArray()),
         () -> new LicenseConfigProcessor(licenseManager, globalConfigStore));
-
-    builder.addGlobalStore(
-        keyValueStoreBuilder(
-                org.apache.kafka.streams.state.Stores.inMemoryKeyValueStore(
-                    taktConfiguration.getPrefixed(Stores.SECURITY_POLICY.getStorename())),
-                Serdes.String(),
-                Serdes.ByteArray())
-            .withLoggingDisabled(),
-        taktConfiguration.getPrefixed(Topics.SECURITY_POLICY_TOPIC.getTopicName()),
-        Consumed.with(Serdes.String(), Serdes.ByteArray()),
-        () ->
-            new NamespaceSecurityPolicyProcessor(
-                namespaceSecurityPolicyStore,
-                namespaceSecurityPolicyActivationService,
-                engineAuthorizationService));
 
     builder.addGlobalStore(
         keyValueStoreBuilder(
@@ -960,10 +940,7 @@ public class TopologyProducer {
 
   private ProtectedDataPlaneParticipationGuard protectedDataPlaneParticipationGuard() {
     return new ProtectedDataPlaneParticipationGuard(
-        namespaceSecurityPolicyStore,
-        new EngineSecurityReadinessEvaluator(
-            taktConfiguration, namespaceSecurityPolicyStore, messageSigningService, clock),
-        clock);
+        taktConfiguration.isAnchored(), messageSigningService);
   }
 
   private void setupMessageStream(StreamsBuilder builder) {

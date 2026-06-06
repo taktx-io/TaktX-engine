@@ -57,14 +57,12 @@ public class ParticipantStatusProcessor implements Processor<String, byte[], Voi
       ParticipantStatusDTO validated = ParticipantStatusSupport.requireValid(status);
       participantStatusStore.update(rec.key(), validated);
       log.debug(
-          "Participant status updated: key={} participantId={} participantInstanceId={} effectiveState={} readyForDataPlane={} observedPolicyVersion={} observedPolicyHash={}",
+          "Participant status updated: key={} participantId={} participantInstanceId={} effectiveState={} readyForDataPlane={}",
           rec.key(),
           validated.getParticipantId(),
           validated.getParticipantInstanceId(),
           validated.getEffectiveState(),
-          validated.isReadyForDataPlane(),
-          validated.getObservedPolicyVersion(),
-          validated.getObservedPolicyHash());
+          validated.isReadyForDataPlane());
     } catch (Exception e) {
       log.warn("Failed to deserialize or validate participant status: {}", e.getMessage());
     }

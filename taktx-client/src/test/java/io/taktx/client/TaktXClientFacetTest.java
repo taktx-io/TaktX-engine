@@ -9,7 +9,6 @@ package io.taktx.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import io.taktx.dto.NamespaceSecurityPolicyDTO;
 import io.taktx.dto.ParticipantCapability;
 import io.taktx.dto.ParticipantKind;
 import io.taktx.dto.SecurityParticipantDescriptor;
@@ -27,7 +26,6 @@ class TaktXClientFacetTest {
   void facetEntryPoints_areCachedAndAvailableFromRootClient() {
     TaktXClient client = buildClient(runtimeObserverDescriptor());
     try {
-      assertThat(client.security()).isSameAs(client.security());
       assertThat(client.observability()).isSameAs(client.observability());
       assertThat(client.runtime()).isSameAs(client.runtime());
       assertThat(client.workers()).isSameAs(client.workers());
@@ -40,7 +38,6 @@ class TaktXClientFacetTest {
   @Test
   void mixedCapabilityParticipants_canAccessSecurityRuntimeAndObservabilityFacets() {
     Set<ParticipantCapability> capabilities = new LinkedHashSet<>();
-    capabilities.add(ParticipantCapability.AUTHORITATIVE_POLICY_PUBLISHER);
     capabilities.add(ParticipantCapability.SECURITY_OBSERVER);
     capabilities.add(ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT);
 
@@ -50,13 +47,11 @@ class TaktXClientFacetTest {
 
     TaktXClient client = buildClient(descriptor, publisherProperties());
     try {
-      SecurityClient securityFacet = client.security();
       SecurityObservabilityClient observabilityFacet = client.observability();
       RuntimeClient runtimeFacet = client.runtime();
 
       assertThat(client.getParticipantDescriptor().capabilities())
           .containsExactlyElementsOf(capabilities);
-      assertThat(securityFacet).isNotNull();
       assertThat(observabilityFacet).isNotNull();
       assertThat(runtimeFacet).isNotNull();
     } finally {
@@ -65,27 +60,18 @@ class TaktXClientFacetTest {
   }
 
   @Test
-  void policyMutationAndObservationAreExposedThroughPublicFacetApis() throws Exception {
-    Method securityEntryPoint = TaktXClient.class.getMethod("security");
+  void publicFacetApisAreExposed() throws Exception {
     Method observabilityEntryPoint = TaktXClient.class.getMethod("observability");
     Method runtimeEntryPoint = TaktXClient.class.getMethod("runtime");
     Method workersEntryPoint = TaktXClient.class.getMethod("workers");
     Method dlqEntryPoint = TaktXClient.class.getMethod("dlq");
 
-    assertThat(securityEntryPoint.getReturnType()).isEqualTo(SecurityClient.class);
     assertThat(observabilityEntryPoint.getReturnType())
         .isEqualTo(SecurityObservabilityClient.class);
     assertThat(runtimeEntryPoint.getReturnType()).isEqualTo(RuntimeClient.class);
     assertThat(workersEntryPoint.getReturnType()).isEqualTo(WorkersClient.class);
     assertThat(dlqEntryPoint.getReturnType()).isEqualTo(DlqClient.class);
 
-    assertThat(
-            SecurityClient.class.getMethod(
-                "publishNamespaceSecurityPolicy", NamespaceSecurityPolicyDTO.class))
-        .isNotNull();
-    assertThat(SecurityClient.class.getMethod("clearNamespaceSecurityPolicy")).isNotNull();
-    assertThat(SecurityClient.class.getMethod("authoritativePolicyMutationAvailability"))
-        .isNotNull();
     assertThat(RuntimeClient.class.getMethod("startProcess", String.class, VariablesDTO.class))
         .isNotNull();
     assertThat(

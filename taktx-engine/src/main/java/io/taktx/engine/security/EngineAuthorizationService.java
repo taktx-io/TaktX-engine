@@ -20,17 +20,14 @@ import io.taktx.dto.ExternalTaskResponseTriggerDTO;
 import io.taktx.dto.GlobalConfigurationDTO;
 import io.taktx.dto.KeyRole;
 import io.taktx.dto.MessageScheduleDTO;
-import io.taktx.dto.NamespaceSecurityPolicyDTO;
 import io.taktx.dto.ProcessInstanceTriggerDTO;
 import io.taktx.dto.ReplayProtectionMode;
-import io.taktx.dto.SecurityMode;
 import io.taktx.dto.SetVariableTriggerDTO;
 import io.taktx.dto.SigningKeyDTO;
 import io.taktx.dto.StartCommandDTO;
 import io.taktx.dto.TokenClaims;
 import io.taktx.dto.UserTaskResponseTriggerDTO;
 import io.taktx.engine.config.GlobalConfigStore;
-import io.taktx.engine.config.NamespaceSecurityPolicyStore;
 import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.pd.MessageEventIngressEnvelope;
 import io.taktx.engine.pd.SignalIngressEnvelope;
@@ -80,8 +77,8 @@ public class EngineAuthorizationService {
   static final String SIG_HEADER = Constants.HEADER_ENGINE_SIGNATURE;
 
   private final TaktConfiguration config;
+  private final boolean anchored;
   private final GlobalConfigStore globalConfigStore;
-  private final NamespaceSecurityPolicyStore namespaceSecurityPolicyStore;
   private final AuthorizationTokenValidator validator;
   private final KeyTrustPolicy keyTrustPolicy;
   private final MessageSecurityPolicyRegistry messageSecurityPolicyRegistry;
@@ -91,14 +88,13 @@ public class EngineAuthorizationService {
   public EngineAuthorizationService(
       TaktConfiguration config,
       GlobalConfigStore globalConfigStore,
-      NamespaceSecurityPolicyStore namespaceSecurityPolicyStore,
       PublicKeyProvider publicKeyProvider,
       KeyTrustPolicy keyTrustPolicy,
       MessageSecurityPolicyRegistry messageSecurityPolicyRegistry,
       VerificationCore verificationCore) {
     this.config = config;
+    this.anchored = config.isAnchored();
     this.globalConfigStore = globalConfigStore;
-    this.namespaceSecurityPolicyStore = namespaceSecurityPolicyStore;
     this.keyTrustPolicy = keyTrustPolicy;
     this.messageSecurityPolicyRegistry = messageSecurityPolicyRegistry;
     this.verificationCore = verificationCore;
@@ -109,7 +105,6 @@ public class EngineAuthorizationService {
   EngineAuthorizationService(
       TaktConfiguration config,
       GlobalConfigStore globalConfigStore,
-      NamespaceSecurityPolicyStore namespaceSecurityPolicyStore,
       PublicKeyProvider publicKeyProvider,
       KafkaStreams kafkaStreams,
       KeyTrustPolicy keyTrustPolicy,
@@ -117,94 +112,41 @@ public class EngineAuthorizationService {
     this(
         config,
         globalConfigStore,
-        namespaceSecurityPolicyStore,
         publicKeyProvider,
         keyTrustPolicy,
         messageSecurityPolicyRegistry,
         new VerificationCore(config, kafkaStreams, keyTrustPolicy));
   }
 
-  /** Test constructor preserving the pre-policy API by using an empty namespace policy store. */
-  EngineAuthorizationService(
-      TaktConfiguration config,
-      GlobalConfigStore globalConfigStore,
-      PublicKeyProvider publicKeyProvider,
-      KafkaStreams kafkaStreams,
-      KeyTrustPolicy keyTrustPolicy,
-      MessageSecurityPolicyRegistry messageSecurityPolicyRegistry) {
-    this(
-        config,
-        globalConfigStore,
-        new NamespaceSecurityPolicyStore(),
-        publicKeyProvider,
-        kafkaStreams,
-        keyTrustPolicy,
-        messageSecurityPolicyRegistry);
-  }
-
   /** Test constructor — no CDI. */
   EngineAuthorizationService(
       TaktConfiguration config,
       GlobalConfigStore globalConfigStore,
-      NamespaceSecurityPolicyStore namespaceSecurityPolicyStore,
       PublicKeyProvider publicKeyProvider,
       KafkaStreams kafkaStreams,
       KeyTrustPolicy keyTrustPolicy) {
     this(
         config,
         globalConfigStore,
-        namespaceSecurityPolicyStore,
         publicKeyProvider,
         keyTrustPolicy,
         new MessageSecurityPolicyRegistry(),
         new VerificationCore(config, kafkaStreams, keyTrustPolicy));
   }
 
-  /** Test constructor preserving the pre-policy API by using an empty namespace policy store. */
-  EngineAuthorizationService(
-      TaktConfiguration config,
-      GlobalConfigStore globalConfigStore,
-      PublicKeyProvider publicKeyProvider,
-      KafkaStreams kafkaStreams,
-      KeyTrustPolicy keyTrustPolicy) {
-    this(
-        config,
-        globalConfigStore,
-        new NamespaceSecurityPolicyStore(),
-        publicKeyProvider,
-        kafkaStreams,
-        keyTrustPolicy);
-  }
-
   /** Test constructor — no CDI. Accessible from any package (e.g. integration test classes). */
   public EngineAuthorizationService(
       TaktConfiguration config,
       GlobalConfigStore globalConfigStore,
-      NamespaceSecurityPolicyStore namespaceSecurityPolicyStore,
       PublicKeyProvider publicKeyProvider,
       KafkaStreams kafkaStreams) {
     this(
         config,
         globalConfigStore,
-        namespaceSecurityPolicyStore,
         publicKeyProvider,
         new OpenKeyTrustPolicy(),
         new MessageSecurityPolicyRegistry(),
         new VerificationCore(config, kafkaStreams));
-  }
-
-  /** Test constructor preserving the pre-policy API by using an empty namespace policy store. */
-  public EngineAuthorizationService(
-      TaktConfiguration config,
-      GlobalConfigStore globalConfigStore,
-      PublicKeyProvider publicKeyProvider,
-      KafkaStreams kafkaStreams) {
-    this(
-        config,
-        globalConfigStore,
-        new NamespaceSecurityPolicyStore(),
-        publicKeyProvider,
-        kafkaStreams);
   }
 
   @PostConstruct
@@ -258,15 +200,13 @@ public class EngineAuthorizationService {
     }
     GlobalConfigurationDTO cfg = effectiveConfig();
     MessageSecurityPolicy policy = resolveProcessInstancePolicy(trigger);
-    NamespaceSecurityPolicyDTO authoritativePolicy = authoritativePolicy();
-    assertTrustAnchorRequirementSatisfied(authoritativePolicy);
 
     Header authHeader = lastHeader(headers, AUTH_HEADER);
     Header sigHeader = lastHeader(headers, SIG_HEADER);
 
     boolean entryCommand = isEntryCommand(trigger);
     boolean taskCompletionTrigger = isTaskCompletionTrigger(trigger);
-    boolean signingActive = isSignatureGateActive(cfg, authoritativePolicy);
+    boolean signingActive = anchored || cfg.isSigningEnabled();
 
     KeyRole requiredRole = requiredRole(policy);
 
@@ -377,9 +317,7 @@ public class EngineAuthorizationService {
     MessageSecurityPolicy policy =
         messageSecurityPolicyRegistry.resolve(
             Topics.SCHEDULE_COMMANDS.getTopicName(), MessageScheduleDTO.class);
-    NamespaceSecurityPolicyDTO authoritativePolicy = authoritativePolicy();
-    assertTrustAnchorRequirementSatisfied(authoritativePolicy);
-    if (!isSignatureGateActive(cfg, authoritativePolicy)) {
+    if (!(anchored || cfg.isSigningEnabled())) {
       log.debug("Security gates disabled — skipping signature enforcement for schedule-commands");
       return null;
     }
@@ -412,80 +350,6 @@ public class EngineAuthorizationService {
     return key;
   }
 
-  /**
-   * Authorizes an authoritative namespace-security-policy mutation.
-   *
-   * <p>Unlike protected runtime topics, authoritative control-plane mutation must never fall back
-   * to legacy opt-in runtime flags. A valid {@code tx-sig} from a trusted {@code PLATFORM} signer
-   * is always required, and the signature is verified directly against the raw payload bytes (or an
-   * empty payload for tombstones).
-   */
-  public SigningKeyDTO authorizeNamespaceSecurityPolicyMutation(Headers headers, byte[] payload) {
-    Header sigHeader = lastHeader(headers, SIG_HEADER);
-    if (sigHeader == null || sigHeader.value() == null) {
-      throw new AuthorizationTokenException(
-          "Missing required "
-              + SIG_HEADER
-              + " header on authoritative namespace security policy mutation");
-    }
-
-    String headerValue = new String(sigHeader.value(), StandardCharsets.UTF_8);
-    int dot = headerValue.indexOf('.');
-    if (dot < 0) {
-      throw new AuthorizationTokenException(
-          "Malformed "
-              + SIG_HEADER
-              + " header (expected '<keyId>.<base64sig>') on authoritative namespace security policy mutation");
-    }
-
-    String keyId = headerValue.substring(0, dot);
-    String base64Sig = headerValue.substring(dot + 1);
-    SigningKeyDTO key = verificationCore.resolveKey(keyId);
-    if (key == null) {
-      throw new AuthorizationTokenException(
-          "Unknown Ed25519 keyId '"
-              + keyId
-              + "' — rejecting authoritative namespace security policy mutation");
-    }
-    if (key.getStatus() == SigningKeyDTO.KeyStatus.REVOKED) {
-      throw new AuthorizationTokenException(
-          "Revoked Ed25519 keyId '"
-              + keyId
-              + "' — rejecting authoritative namespace security policy mutation");
-    }
-    if (!keyTrustPolicy.isTrustedForRole(key, KeyRole.PLATFORM)) {
-      throw new AuthorizationTokenException(
-          "Signing keyId '"
-              + keyId
-              + "' (role="
-              + key.effectiveRole()
-              + ") is not trusted for required role "
-              + KeyRole.PLATFORM);
-    }
-
-    try {
-      byte[] signatureBytes = Base64.getDecoder().decode(base64Sig);
-      byte[] payloadToVerify = payload != null ? payload : new byte[0];
-      if (!Ed25519Service.verify(payloadToVerify, signatureBytes, key.getPublicKeyBase64())) {
-        throw new AuthorizationTokenException(
-            "Ed25519 signature verification failed for authoritative namespace security policy mutation keyId="
-                + keyId);
-      }
-    } catch (IllegalArgumentException e) {
-      throw new AuthorizationTokenException(
-          "Malformed base64 signature for authoritative namespace security policy mutation keyId="
-              + keyId
-              + ": "
-              + e.getMessage());
-    }
-
-    log.info(
-        "✅ Authorised namespace-security-policy mutation keyId={} role={}",
-        keyId,
-        key.effectiveRole());
-    return key;
-  }
-
   private SigningKeyDTO authorizeSignedIngress(
       Headers headers,
       Object message,
@@ -497,9 +361,7 @@ public class EngineAuthorizationService {
     }
 
     GlobalConfigurationDTO cfg = effectiveConfig();
-    NamespaceSecurityPolicyDTO authoritativePolicy = authoritativePolicy();
-    assertTrustAnchorRequirementSatisfied(authoritativePolicy);
-    if (!isSignatureGateActive(cfg, authoritativePolicy)) {
+    if (!(anchored || cfg.isSigningEnabled())) {
       return null;
     }
 
@@ -652,16 +514,6 @@ public class EngineAuthorizationService {
     return requiredRole;
   }
 
-  private static boolean isSignatureGateActive(
-      GlobalConfigurationDTO cfg, NamespaceSecurityPolicyDTO authoritativePolicy) {
-    return cfg.isSigningEnabled() || isPolicyDrivenSignatureRequired(authoritativePolicy);
-  }
-
-  private static boolean isPolicyDrivenSignatureRequired(
-      NamespaceSecurityPolicyDTO authoritativePolicy) {
-    return isAnchoredPosture(authoritativePolicy);
-  }
-
   private static boolean isEntryCommand(ProcessInstanceTriggerDTO trigger) {
     return trigger instanceof StartCommandDTO
         || trigger instanceof AbortTriggerDTO
@@ -682,32 +534,11 @@ public class EngineAuthorizationService {
     return value != null && value.getClass() == io.taktx.dto.SignalDTO.class;
   }
 
-  private void assertTrustAnchorRequirementSatisfied(
-      NamespaceSecurityPolicyDTO authoritativePolicy) {
-    if (!isAnchoredPosture(authoritativePolicy)) {
-      return;
-    }
-    if (config.getPlatformPublicKey() == null || config.getPlatformPublicKey().isBlank()) {
-      throw new AuthorizationTokenException(
-          "Namespace security policy requires anchored trust but no platform public key is configured");
-    }
-  }
-
   private GlobalConfigurationDTO effectiveConfig() {
     if (globalConfigStore == null || globalConfigStore.get() == null) {
       return GlobalConfigurationDTO.builder().build();
     }
     return globalConfigStore.get();
-  }
-
-  private static boolean isAnchoredPosture(NamespaceSecurityPolicyDTO policy) {
-    return policy != null && policy.getMode() == SecurityMode.ANCHORED;
-  }
-
-  private NamespaceSecurityPolicyDTO authoritativePolicy() {
-    return namespaceSecurityPolicyStore != null
-        ? namespaceSecurityPolicyStore.getAuthoritativePolicy()
-        : null;
   }
 
   private static Header lastHeader(Headers headers, String headerName) {

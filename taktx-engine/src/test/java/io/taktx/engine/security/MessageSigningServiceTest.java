@@ -9,22 +9,16 @@ package io.taktx.engine.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
-import io.taktx.dto.GlobalConfigurationDTO;
-import io.taktx.dto.NamespaceSecurityPolicyDTO;
-import io.taktx.dto.SecurityMode;
-import io.taktx.engine.config.GlobalConfigStore;
-import io.taktx.engine.config.NamespaceSecurityPolicyStore;
 import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.security.Ed25519Service;
-import io.taktx.security.NamespaceSecurityPolicySupport;
 import io.taktx.security.SigningIdentity;
 import io.taktx.security.SigningIdentitySource;
 import io.taktx.security.SigningKeyGenerator;
 import io.taktx.security.StaticSigningIdentitySource;
 import java.security.KeyPair;
 import java.util.Base64;
-import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -34,8 +28,6 @@ class MessageSigningServiceTest {
   private static final byte[] PAYLOAD = "proto-payload-bytes".getBytes();
 
   private TaktConfiguration config;
-  private GlobalConfigStore globalConfigStore;
-  private NamespaceSecurityPolicyStore namespaceSecurityPolicyStore;
   private MessageSigningService service;
   private SigningIdentitySource signingIdentitySource;
 
@@ -53,60 +45,22 @@ class MessageSigningServiceTest {
                 publicKeyBase64));
 
     config = mock(TaktConfiguration.class);
-    globalConfigStore = new GlobalConfigStore();
-    namespaceSecurityPolicyStore = new NamespaceSecurityPolicyStore();
-    service =
-        new MessageSigningService(
-            config, null, namespaceSecurityPolicyStore, signingIdentitySource, false);
-  }
-
-  /**
-   * Helper: build a service that reads from globalConfigStore and uses the static identity source.
-   */
-  private MessageSigningService serviceWithConfigStore(GlobalConfigStore store) {
-    return new MessageSigningService(
-        config, store, namespaceSecurityPolicyStore, signingIdentitySource, false);
+    when(config.isAnchored()).thenReturn(false);
+    service = new MessageSigningService(config, signingIdentitySource, false);
   }
 
   @Test
-  void engineSigningWithIdentity_isInactiveUnderDefaultOpenSemantics() {
+  void openMode_engineMessagesAreUnsigned() {
     assertThat(service.signToHeaderValue(PAYLOAD)).isNull();
   }
 
   @Test
-  void globalConfigNull_keepsOpenEngineMessagesUnsigned() {
-    MessageSigningService svc = serviceWithConfigStore(globalConfigStore);
-    assertThat(svc.signToHeaderValue(PAYLOAD)).isNull();
-  }
+  void anchoredMode_signsMessages() {
+    when(config.isAnchored()).thenReturn(true);
+    MessageSigningService anchoredService =
+        new MessageSigningService(config, signingIdentitySource, false);
 
-  @Test
-  void globalConfigDisabled_keepsOpenEngineMessagesUnsigned() {
-    MessageSigningService svc = serviceWithConfigStore(globalConfigStore);
-    globalConfigStore.update(globalConfig(false, false));
-    assertThat(svc.signToHeaderValue(PAYLOAD)).isNull();
-  }
-
-  @Test
-  void signingEnabled_globalConfigPresent_returnsHeaderValue() {
-    MessageSigningService svc = serviceWithConfigStore(globalConfigStore);
-    globalConfigStore.update(globalConfig(true, false));
-    assertThat(svc.signToHeaderValue(PAYLOAD)).isNotNull();
-  }
-
-  @Test
-  void authorizationEnabled_evenWhenSigningDisabled_returnsHeaderValue() {
-    MessageSigningService svc = serviceWithConfigStore(globalConfigStore);
-    globalConfigStore.update(globalConfig(false, true));
-    assertThat(svc.signToHeaderValue(PAYLOAD)).isNotNull();
-  }
-
-  @Test
-  void authoritativeAnchoredPolicy_signsWithoutLegacyRuntimeToggle() {
-    namespaceSecurityPolicyStore.update(anchoredPolicy(42L));
-
-    MessageSigningService svc = serviceWithConfigStore(globalConfigStore);
-
-    assertThat(svc.signToHeaderValue(PAYLOAD)).isNotNull();
+    assertThat(anchoredService.signToHeaderValue(PAYLOAD)).isNotNull();
   }
 
   @Test
@@ -115,22 +69,12 @@ class MessageSigningServiceTest {
   }
 
   @Test
-  void hasLegacyProtectedRuntimeRequirement_reflectsLegacyGlobalConfigToggles() {
-    MessageSigningService svc = serviceWithConfigStore(globalConfigStore);
-
-    assertThat(svc.hasLegacyProtectedRuntimeRequirement()).isFalse();
-
-    globalConfigStore.update(globalConfig(true, false));
-
-    assertThat(svc.hasLegacyProtectedRuntimeRequirement()).isTrue();
-  }
-
-  @Test
   void headerValue_hasCorrectFormat_keyIdDotBase64() {
-    MessageSigningService svc = serviceWithConfigStore(globalConfigStore);
-    globalConfigStore.update(globalConfig(true, false));
+    when(config.isAnchored()).thenReturn(true);
+    MessageSigningService anchoredService =
+        new MessageSigningService(config, signingIdentitySource, false);
 
-    String headerValue = svc.signToHeaderValue(PAYLOAD);
+    String headerValue = anchoredService.signToHeaderValue(PAYLOAD);
 
     assertThat(headerValue).startsWith(KEY_ID + ".");
     String b64Part = headerValue.substring(KEY_ID.length() + 1);
@@ -139,10 +83,11 @@ class MessageSigningServiceTest {
 
   @Test
   void headerValue_isVerifiableWithPublicKey() {
-    MessageSigningService svc = serviceWithConfigStore(globalConfigStore);
-    globalConfigStore.update(globalConfig(true, false));
+    when(config.isAnchored()).thenReturn(true);
+    MessageSigningService anchoredService =
+        new MessageSigningService(config, signingIdentitySource, false);
 
-    String headerValue = svc.signToHeaderValue(PAYLOAD);
+    String headerValue = anchoredService.signToHeaderValue(PAYLOAD);
     byte[] sigBytes = Base64.getDecoder().decode(headerValue.substring(KEY_ID.length() + 1));
 
     assertThat(Ed25519Service.verify(PAYLOAD, sigBytes, publicKeyBase64)).isTrue();
@@ -150,12 +95,13 @@ class MessageSigningServiceTest {
 
   @Test
   void multipleCallsWithSameKey_eachHasValidSignature() {
-    MessageSigningService svc = serviceWithConfigStore(globalConfigStore);
-    globalConfigStore.update(globalConfig(true, false));
+    when(config.isAnchored()).thenReturn(true);
+    MessageSigningService anchoredService =
+        new MessageSigningService(config, signingIdentitySource, false);
 
     for (int i = 0; i < 5; i++) {
       byte[] payload = ("payload-" + i).getBytes();
-      String hv = svc.signToHeaderValue(payload);
+      String hv = anchoredService.signToHeaderValue(payload);
       assertThat(hv).isNotNull();
       byte[] sig = Base64.getDecoder().decode(hv.substring(KEY_ID.length() + 1));
       assertThat(Ed25519Service.verify(payload, sig, publicKeyBase64)).isTrue();
@@ -166,9 +112,8 @@ class MessageSigningServiceTest {
 
   @Test
   void keyRotation_switchToNewIdentity_signsWithNewKey() {
-    // Start with key-1
-    globalConfigStore.update(globalConfig(true, false));
-    MessageSigningService svc = serviceWithConfigStore(globalConfigStore);
+    when(config.isAnchored()).thenReturn(true);
+    MessageSigningService svc = new MessageSigningService(config, signingIdentitySource, false);
 
     String headerBefore = svc.signToHeaderValue(PAYLOAD);
     assertThat(headerBefore).startsWith(KEY_ID + ".");
@@ -184,9 +129,7 @@ class MessageSigningServiceTest {
                 SigningKeyGenerator.encodePrivateKey(newKeyPair.getPrivate()),
                 newPublicKeyBase64));
 
-    MessageSigningService rotatedSvc =
-        new MessageSigningService(
-            config, globalConfigStore, namespaceSecurityPolicyStore, newSource, false);
+    MessageSigningService rotatedSvc = new MessageSigningService(config, newSource, false);
 
     String headerAfter = rotatedSvc.signToHeaderValue(PAYLOAD);
     assertThat(headerAfter).isNotNull().startsWith(newKeyId + ".");
@@ -198,6 +141,7 @@ class MessageSigningServiceTest {
 
   @Test
   void keyRotation_previousIdentityCaptured_whenKeyIdChanges() {
+    when(config.isAnchored()).thenReturn(true);
     KeyPair key1 = SigningKeyGenerator.generate();
     KeyPair key2 = SigningKeyGenerator.generate();
 
@@ -212,11 +156,7 @@ class MessageSigningServiceTest {
             SigningIdentity.ed25519(
                 key1Id, SigningKeyGenerator.encodePrivateKey(key1.getPrivate()), key1Pub));
 
-    MessageSigningService svc =
-        new MessageSigningService(
-            config, globalConfigStore, namespaceSecurityPolicyStore, srcKey1, false);
-
-    globalConfigStore.update(globalConfig(true, false));
+    MessageSigningService svc = new MessageSigningService(config, srcKey1, false);
 
     // Sign once to establish key1 as the active identity
     String h1 = svc.signToHeaderValue(PAYLOAD);
@@ -228,9 +168,7 @@ class MessageSigningServiceTest {
             SigningIdentity.ed25519(
                 key2Id, SigningKeyGenerator.encodePrivateKey(key2.getPrivate()), key2Pub));
 
-    MessageSigningService svc2 =
-        new MessageSigningService(
-            config, globalConfigStore, namespaceSecurityPolicyStore, srcKey2, false);
+    MessageSigningService svc2 = new MessageSigningService(config, srcKey2, false);
 
     // New service immediately uses key2
     String h2 = svc2.signToHeaderValue(PAYLOAD);
@@ -253,24 +191,5 @@ class MessageSigningServiceTest {
   @Test
   void getPublicKeyBase64_returnsCurrentPublicKey() {
     assertThat(service.getPublicKeyBase64()).isEqualTo(publicKeyBase64);
-  }
-
-  // ── helpers ────────────────────────────────────────────────────────────────
-
-  private GlobalConfigurationDTO globalConfig(
-      boolean signingEnabled, boolean engineRequiresAuthorization) {
-    return GlobalConfigurationDTO.builder()
-        .signingEnabled(signingEnabled)
-        .engineRequiresAuthorization(engineRequiresAuthorization)
-        .trustedKeyIds(List.of(KEY_ID))
-        .build();
-  }
-
-  private static NamespaceSecurityPolicyDTO anchoredPolicy(long version) {
-    return NamespaceSecurityPolicySupport.requireValid(
-        NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.ANCHORED)
-            .policyVersion(version)
-            .build());
   }
 }

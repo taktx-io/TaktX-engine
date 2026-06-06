@@ -12,7 +12,6 @@ import io.taktx.dto.ParticipantCapability;
 import io.taktx.dto.ParticipantEffectiveState;
 import io.taktx.dto.ParticipantStatusDTO;
 import io.taktx.dto.PolicyMismatchReasonDTO;
-import io.taktx.dto.SecurityMode;
 import io.taktx.dto.SecurityParticipantDescriptor;
 import io.taktx.security.ParticipantStatusSupport;
 import io.taktx.serdes.ParticipantStatusProtoMapper;
@@ -63,7 +62,7 @@ final class ClientParticipantStatusPublisher {
 
   private final TaktPropertiesHelper taktPropertiesHelper;
   private final SecurityParticipantDescriptor participantDescriptor;
-  private final Supplier<ObservedPolicySnapshot> observedPolicySupplier;
+  private final boolean anchored;
   private final BooleanSupplier signingConfiguredSupplier;
   private final BooleanSupplier keyPublishedSupplier;
   private final BooleanSupplier keyCountersignedSupplier;
@@ -78,7 +77,7 @@ final class ClientParticipantStatusPublisher {
   ClientParticipantStatusPublisher(
       TaktPropertiesHelper taktPropertiesHelper,
       SecurityParticipantDescriptor participantDescriptor,
-      Supplier<ObservedPolicySnapshot> observedPolicySupplier,
+      boolean anchored,
       BooleanSupplier signingConfiguredSupplier,
       BooleanSupplier keyPublishedSupplier,
       BooleanSupplier keyCountersignedSupplier,
@@ -86,7 +85,7 @@ final class ClientParticipantStatusPublisher {
     this(
         taktPropertiesHelper,
         participantDescriptor,
-        observedPolicySupplier,
+        anchored,
         signingConfiguredSupplier,
         keyPublishedSupplier,
         keyCountersignedSupplier,
@@ -98,7 +97,7 @@ final class ClientParticipantStatusPublisher {
   ClientParticipantStatusPublisher(
       TaktPropertiesHelper taktPropertiesHelper,
       SecurityParticipantDescriptor participantDescriptor,
-      Supplier<ObservedPolicySnapshot> observedPolicySupplier,
+      boolean anchored,
       BooleanSupplier signingConfiguredSupplier,
       BooleanSupplier keyPublishedSupplier,
       BooleanSupplier keyCountersignedSupplier,
@@ -107,7 +106,7 @@ final class ClientParticipantStatusPublisher {
     this(
         taktPropertiesHelper,
         participantDescriptor,
-        observedPolicySupplier,
+        anchored,
         signingConfiguredSupplier,
         keyPublishedSupplier,
         keyCountersignedSupplier,
@@ -120,7 +119,7 @@ final class ClientParticipantStatusPublisher {
   ClientParticipantStatusPublisher(
       TaktPropertiesHelper taktPropertiesHelper,
       SecurityParticipantDescriptor participantDescriptor,
-      Supplier<ObservedPolicySnapshot> observedPolicySupplier,
+      boolean anchored,
       BooleanSupplier signingConfiguredSupplier,
       BooleanSupplier keyPublishedSupplier,
       BooleanSupplier keyCountersignedSupplier,
@@ -129,7 +128,7 @@ final class ClientParticipantStatusPublisher {
     this(
         taktPropertiesHelper,
         participantDescriptor,
-        observedPolicySupplier,
+        anchored,
         signingConfiguredSupplier,
         keyPublishedSupplier,
         keyCountersignedSupplier,
@@ -142,7 +141,7 @@ final class ClientParticipantStatusPublisher {
   ClientParticipantStatusPublisher(
       TaktPropertiesHelper taktPropertiesHelper,
       SecurityParticipantDescriptor participantDescriptor,
-      Supplier<ObservedPolicySnapshot> observedPolicySupplier,
+      boolean anchored,
       BooleanSupplier signingConfiguredSupplier,
       BooleanSupplier keyPublishedSupplier,
       BooleanSupplier keyCountersignedSupplier,
@@ -151,7 +150,7 @@ final class ClientParticipantStatusPublisher {
       Producer<String, byte[]> producer) {
     this.taktPropertiesHelper = taktPropertiesHelper;
     this.participantDescriptor = participantDescriptor;
-    this.observedPolicySupplier = observedPolicySupplier;
+    this.anchored = anchored;
     this.signingConfiguredSupplier = signingConfiguredSupplier;
     this.keyPublishedSupplier = keyPublishedSupplier;
     this.keyCountersignedSupplier = keyCountersignedSupplier;
@@ -249,9 +248,6 @@ final class ClientParticipantStatusPublisher {
    */
   ParticipantStatusDTO evaluateCurrentStatus() {
     long nowMs = clock.millis();
-    ObservedPolicySnapshot observedPolicy = observedPolicySupplier.get();
-    Long observedPolicyVersion =
-        observedPolicy != null ? observedPolicy.effectivePolicyVersion() : null;
     Set<ParticipantCapability> capabilities = participantDescriptor.capabilities();
 
     ParticipantEffectiveState effectiveState;
@@ -263,25 +259,13 @@ final class ClientParticipantStatusPublisher {
       effectiveState = ParticipantEffectiveState.READY;
       readyForDataPlane = false;
       mismatchReasons = List.of();
-    } else if (capabilities.contains(ParticipantCapability.AUTHORITATIVE_POLICY_PUBLISHER)
-        && !capabilities.contains(ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT)) {
-      // AUTHORITATIVE_POLICY_PUBLISHER — control-plane participant, always ready, not data-plane.
-      effectiveState = ParticipantEffectiveState.READY;
-      readyForDataPlane = false;
-      mismatchReasons = List.of();
     } else if (capabilities.contains(ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT)) {
-      SecurityMode effectiveMode =
-          observedPolicy != null && observedPolicy.effectiveMode() != null
-              ? observedPolicy.effectiveMode()
-              : SecurityMode.OPEN;
       boolean signingConfigured = signingConfiguredSupplier.getAsBoolean();
       boolean keyPublished = keyPublishedSupplier.getAsBoolean();
       boolean keyCountersigned = keyCountersignedSupplier.getAsBoolean();
 
-      if (effectiveMode != SecurityMode.ANCHORED) {
-        // OPEN mode: the client is ready right now regardless of signing. Report signing gaps as
-        // non-blocking informational warnings so operators can see who would be blocked under
-        // ANCHORED. An empty list means fully signing-ready — the best case.
+      if (!anchored) {
+        // OPEN mode: ready regardless of signing; report any gaps as informational warnings.
         effectiveState = ParticipantEffectiveState.READY;
         readyForDataPlane = true;
         mismatchReasons =
@@ -292,14 +276,14 @@ final class ClientParticipantStatusPublisher {
         readyForDataPlane = true;
         mismatchReasons = List.of();
       } else {
-        // ANCHORED with signing gaps — now blocking.
+        // ANCHORED with signing gaps — blocking (fail-fast guarantees this is only transient).
         effectiveState = ParticipantEffectiveState.MISMATCH;
         readyForDataPlane = false;
         mismatchReasons =
             signingGapReasons(signingConfigured, keyPublished, keyCountersigned, false);
       }
     } else {
-      // No recognised capability — present but not a data-plane participant.
+      // No recognised data-plane capability.
       effectiveState = ParticipantEffectiveState.READY;
       readyForDataPlane = false;
       mismatchReasons = List.of();
@@ -319,8 +303,6 @@ final class ClientParticipantStatusPublisher {
         .statusVerificationLevel(io.taktx.dto.StatusVerificationLevel.LOCALLY_VERIFIED_STATUS)
         .effectiveState(effectiveState)
         .readyForDataPlane(readyForDataPlane)
-        .observedPolicyVersion(observedPolicyVersion)
-        .observedPolicyHash(observedPolicy != null ? observedPolicy.effectivePolicyHash() : null)
         .mismatchReasons(mismatchReasons)
         .currentSigningKeyId(currentSigningKeyIdSupplier.get())
         .build();
