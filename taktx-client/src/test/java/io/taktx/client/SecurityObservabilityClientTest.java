@@ -129,6 +129,20 @@ class SecurityObservabilityClientTest {
   }
 
   @Test
+  void getPostureSnapshot_doesNotInferAnchoredModeFromProtectedClientCapabilitiesAlone() {
+    TestHarness harness = new TestHarness();
+    harness.participantStatuses.set(
+        Map.of(
+            "client#2",
+            participantStatus(
+                "client#2", Set.of(ParticipantCapability.PROTECTED_RUNTIME_PARTICIPANT))));
+
+    SecurityPostureSnapshot snapshot = harness.client.getPostureSnapshot();
+
+    assertThat(snapshot.effectiveMode()).isNull();
+  }
+
+  @Test
   void snapshotHelpers_defaultToEmptyStateWhenNothingHasBeenObserved() {
     TestHarness harness = new TestHarness();
     SecurityPostureSnapshot postureSnapshot = harness.client.getPostureSnapshot();

@@ -148,7 +148,7 @@ class TaktXClientProviderTest {
 
     SecurityParticipantDescriptor descriptor = provider.resolveParticipantDescriptor(properties);
 
-    assertThat(descriptor.participantId()).isEqualTo("tenant.payments.orders-console");
+    assertThat(descriptor.participantId()).isEqualTo("payments.orders-console");
     assertThat(descriptor.kind()).isEqualTo(ParticipantKind.CLIENT);
     assertThat(descriptor.componentType()).isEqualTo("orders-console");
     assertThat(descriptor.capabilities())
@@ -166,7 +166,7 @@ class TaktXClientProviderTest {
 
     SecurityParticipantDescriptor descriptor = provider.resolveParticipantDescriptor(properties);
 
-    assertThat(descriptor.participantId()).isEqualTo("tenant.payments.generic-client");
+    assertThat(descriptor.participantId()).isEqualTo("payments.generic-client");
     assertThat(descriptor.componentType()).isEqualTo("generic-client");
     assertThat(descriptor.kind()).isEqualTo(ParticipantKind.CLIENT);
   }

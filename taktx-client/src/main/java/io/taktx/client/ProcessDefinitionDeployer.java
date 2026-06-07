@@ -28,7 +28,7 @@ import org.slf4j.Logger;
  * A deployer for process definitions, responsible for parsing BPMN XML and sending the parsed
  * definitions to a Kafka topic.
  */
-class ProcessDefinitionDeployer {
+class ProcessDefinitionDeployer implements AutoCloseable {
 
   private static final Logger log =
       org.slf4j.LoggerFactory.getLogger(ProcessDefinitionDeployer.class);
@@ -107,5 +107,10 @@ class ProcessDefinitionDeployer {
         throw new IllegalStateException(e);
       }
     }
+  }
+
+  @Override
+  public void close() {
+    xmlEmitter.close();
   }
 }

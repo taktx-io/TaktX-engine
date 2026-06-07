@@ -10,6 +10,7 @@ package io.taktx.client;
 import io.taktx.dto.ParticipantStatusDTO;
 import io.taktx.dto.SecurityEventDTO;
 import io.taktx.dto.SecurityMode;
+import io.taktx.security.ParticipantStatusSupport;
 import jakarta.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -79,12 +80,18 @@ public record SecurityPostureSnapshot(
 
   private static @Nullable SecurityMode deriveEffectiveMode(
       Map<String, ParticipantStatusDTO> statuses) {
-    // Any participant that reports ANCHORED supportedModes indicates the cluster is anchored.
+    // Mode is startup-static. Only the engine/enforcer may authoritatively self-report that the
+    // namespace is running in ANCHORED mode; protected-runtime clients merely advertise support in
+    // principle and must not flip the derived namespace posture on their own.
     return statuses.values().stream()
         .filter(
             s ->
-                s.getSupportedModes() != null
-                    && s.getSupportedModes().contains(SecurityMode.ANCHORED))
+                s != null
+                    && (s.getParticipantKind() == io.taktx.dto.ParticipantKind.ENGINE
+                        || (s.getCapabilities() != null
+                            && s.getCapabilities()
+                                .contains(io.taktx.dto.ParticipantCapability.ENFORCER)))
+                    && ParticipantStatusSupport.supportsMode(s, SecurityMode.ANCHORED))
         .findFirst()
         .map(s -> SecurityMode.ANCHORED)
         .orElse(null);

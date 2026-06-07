@@ -36,7 +36,7 @@ import org.apache.kafka.clients.producer.ProducerRecord;
  * A responder for process instance triggers, responsible for creating responders for different
  * types of flow element triggers.
  */
-public class ProcessInstanceResponder {
+public class ProcessInstanceResponder implements AutoCloseable {
 
   private final KafkaProducer<UUID, ProcessInstanceTriggerDTO> responseEmitter;
   private final String topicName;
@@ -483,5 +483,10 @@ public class ProcessInstanceResponder {
       protectedDataPlaneGuard.check(operation, null);
       beforeSendHook.run();
     };
+  }
+
+  @Override
+  public void close() {
+    responseEmitter.close();
   }
 }

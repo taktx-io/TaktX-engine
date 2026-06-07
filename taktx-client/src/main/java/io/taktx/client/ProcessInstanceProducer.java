@@ -30,7 +30,7 @@ import org.apache.kafka.clients.producer.ProducerRecord;
  * A producer for process instance triggers, responsible for producing and sending
  * ProcessInstanceTriggerDTO objects to a Kafka topic.
  */
-public class ProcessInstanceProducer {
+public class ProcessInstanceProducer implements AutoCloseable {
 
   private final TaktPropertiesHelper kafkaPropertiesHelper;
   private final KafkaProducer<UUID, ProcessInstanceTriggerDTO> processInstanceTriggerEmitter;
@@ -304,5 +304,10 @@ public class ProcessInstanceProducer {
           "AuthorizationTokenProvider returned no token for " + authorizationRequest.scope());
     }
     return authorizationToken;
+  }
+
+  @Override
+  public void close() {
+    processInstanceTriggerEmitter.close();
   }
 }

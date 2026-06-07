@@ -628,7 +628,8 @@ public class TaktXClient {
       throw new IllegalArgumentException("policy must not be null");
     }
     TaktPropertiesHelper helper = new TaktPropertiesHelper(properties);
-    String topic = helper.getPrefixedTopicName(io.taktx.Topics.SECURITY_POLICY_TOPIC.getTopicName());
+    String topic =
+        helper.getPrefixedTopicName(io.taktx.Topics.SECURITY_POLICY_TOPIC.getTopicName());
 
     java.util.Properties producerProps = helper.getKafkaProducerProperties();
     producerProps.put("max.block.ms", "5000");
@@ -651,10 +652,13 @@ public class TaktXClient {
     }
   }
 
-  /** Clears the namespace security policy by publishing a tombstone to the compacted policy topic. */
+  /**
+   * Clears the namespace security policy by publishing a tombstone to the compacted policy topic.
+   */
   public static void clearNamespaceSecurityPolicy(Properties properties) {
     TaktPropertiesHelper helper = new TaktPropertiesHelper(properties);
-    String topic = helper.getPrefixedTopicName(io.taktx.Topics.SECURITY_POLICY_TOPIC.getTopicName());
+    String topic =
+        helper.getPrefixedTopicName(io.taktx.Topics.SECURITY_POLICY_TOPIC.getTopicName());
 
     java.util.Properties producerProps = helper.getKafkaProducerProperties();
     producerProps.put("max.block.ms", "5000");
@@ -1220,6 +1224,7 @@ public class TaktXClient {
     this.participantStatusPublisher.stop();
     this.processDefinitionConsumer.stop();
     this.externalTaskTriggerTopicConsumer.stop();
+    this.userTaskTriggerTopicConsumer.stop();
     this.processInstanceUpdateConsumer.stop();
     this.xmlByProcessDefinitionIdConsumer.stop();
     this.xmlByDmnDefinitionIdConsumer.stop();
@@ -1254,6 +1259,13 @@ public class TaktXClient {
       securityEventTopicStore = null;
     }
     securityEventStore = null;
+    processInstanceResponder.close();
+    processInstanceProducer.close();
+    messageEventSender.close();
+    signalSender.close();
+    processDefinitionDeployer.close();
+    dmnDefinitionDeployer.close();
+    externalTaskTopicRequester.close();
     publishedWorkerKeyId = null;
     publishedWorkerIdentityDescriptor = null;
     publishedWorkerKeyRecord = null;

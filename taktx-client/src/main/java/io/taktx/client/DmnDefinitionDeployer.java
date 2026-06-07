@@ -28,7 +28,7 @@ import org.slf4j.Logger;
  * A deployer for DMN definitions, responsible for parsing DMN XML and sending it to the {@code
  * dmn-definitions} Kafka topic.
  */
-class DmnDefinitionDeployer {
+class DmnDefinitionDeployer implements AutoCloseable {
 
   private static final Logger log = org.slf4j.LoggerFactory.getLogger(DmnDefinitionDeployer.class);
 
@@ -101,5 +101,10 @@ class DmnDefinitionDeployer {
         throw new IllegalStateException(e);
       }
     }
+  }
+
+  @Override
+  public void close() {
+    xmlEmitter.close();
   }
 }

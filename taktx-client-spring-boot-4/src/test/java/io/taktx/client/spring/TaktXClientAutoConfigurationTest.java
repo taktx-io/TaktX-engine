@@ -120,7 +120,7 @@ class TaktXClientAutoConfigurationTest {
   void resolveParticipantDescriptor_usesSpringApplicationNameAndWorkerCapabilities() {
     SecurityParticipantDescriptor descriptor = configuration.resolveParticipantDescriptor();
 
-    assertThat(descriptor.participantId()).isEqualTo("acme.test.orders-service");
+    assertThat(descriptor.participantId()).isEqualTo("test.orders-service");
     assertThat(descriptor.kind()).isEqualTo(ParticipantKind.CLIENT);
     assertThat(descriptor.componentType()).isEqualTo("orders-service");
     assertThat(descriptor.capabilities())

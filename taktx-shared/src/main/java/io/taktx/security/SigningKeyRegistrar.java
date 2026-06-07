@@ -236,7 +236,8 @@ public class SigningKeyRegistrar {
 
     doPublish(
         buildProducerProperties(
-            taktPropertiesHelper.getKafkaProducerProperties(), taktPropertiesHelper.getTaktProperties()),
+            taktPropertiesHelper.getKafkaProducerProperties(),
+            taktPropertiesHelper.getTaktProperties()),
         new StringSerializer(),
         new ByteArraySerializer(),
         topic,
@@ -287,7 +288,8 @@ public class SigningKeyRegistrar {
         taktPropertiesHelper.getPrefixedTopicName(Topics.SIGNING_KEYS_TOPIC.getTopicName());
     doPublish(
         buildProducerProperties(
-            taktPropertiesHelper.getKafkaProducerProperties(), taktPropertiesHelper.getTaktProperties()),
+            taktPropertiesHelper.getKafkaProducerProperties(),
+            taktPropertiesHelper.getTaktProperties()),
         new StringSerializer(),
         new ByteArraySerializer(),
         topic,
@@ -302,21 +304,11 @@ public class SigningKeyRegistrar {
     }
     props.putIfAbsent(ProducerConfig.ACKS_CONFIG, "all");
     props.putIfAbsent(ProducerConfig.RETRIES_CONFIG, "3");
+    applyTimeoutDefault(props, explicitOverrideSource, ProducerConfig.MAX_BLOCK_MS_CONFIG, "5000");
     applyTimeoutDefault(
-        props,
-        explicitOverrideSource,
-        ProducerConfig.MAX_BLOCK_MS_CONFIG,
-        "5000");
+        props, explicitOverrideSource, ProducerConfig.DELIVERY_TIMEOUT_MS_CONFIG, "5000");
     applyTimeoutDefault(
-        props,
-        explicitOverrideSource,
-        ProducerConfig.DELIVERY_TIMEOUT_MS_CONFIG,
-        "5000");
-    applyTimeoutDefault(
-        props,
-        explicitOverrideSource,
-        ProducerConfig.REQUEST_TIMEOUT_MS_CONFIG,
-        "3000");
+        props, explicitOverrideSource, ProducerConfig.REQUEST_TIMEOUT_MS_CONFIG, "3000");
     return props;
   }
 

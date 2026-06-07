@@ -27,6 +27,7 @@ import io.taktx.dto.FlowElementsDTO;
 import io.taktx.dto.FlowNodeInstanceDTO;
 import io.taktx.dto.FlowNodeInstanceKeyDTO;
 import io.taktx.dto.FlowNodeInstanceUpdateDTO;
+import io.taktx.dto.KeyRole;
 import io.taktx.dto.MessageEventDTO;
 import io.taktx.dto.MessageEventKeyDTO;
 import io.taktx.dto.NewInstanceSignalSubscriptionDTO;
@@ -53,10 +54,15 @@ import io.taktx.serdes.ExternalTaskMetaSerializer;
 import io.taktx.util.TaktPropertiesHelper;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.security.KeyFactory;
+import java.security.PrivateKey;
+import java.security.Signature;
+import java.security.spec.PKCS8EncodedKeySpec;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -157,6 +163,10 @@ public class BpmnTestEngine {
       signedExternalTaskTopicRequester.close();
       signedExternalTaskTopicRequester = null;
     }
+    if (adminClientHelper != null) {
+      adminClientHelper.close();
+      adminClientHelper = null;
+    }
     taktClient.stop();
     taktClient = null;
     processInstanceTriggerConsumer.stop();
@@ -191,11 +201,24 @@ public class BpmnTestEngine {
     }
 
     SigningIdentity topicRequestSigningIdentity = createTopicRequestSigningIdentity();
+    String platformPublicKeyBase64 = System.getProperty("taktx.platform.public-key");
+    String topicRequestRegistrationSignature =
+        registrationSignature(
+            topicRequestSigningIdentity.getKeyId(),
+            topicRequestSigningIdentity.getPublicKeyBase64(),
+            "Ed25519",
+            KeyRole.CLIENT);
+    if (platformPublicKeyBase64 != null && !platformPublicKeyBase64.isBlank()) {
+      kakaProperties.put("taktx.platform.public-key", platformPublicKeyBase64);
+      kakaProperties.put("taktx.signing.registration-signature", topicRequestRegistrationSignature);
+    }
     TaktXClient.publishSigningKey(
         kakaProperties,
         topicRequestSigningIdentity.getKeyId(),
         topicRequestSigningIdentity.getPublicKeyBase64(),
-        "bpmn-test-engine");
+        "Ed25519",
+        KeyRole.CLIENT,
+        topicRequestRegistrationSignature);
     waitUntilTopicRequestSigningKeyIsResolvable(topicRequestSigningIdentity);
     signedExternalTaskTopicRequester =
         new SignedExternalTaskTopicRequester(kakaProperties, topicRequestSigningIdentity);
@@ -577,6 +600,29 @@ public class BpmnTestEngine {
                   signingIdentity.getPublicKeyBase64(),
                   keyResolver.resolvePublicKey(signingIdentity.getKeyId()));
             });
+  }
+
+  private static String registrationSignature(
+      String keyId, String publicKeyBase64, String algorithm, KeyRole role) {
+    String privateKeyBase64 = System.getProperty("taktx.test.platform.private-key");
+    if (privateKeyBase64 == null || privateKeyBase64.isBlank()) {
+      return null;
+    }
+    try {
+      PrivateKey privateKey =
+          KeyFactory.getInstance("RSA")
+              .generatePrivate(
+                  new PKCS8EncodedKeySpec(Base64.getDecoder().decode(privateKeyBase64)));
+      byte[] payload =
+          (keyId + "|" + publicKeyBase64 + "|" + algorithm + "|" + role.name())
+              .getBytes(StandardCharsets.UTF_8);
+      Signature signature = Signature.getInstance("SHA256withRSA");
+      signature.initSign(privateKey);
+      signature.update(payload);
+      return Base64.getEncoder().encodeToString(signature.sign());
+    } catch (Exception e) {
+      throw new IllegalStateException("Failed to countersign BPMN test-engine key", e);
+    }
   }
 
   public BpmnTestEngine startProcessInstance(VariablesDTO variables) {

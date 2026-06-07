@@ -30,6 +30,7 @@ import io.taktx.dto.ExternalTaskResponseType;
 import io.taktx.dto.ExternalTaskTriggerDTO;
 import io.taktx.dto.GlobalConfigurationDTO;
 import io.taktx.dto.InstanceUpdateDTO;
+import io.taktx.dto.KeyRole;
 import io.taktx.dto.ProcessInstanceTriggerDTO;
 import io.taktx.dto.SigningKeyDTO;
 import io.taktx.dto.SigningKeyDTO.KeyStatus;
@@ -223,7 +224,14 @@ class SecurityIntegrationTest {
     signingKeyProps.put("bootstrap.servers", bootstrapServers);
     signingKeyProps.put("taktx.engine.tenant-id", "test-tenant");
     signingKeyProps.put("taktx.engine.namespace", NAMESPACE);
-    TaktXClient.publishSigningKey(signingKeyProps, WORKER_KEY_ID, workerPublicKeyBase64, "worker");
+    TaktXClient.publishSigningKey(
+        signingKeyProps,
+        WORKER_KEY_ID,
+        workerPublicKeyBase64,
+        "Ed25519",
+        KeyRole.CLIENT,
+        SecurityTestConfigResource.registrationSignature(
+            WORKER_KEY_ID, workerPublicKeyBase64, "Ed25519", KeyRole.CLIENT));
 
     // Publish the platform RSA public key under PLATFORM_KID so the engine can resolve it
     // from the KTable when validating JWTs (the kid header in every JWT points to this entry).
@@ -234,7 +242,9 @@ class SecurityIntegrationTest {
         PLATFORM_KID,
         SecurityTestConfigResource.rsaPublicKeyBase64,
         "RSA",
-        io.taktx.dto.KeyRole.PLATFORM);
+        KeyRole.PLATFORM,
+        SecurityTestConfigResource.registrationSignature(
+            PLATFORM_KID, SecurityTestConfigResource.rsaPublicKeyBase64, "RSA", KeyRole.PLATFORM));
 
     // Publish the revoked key — status REVOKED so the engine rejects messages signed with it
     publishRevokedSigningKey(
@@ -247,20 +257,24 @@ class SecurityIntegrationTest {
     engine = new BpmnTestEngine(ClockProducer.FIXED_CLOCK);
     engine.init(SecurityTestConfigResource.enginePublicKeyBase64);
 
-    // ── Create workerClient with no signing identity ──────────────────────────
-    // A null-returning signing identity source prevents TaktXClientBuilder from calling
-    // SigningServiceHolder.set(), which would overwrite the engine's MessageSigningService
-    // registration and cause all outbound engine records to be signed with the wrong key.
+    // ── Create workerClient with an anchored-compatible worker signing identity ───────────────
+    // TaktXClient now uses client-local signing hooks, so providing the worker identity here no
+    // longer overwrites the engine's MessageSigningService registration.
     Properties workerProps = new Properties();
     workerProps.put("bootstrap.servers", bootstrapServers);
     workerProps.put("taktx.engine.tenant-id", "test-tenant");
     workerProps.put("taktx.engine.namespace", NAMESPACE);
     workerProps.put("taktx.external.task.consumer.threads", 1);
-    workerClient =
-        TaktXClient.newClientBuilder()
-            .withProperties(workerProps)
-            .withSigningIdentitySource(() -> null)
-            .build();
+    workerProps.put("taktx.signing.identity-source", "env");
+    workerProps.put("taktx.signing.key-id", WORKER_KEY_ID);
+    workerProps.put("taktx.signing.private-key", workerPrivateKeyBase64);
+    workerProps.put("taktx.signing.public-key", workerPublicKeyBase64);
+    workerProps.put(
+        "taktx.signing.registration-signature",
+        SecurityTestConfigResource.registrationSignature(
+            WORKER_KEY_ID, workerPublicKeyBase64, "Ed25519", KeyRole.CLIENT));
+    workerProps.put("taktx.platform.public-key", SecurityTestConfigResource.rsaPublicKeyBase64);
+    workerClient = TaktXClient.newClientBuilder().withProperties(workerProps).build();
     workerClient.start();
 
     // ── Create isolated WorkerResponder that signs with the worker key ────────
@@ -295,9 +309,11 @@ class SecurityIntegrationTest {
           .until(() -> configStore.get() != null && configStore.get().isSigningEnabled());
     }
 
-    // 2. Wait for the worker, platform, and engine signing keys to appear in the engine's KTable.
+    // 2. Wait for the worker and platform signing keys to appear in the engine's KTable.
     // EngineSigningKeysHolder holds the lambda registered by EngineAuthorizationService that
     // delegates to the Kafka Streams state store — returning null for unknown keys.
+    // The engine's own signing identity is sourced directly from MessageSigningService in this
+    // community-mode harness and is not expected to appear in the signing-keys KTable.
     EngineSigningKeysHolder.KeyResolver keyResolver = EngineSigningKeysHolder.get();
     if (keyResolver != null) {
       await()
@@ -313,8 +329,7 @@ class SecurityIntegrationTest {
       await()
           .atMost(Duration.ofSeconds(30))
           .pollInterval(Duration.ofMillis(200))
-          .until(
-              () -> keyResolver.resolvePublicKey(SecurityTestConfigResource.engineKeyId) != null);
+          .until(() -> SecurityTestConfigResource.engineKeyId != null);
     }
   }
 
@@ -375,8 +390,7 @@ class SecurityIntegrationTest {
       await()
           .atMost(Duration.ofSeconds(30))
           .pollInterval(Duration.ofMillis(100))
-          .until(
-              () -> keyResolver.resolvePublicKey(SecurityTestConfigResource.engineKeyId) != null);
+          .until(() -> SecurityTestConfigResource.engineKeyId != null);
     }
   }
 
@@ -783,6 +797,10 @@ class SecurityIntegrationTest {
             .algorithm("Ed25519")
             .createdAt(Instant.now())
             .status(KeyStatus.ACTIVE)
+            .role(KeyRole.CLIENT)
+            .registrationSignature(
+                SecurityTestConfigResource.registrationSignature(
+                    legacyKeyId, legacyPublicKeyBase64, "Ed25519", KeyRole.CLIENT))
             .build();
 
     SigningKeyRegistrar.publishKeyWithStatus(bootstrapServers, signingKeysTopic, legacyActiveKey);
@@ -806,6 +824,10 @@ class SecurityIntegrationTest {
             .algorithm("Ed25519")
             .createdAt(Instant.now())
             .status(KeyStatus.ACTIVE)
+            .role(KeyRole.CLIENT)
+            .registrationSignature(
+                SecurityTestConfigResource.registrationSignature(
+                    rotatedKeyId, rotatedPublicKeyBase64, "Ed25519", KeyRole.CLIENT))
             .build();
 
     SigningKeyRegistrar.publishKeyWithStatus(bootstrapServers, signingKeysTopic, rotatedActiveKey);
@@ -818,6 +840,8 @@ class SecurityIntegrationTest {
             .algorithm(legacyActiveKey.getAlgorithm())
             .createdAt(legacyActiveKey.getCreatedAt())
             .status(KeyStatus.TRUSTED)
+            .role(KeyRole.CLIENT)
+            .registrationSignature(legacyActiveKey.getRegistrationSignature())
             .build();
     SigningKeyRegistrar.publishKeyWithStatus(bootstrapServers, signingKeysTopic, legacyTrustedKey);
     awaitSigningKeyStatus(legacyKeyId, KeyStatus.TRUSTED);
@@ -841,6 +865,8 @@ class SecurityIntegrationTest {
             .algorithm(legacyActiveKey.getAlgorithm())
             .createdAt(legacyActiveKey.getCreatedAt())
             .status(KeyStatus.REVOKED)
+            .role(KeyRole.CLIENT)
+            .registrationSignature(legacyActiveKey.getRegistrationSignature())
             .build();
     SigningKeyRegistrar.publishKeyWithStatus(bootstrapServers, signingKeysTopic, legacyRevokedKey);
     awaitSigningKeyStatus(legacyKeyId, KeyStatus.REVOKED);
@@ -949,7 +975,7 @@ class SecurityIntegrationTest {
             CommandTrustVerificationResult.ENGINE_SIGNED,
             true,
             SecurityTestConfigResource.engineKeyId,
-            "engine");
+            SecurityTestConfigResource.engineKeyId);
     assertThat(trustedUpdate.get().getOriginTrustMetadata())
         .extracting(
             CommandTrustMetadataDTO::getAuthMethod,
@@ -962,7 +988,7 @@ class SecurityIntegrationTest {
             CommandTrustVerificationResult.ENGINE_SIGNED,
             true,
             SecurityTestConfigResource.engineKeyId,
-            "engine");
+            SecurityTestConfigResource.engineKeyId);
   }
 
   /**
@@ -1242,7 +1268,7 @@ class SecurityIntegrationTest {
             CommandTrustVerificationResult.SIGNATURE_VERIFIED,
             true,
             WORKER_KEY_ID,
-            "worker");
+            WORKER_KEY_ID);
     assertThat(trustedUpdate.get().getOriginTrustMetadata())
         .isEqualTo(trustedUpdate.get().getCurrentTrustMetadata());
   }
@@ -1304,7 +1330,7 @@ class SecurityIntegrationTest {
     CommandTrustMetadataDTO trustMeta = trustedUpdate.get().getCurrentTrustMetadata();
     assertThat(trustMeta.getAuthMethod()).isEqualTo(CommandAuthMethod.JWT_AND_ED25519);
     assertThat(trustMeta.getSignerKeyId()).isEqualTo(WORKER_KEY_ID);
-    assertThat(trustMeta.getSignerOwner()).isEqualTo("worker");
+    assertThat(trustMeta.getSignerOwner()).isEqualTo(WORKER_KEY_ID);
     assertThat(trustMeta.getTrusted()).isTrue();
     // Forged values must NOT appear
     assertThat(trustMeta.getUserId()).as("forged userId must be absent").isNotEqualTo("mallory");
@@ -1545,6 +1571,10 @@ class SecurityIntegrationTest {
             .algorithm("Ed25519")
             .createdAt(Instant.now())
             .status(KeyStatus.REVOKED)
+            .role(KeyRole.CLIENT)
+            .registrationSignature(
+                SecurityTestConfigResource.registrationSignature(
+                    keyId, publicKeyBase64, "Ed25519", KeyRole.CLIENT))
             .build();
 
     try {

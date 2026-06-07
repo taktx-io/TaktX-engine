@@ -23,7 +23,7 @@ import org.apache.kafka.clients.producer.ProducerRecord;
  * A sender for message events, responsible for producing and sending MessageEventDTO objects to a
  * Kafka topic.
  */
-public class MessageEventSender {
+public class MessageEventSender implements AutoCloseable {
 
   private final Producer<MessageEventKeyDTO, MessageEventDTO> messageEventEmitter;
   private final TaktPropertiesHelper taktPropertiesHelper;
@@ -85,5 +85,10 @@ public class MessageEventSender {
             taktPropertiesHelper.getPrefixedTopicName(Topics.MESSAGE_EVENT_TOPIC.getTopicName()),
             messageEventDTO.toMessageEventKey(),
             messageEventDTO));
+  }
+
+  @Override
+  public void close() {
+    messageEventEmitter.close();
   }
 }

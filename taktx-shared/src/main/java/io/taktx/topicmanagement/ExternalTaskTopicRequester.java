@@ -19,7 +19,7 @@ import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.StringSerializer;
 
-public class ExternalTaskTopicRequester {
+public class ExternalTaskTopicRequester implements AutoCloseable {
 
   private final TaktPropertiesHelper taktPropertiesHelper;
   private final KafkaProducer<String, TopicMetaDTO> producer;
@@ -64,5 +64,10 @@ public class ExternalTaskTopicRequester {
             topicName,
             topicMetaDTO));
     return topicName;
+  }
+
+  @Override
+  public void close() {
+    producer.close();
   }
 }

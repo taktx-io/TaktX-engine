@@ -9,27 +9,35 @@ package io.taktx.engine.pi.integration;
 
 import io.quarkus.arc.Arc;
 import io.quarkus.test.common.QuarkusTestResourceLifecycleManager;
+import io.taktx.dto.KeyRole;
+import io.taktx.dto.SigningKeyDTO;
 import io.taktx.engine.generic.ClockProducer;
 import io.taktx.engine.generic.MutableClock;
 import io.taktx.engine.license.LicenseManager;
 import io.taktx.engine.pi.testengine.SingletonBpmnTestEngine;
 import io.taktx.engine.security.MessageSigningService;
+import io.taktx.security.SigningKeyGenerator;
+import io.taktx.security.SigningKeyRegistrar;
 import java.security.KeyPairGenerator;
+import java.security.Signature;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.Map;
+import java.util.UUID;
 
 /**
- * Quarkus test resource that provisions RSA test keys for JWT validation and captures the engine's
- * active Ed25519 engine signing key after Quarkus startup.
+ * Quarkus test resource that provisions anchored-mode security material for the security
+ * integration profile.
  *
  * <p>The generated/observed public keys are exposed via static fields so tests can produce valid
- * JWTs and verify Ed25519 signatures without any shared mutable state.
+ * JWTs and verify Ed25519 signatures without any shared mutable state. The engine itself is also
+ * started with a stable pre-generated Ed25519 identity and a valid engine-key countersignature so
+ * startup-static anchored signing is active for the whole suite.
  *
- * <p>The RSA public key is NOT injected via {@code taktx.platform.public-key} — instead, the test
- * publishes it to the {@code taktx-signing-keys} KTable under {@link #PLATFORM_KID} in
- * {@code @BeforeAll}, matching the {@code kid} header the JWT builder sets. The engine resolves the
- * key at validation time from the KTable, just like the real platform does.
+ * <p>The RSA public key is injected via {@code taktx.platform.public-key} so the engine runs in
+ * anchored mode, and it is also published to the {@code taktx-signing-keys} KTable under {@link
+ * #PLATFORM_KID} in {@code @BeforeAll}, matching the {@code kid} header the JWT builder sets. That
+ * keeps JWT issuer-key resolution on the same KTable path the real platform uses.
  */
 public class SecurityTestConfigResource implements QuarkusTestResourceLifecycleManager {
 
@@ -50,6 +58,11 @@ public class SecurityTestConfigResource implements QuarkusTestResourceLifecycleM
   /** Active engine signing key ID, exposed for assertions. */
   static String engineKeyId;
 
+  private static String enginePrivateKeyBase64;
+  private static String engineRegistrationSignature;
+
+  private static final String PLATFORM_PRIVATE_KEY_SYS_PROP = "taktx.test.platform.private-key";
+
   @Override
   public Map<String, String> start() {
     // Close the shared singleton engine (used by all default-profile tests) BEFORE Quarkus
@@ -68,7 +81,40 @@ public class SecurityTestConfigResource implements QuarkusTestResourceLifecycleM
       rsaPrivateKey = rsaKp.getPrivate();
       rsaPublicKeyBase64 = Base64.getEncoder().encodeToString(rsaPublicKey.getEncoded());
 
-      return Map.of("taktx.test", "true", "kafka.devservices.auto-create-topics", "false");
+      java.security.KeyPair engineKp = SigningKeyGenerator.generate();
+      enginePrivateKeyBase64 = SigningKeyGenerator.encodePrivateKey(engineKp.getPrivate());
+      enginePublicKeyBase64 = SigningKeyGenerator.encodePublicKey(engineKp.getPublic());
+      engineKeyId = "security-test-engine-" + UUID.randomUUID();
+      engineRegistrationSignature =
+          registrationSignature(engineKeyId, enginePublicKeyBase64, "Ed25519", KeyRole.ENGINE);
+
+      System.setProperty("taktx.signing.identity-source", "env");
+      System.setProperty("taktx.signing.key-id", engineKeyId);
+      System.setProperty("taktx.signing.private-key", enginePrivateKeyBase64);
+      System.setProperty("taktx.signing.public-key", enginePublicKeyBase64);
+      System.setProperty("taktx.platform.public-key", rsaPublicKeyBase64);
+      System.setProperty("taktx.engine.key-registration-signature", engineRegistrationSignature);
+      System.setProperty(
+          PLATFORM_PRIVATE_KEY_SYS_PROP,
+          Base64.getEncoder().encodeToString(rsaPrivateKey.getEncoded()));
+
+      return Map.of(
+          "taktx.test",
+          "true",
+          "kafka.devservices.auto-create-topics",
+          "false",
+          "taktx.signing.identity-source",
+          "env",
+          "taktx.signing.key-id",
+          engineKeyId,
+          "taktx.signing.private-key",
+          enginePrivateKeyBase64,
+          "taktx.signing.public-key",
+          enginePublicKeyBase64,
+          "taktx.platform.public-key",
+          rsaPublicKeyBase64,
+          "taktx.engine.key-registration-signature",
+          engineRegistrationSignature);
     } catch (Exception e) {
       throw new RuntimeException("Failed to generate test keys", e);
     }
@@ -107,8 +153,36 @@ public class SecurityTestConfigResource implements QuarkusTestResourceLifecycleM
 
   @Override
   public void stop() {
+    System.clearProperty("taktx.signing.identity-source");
+    System.clearProperty("taktx.signing.key-id");
+    System.clearProperty("taktx.signing.private-key");
+    System.clearProperty("taktx.signing.public-key");
+    System.clearProperty("taktx.platform.public-key");
+    System.clearProperty("taktx.engine.key-registration-signature");
+    System.clearProperty(PLATFORM_PRIVATE_KEY_SYS_PROP);
+    enginePrivateKeyBase64 = null;
+    engineRegistrationSignature = null;
     enginePublicKeyBase64 = null;
     engineKeyId = null;
+  }
+
+  static String registrationSignature(
+      String keyId, String publicKeyBase64, String algorithm, KeyRole role) {
+    try {
+      SigningKeyDTO dto =
+          SigningKeyDTO.builder()
+              .keyId(keyId)
+              .publicKeyBase64(publicKeyBase64)
+              .algorithm(algorithm)
+              .role(role)
+              .build();
+      Signature signature = Signature.getInstance("SHA256withRSA");
+      signature.initSign(rsaPrivateKey);
+      signature.update(SigningKeyRegistrar.computeCanonicalPayload(dto));
+      return Base64.getEncoder().encodeToString(signature.sign());
+    } catch (Exception e) {
+      throw new IllegalStateException("Failed to countersign security test key", e);
+    }
   }
 
   private static void resetFixedTestClock() {

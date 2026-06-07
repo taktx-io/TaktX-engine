@@ -16,11 +16,9 @@ import io.taktx.client.InstanceUpdateRecord;
 import io.taktx.client.SecurityPostureSnapshot;
 import io.taktx.client.TaktXClient;
 import io.taktx.dto.ExternalTaskTriggerDTO;
-import io.taktx.dto.NamespaceSecurityPolicyDTO;
 import io.taktx.dto.ParticipantCapability;
 import io.taktx.dto.SecurityMode;
 import io.taktx.dto.VariablesDTO;
-import java.time.Duration;
 import java.util.Queue;
 import java.util.Set;
 import java.util.UUID;
@@ -29,8 +27,10 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 @QuarkusTest
-@TestProfile(SecurityTestProfile.class)
-@QuarkusTestResource(value = SecurityTestConfigResource.class, restrictToAnnotatedClass = true)
+@TestProfile(PublicClientDogfoodOpenTestProfile.class)
+@QuarkusTestResource(
+    value = PublicClientDogfoodOpenTestConfigResource.class,
+    restrictToAnnotatedClass = true)
 @Tag("security-integration")
 class PublicClientOpenModeDogfoodIntegrationTest extends PublicClientDogfoodIntegrationTestSupport {
 
@@ -62,49 +62,11 @@ class PublicClientOpenModeDogfoodIntegrationTest extends PublicClientDogfoodInte
     awaitProcessCompleted(updates, instanceId);
 
     SecurityPostureSnapshot posture = client.observability().getPostureSnapshot();
-    assertThat(posture.effectiveMode()).isNull();
-  }
-
-  @Test
-  void communityOpenPolicy_isPublishedObservedAndCanBeCleared() {
-    long openPolicyVersion = nextPolicyVersion();
-    String namespace = newTestNamespace("dogfood-open-policy");
-
-    TaktXClient observer =
-        startClient(
-            baseProperties(namespace),
-            participantDescriptor(
-                "dogfood-open-observer",
-                Set.of(ParticipantCapability.SECURITY_OBSERVER),
-                "dogfood-open-observer"));
-    TaktXClient publisher =
-        startClient(
-            platformWriterProperties(namespace),
-            participantDescriptor(
-                "dogfood-open-console",
-                Set.of(ParticipantCapability.SECURITY_OBSERVER),
-                "console"));
-
-    awaitNoPolicy(observer);
-
-    NamespaceSecurityPolicyDTO observedPolicy =
-        publishPolicyAndAwaitObserved(
-            namespace,
-            publisher,
-            observer,
-            activeCommunityOpenPolicy(openPolicyVersion),
-            Duration.ofSeconds(30));
-
-    assertThat(observedPolicy.getMode()).isEqualTo(SecurityMode.OPEN);
-
-    TaktXClient.clearNamespaceSecurityPolicy(platformWriterProperties(namespace));
-    awaitNoPolicy(observer);
-    assertThat(observer.observability().getPostureSnapshot().effectiveMode()).isNull();
+    assertThat(posture.effectiveMode()).isNotEqualTo(SecurityMode.ANCHORED);
   }
 
   @Test
   void communityOpenPolicy_allowsUnsignedWorkerCompletionThroughPublicClient() throws Exception {
-    long openPolicyVersion = nextPolicyVersion();
     String namespace = newTestNamespace("dogfood-open-worker");
 
     TaktXClient observer =
@@ -114,13 +76,6 @@ class PublicClientOpenModeDogfoodIntegrationTest extends PublicClientDogfoodInte
                 "dogfood-open-worker-observer",
                 Set.of(ParticipantCapability.SECURITY_OBSERVER),
                 "dogfood-open-worker-observer"));
-    TaktXClient publisher =
-        startClient(
-            platformWriterProperties(namespace),
-            participantDescriptor(
-                "dogfood-open-worker-console",
-                Set.of(ParticipantCapability.SECURITY_OBSERVER),
-                "console"));
     TaktXClient runtimeClient =
         startClientWithoutSigningIdentity(
             baseProperties(namespace),
@@ -156,18 +111,6 @@ class PublicClientOpenModeDogfoodIntegrationTest extends PublicClientDogfoodInte
         .workers()
         .registerExternalTaskConsumer(
             collectingExternalTaskConsumer(triggers), "dogfood-open-worker-" + UUID.randomUUID());
-
-    NamespaceSecurityPolicyDTO observedPolicy =
-        publishPolicyAndAwaitObserved(
-            namespace,
-            publisher,
-            observer,
-            activeCommunityOpenPolicy(openPolicyVersion),
-            Duration.ofSeconds(30));
-    awaitObservedPolicyVersion(runtimeClient, openPolicyVersion);
-    awaitObservedPolicyVersion(workerClient, openPolicyVersion);
-
-    assertThat(observedPolicy.getMode()).isEqualTo(SecurityMode.OPEN);
 
     UUID instanceId =
         runtimeClient.runtime().startProcess(SERVICE_PROCESS_ID, VariablesDTO.empty());

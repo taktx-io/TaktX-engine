@@ -22,7 +22,7 @@ import org.apache.kafka.common.serialization.StringSerializer;
  * A sender for message events, responsible for producing and sending MessageEventDTO objects to a
  * Kafka topic.
  */
-public class SignalSender {
+public class SignalSender implements AutoCloseable {
 
   private final Producer<String, SignalDTO> signalEmitter;
   private final TaktPropertiesHelper taktPropertiesHelper;
@@ -84,5 +84,10 @@ public class SignalSender {
             taktPropertiesHelper.getPrefixedTopicName(Topics.SIGNAL_TOPIC.getTopicName()),
             signalDTO.getSignalName(),
             signalDTO));
+  }
+
+  @Override
+  public void close() {
+    signalEmitter.close();
   }
 }
