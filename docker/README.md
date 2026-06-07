@@ -6,12 +6,12 @@ The setup is split into composable layers so you can start simple and add comple
 
 ## Layers at a glance
 
-| Level | File | Signing | Setup needed |
-|-------|------|---------|--------------|
-| 1 — Minimal | `docker-compose.yaml` *(base)* | In-memory generated | None |
-| 2 — Monitoring | `+ docker-compose.monitoring.yml` | ← same | None |
-| 3 — File signing | `+ docker-compose.file-signing.yml` | Persistent file key | Generate key files |
-| 4 — Anchored | `+ docker-compose.anchored.yml` | File key + root trust | Generate + sign keys |
+| Level | File | Security mode | Signing | Setup needed |
+|-------|------|---------------|---------|--------------|
+| 1 — Minimal | `docker-compose.yaml` *(base)* | `OPEN` | In-memory generated | None |
+| 2 — Monitoring | `+ docker-compose.monitoring.yml` | `OPEN` | ← same | None |
+| 3 — File signing | `+ docker-compose.file-signing.yml` | `OPEN` | Persistent file key | Generate key files |
+| 4 — Anchored | `+ docker-compose.anchored.yml` | `ANCHORED` | File key + root trust | Generate + sign keys |
 
 ---
 
@@ -98,7 +98,6 @@ scripts/generate_trust_anchor.sh --init
 scripts/generate_trust_anchor.sh \
   --sign \
   --key-dir docker/signing/engine \
-  --owner acme-engine \
   --role ENGINE
 
 # 4. Paste the printed values into docker-compose.anchored.yml:

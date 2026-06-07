@@ -20,7 +20,7 @@ TaktX Engine is an open-source, high-performance **BPMN 2.0 process automation e
 
 Key differentiators from alternatives (Camunda, Zeebe, Flowable):
 - **No dedicated database** — state lives in Kafka-backed stores, fully replayable from the Kafka log
-- **Ed25519 message signing** — engine/client traffic can be cryptographically authenticated when secured posture or legacy runtime signing is enabled
+- **Ed25519 message signing** — engine/client traffic is cryptographically authenticated when the namespace is in `ANCHORED` mode
 - **RS256 JWT command authorization** — fine-grained, token-based command control out of the box
 - **Single deployable JAR / OCI image** — no separate engine cluster to operate
 
