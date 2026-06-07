@@ -93,7 +93,6 @@ on every restart and cannot be pre-signed.
 ```bash
 scripts/generate_trust_anchor.sh --sign \
   --key-dir docker/signing/engine \
-  --owner engine \
   --role ENGINE
 ```
 
@@ -105,7 +104,6 @@ Copy the printed `TAKTX_ENGINE_KEY_REGISTRATION_SIGNATURE=...` value into
 ```bash
 scripts/generate_trust_anchor.sh --sign \
   --key-dir docker/signing/worker-example \
-  --owner worker-example \
   --role CLIENT
 ```
 
@@ -131,7 +129,7 @@ are needed.
 The registration signature is `SHA256withRSA` (PKCS#1 v1.5) over the pipe-delimited UTF-8 string:
 
 ```
-keyId|publicKeyBase64|algorithm|owner|role
+keyId|publicKeyBase64|algorithm|role
 ```
 
 This is exactly what `io.taktx.security.SigningKeyRegistrar.computeCanonicalPayload()` produces.

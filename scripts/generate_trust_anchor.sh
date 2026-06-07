@@ -31,7 +31,7 @@
 #
 #   --sign        Sign a key directory (engine or worker) to produce a
 #                 registration signature environment-variable value.
-#                 Required flags: --key-dir, --owner, --role
+#                 Required flags: --key-dir, --role
 #                 Output: prints the env-var name and base64 signature to stdout.
 #
 #   --show-pubkey Print TAKTX_PLATFORM_PUBLIC_KEY value from an existing
@@ -51,7 +51,6 @@
 #   # 3. Sign the engine key
 #   scripts/generate_trust_anchor.sh --sign \
 #     --key-dir docker/signing/engine \
-#     --owner engine \
 #     --role ENGINE
 #   # → copy the printed TAKTX_ENGINE_KEY_REGISTRATION_SIGNATURE value into
 #   #   docker-compose-full.yaml (x-taktx-anchored-engine-trust-env block)
@@ -65,7 +64,6 @@
 #
 #   scripts/generate_trust_anchor.sh --sign \
 #     --key-dir docker/signing/worker-billing \
-#     --owner worker-billing \
 #     --role CLIENT
 #   # → copy the printed TAKTX_SIGNING_REGISTRATION_SIGNATURE value into the
 #   #   worker service environment block
@@ -75,7 +73,7 @@
 # The registration signature is SHA256withRSA (PKCS#1 v1.5) over the pipe-delimited
 # UTF-8 string:
 #
-#   keyId|publicKeyBase64|algorithm|owner|role
+#   keyId|publicKeyBase64|algorithm|role
 #
 # This matches exactly what io.taktx.security.SigningKeyRegistrar.computeCanonicalPayload()
 # produces in Java. The algorithm field is always "Ed25519" for engine and worker keys.
@@ -104,7 +102,7 @@ PLATFORM_PUBLIC_B64="$SIGNING_DIR/platform-public.b64"
 usage() {
   echo "Usage:"
   echo "  $0 --init"
-  echo "  $0 --sign --key-dir <dir> --owner <owner> --role <ENGINE|CLIENT|PLATFORM>"
+  echo "  $0 --sign --key-dir <dir> --role <ENGINE|CLIENT|PLATFORM>"
   echo "  $0 --show-pubkey"
   echo ""
   echo "Run '$0' with no arguments for full documentation."
@@ -165,8 +163,7 @@ init_platform_key() {
 
 sign_key() {
   local key_dir="$1"
-  local owner="$2"
-  local role="$3"
+  local role="$2"
 
   # Validate role
   if [[ "$role" != "ENGINE" && "$role" != "CLIENT" && "$role" != "PLATFORM" ]]; then
@@ -216,14 +213,13 @@ sign_key() {
 
   # Build the canonical payload — must exactly match
   # io.taktx.security.SigningKeyRegistrar.computeCanonicalPayload():
-  #   keyId|publicKeyBase64|algorithm|owner|role
+  #   keyId|publicKeyBase64|algorithm|role
   local canonical_payload
-  canonical_payload=$(printf '%s|%s|%s|%s|%s' \
-    "$key_id" "$pub_key_b64" "$algorithm" "$owner" "$role")
+  canonical_payload=$(printf '%s|%s|%s|%s' \
+    "$key_id" "$pub_key_b64" "$algorithm" "$role")
 
   echo "==> Signing key registration..."
   echo "    Key ID    : $key_id"
-  echo "    Owner     : $owner"
   echo "    Role      : $role"
   echo "    Algorithm : $algorithm"
   echo "    Canonical : $canonical_payload" | cut -c1-120
@@ -263,13 +259,12 @@ show_pubkey() {
 
 if [[ $# -eq 0 ]]; then
   # Print full usage from the header block
-  head -n 90 "$0" | tail -n +2 | sed 's/^# \?//'
+  head -n 86 "$0" | tail -n +2 | sed 's/^# \?//'
   exit 0
 fi
 
 MODE=""
 KEY_DIR=""
-OWNER=""
 ROLE=""
 
 while [[ $# -gt 0 ]]; do
@@ -278,7 +273,6 @@ while [[ $# -gt 0 ]]; do
     --sign)       MODE="sign"; shift ;;
     --show-pubkey) MODE="show-pubkey"; shift ;;
     --key-dir)    KEY_DIR="$2"; shift 2 ;;
-    --owner)      OWNER="$2"; shift 2 ;;
     --role)       ROLE="$2"; shift 2 ;;
     *) echo "Unknown option: $1" >&2; usage ;;
   esac
@@ -289,11 +283,11 @@ case "$MODE" in
     init_platform_key
     ;;
   sign)
-    if [[ -z "$KEY_DIR" || -z "$OWNER" || -z "$ROLE" ]]; then
-      echo "ERROR: --sign requires --key-dir, --owner, and --role." >&2
+    if [[ -z "$KEY_DIR" || -z "$ROLE" ]]; then
+      echo "ERROR: --sign requires --key-dir and --role." >&2
       usage
     fi
-    sign_key "$KEY_DIR" "$OWNER" "$ROLE"
+    sign_key "$KEY_DIR" "$ROLE"
     ;;
   show-pubkey)
     show_pubkey
@@ -302,4 +296,3 @@ case "$MODE" in
     usage
     ;;
 esac
-
