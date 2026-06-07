@@ -14,10 +14,10 @@ import static org.awaitility.Awaitility.await;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
-import io.taktx.client.ObservedPolicySnapshot;
 import io.taktx.client.SecurityPostureSnapshot;
 import io.taktx.client.TaktXClient;
 import io.taktx.dto.ExternalTaskTriggerDTO;
+import io.taktx.dto.NamespaceSecurityPolicyDTO;
 import io.taktx.dto.ParticipantCapability;
 import io.taktx.dto.SecurityEventDTO;
 import io.taktx.dto.SecurityEventType;
@@ -55,9 +55,7 @@ class PublicClientSecuredModeDogfoodIntegrationTest
             platformWriterProperties(namespace),
             participantDescriptor(
                 "dogfood-console",
-                Set.of(
-                    ParticipantCapability.AUTHORITATIVE_POLICY_PUBLISHER,
-                    ParticipantCapability.SECURITY_OBSERVER),
+                Set.of(ParticipantCapability.SECURITY_OBSERVER),
                 "console"));
     TaktXClient runtimeClient =
         startClient(
@@ -79,7 +77,7 @@ class PublicClientSecuredModeDogfoodIntegrationTest
                 "worker-service"));
 
     awaitNoPolicy(observer);
-    primeAuthoritativePolicyMutationPath(publisher, observer, Duration.ofSeconds(30));
+    primeAuthoritativePolicyMutationPath(namespace, publisher, observer, Duration.ofSeconds(30));
 
     deployProcessAndAwaitAvailability(runtimeClient, SERVICE_TASK_BPMN, SERVICE_PROCESS_ID);
 
@@ -122,9 +120,13 @@ class PublicClientSecuredModeDogfoodIntegrationTest
     assertThat(rejectionEvent.get()).isNotNull();
     assertThat(rejectionEvent.get().getMessage()).contains("required role PLATFORM");
 
-    ObservedPolicySnapshot observedPolicy =
+    NamespaceSecurityPolicyDTO observedPolicy =
         publishPolicyAndAwaitObserved(
-            publisher, observer, activeSecuredPolicy(securedPolicyVersion), Duration.ofSeconds(30));
+            namespace,
+            publisher,
+            observer,
+            activeSecuredPolicy(securedPolicyVersion),
+            Duration.ofSeconds(30));
     awaitObservedPolicyVersion(runtimeClient, securedPolicyVersion);
     awaitObservedPolicyVersion(workerClient, securedPolicyVersion);
 
@@ -133,8 +135,7 @@ class PublicClientSecuredModeDogfoodIntegrationTest
             .observability()
             .awaitPostureSnapshot(
                 snapshot ->
-                    snapshot.hasEffectivePolicy()
-                        && snapshot.recentSecurityEvents().stream()
+                    snapshot.recentSecurityEvents().stream()
                             .anyMatch(
                                 event ->
                                     event.getEventType()
@@ -143,7 +144,7 @@ class PublicClientSecuredModeDogfoodIntegrationTest
                                         && event.getMessage().contains(ROGUE_WRITER_KEY_ID)),
                 Duration.ofSeconds(30));
 
-    assertThat(observedPolicy.effectiveMode()).isEqualTo(SecurityMode.ANCHORED);
+    assertThat(observedPolicy.getMode()).isEqualTo(SecurityMode.ANCHORED);
     assertThat(posture.recentSecurityEvents())
         .extracting(SecurityEventDTO::getEventType)
         .contains(SecurityEventType.CONTROL_PLANE_MUTATION_REJECTED);
@@ -184,9 +185,7 @@ class PublicClientSecuredModeDogfoodIntegrationTest
             platformWriterProperties(namespace),
             participantDescriptor(
                 "dogfood-signing-console",
-                Set.of(
-                    ParticipantCapability.AUTHORITATIVE_POLICY_PUBLISHER,
-                    ParticipantCapability.SECURITY_OBSERVER),
+                Set.of(ParticipantCapability.SECURITY_OBSERVER),
                 "console"));
     TaktXClient signedRuntimeClient =
         startClient(
@@ -203,6 +202,7 @@ class PublicClientSecuredModeDogfoodIntegrationTest
     deployProcessAndAwaitAvailability(signedRuntimeClient, TASK_SINGLE_BPMN, OPEN_PROCESS_ID);
 
     publishPolicyAndAwaitObserved(
+        namespace,
         publisher,
         observer,
         activeSigningRequiredPolicy(securedPolicyVersion),
@@ -233,9 +233,7 @@ class PublicClientSecuredModeDogfoodIntegrationTest
             platformWriterProperties(namespace),
             participantDescriptor(
                 "dogfood-worker-negative-console",
-                Set.of(
-                    ParticipantCapability.AUTHORITATIVE_POLICY_PUBLISHER,
-                    ParticipantCapability.SECURITY_OBSERVER),
+                Set.of(ParticipantCapability.SECURITY_OBSERVER),
                 "console"));
     TaktXClient runtimeClient =
         startClient(
@@ -271,9 +269,13 @@ class PublicClientSecuredModeDogfoodIntegrationTest
             collectingExternalTaskConsumer(triggers),
             "dogfood-worker-negative-" + UUID.randomUUID());
 
-    ObservedPolicySnapshot observedPolicy =
+    NamespaceSecurityPolicyDTO observedPolicy =
         publishPolicyAndAwaitObserved(
-            publisher, observer, activeSecuredPolicy(securedPolicyVersion), Duration.ofSeconds(30));
+            namespace,
+            publisher,
+            observer,
+            activeSecuredPolicy(securedPolicyVersion),
+            Duration.ofSeconds(30));
     awaitObservedPolicyVersion(runtimeClient, securedPolicyVersion);
     awaitObservedPolicyVersion(unsignedWorkerClient, securedPolicyVersion);
 
@@ -282,14 +284,10 @@ class PublicClientSecuredModeDogfoodIntegrationTest
             .observability()
             .awaitPostureSnapshot(
                 snapshot ->
-                    snapshot.hasEffectivePolicy()
-                        && snapshot.effectiveMode() == SecurityMode.ANCHORED
-                        && Long.valueOf(securedPolicyVersion)
-                            .equals(snapshot.effectivePolicyVersion()),
+                    snapshot.effectiveMode() == SecurityMode.ANCHORED,
                 Duration.ofSeconds(30));
 
-    assertThat(observedPolicy.effectiveMode()).isEqualTo(SecurityMode.ANCHORED);
-    assertThat(posture.currentActivationState()).isNull();
+    assertThat(observedPolicy.getMode()).isEqualTo(SecurityMode.ANCHORED);
 
     assertThatThrownBy(
             () ->
@@ -335,9 +333,7 @@ class PublicClientSecuredModeDogfoodIntegrationTest
             platformWriterProperties(namespace),
             participantDescriptor(
                 "dogfood-signed-open-console",
-                Set.of(
-                    ParticipantCapability.AUTHORITATIVE_POLICY_PUBLISHER,
-                    ParticipantCapability.SECURITY_OBSERVER),
+                Set.of(ParticipantCapability.SECURITY_OBSERVER),
                 "console"));
     TaktXClient runtimeClient =
         startClient(
@@ -361,7 +357,11 @@ class PublicClientSecuredModeDogfoodIntegrationTest
     deployProcessAndAwaitAvailability(runtimeClient, TASK_SINGLE_BPMN, OPEN_PROCESS_ID);
 
     publishPolicyAndAwaitObserved(
-        publisher, observer, activeCommunityOpenPolicy(openPolicyVersion), Duration.ofSeconds(30));
+        namespace,
+        publisher,
+        observer,
+        activeCommunityOpenPolicy(openPolicyVersion),
+        Duration.ofSeconds(30));
     awaitObservedPolicyVersion(runtimeClient, openPolicyVersion);
 
     // In OPEN mode the signed start command is accepted — signing is orthogonal to mode
@@ -387,9 +387,7 @@ class PublicClientSecuredModeDogfoodIntegrationTest
             platformWriterProperties(namespace),
             participantDescriptor(
                 "dogfood-unknown-key-console",
-                Set.of(
-                    ParticipantCapability.AUTHORITATIVE_POLICY_PUBLISHER,
-                    ParticipantCapability.SECURITY_OBSERVER),
+                Set.of(ParticipantCapability.SECURITY_OBSERVER),
                 "console"));
 
     // Generate a fresh keypair whose public key is never published to taktx-signing-keys.
@@ -423,7 +421,11 @@ class PublicClientSecuredModeDogfoodIntegrationTest
     deployProcessAndAwaitAvailability(unknownKeyClient, TASK_SINGLE_BPMN, OPEN_PROCESS_ID);
 
     publishPolicyAndAwaitObserved(
-        publisher, observer, activeAnchoredPolicy(securedPolicyVersion), Duration.ofSeconds(30));
+        namespace,
+        publisher,
+        observer,
+        activeAnchoredPolicy(securedPolicyVersion),
+        Duration.ofSeconds(30));
     awaitObservedPolicyVersion(unknownKeyClient, securedPolicyVersion);
 
     // The engine should reject the signed start command because "unknown-key-dogfood" is not

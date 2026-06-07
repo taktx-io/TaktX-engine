@@ -26,11 +26,11 @@ import org.apache.kafka.common.serialization.ByteArraySerializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 
 /**
- * Publishes the engine's startup-resolved namespace security mode to the compacted
- * {@code taktx-security-policy} topic once at startup.
+ * Publishes the engine's startup-resolved namespace security mode to the compacted {@code
+ * taktx-security-policy} topic once at startup.
  *
- * <p>The mode is read-only after this point — it is determined by the presence of
- * {@code TAKTX_PLATFORM_PUBLIC_KEY} and never changes at runtime. The record is keyed with {@code
+ * <p>The mode is read-only after this point — it is determined by the presence of {@code
+ * TAKTX_PLATFORM_PUBLIC_KEY} and never changes at runtime. The record is keyed with {@code
  * "policy"} so the compacted topic retains one entry per namespace for Console display.
  *
  * <p>This publish is best-effort; failure is logged as a warning but does not block startup.
@@ -55,8 +55,7 @@ public class NamespacePosturePublisher {
   @PostConstruct
   void publishStartupPosture() {
     SecurityMode mode = configuration.isAnchored() ? SecurityMode.ANCHORED : SecurityMode.OPEN;
-    String topic =
-        configuration.getPrefixed(Topics.SECURITY_POLICY_TOPIC.getTopicName());
+    String topic = configuration.getPrefixed(Topics.SECURITY_POLICY_TOPIC.getTopicName());
     try {
       Map<String, Object> producerConfig = new HashMap<>(kafkaClientsConfig.getConfig());
       producerConfig.put("max.block.ms", "5000");
@@ -75,7 +74,9 @@ public class NamespacePosturePublisher {
     } catch (Exception e) {
       log.warn(
           "Failed to publish namespace posture (non-fatal): topic={} mode={} error={}",
-          topic, mode, e.getMessage());
+          topic,
+          mode,
+          e.getMessage());
     }
   }
 }

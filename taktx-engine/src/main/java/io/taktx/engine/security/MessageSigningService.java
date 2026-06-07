@@ -32,9 +32,9 @@ import lombok.extern.slf4j.Slf4j;
 /**
  * Signs engine-internal Kafka messages with Ed25519 when anchored mode is active.
  *
- * <p>Whether to sign is resolved once at startup: {@code anchored = platform public key set}.
- * There is no runtime switching. Registers itself as a {@link SigningServiceHolder.SigningFunction}
- * at startup so that {@link io.taktx.serdes.ProtoSigningSerializer} can sign records in a single
+ * <p>Whether to sign is resolved once at startup: {@code anchored = platform public key set}. There
+ * is no runtime switching. Registers itself as a {@link SigningServiceHolder.SigningFunction} at
+ * startup so that {@link io.taktx.serdes.ProtoSigningSerializer} can sign records in a single
  * serialisation pass — no double-serialisation.
  */
 @ApplicationScoped
@@ -61,13 +61,15 @@ public class MessageSigningService {
   private volatile SigningIdentity previousIdentity;
 
   @Inject
-  public MessageSigningService(TaktConfiguration config, SigningIdentitySource signingIdentitySource) {
+  public MessageSigningService(
+      TaktConfiguration config, SigningIdentitySource signingIdentitySource) {
     this(config, signingIdentitySource, true);
   }
 
   /** Test constructor with a pre-built identity source and publication scheduler disabled. */
   MessageSigningService(
-      TaktConfiguration config, SigningIdentitySource signingIdentitySource,
+      TaktConfiguration config,
+      SigningIdentitySource signingIdentitySource,
       boolean startPublicationScheduler) {
     this.config = config;
     this.anchored = config.isAnchored();

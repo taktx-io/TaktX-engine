@@ -306,9 +306,11 @@ class ParticipantStatusSupportTest {
             .readyForDataPlane(false)
             .build();
 
-    assertThat(ParticipantStatusSupport.allowsProtectedDataPlaneParticipation(unverifiedReady, 199L))
+    assertThat(
+            ParticipantStatusSupport.allowsProtectedDataPlaneParticipation(unverifiedReady, 199L))
         .isTrue();
-    assertThat(ParticipantStatusSupport.allowsProtectedDataPlaneParticipation(verifiedNotReady, 199L))
+    assertThat(
+            ParticipantStatusSupport.allowsProtectedDataPlaneParticipation(verifiedNotReady, 199L))
         .isFalse();
   }
 

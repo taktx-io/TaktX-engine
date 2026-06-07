@@ -25,6 +25,7 @@ import java.util.Set;
  * Simplified operator-facing namespace posture view — read-only.
  *
  * <p>Mode is startup-static; it cannot be changed at runtime. This snapshot provides:
+ *
  * <ul>
  *   <li>The effective mode (derived from participant self-reports or the policy topic)
  *   <li>Whether the namespace is currently ready for protected data-plane participation
@@ -58,8 +59,7 @@ public record SimplifiedSecurityPostureSnapshot(
     long nowMs = System.currentTimeMillis();
     SecurityMode effectiveMode = effectiveSnapshot.effectiveMode();
     ParticipantSummary participantSummary =
-        ParticipantSummary.from(
-            effectiveSnapshot.participantStatuses(), null, null, nowMs);
+        ParticipantSummary.from(effectiveSnapshot.participantStatuses(), null, null, nowMs);
     List<BlockingIssue> blockingIssues = flattenBlockingIssues(effectiveSnapshot, nowMs);
     boolean protectedRuntimeAllowed =
         deriveProtectedRuntimeAllowed(effectiveMode, participantSummary);
@@ -79,8 +79,9 @@ public record SimplifiedSecurityPostureSnapshot(
       SecurityPostureSnapshot snapshot, long nowMs) {
     Map<String, BlockingIssue> issues = new LinkedHashMap<>();
 
-    snapshot.participantStatuses().forEach(
-        (participantInstanceId, status) -> addStatusIssues(issues, status, nowMs));
+    snapshot
+        .participantStatuses()
+        .forEach((participantInstanceId, status) -> addStatusIssues(issues, status, nowMs));
 
     for (ParticipantPostureMismatch mismatch : snapshot.mismatchReasons()) {
       if (mismatch == null || mismatch.mismatchReason() == null) {
@@ -100,7 +101,8 @@ public record SimplifiedSecurityPostureSnapshot(
               mismatch.participantId(),
               mismatch.participantKind(),
               mismatch.componentType(),
-              null, null,
+              null,
+              null,
               mismatch.mismatchReason().getMetadata()));
     }
 
@@ -116,7 +118,8 @@ public record SimplifiedSecurityPostureSnapshot(
               event.getMessage(),
               event.getParticipantInstanceId(),
               event.getParticipantId(),
-              null, null,
+              null,
+              null,
               event.getEventType(),
               event.getSeverity(),
               event.getMetadata()));
@@ -141,7 +144,8 @@ public record SimplifiedSecurityPostureSnapshot(
               status.getParticipantId(),
               status.getParticipantKind(),
               status.getComponentType(),
-              null, null,
+              null,
+              null,
               Map.of("statusExpiresAt", String.valueOf(status.getStatusExpiresAt()))));
       return;
     }
@@ -161,7 +165,8 @@ public record SimplifiedSecurityPostureSnapshot(
               status.getParticipantId(),
               status.getParticipantKind(),
               status.getComponentType(),
-              null, null,
+              null,
+              null,
               Map.of(
                   "effectiveState", String.valueOf(status.getEffectiveState()),
                   "readyForDataPlane", Boolean.toString(status.isReadyForDataPlane()))));

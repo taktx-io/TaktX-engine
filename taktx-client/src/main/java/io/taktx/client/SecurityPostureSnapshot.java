@@ -18,8 +18,8 @@ import java.util.Map;
 
 /**
  * Console-grade namespace security posture snapshot assembled from participant-status and
- * security-event topics. The effective mode is startup-static and sourced directly from
- * {@code taktx-security-policy} (mode-only) or from participant self-reports.
+ * security-event topics. The effective mode is startup-static and sourced directly from {@code
+ * taktx-security-policy} (mode-only) or from participant self-reports.
  */
 public record SecurityPostureSnapshot(
     @Nullable SecurityMode effectiveMode,
@@ -45,7 +45,9 @@ public record SecurityPostureSnapshot(
       Map<String, ParticipantStatusDTO> participantStatuses,
       List<SecurityEventDTO> recentSecurityEvents) {
     Map<String, ParticipantStatusDTO> statuses =
-        participantStatuses == null ? Map.of() : Map.copyOf(new LinkedHashMap<>(participantStatuses));
+        participantStatuses == null
+            ? Map.of()
+            : Map.copyOf(new LinkedHashMap<>(participantStatuses));
     List<SecurityEventDTO> events =
         recentSecurityEvents == null ? List.of() : List.copyOf(recentSecurityEvents);
     // Derive effective mode from any engine participant that self-reports it
@@ -79,7 +81,10 @@ public record SecurityPostureSnapshot(
       Map<String, ParticipantStatusDTO> statuses) {
     // Any participant that reports ANCHORED supportedModes indicates the cluster is anchored.
     return statuses.values().stream()
-        .filter(s -> s.getSupportedModes() != null && s.getSupportedModes().contains(SecurityMode.ANCHORED))
+        .filter(
+            s ->
+                s.getSupportedModes() != null
+                    && s.getSupportedModes().contains(SecurityMode.ANCHORED))
         .findFirst()
         .map(s -> SecurityMode.ANCHORED)
         .orElse(null);
@@ -93,14 +98,17 @@ public record SecurityPostureSnapshot(
           if (status == null || status.getMismatchReasons() == null) {
             return;
           }
-          status.getMismatchReasons().forEach(
-              reason -> mismatches.add(
-                  new ParticipantPostureMismatch(
-                      participantInstanceId,
-                      status.getParticipantId(),
-                      status.getParticipantKind(),
-                      status.getComponentType(),
-                      reason)));
+          status
+              .getMismatchReasons()
+              .forEach(
+                  reason ->
+                      mismatches.add(
+                          new ParticipantPostureMismatch(
+                              participantInstanceId,
+                              status.getParticipantId(),
+                              status.getParticipantKind(),
+                              status.getComponentType(),
+                              reason)));
         });
     return List.copyOf(mismatches);
   }

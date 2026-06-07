@@ -18,6 +18,7 @@ import java.security.KeyPair;
 import java.time.Instant;
 import java.util.Properties;
 import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.ByteArraySerializer;
 import org.apache.kafka.common.serialization.StringSerializer;
@@ -234,7 +235,8 @@ public class SigningKeyRegistrar {
       String registrationSignature) {
 
     doPublish(
-        taktPropertiesHelper.getKafkaProducerProperties(),
+        buildProducerProperties(
+            taktPropertiesHelper.getKafkaProducerProperties(), taktPropertiesHelper.getTaktProperties()),
         new StringSerializer(),
         new ByteArraySerializer(),
         topic,
@@ -284,11 +286,47 @@ public class SigningKeyRegistrar {
     String topic =
         taktPropertiesHelper.getPrefixedTopicName(Topics.SIGNING_KEYS_TOPIC.getTopicName());
     doPublish(
-        taktPropertiesHelper.getKafkaProducerProperties(),
+        buildProducerProperties(
+            taktPropertiesHelper.getKafkaProducerProperties(), taktPropertiesHelper.getTaktProperties()),
         new StringSerializer(),
         new ByteArraySerializer(),
         topic,
         updatedKey);
+  }
+
+  static Properties buildProducerProperties(
+      Properties baseProperties, Properties explicitOverrideSource) {
+    Properties props = new Properties();
+    if (baseProperties != null && !baseProperties.isEmpty()) {
+      props.putAll(baseProperties);
+    }
+    props.putIfAbsent(ProducerConfig.ACKS_CONFIG, "all");
+    props.putIfAbsent(ProducerConfig.RETRIES_CONFIG, "3");
+    applyTimeoutDefault(
+        props,
+        explicitOverrideSource,
+        ProducerConfig.MAX_BLOCK_MS_CONFIG,
+        "5000");
+    applyTimeoutDefault(
+        props,
+        explicitOverrideSource,
+        ProducerConfig.DELIVERY_TIMEOUT_MS_CONFIG,
+        "5000");
+    applyTimeoutDefault(
+        props,
+        explicitOverrideSource,
+        ProducerConfig.REQUEST_TIMEOUT_MS_CONFIG,
+        "3000");
+    return props;
+  }
+
+  private static void applyTimeoutDefault(
+      Properties target, Properties explicitOverrideSource, String key, String defaultValue) {
+    if (explicitOverrideSource != null && explicitOverrideSource.containsKey(key)) {
+      target.put(key, explicitOverrideSource.get(key));
+      return;
+    }
+    target.put(key, defaultValue);
   }
 
   /**

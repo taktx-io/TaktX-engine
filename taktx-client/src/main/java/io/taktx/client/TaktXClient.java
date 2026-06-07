@@ -16,7 +16,6 @@ import io.taktx.client.dlq.DlqReplayCommandProducer;
 import io.taktx.client.dlq.DlqReplayResultConsumer;
 import io.taktx.dto.ConfigurationEventDTO;
 import io.taktx.dto.ConfigurationEventDTO.ConfigurationEventType;
-import io.taktx.dto.Constants;
 import io.taktx.dto.DlqEnvelope;
 import io.taktx.dto.DlqReplayCommand;
 import io.taktx.dto.DlqReplayResult;
@@ -47,7 +46,6 @@ import io.taktx.security.EnvironmentWorkerSigningIdentitySource;
 import io.taktx.security.FileSigningIdentitySource;
 import io.taktx.security.GeneratedSigningIdentitySource;
 import io.taktx.security.LocalPersistentSigningIdentitySource;
-import io.taktx.security.NamespaceSecurityPolicySupport;
 import io.taktx.security.RuntimeConfigurationHolder;
 import io.taktx.security.SecurityParticipantDescriptorSupport;
 import io.taktx.security.SigningIdentity;
@@ -65,7 +63,6 @@ import io.taktx.util.TaktPropertiesHelper;
 import jakarta.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.LinkedHashSet;
@@ -83,7 +80,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import org.apache.kafka.clients.producer.KafkaProducer;
-import org.apache.kafka.clients.producer.ProducerRecord;
 import org.slf4j.Logger;
 
 /**
@@ -99,6 +95,7 @@ public class TaktXClient {
   private static final Logger log = org.slf4j.LoggerFactory.getLogger(TaktXClient.class);
   private final ProcessDefinitionConsumer processDefinitionConsumer;
   static final String CONFIGURATION_RECORD_KEY = "config";
+  static final String SECURITY_POLICY_RECORD_KEY = "policy";
   private final ParameterResolverFactory parameterResolverFactory;
   private final ProcessInstanceResponder processInstanceResponder;
   private final ProcessDefinitionDeployer processDefinitionDeployer;
@@ -391,8 +388,7 @@ public class TaktXClient {
               org.apache.kafka.common.serialization.StringDeserializer.class,
               org.apache.kafka.common.serialization.ByteArrayDeserializer.class,
               "earliest");
-      runtimeConfigurationStore =
-          new RuntimeConfigurationStore(consumerProps, topic, () -> {});
+      runtimeConfigurationStore = new RuntimeConfigurationStore(consumerProps, topic, () -> {});
       runtimeConfigurationStore.awaitReady(java.time.Duration.ofSeconds(10));
       log.info(
           "✅ RuntimeConfigurationStore ready — signingEnabled={} engineRequiresAuthorization={} engineRequiresExternalTaskAuthorization={} engineRequiresUserTaskAuthorization={} replayProtectionMode={} replayProtectionRetentionMs={}",
@@ -625,6 +621,60 @@ public class TaktXClient {
     }
   }
 
+  /** Publishes namespace security policy to the compacted {@code taktx-security-policy} topic. */
+  public static void publishNamespaceSecurityPolicy(
+      Properties properties, NamespaceSecurityPolicyDTO policy) {
+    if (policy == null) {
+      throw new IllegalArgumentException("policy must not be null");
+    }
+    TaktPropertiesHelper helper = new TaktPropertiesHelper(properties);
+    String topic = helper.getPrefixedTopicName(io.taktx.Topics.SECURITY_POLICY_TOPIC.getTopicName());
+
+    java.util.Properties producerProps = helper.getKafkaProducerProperties();
+    producerProps.put("max.block.ms", "5000");
+    producerProps.put("delivery.timeout.ms", "5000");
+    producerProps.put("request.timeout.ms", "3000");
+
+    try (org.apache.kafka.clients.producer.KafkaProducer<String, byte[]> producer =
+        new org.apache.kafka.clients.producer.KafkaProducer<>(
+            producerProps,
+            new org.apache.kafka.common.serialization.StringSerializer(),
+            new org.apache.kafka.common.serialization.ByteArraySerializer())) {
+      byte[] valueBytes = NamespaceSecurityPolicyProtoMapper.toProto(policy).toByteArray();
+      producer.send(
+          new org.apache.kafka.clients.producer.ProducerRecord<>(
+              topic, SECURITY_POLICY_RECORD_KEY, valueBytes));
+      producer.flush();
+      log.info("✅ Namespace security policy published to {}: mode={}", topic, policy.getMode());
+    } catch (Exception e) {
+      throw new IllegalStateException("Failed to publish namespace security policy", e);
+    }
+  }
+
+  /** Clears the namespace security policy by publishing a tombstone to the compacted policy topic. */
+  public static void clearNamespaceSecurityPolicy(Properties properties) {
+    TaktPropertiesHelper helper = new TaktPropertiesHelper(properties);
+    String topic = helper.getPrefixedTopicName(io.taktx.Topics.SECURITY_POLICY_TOPIC.getTopicName());
+
+    java.util.Properties producerProps = helper.getKafkaProducerProperties();
+    producerProps.put("max.block.ms", "5000");
+    producerProps.put("delivery.timeout.ms", "5000");
+    producerProps.put("request.timeout.ms", "3000");
+
+    try (org.apache.kafka.clients.producer.KafkaProducer<String, byte[]> producer =
+        new org.apache.kafka.clients.producer.KafkaProducer<>(
+            producerProps,
+            new org.apache.kafka.common.serialization.StringSerializer(),
+            new org.apache.kafka.common.serialization.ByteArraySerializer())) {
+      producer.send(
+          new org.apache.kafka.clients.producer.ProducerRecord<>(
+              topic, SECURITY_POLICY_RECORD_KEY, null));
+      producer.flush();
+      log.info("✅ Namespace security policy cleared via tombstone: topic={}", topic);
+    } catch (Exception e) {
+      throw new IllegalStateException("Failed to clear namespace security policy", e);
+    }
+  }
 
   /**
    * Publishes an Ed25519 or RSA public key to the {@code taktx-signing-keys} compacted topic so
@@ -831,7 +881,8 @@ public class TaktXClient {
     }
     SigningIdentity identity = currentSigningIdentity();
     if (identity == null) {
-      String sourceType = signingIdentitySource != null ? signingIdentitySource.getSourceType() : "none";
+      String sourceType =
+          signingIdentitySource != null ? signingIdentitySource.getSourceType() : "none";
       logWorkerSigningRegistrationState(
           "waiting-for-identity:" + sourceType,
           "Worker response signing: anchored mode but no signing identity available from source={}",
@@ -2132,7 +2183,8 @@ public class TaktXClient {
       // Fail fast when anchored intent is detected but prerequisites are missing.
       boolean anchored = resolvePlatformPublicKey(properties) != null;
       if (anchored) {
-        if (effectiveSigningIdentitySource == null || !effectiveSigningIdentitySource.isRestartStable()) {
+        if (effectiveSigningIdentitySource == null
+            || !effectiveSigningIdentitySource.isRestartStable()) {
           throw new IllegalStateException(
               "ANCHORED mode (TAKTX_PLATFORM_PUBLIC_KEY is set) requires a restart-stable signing"
                   + " identity source (env or file, not generated). Configure"

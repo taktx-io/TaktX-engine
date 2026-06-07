@@ -15,8 +15,9 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 
-
-/** Namespace-level security mode — resolved once at startup, published for Console observability. */
+/**
+ * Namespace-level security mode — resolved once at startup, published for Console observability.
+ */
 @Getter
 @Setter
 @NoArgsConstructor

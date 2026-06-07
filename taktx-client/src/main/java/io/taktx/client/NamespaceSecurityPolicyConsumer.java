@@ -9,7 +9,9 @@ package io.taktx.client;
 
 import io.taktx.dto.NamespaceSecurityPolicyDTO;
 
-/** Callback for observed namespace security policy records (mode-only, read from the policy topic). */
+/**
+ * Callback for observed namespace security policy records (mode-only, read from the policy topic).
+ */
 @FunctionalInterface
 public interface NamespaceSecurityPolicyConsumer {
   void accept(NamespaceSecurityPolicyDTO policy);

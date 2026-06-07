@@ -233,7 +233,6 @@ class SecurityIntegrationTest {
         signingKeyProps,
         PLATFORM_KID,
         SecurityTestConfigResource.rsaPublicKeyBase64,
-        "platform",
         "RSA",
         io.taktx.dto.KeyRole.PLATFORM);
 
@@ -784,7 +783,6 @@ class SecurityIntegrationTest {
             .algorithm("Ed25519")
             .createdAt(Instant.now())
             .status(KeyStatus.ACTIVE)
-            .owner("rotation-old-worker")
             .build();
 
     SigningKeyRegistrar.publishKeyWithStatus(bootstrapServers, signingKeysTopic, legacyActiveKey);
@@ -808,7 +806,6 @@ class SecurityIntegrationTest {
             .algorithm("Ed25519")
             .createdAt(Instant.now())
             .status(KeyStatus.ACTIVE)
-            .owner("rotation-new-worker")
             .build();
 
     SigningKeyRegistrar.publishKeyWithStatus(bootstrapServers, signingKeysTopic, rotatedActiveKey);
@@ -821,7 +818,6 @@ class SecurityIntegrationTest {
             .algorithm(legacyActiveKey.getAlgorithm())
             .createdAt(legacyActiveKey.getCreatedAt())
             .status(KeyStatus.TRUSTED)
-            .owner(legacyActiveKey.getOwner())
             .build();
     SigningKeyRegistrar.publishKeyWithStatus(bootstrapServers, signingKeysTopic, legacyTrustedKey);
     awaitSigningKeyStatus(legacyKeyId, KeyStatus.TRUSTED);
@@ -845,7 +841,6 @@ class SecurityIntegrationTest {
             .algorithm(legacyActiveKey.getAlgorithm())
             .createdAt(legacyActiveKey.getCreatedAt())
             .status(KeyStatus.REVOKED)
-            .owner(legacyActiveKey.getOwner())
             .build();
     SigningKeyRegistrar.publishKeyWithStatus(bootstrapServers, signingKeysTopic, legacyRevokedKey);
     awaitSigningKeyStatus(legacyKeyId, KeyStatus.REVOKED);
@@ -1550,7 +1545,6 @@ class SecurityIntegrationTest {
             .algorithm("Ed25519")
             .createdAt(Instant.now())
             .status(KeyStatus.REVOKED)
-            .owner("revoked-worker")
             .build();
 
     try {

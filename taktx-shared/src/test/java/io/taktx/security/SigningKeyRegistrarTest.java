@@ -13,6 +13,7 @@ import io.taktx.dto.KeyRole;
 import io.taktx.dto.SigningKeyDTO;
 import io.taktx.dto.SigningKeyDTO.KeyStatus;
 import java.time.Instant;
+import java.util.Properties;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -180,5 +181,45 @@ class SigningKeyRegistrarTest {
 
     String payload = new String(SigningKeyRegistrar.computeCanonicalPayload(key));
     assertThat(payload).isEqualTo("plat-001|DDDD|RSA|PLATFORM");
+  }
+
+  @Test
+  void buildProducerProperties_appliesFailFastTimeoutsWhenOnlySharedDefaultsExist() {
+    Properties baseProperties = new Properties();
+    baseProperties.setProperty("bootstrap.servers", "localhost:9092");
+    baseProperties.setProperty("delivery.timeout.ms", "120000");
+
+    Properties explicitOverrides = new Properties();
+    explicitOverrides.setProperty("bootstrap.servers", "localhost:9092");
+
+    Properties producerProperties =
+        SigningKeyRegistrar.buildProducerProperties(baseProperties, explicitOverrides);
+
+    assertThat(producerProperties.getProperty("bootstrap.servers")).isEqualTo("localhost:9092");
+    assertThat(producerProperties.getProperty("acks")).isEqualTo("all");
+    assertThat(producerProperties.getProperty("retries")).isEqualTo("3");
+    assertThat(producerProperties.getProperty("max.block.ms")).isEqualTo("5000");
+    assertThat(producerProperties.getProperty("delivery.timeout.ms")).isEqualTo("5000");
+    assertThat(producerProperties.getProperty("request.timeout.ms")).isEqualTo("3000");
+  }
+
+  @Test
+  void buildProducerProperties_preservesExplicitTimeoutOverrides() {
+    Properties baseProperties = new Properties();
+    baseProperties.setProperty("bootstrap.servers", "localhost:9092");
+    baseProperties.setProperty("delivery.timeout.ms", "120000");
+
+    Properties explicitOverrides = new Properties();
+    explicitOverrides.setProperty("bootstrap.servers", "localhost:9092");
+    explicitOverrides.setProperty("max.block.ms", "1111");
+    explicitOverrides.setProperty("delivery.timeout.ms", "2222");
+    explicitOverrides.setProperty("request.timeout.ms", "3333");
+
+    Properties producerProperties =
+        SigningKeyRegistrar.buildProducerProperties(baseProperties, explicitOverrides);
+
+    assertThat(producerProperties.getProperty("max.block.ms")).isEqualTo("1111");
+    assertThat(producerProperties.getProperty("delivery.timeout.ms")).isEqualTo("2222");
+    assertThat(producerProperties.getProperty("request.timeout.ms")).isEqualTo("3333");
   }
 }

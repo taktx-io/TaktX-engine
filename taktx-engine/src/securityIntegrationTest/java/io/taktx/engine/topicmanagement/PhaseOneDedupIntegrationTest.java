@@ -470,7 +470,6 @@ class PhaseOneDedupIntegrationTest {
         .keyId(keyId)
         .publicKeyBase64("dummy")
         .algorithm("Ed25519")
-        .owner("worker")
         .role(role)
         .build();
   }

@@ -68,7 +68,8 @@ class TaktXClientBuilderParticipantDescriptorTest {
                     capabilities,
                     " admin-console "));
 
-    SecurityParticipantDescriptor descriptor = builder.resolveParticipantDescriptor(baseProperties());
+    SecurityParticipantDescriptor descriptor =
+        builder.resolveParticipantDescriptor(baseProperties());
 
     assertThat(descriptor.participantId()).isEqualTo("tenant.default.admin-console");
     assertThat(descriptor.componentType()).isEqualTo("admin-console");

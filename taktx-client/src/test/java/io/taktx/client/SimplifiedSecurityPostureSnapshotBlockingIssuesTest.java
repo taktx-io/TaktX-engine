@@ -97,17 +97,14 @@ class SimplifiedSecurityPostureSnapshotBlockingIssuesTest {
     SimplifiedSecurityPostureSnapshot simplified =
         SimplifiedSecurityPostureSnapshot.from(
             SecurityPostureSnapshot.from(
-                Map.of(blockedWorker.getParticipantInstanceId(), blockedWorker),
-                List.of()));
+                Map.of(blockedWorker.getParticipantInstanceId(), blockedWorker), List.of()));
 
     assertThat(blockingCodes(simplified)).contains(ENGINE_SIGNING_UNAVAILABLE);
   }
 
   private static SimplifiedSecurityPostureSnapshot simplifiedOpen(ParticipantStatusDTO status) {
     return SimplifiedSecurityPostureSnapshot.from(
-        SecurityPostureSnapshot.from(
-            Map.of(status.getParticipantInstanceId(), status),
-            List.of()));
+        SecurityPostureSnapshot.from(Map.of(status.getParticipantInstanceId(), status), List.of()));
   }
 
   private static List<String> blockingCodes(SimplifiedSecurityPostureSnapshot simplified) {

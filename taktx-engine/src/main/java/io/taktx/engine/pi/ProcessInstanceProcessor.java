@@ -14,7 +14,6 @@ import io.taktx.Topics;
 import io.taktx.dto.AbortTriggerDTO;
 import io.taktx.dto.CommandTrustMetadataDTO;
 import io.taktx.dto.CommandTrustVerificationResult;
-import io.taktx.dto.Constants;
 import io.taktx.dto.CompensationRegistrationDTO;
 import io.taktx.dto.CompensationTriggerStateDTO;
 import io.taktx.dto.Constants;
@@ -264,39 +263,6 @@ public class ProcessInstanceProcessor
     if (trigger == null) {
       handleUnDecodedTrigger(triggerRecord.key(), triggerRecord.headers(), triggerEnvelope);
       return;
-    }
-
-    TokenClaims validatedJwtClaims;
-    try {
-      validatedJwtClaims = resolveValidatedJwtClaims(triggerRecord.headers(), triggerEnvelope);
-    } catch (AuthorizationTokenException e) {
-      log.warn("⛔ Command rejected — task-completion JWT validation failed: {}", e.getMessage());
-      emitSecurityRejectionEvent(
-          triggerRecord.key(),
-          triggerRecord.headers(),
-          triggerEnvelope,
-          reasonHintForAuthorizationFailure(triggerEnvelope, e),
-          e.getMessage(),
-          "JWT_VALIDATION");
-      return;
-    }
-
-    if (protectedDataPlaneParticipationGuard != null) {
-      ProtectedDataPlaneParticipationGuard.Decision gateDecision =
-          protectedDataPlaneParticipationGuard.evaluate();
-      if (!gateDecision.permitted()) {
-        log.warn(
-            "⛔ Command rejected — protected data-plane participation blocked: {}",
-            gateDecision.reasonText());
-        emitSecurityRejectionEvent(
-            triggerRecord.key(),
-            triggerRecord.headers(),
-            triggerEnvelope,
-            gateDecision.reasonHint(),
-            gateDecision.reasonText(),
-            "READINESS");
-        return;
-      }
     }
 
     TokenClaims validatedJwtClaims;

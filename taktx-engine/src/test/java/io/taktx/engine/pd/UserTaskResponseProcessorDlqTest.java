@@ -226,8 +226,7 @@ class UserTaskResponseProcessorDlqTest {
 
     UserTaskResponseProcessor guardedProcessor =
         new UserTaskResponseProcessor(
-            clock,
-            new ProtectedDataPlaneParticipationGuard(true, messageSigningService));
+            clock, new ProtectedDataPlaneParticipationGuard(true, messageSigningService));
     guardedProcessor.init(context);
     return guardedProcessor;
   }
@@ -238,8 +237,7 @@ class UserTaskResponseProcessorDlqTest {
 
     UserTaskResponseProcessor guardedProcessor =
         new UserTaskResponseProcessor(
-            clock,
-            new ProtectedDataPlaneParticipationGuard(false, messageSigningService));
+            clock, new ProtectedDataPlaneParticipationGuard(false, messageSigningService));
     guardedProcessor.init(context);
     return guardedProcessor;
   }

@@ -15,6 +15,7 @@ import io.taktx.security.SigningIdentity;
 import io.taktx.security.SigningKeyGenerator;
 import io.taktx.security.SigningServiceHolder;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
 import java.util.Properties;
@@ -55,7 +56,7 @@ class TaktXClientWorkerSigningTest {
 
   @Test
   void shouldKeepDefaultOpenClientSigningInactive() {
-    TaktXClient client = clientWithSigningIdentity(false);
+    TaktXClient client = clientWithSigningIdentity(false).client();
 
     // Without anchored mode (no platform key), signing should not be activated
     client.refreshWorkerSigningFunctionRegistration();
@@ -65,9 +66,11 @@ class TaktXClientWorkerSigningTest {
 
   @Test
   void anchoredClient_preparesAndActivatesClientSigning() throws Exception {
-    TaktXClient client = clientWithSigningIdentity(true);
+    WorkerSigningFixture fixture = clientWithSigningIdentity(true);
+    TaktXClient client = fixture.client();
 
     client.refreshWorkerSigningFunctionRegistration();
+    markWorkerSigningKeyPublished(client, fixture.signingIdentity());
 
     assertThat(SigningServiceHolder.get()).isNotNull();
     assertThat(SigningServiceHolder.get().sign("payload".getBytes(StandardCharsets.UTF_8)))
@@ -76,11 +79,17 @@ class TaktXClientWorkerSigningTest {
 
   @Test
   void anchoredClient_reactivatesClientSigningWithoutLegacyRuntimeToggle() throws Exception {
-    TaktXClient client = clientWithSigningIdentity(true);
+    WorkerSigningFixture fixture = clientWithSigningIdentity(true);
+    TaktXClient client = fixture.client();
 
     client.refreshWorkerSigningFunctionRegistration();
+    SigningServiceHolder.SigningFunction initialSigner = SigningServiceHolder.get();
+    SigningServiceHolder.clear();
 
-    assertThat(SigningServiceHolder.get()).isNotNull();
+    client.refreshWorkerSigningFunctionRegistration();
+    markWorkerSigningKeyPublished(client, fixture.signingIdentity());
+
+    assertThat(SigningServiceHolder.get()).isNotNull().isSameAs(initialSigner);
     assertThat(SigningServiceHolder.get().sign("payload".getBytes(StandardCharsets.UTF_8)))
         .startsWith("worker-key.");
   }
@@ -100,6 +109,7 @@ class TaktXClientWorkerSigningTest {
 
     RuntimeConfigurationHolder.set(GlobalConfigurationDTO.builder().signingEnabled(true).build());
     client.refreshWorkerSigningFunctionRegistration();
+    markWorkerSigningKeyPublished(client, signingIdentity);
 
     assertThat(SigningServiceHolder.get()).isNotNull();
 
@@ -128,15 +138,44 @@ class TaktXClientWorkerSigningTest {
     assertThat(SigningServiceHolder.get()).isSameAs(existingGlobalSigner);
   }
 
-  private static TaktXClient clientWithSigningIdentity(boolean anchored) {
+  private static WorkerSigningFixture clientWithSigningIdentity(boolean anchored) {
     SigningIdentity signingIdentity = signingIdentity("worker-key");
 
     Properties props = anchored ? anchoredProperties() : openProperties();
 
-    return TaktXClient.newClientBuilder()
-        .withProperties(props)
-        .withSigningIdentitySource(() -> signingIdentity)
-        .build();
+    return new WorkerSigningFixture(
+        TaktXClient.newClientBuilder()
+            .withProperties(props)
+            .withSigningIdentitySource(() -> signingIdentity)
+            .build(),
+        signingIdentity);
+  }
+
+  private static void markWorkerSigningKeyPublished(TaktXClient client, SigningIdentity identity)
+      throws Exception {
+    String descriptor =
+        (String)
+            invokeDeclaredMethod(
+                client,
+                "workerIdentityPublicationDescriptor",
+                new Class<?>[] {SigningIdentity.class},
+                identity);
+    setField(client, "publishedWorkerIdentityDescriptor", descriptor);
+    setField(client, "publishedWorkerKeyId", identity.getKeyId());
+  }
+
+  private static Object invokeDeclaredMethod(
+      Object target, String methodName, Class<?>[] parameterTypes, Object... args)
+      throws Exception {
+    Method method = target.getClass().getDeclaredMethod(methodName, parameterTypes);
+    method.setAccessible(true);
+    return method.invoke(target, args);
+  }
+
+  private static void setField(Object target, String fieldName, Object value) throws Exception {
+    Field field = target.getClass().getDeclaredField(fieldName);
+    field.setAccessible(true);
+    field.set(target, value);
   }
 
   private static Properties openProperties() {
@@ -166,4 +205,6 @@ class TaktXClientWorkerSigningTest {
         SigningKeyGenerator.encodePrivateKey(keyPair.getPrivate()),
         SigningKeyGenerator.encodePublicKey(keyPair.getPublic()));
   }
+
+  private record WorkerSigningFixture(TaktXClient client, SigningIdentity signingIdentity) {}
 }

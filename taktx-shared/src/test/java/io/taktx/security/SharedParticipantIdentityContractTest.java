@@ -56,10 +56,8 @@ class SharedParticipantIdentityContractTest {
 
     assertThat(ParticipantCapability.values())
         .extracting(Enum::name)
-        .containsExactly(
-            "ENFORCER",
-            "PROTECTED_RUNTIME_PARTICIPANT",
-            "SECURITY_OBSERVER")
-        .doesNotContain("AUTHORITATIVE_POLICY_PUBLISHER", "ENGINE", "INGESTER", "CONSOLE", "CLIENT");
+        .containsExactly("ENFORCER", "PROTECTED_RUNTIME_PARTICIPANT", "SECURITY_OBSERVER")
+        .doesNotContain(
+            "AUTHORITATIVE_POLICY_PUBLISHER", "ENGINE", "INGESTER", "CONSOLE", "CLIENT");
   }
 }

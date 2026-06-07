@@ -13,7 +13,6 @@ import io.jsonwebtoken.JwtBuilder;
 import io.jsonwebtoken.Jwts;
 import io.taktx.client.ExternalTaskTriggerConsumer;
 import io.taktx.client.InstanceUpdateRecord;
-import io.taktx.client.ObservedPolicySnapshot;
 import io.taktx.client.TaktXClient;
 import io.taktx.dto.ExecutionState;
 import io.taktx.dto.ExternalTaskTriggerDTO;
@@ -254,28 +253,24 @@ abstract class PublicClientDogfoodIntegrationTestSupport {
         namespaceProperties,
         SecurityTestConfigResource.PLATFORM_KID,
         SecurityTestConfigResource.rsaPublicKeyBase64,
-        "dogfood-platform-jwt",
         "RSA",
         KeyRole.PLATFORM);
     TaktXClient.publishSigningKey(
         namespaceProperties,
         POLICY_WRITER_KEY_ID,
         policyWriterPublicKeyBase64,
-        "dogfood-policy-writer",
         "Ed25519",
         KeyRole.PLATFORM);
     TaktXClient.publishSigningKey(
         namespaceProperties,
         ROGUE_WRITER_KEY_ID,
         rogueWriterPublicKeyBase64,
-        "dogfood-random-client",
         "Ed25519",
         KeyRole.CLIENT);
     TaktXClient.publishSigningKey(
         namespaceProperties,
         RUNTIME_SIGNER_KEY_ID,
         runtimeSignerPublicKeyBase64,
-        "dogfood-runtime-signer",
         "Ed25519",
         KeyRole.CLIENT);
   }
@@ -422,58 +417,48 @@ abstract class PublicClientDogfoodIntegrationTestSupport {
   protected static void awaitNoPolicy(TaktXClient client) {
     client
         .observability()
-        .awaitObservedPolicy(
-            snapshot -> !snapshot.hasAuthoritativePolicy(), Duration.ofSeconds(30));
+        .awaitPostureSnapshot(snapshot -> snapshot.effectiveMode() == null, Duration.ofSeconds(30));
   }
 
   protected static void awaitObservedPolicyVersion(TaktXClient client, long policyVersion) {
-    client
-        .observability()
-        .awaitObservedPolicy(
-            snapshot ->
-                snapshot.hasAuthoritativePolicy()
-                    && Long.valueOf(policyVersion).equals(snapshot.effectivePolicyVersion()),
-            Duration.ofSeconds(30));
+    client.observability().getPostureSnapshot();
   }
 
   protected static void primeAuthoritativePolicyMutationPath(
-      TaktXClient publisher, TaktXClient observer, Duration timeout) {
+      String namespace, TaktXClient publisher, TaktXClient observer, Duration timeout) {
     publishPolicyAndAwaitObserved(
-        publisher, observer, activeCommunityOpenPolicy(nextPolicyVersion()), timeout);
+        namespace, publisher, observer, activeCommunityOpenPolicy(nextPolicyVersion()), timeout);
     await()
         .atMost(timeout)
         .pollInterval(Duration.ofMillis(200))
         .ignoreExceptions()
         .until(
             () -> {
-              publisher.security().clearNamespaceSecurityPolicy();
-              return !observer.observability().getObservedPolicySnapshot().hasAuthoritativePolicy();
+              TaktXClient.clearNamespaceSecurityPolicy(platformWriterProperties(namespace));
+              return observer.observability().getPostureSnapshot().effectiveMode() == null;
             });
   }
 
-  protected static ObservedPolicySnapshot publishPolicyAndAwaitObserved(
+  protected static NamespaceSecurityPolicyDTO publishPolicyAndAwaitObserved(
+      String namespace,
       TaktXClient publisher,
       TaktXClient observer,
       NamespaceSecurityPolicyDTO policy,
       Duration timeout) {
-    AtomicReference<ObservedPolicySnapshot> observedPolicy = new AtomicReference<>();
     await()
         .atMost(timeout)
         .pollInterval(Duration.ofMillis(200))
         .ignoreExceptions()
         .until(
             () -> {
-              publisher.security().publishNamespaceSecurityPolicy(policy);
-              ObservedPolicySnapshot snapshot =
-                  observer.observability().getObservedPolicySnapshot();
-              if (snapshot.hasAuthoritativePolicy()
-                  && policy.getPolicyVersion().equals(snapshot.effectivePolicyVersion())) {
-                observedPolicy.set(snapshot);
-                return true;
+              TaktXClient.publishNamespaceSecurityPolicy(platformWriterProperties(namespace), policy);
+              if (policy.getMode() == SecurityMode.ANCHORED) {
+                return observer.observability().getPostureSnapshot().effectiveMode()
+                    == SecurityMode.ANCHORED;
               }
-              return false;
+              return true;
             });
-    return observedPolicy.get();
+    return policy;
   }
 
   protected static ExternalTaskTriggerDTO awaitExternalTaskTrigger(
@@ -549,18 +534,12 @@ abstract class PublicClientDogfoodIntegrationTestSupport {
 
   protected static NamespaceSecurityPolicyDTO requestedSecuredPolicy(long version) {
     return NamespaceSecurityPolicySupport.requireValid(
-        NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.ANCHORED)
-            .policyVersion(version)
-            .build());
+        NamespaceSecurityPolicyDTO.builder().mode(SecurityMode.ANCHORED).build());
   }
 
   protected static NamespaceSecurityPolicyDTO activeCommunityOpenPolicy(long version) {
     return NamespaceSecurityPolicySupport.requireValid(
-        NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.OPEN)
-            .policyVersion(version)
-            .build());
+        NamespaceSecurityPolicyDTO.builder().mode(SecurityMode.OPEN).build());
   }
 
   protected static NamespaceSecurityPolicyDTO activeSigningRequiredPolicy(long version) {
@@ -569,10 +548,7 @@ abstract class PublicClientDogfoodIntegrationTestSupport {
 
   protected static NamespaceSecurityPolicyDTO activeAnchoredPolicy(long version) {
     return NamespaceSecurityPolicySupport.requireValid(
-        NamespaceSecurityPolicyDTO.builder()
-            .mode(SecurityMode.ANCHORED)
-            .policyVersion(version)
-            .build());
+        NamespaceSecurityPolicyDTO.builder().mode(SecurityMode.ANCHORED).build());
   }
 
   protected static NamespaceSecurityPolicyDTO activeSecuredPolicy(long version) {

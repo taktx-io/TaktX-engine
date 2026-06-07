@@ -17,7 +17,6 @@ import io.taktx.dto.PolicyMismatchReasonDTO;
 import io.taktx.dto.SecurityEventDTO;
 import io.taktx.dto.SecurityEventSeverity;
 import io.taktx.dto.SecurityEventType;
-import io.taktx.dto.SecurityMode;
 import io.taktx.dto.StatusVerificationLevel;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -248,9 +247,7 @@ class SecurityObservabilityClientTest {
             participantStatuses::get,
             securityEvents::get,
             new SecurityObservabilityClient.ConsumerRegistrars(
-                consumer -> {},
-                participantStatusConsumers::add,
-                securityEventConsumers::add),
+                consumer -> {}, participantStatusConsumers::add, securityEventConsumers::add),
             initializerCalls::incrementAndGet,
             Duration.ofMillis(10));
 

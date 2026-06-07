@@ -43,9 +43,7 @@ public class EngineSecurityReadinessEvaluator {
 
   @Inject
   public EngineSecurityReadinessEvaluator(
-      TaktConfiguration configuration,
-      MessageSigningService messageSigningService,
-      Clock clock) {
+      TaktConfiguration configuration, MessageSigningService messageSigningService, Clock clock) {
     this.configuration = configuration;
     this.messageSigningService = messageSigningService;
     this.clock = clock;
@@ -64,7 +62,8 @@ public class EngineSecurityReadinessEvaluator {
 
     if (anchored) {
       // Only transient reason: own key not yet published after cold start.
-      if (messageSigningService.getKeyId() == null || !messageSigningService.isPublicKeyPublished()) {
+      if (messageSigningService.getKeyId() == null
+          || !messageSigningService.isPublicKeyPublished()) {
         effectiveState = ParticipantEffectiveState.MISMATCH;
         readyForDataPlane = false;
         mismatchReasons.add(

@@ -60,7 +60,8 @@ public class SecurityObservabilityClient {
       Runnable initializer,
       Duration pollInterval) {
     this.participantStatusSnapshotSupplier =
-        Objects.requireNonNull(participantStatusSnapshotSupplier, "participantStatusSnapshotSupplier");
+        Objects.requireNonNull(
+            participantStatusSnapshotSupplier, "participantStatusSnapshotSupplier");
     this.recentSecurityEventsSupplier =
         Objects.requireNonNull(recentSecurityEventsSupplier, "recentSecurityEventsSupplier");
     this.consumerRegistrars = Objects.requireNonNull(consumerRegistrars, "consumerRegistrars");

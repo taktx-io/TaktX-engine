@@ -275,7 +275,10 @@ class ProcessInstanceProcessorDlqTest {
 
     guardedProcessor.process(new Record<>(processInstanceId, envelope, 42L, headers));
 
-    assertSecurityEvent(processInstanceId, ProtectedDataPlaneParticipationGuard.ENGINE_SIGNING_UNAVAILABLE, "READINESS");
+    assertSecurityEvent(
+        processInstanceId,
+        ProtectedDataPlaneParticipationGuard.ENGINE_SIGNING_UNAVAILABLE,
+        "READINESS");
     verifyNoInteractions(definitionsCache);
     verify(context, never()).forward(any());
   }
@@ -302,7 +305,10 @@ class ProcessInstanceProcessorDlqTest {
 
     guardedProcessor.process(new Record<>(processInstanceId, envelope, 42L, headers));
 
-    assertSecurityEvent(processInstanceId, ProtectedDataPlaneParticipationGuard.ENGINE_SIGNING_UNAVAILABLE, "READINESS");
+    assertSecurityEvent(
+        processInstanceId,
+        ProtectedDataPlaneParticipationGuard.ENGINE_SIGNING_UNAVAILABLE,
+        "READINESS");
     verifyNoInteractions(definitionsCache);
     verify(context, never()).forward(any());
   }
@@ -422,8 +428,9 @@ class ProcessInstanceProcessorDlqTest {
       NamespaceSecurityPolicyDTO authoritativePolicy,
       String platformPublicKey,
       boolean signingAvailable) {
-    boolean anchored = authoritativePolicy != null
-        && io.taktx.dto.SecurityMode.ANCHORED == authoritativePolicy.getMode();
+    boolean anchored =
+        authoritativePolicy != null
+            && io.taktx.dto.SecurityMode.ANCHORED == authoritativePolicy.getMode();
 
     MessageSigningService messageSigningService = mock(MessageSigningService.class);
     when(messageSigningService.getKeyId()).thenReturn(signingAvailable ? "engine-key-1" : null);
@@ -451,9 +458,7 @@ class ProcessInstanceProcessorDlqTest {
   }
 
   private static NamespaceSecurityPolicyDTO anchoredPolicy(long version) {
-    return NamespaceSecurityPolicyDTO.builder()
-        .mode(SecurityMode.ANCHORED)
-        .build();
+    return NamespaceSecurityPolicyDTO.builder().mode(SecurityMode.ANCHORED).build();
   }
 
   private void assertSecurityEvent(UUID processInstanceId, String expectedCode, String stage) {

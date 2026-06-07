@@ -32,9 +32,7 @@ public final class NamespaceSecurityPolicyProtoMapper {
     if (message == null) {
       return null;
     }
-    return NamespaceSecurityPolicyDTO.builder()
-        .mode(toDto(message.getMode()))
-        .build();
+    return NamespaceSecurityPolicyDTO.builder().mode(toDto(message.getMode())).build();
   }
 
   private static SecurityModeMessage toProto(SecurityMode mode) {
@@ -51,5 +49,4 @@ public final class NamespaceSecurityPolicyProtoMapper {
       case SECURITY_MODE_UNSPECIFIED, UNRECOGNIZED -> null;
     };
   }
-
 }

@@ -166,7 +166,8 @@ class ClientParticipantStatusPublisherTest {
     ParticipantStatusDTO roundTripped =
         ParticipantStatusProtoMapper.toDto(
             io.taktx.proto.ParticipantStatusMessage.parseFrom(record.value()));
-    assertThat(roundTripped.getParticipantId()).isEqualTo("tenant.default.client"); // explicit descriptor in test
+    assertThat(roundTripped.getParticipantId())
+        .isEqualTo("tenant.default.client"); // explicit descriptor in test
     assertThat(roundTripped.getEffectiveState()).isEqualTo(ParticipantEffectiveState.READY);
     assertThat(roundTripped.isReadyForDataPlane()).isTrue();
   }

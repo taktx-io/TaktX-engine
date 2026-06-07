@@ -15,10 +15,10 @@ import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
 import io.taktx.client.InstanceUpdateRecord;
-import io.taktx.client.ObservedPolicySnapshot;
 import io.taktx.client.SecurityPostureSnapshot;
 import io.taktx.client.TaktXClient;
 import io.taktx.dto.DlqEnvelope;
+import io.taktx.dto.NamespaceSecurityPolicyDTO;
 import io.taktx.dto.ParticipantCapability;
 import io.taktx.dto.ParticipantEffectiveState;
 import io.taktx.dto.ParticipantKind;
@@ -60,9 +60,7 @@ class PublicClientObservabilityDogfoodIntegrationTest
             platformWriterProperties(namespace),
             participantDescriptor(
                 "dogfood-anchored-console",
-                Set.of(
-                    ParticipantCapability.AUTHORITATIVE_POLICY_PUBLISHER,
-                    ParticipantCapability.SECURITY_OBSERVER),
+                Set.of(ParticipantCapability.SECURITY_OBSERVER),
                 "console"));
     TaktXClient runtimeClient =
         startClient(
@@ -82,8 +80,9 @@ class PublicClientObservabilityDogfoodIntegrationTest
 
     awaitNoPolicy(observer);
 
-    ObservedPolicySnapshot observedPolicy =
+    NamespaceSecurityPolicyDTO observedPolicy =
         publishPolicyAndAwaitObserved(
+            namespace,
             publisher,
             observer,
             activeAnchoredPolicy(anchoredPolicyVersion),
@@ -105,10 +104,7 @@ class PublicClientObservabilityDogfoodIntegrationTest
             .observability()
             .awaitPostureSnapshot(
                 snapshot ->
-                    snapshot.hasEffectivePolicy()
-                        && snapshot.effectiveMode() == SecurityMode.ANCHORED
-                        && Long.valueOf(anchoredPolicyVersion)
-                            .equals(snapshot.effectivePolicyVersion())
+                    snapshot.effectiveMode() == SecurityMode.ANCHORED
                         && snapshot.recentSecurityEvents().stream()
                             .anyMatch(
                                 event ->
@@ -116,9 +112,7 @@ class PublicClientObservabilityDogfoodIntegrationTest
                                         && "TRUST_ANCHOR_MISSING".equals(event.getCode())),
                 Duration.ofSeconds(30));
 
-    assertThat(observedPolicy.hasAuthoritativePolicy()).isTrue();
-    assertThat(observedPolicy.effectiveMode()).isEqualTo(SecurityMode.ANCHORED);
-    assertThat(posture.currentActivationState()).isNull();
+    assertThat(observedPolicy.getMode()).isEqualTo(SecurityMode.ANCHORED);
     assertThat(blockedEvent.getCode()).isEqualTo("TRUST_ANCHOR_MISSING");
     assertThat(blockedEvent.getMessage()).contains("platform public key");
     assertThat(posture.recentSecurityEvents())
@@ -162,15 +156,14 @@ class PublicClientObservabilityDogfoodIntegrationTest
                   platformWriterProperties(namespace),
                   participantDescriptor(
                       "dogfood-anchored-status-console",
-                      Set.of(
-                          ParticipantCapability.AUTHORITATIVE_POLICY_PUBLISHER,
-                          ParticipantCapability.SECURITY_OBSERVER),
+                      Set.of(ParticipantCapability.SECURITY_OBSERVER),
                       "console"));
 
           awaitNoPolicy(observer);
 
-          ObservedPolicySnapshot observedPolicy =
+          NamespaceSecurityPolicyDTO observedPolicy =
               publishPolicyAndAwaitObserved(
+                  namespace,
                   publisher,
                   observer,
                   activeAnchoredPolicy(anchoredPolicyVersion),
@@ -200,7 +193,7 @@ class PublicClientObservabilityDogfoodIntegrationTest
                               && snapshot.hasMismatchReasons(),
                       Duration.ofSeconds(30));
 
-          assertThat(observedPolicy.effectiveMode()).isEqualTo(SecurityMode.ANCHORED);
+          assertThat(observedPolicy.getMode()).isEqualTo(SecurityMode.ANCHORED);
           assertThat(participantStatuses.values())
               .anySatisfy(
                   status -> {
@@ -210,7 +203,6 @@ class PublicClientObservabilityDogfoodIntegrationTest
                     assertThat(status.getEffectiveState())
                         .isEqualTo(ParticipantEffectiveState.MISMATCH);
                     assertThat(status.isReadyForDataPlane()).isFalse();
-                    assertThat(status.getObservedPolicyVersion()).isEqualTo(anchoredPolicyVersion);
                     assertThat(status.getMismatchReasons())
                         .anyMatch(reason -> "TRUST_ANCHOR_MISSING".equals(reason.getCode()));
                   });
@@ -245,16 +237,14 @@ class PublicClientObservabilityDogfoodIntegrationTest
             platformWriterProperties(defaultNamespace),
             participantDescriptor(
                 "dogfood-default-console",
-                Set.of(
-                    ParticipantCapability.AUTHORITATIVE_POLICY_PUBLISHER,
-                    ParticipantCapability.SECURITY_OBSERVER),
+                Set.of(ParticipantCapability.SECURITY_OBSERVER),
                 "console"));
 
     awaitNoPolicy(defaultObserver);
-    assertThat(isolatedObserver.observability().getObservedPolicySnapshot())
-        .isEqualTo(ObservedPolicySnapshot.empty());
+    assertThat(isolatedObserver.observability().getPostureSnapshot().effectiveMode()).isNull();
 
     publishPolicyAndAwaitObserved(
+        defaultNamespace,
         publisher,
         defaultObserver,
         activeAnchoredPolicy(securedPolicyVersion),
@@ -265,10 +255,8 @@ class PublicClientObservabilityDogfoodIntegrationTest
         .atMost(Duration.ofSeconds(5))
         .untilAsserted(
             () -> {
-              assertThat(isolatedObserver.observability().getObservedPolicySnapshot())
-                  .isEqualTo(ObservedPolicySnapshot.empty());
-              assertThat(isolatedObserver.observability().getPostureSnapshot().hasEffectivePolicy())
-                  .isFalse();
+              assertThat(isolatedObserver.observability().getPostureSnapshot().effectiveMode())
+                  .isNull();
               assertThat(isolatedObserver.observability().getRecentSecurityEvents())
                   .noneMatch(
                       event ->
@@ -295,9 +283,7 @@ class PublicClientObservabilityDogfoodIntegrationTest
             platformWriterProperties(securedNamespace),
             participantDescriptor(
                 "dogfood-cross-namespace-console",
-                Set.of(
-                    ParticipantCapability.AUTHORITATIVE_POLICY_PUBLISHER,
-                    ParticipantCapability.SECURITY_OBSERVER),
+                Set.of(ParticipantCapability.SECURITY_OBSERVER),
                 "console"));
     TaktXClient securedActor =
         startClientWithoutSigningIdentity(
@@ -319,24 +305,22 @@ class PublicClientObservabilityDogfoodIntegrationTest
 
     deployProcessAndAwaitAvailability(openActor, TASK_SINGLE_BPMN, OPEN_PROCESS_ID);
 
-    ObservedPolicySnapshot securedObservedPolicy =
+    NamespaceSecurityPolicyDTO securedObservedPolicy =
         publishPolicyAndAwaitObserved(
+            securedNamespace,
             securedPublisher,
             securedActor,
             activeAnchoredPolicy(securedPolicyVersion),
             Duration.ofSeconds(30));
 
-    assertThat(securedObservedPolicy.effectiveMode()).isEqualTo(SecurityMode.ANCHORED);
+    assertThat(securedObservedPolicy.getMode()).isEqualTo(SecurityMode.ANCHORED);
 
     await()
         .during(Duration.ofSeconds(2))
         .atMost(Duration.ofSeconds(5))
         .untilAsserted(
             () -> {
-              assertThat(openActor.observability().getObservedPolicySnapshot())
-                  .isEqualTo(ObservedPolicySnapshot.empty());
-              assertThat(openActor.observability().getPostureSnapshot().hasEffectivePolicy())
-                  .isFalse();
+              assertThat(openActor.observability().getPostureSnapshot().effectiveMode()).isNull();
             });
 
     assertThatThrownBy(

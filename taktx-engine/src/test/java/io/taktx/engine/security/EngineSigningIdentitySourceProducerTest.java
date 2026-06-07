@@ -75,5 +75,4 @@ class EngineSigningIdentitySourceProducerTest {
         .hasMessageContaining("taktx.signing.identity-source")
         .hasMessageContaining("generated, env, file");
   }
-
 }

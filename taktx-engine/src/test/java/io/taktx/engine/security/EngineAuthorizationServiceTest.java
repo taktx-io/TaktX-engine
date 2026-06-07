@@ -26,7 +26,6 @@ import io.taktx.dto.ExternalTaskResponseTriggerDTO;
 import io.taktx.dto.ExternalTaskResponseType;
 import io.taktx.dto.GlobalConfigurationDTO;
 import io.taktx.dto.KeyRole;
-import io.taktx.dto.NamespaceSecurityPolicyDTO;
 import io.taktx.dto.OneTimeScheduleDTO;
 import io.taktx.dto.ProcessDefinitionKey;
 import io.taktx.dto.ReplayProtectionMode;
@@ -49,8 +48,6 @@ import io.taktx.engine.pd.SignalIngressEnvelope;
 import io.taktx.engine.pi.ProcessInstanceTriggerEnvelope;
 import io.taktx.engine.topicmanagement.TopicMetaIngressEnvelope;
 import io.taktx.security.AuthorizationTokenException;
-import io.taktx.security.Ed25519Service;
-import io.taktx.security.SigningKeyGenerator;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyPairGenerator;
 import java.time.Instant;
@@ -96,11 +93,7 @@ class EngineAuthorizationServiceTest {
         .thenReturn("default.taktx-signing-keys");
 
     service =
-        new EngineAuthorizationService(
-            config,
-            globalConfigStore,
-            publicKeyProvider,
-            kafkaStreams);
+        new EngineAuthorizationService(config, globalConfigStore, publicKeyProvider, kafkaStreams);
   }
 
   // ── authorization disabled ─────────────────────────────────────────────────
@@ -359,11 +352,7 @@ class EngineAuthorizationServiceTest {
 
     service =
         new EngineAuthorizationService(
-            config,
-            globalConfigStore,
-            publicKeyProvider,
-            kafkaStreams,
-            (_, _) -> false);
+            config, globalConfigStore, publicKeyProvider, kafkaStreams, (_, _) -> false);
 
     String keyId = "untrusted-topic-request-key";
     SigningKeyDTO keyEntry =
@@ -528,7 +517,8 @@ class EngineAuthorizationServiceTest {
   @Test
   void messageEventIngress_anchoredPolicy_missingSignatureRejected() {
     when(config.isAnchored()).thenReturn(true);
-    service = new EngineAuthorizationService(config, globalConfigStore, publicKeyProvider, kafkaStreams);
+    service =
+        new EngineAuthorizationService(config, globalConfigStore, publicKeyProvider, kafkaStreams);
     DefinitionMessageEventTriggerDTO messageEvent =
         new DefinitionMessageEventTriggerDTO("payment-received", VariablesDTO.empty());
 
@@ -1035,7 +1025,8 @@ class EngineAuthorizationServiceTest {
   @Test
   void authoritativeAnchoredPolicy_startCommandRequiresSignatureNotJwt() {
     when(config.isAnchored()).thenReturn(true);
-    service = new EngineAuthorizationService(config, globalConfigStore, publicKeyProvider, kafkaStreams);
+    service =
+        new EngineAuthorizationService(config, globalConfigStore, publicKeyProvider, kafkaStreams);
 
     assertThatThrownBy(
             () -> service.authorize(new RecordHeaders(), envelope(startCommand("proc", -1))))
@@ -1047,7 +1038,8 @@ class EngineAuthorizationServiceTest {
   @Test
   void authoritativeAnchoredPolicy_clientSignedStartCommandAcceptedWithoutJwt() {
     when(config.isAnchored()).thenReturn(true);
-    service = new EngineAuthorizationService(config, globalConfigStore, publicKeyProvider, kafkaStreams);
+    service =
+        new EngineAuthorizationService(config, globalConfigStore, publicKeyProvider, kafkaStreams);
 
     String keyId = "anchored-client-key";
     when(signingKeysStore.get(keyId))
@@ -1079,7 +1071,8 @@ class EngineAuthorizationServiceTest {
   @Test
   void authoritativePolicy_doesNotEnableTaskCompletionJwtRequirement() {
     when(config.isAnchored()).thenReturn(true);
-    service = new EngineAuthorizationService(config, globalConfigStore, publicKeyProvider, kafkaStreams);
+    service =
+        new EngineAuthorizationService(config, globalConfigStore, publicKeyProvider, kafkaStreams);
 
     String keyId = "anchored-task-key";
     when(signingKeysStore.get(keyId))
@@ -1113,7 +1106,8 @@ class EngineAuthorizationServiceTest {
   @Test
   void authoritativePolicy_clientCommandSigningRejectsUnsignedStartCommand() {
     when(config.isAnchored()).thenReturn(true);
-    service = new EngineAuthorizationService(config, globalConfigStore, publicKeyProvider, kafkaStreams);
+    service =
+        new EngineAuthorizationService(config, globalConfigStore, publicKeyProvider, kafkaStreams);
 
     assertThatThrownBy(
             () -> service.authorize(new RecordHeaders(), envelope(startCommand("proc", -1))))
@@ -1124,7 +1118,8 @@ class EngineAuthorizationServiceTest {
   @Test
   void authoritativePolicy_workerResponseSigningRejectsUnsignedUserTaskCompletion() {
     when(config.isAnchored()).thenReturn(true);
-    service = new EngineAuthorizationService(config, globalConfigStore, publicKeyProvider, kafkaStreams);
+    service =
+        new EngineAuthorizationService(config, globalConfigStore, publicKeyProvider, kafkaStreams);
 
     assertThatThrownBy(
             () -> service.authorize(new RecordHeaders(), envelope(userTaskResponseTrigger())))
@@ -1135,7 +1130,8 @@ class EngineAuthorizationServiceTest {
   @Test
   void authoritativePolicy_engineOutboundSigningRejectsUnsignedScheduleCommand() {
     when(config.isAnchored()).thenReturn(true);
-    service = new EngineAuthorizationService(config, globalConfigStore, publicKeyProvider, kafkaStreams);
+    service =
+        new EngineAuthorizationService(config, globalConfigStore, publicKeyProvider, kafkaStreams);
 
     assertThatThrownBy(
             () ->

@@ -86,7 +86,6 @@ import io.taktx.engine.pi.ProcessingStatistics;
 import io.taktx.engine.pi.ScopeProcessor;
 import io.taktx.engine.pi.processor.IoMappingProcessor;
 import io.taktx.engine.security.EngineAuthorizationService;
-import io.taktx.engine.security.EngineSecurityReadinessEvaluator;
 import io.taktx.engine.security.MessageSigningService;
 import io.taktx.engine.security.ProcessInstanceResponseDedupProcessor;
 import io.taktx.engine.security.ProtectedDataPlaneParticipationGuard;

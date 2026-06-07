@@ -169,8 +169,8 @@ public class TaktConfiguration {
   }
 
   /**
-   * Returns {@code true} when this engine is configured for anchored mode, i.e. the platform
-   * public key is set. Anchored mode is resolved once at startup and never changes at runtime.
+   * Returns {@code true} when this engine is configured for anchored mode, i.e. the platform public
+   * key is set. Anchored mode is resolved once at startup and never changes at runtime.
    */
   public boolean isAnchored() {
     return getPlatformPublicKey() != null && !getPlatformPublicKey().isBlank();

@@ -87,10 +87,7 @@ class ParticipantStatusPublisherTest {
 
     ParticipantStatusPublisher publisher =
         new ParticipantStatusPublisher(
-            configuration,
-            readinessEvaluator,
-            securityEventPublisher,
-            producer);
+            configuration, readinessEvaluator, securityEventPublisher, producer);
 
     ParticipantStatusDTO published = publisher.publishCurrentStatus();
 
@@ -103,10 +100,7 @@ class ParticipantStatusPublisherTest {
   void publish_rejectsNullStatus() {
     ParticipantStatusPublisher publisher =
         new ParticipantStatusPublisher(
-            configuration,
-            readinessEvaluator,
-            securityEventPublisher,
-            producer);
+            configuration, readinessEvaluator, securityEventPublisher, producer);
 
     assertThatThrownBy(() -> publisher.publish(null))
         .isInstanceOf(IllegalArgumentException.class)
@@ -130,10 +124,7 @@ class ParticipantStatusPublisherTest {
 
     ParticipantStatusPublisher publisher =
         new ParticipantStatusPublisher(
-            configuration,
-            readinessEvaluator,
-            securityEventPublisher,
-            producer);
+            configuration, readinessEvaluator, securityEventPublisher, producer);
 
     publisher.publishCurrentStatus();
 
@@ -168,10 +159,7 @@ class ParticipantStatusPublisherTest {
 
     ParticipantStatusPublisher publisher =
         new ParticipantStatusPublisher(
-            configuration,
-            readinessEvaluator,
-            securityEventPublisher,
-            producer);
+            configuration, readinessEvaluator, securityEventPublisher, producer);
 
     publisher.publishCurrentStatus();
     publisher.publishCurrentStatus();

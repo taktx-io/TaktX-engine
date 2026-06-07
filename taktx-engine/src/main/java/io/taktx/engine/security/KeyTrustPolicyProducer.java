@@ -33,8 +33,8 @@ import lombok.extern.slf4j.Slf4j;
  * </ul>
  *
  * <p>When ANCHORED mode is detected (platform key present), this producer also validates that the
- * remaining anchored prerequisites are configured and fails fast if they are not — refusing to start
- * is preferable to starting silently in a misconfigured state.
+ * remaining anchored prerequisites are configured and fails fast if they are not — refusing to
+ * start is preferable to starting silently in a misconfigured state.
  */
 @ApplicationScoped
 @Slf4j

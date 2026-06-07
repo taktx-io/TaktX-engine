@@ -32,10 +32,7 @@ class ClientProtectedDataPlaneParticipationGuardTest {
   void evaluate_permitsOpenTrafficWhenNotAnchored() {
     ClientProtectedDataPlaneParticipationGuard guard =
         new ClientProtectedDataPlaneParticipationGuard(
-            false,
-            runtimeDescriptor(),
-            () -> false,
-            clock);
+            false, runtimeDescriptor(), () -> false, clock);
 
     ClientProtectedDataPlaneParticipationGuard.Decision decision =
         guard.evaluate(ProtectedClientDataPlaneOperation.START_COMMAND, null);
@@ -49,10 +46,7 @@ class ClientProtectedDataPlaneParticipationGuardTest {
   void evaluate_allowsAnchoredStartCommandWhenSigningIsReady() {
     ClientProtectedDataPlaneParticipationGuard guard =
         new ClientProtectedDataPlaneParticipationGuard(
-            true,
-            runtimeDescriptor(),
-            () -> true,
-            clock);
+            true, runtimeDescriptor(), () -> true, clock);
 
     ClientProtectedDataPlaneParticipationGuard.Decision decision =
         guard.evaluate(ProtectedClientDataPlaneOperation.START_COMMAND, null);
@@ -64,10 +58,7 @@ class ClientProtectedDataPlaneParticipationGuardTest {
   void evaluate_allowsExternalTaskConsumptionWhenAnchoredSigningIsReady() {
     ClientProtectedDataPlaneParticipationGuard guard =
         new ClientProtectedDataPlaneParticipationGuard(
-            true,
-            runtimeDescriptor(),
-            () -> true,
-            clock);
+            true, runtimeDescriptor(), () -> true, clock);
 
     ClientProtectedDataPlaneParticipationGuard.Decision decision =
         guard.evaluate(ProtectedClientDataPlaneOperation.EXTERNAL_TASK_CONSUME, null);
@@ -79,10 +70,7 @@ class ClientProtectedDataPlaneParticipationGuardTest {
   void evaluate_blocksClientCommandsWhenAnchoredButSigningNotReady() {
     ClientProtectedDataPlaneParticipationGuard guard =
         new ClientProtectedDataPlaneParticipationGuard(
-            true,
-            runtimeDescriptor(),
-            () -> false,
-            clock);
+            true, runtimeDescriptor(), () -> false, clock);
 
     ClientProtectedDataPlaneParticipationGuard.Decision decision =
         guard.evaluate(ProtectedClientDataPlaneOperation.CLIENT_COMMAND, null);
@@ -96,10 +84,7 @@ class ClientProtectedDataPlaneParticipationGuardTest {
   void evaluate_blocksWorkerResponseWhenAnchoredButSigningNotReady() {
     ClientProtectedDataPlaneParticipationGuard guard =
         new ClientProtectedDataPlaneParticipationGuard(
-            true,
-            runtimeDescriptor(),
-            () -> false,
-            clock);
+            true, runtimeDescriptor(), () -> false, clock);
 
     ClientProtectedDataPlaneParticipationGuard.Decision decision =
         guard.evaluate(ProtectedClientDataPlaneOperation.MESSAGE_EVENT, null);
@@ -113,10 +98,7 @@ class ClientProtectedDataPlaneParticipationGuardTest {
   void evaluate_blocksProtectedRuntimeTrafficWhenDescriptorLacksRuntimeCapability() {
     ClientProtectedDataPlaneParticipationGuard guard =
         new ClientProtectedDataPlaneParticipationGuard(
-            true,
-            observerDescriptor(),
-            () -> true,
-            clock);
+            true, observerDescriptor(), () -> true, clock);
 
     ClientProtectedDataPlaneParticipationGuard.Decision decision =
         guard.evaluate(ProtectedClientDataPlaneOperation.MESSAGE_EVENT, null);
