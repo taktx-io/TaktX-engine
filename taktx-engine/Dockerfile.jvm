@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1.24
+# syntax=docker/dockerfile:1.27
 
 # ============================================================================
 # Stage 1: Gradle Dependency Cache
