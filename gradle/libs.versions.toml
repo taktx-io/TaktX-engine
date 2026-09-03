@@ -1,5 +1,5 @@
 [versions]
-quarkus = "3.35.3"
+quarkus = "3.39.2"
 protobuf = "4.29.3"
 cronutils = "9.2.1"
 lombok = "1.18.46"
