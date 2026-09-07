@@ -1,7 +1,7 @@
 # This is a Gradle generated file for dependency locking.
 # Manual edits can break the build and are not advised.
 # This file is expected to be part of source control.
-at.yawk.lz4:lz4-java:1.10.1=runtimeClasspath,testRuntimeClasspath
+at.yawk.lz4:lz4-java:1.10.2=runtimeClasspath,testRuntimeClasspath
 com.cronutils:cron-utils:9.2.1=runtimeClasspath,testRuntimeClasspath
 com.github.luben:zstd-jni:1.5.6-10=runtimeClasspath,testRuntimeClasspath
 com.google.code.findbugs:jsr305:3.0.2=spotless865459188
@@ -25,7 +25,7 @@ jakarta.interceptor:jakarta.interceptor-api:2.2.0=compileClasspath
 jakarta.xml.bind:jakarta.xml.bind-api:4.0.4=runtimeClasspath,testRuntimeClasspath
 net.bytebuddy:byte-buddy-agent:1.11.13=testCompileClasspath,testRuntimeClasspath
 net.bytebuddy:byte-buddy:1.18.3=testCompileClasspath,testRuntimeClasspath
-org.apache.kafka:kafka-clients:4.2.0=compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath
+org.apache.kafka:kafka-clients:4.3.1=compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath
 org.apiguardian:apiguardian-api:1.1.2=testCompileClasspath
 org.assertj:assertj-core:3.27.7=testCompileClasspath,testRuntimeClasspath
 org.awaitility:awaitility:4.3.0=compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath
